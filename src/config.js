@@ -17,7 +17,8 @@ export const config = {
     strava: {
       domain: 'strava.com',
       patterns: [
-        /https?:\/\/(?:www\.)?strava\.com\/routes\/\d+/
+        /https?:\/\/(?:www\.)?strava\.com\/routes\/\d+/,
+        /https?:\/\/(?:www\.)?strava\.com\/activities\/\d+/
       ]
     },
     ridewithgps: {

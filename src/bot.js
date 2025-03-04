@@ -128,11 +128,17 @@ To delete a ride:
       if (params.route) {
         if (RouteParser.isValidRouteUrl(params.route)) {
           rideData.routeLink = params.route;
-          const routeInfo = await RouteParser.parseRoute(params.route);
-          if (routeInfo) {
-            if (!params.dist) rideData.distance = routeInfo.distance;
-            if (!params.time) rideData.duration = routeInfo.duration;
+          // Only try to parse details if it's a known provider
+          if (RouteParser.isKnownProvider(params.route)) {
+            const routeInfo = await RouteParser.parseRoute(params.route);
+            if (routeInfo) {
+              if (!params.dist) rideData.distance = routeInfo.distance;
+              if (!params.time) rideData.duration = routeInfo.duration;
+            }
           }
+        } else {
+          await ctx.reply('Invalid route URL format. Please provide a valid URL.');
+          return;
         }
       }
 
@@ -208,11 +214,17 @@ To delete a ride:
       if (params.route) {
         if (RouteParser.isValidRouteUrl(params.route)) {
           updates.routeLink = params.route;
-          const routeInfo = await RouteParser.parseRoute(params.route);
-          if (routeInfo) {
-            if (!params.dist) updates.distance = routeInfo.distance;
-            if (!params.time) updates.duration = routeInfo.duration;
+          // Only try to parse details if it's a known provider
+          if (RouteParser.isKnownProvider(params.route)) {
+            const routeInfo = await RouteParser.parseRoute(params.route);
+            if (routeInfo) {
+              if (!params.dist) updates.distance = routeInfo.distance;
+              if (!params.time) updates.duration = routeInfo.duration;
+            }
           }
+        } else {
+          await ctx.reply('Invalid route URL format. Please provide a valid URL.');
+          return;
         }
       }
 
