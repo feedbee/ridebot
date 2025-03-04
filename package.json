@@ -1,0 +1,24 @@
+{
+  "name": "bike-ride-bot",
+  "version": "1.0.0",
+  "description": "Telegram bot for organizing bike rides",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "NODE_ENV=development nodemon src/index.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "grammy": "^1.21.1",
+    "@grammyjs/conversations": "^1.2.0",
+    "mongoose": "^8.1.1",
+    "dotenv": "^16.4.1",
+    "node-fetch": "^3.3.2",
+    "cheerio": "^1.0.0-rc.12"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.3",
+    "jest": "^29.7.0"
+  },
+  "type": "module"
+} 
