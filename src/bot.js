@@ -47,28 +47,34 @@ dist: 35
 time: 90
 speed: 25-28
 
-To update a ride:
-1. Reply to the ride message
-2. Use /updateride command with new parameters
-3. Only the ride creator can update it
+To update a ride (only the ride creator can do this):
+1. Reply to the ride message and use /updateride command with new parameters
+OR
+2. Use /updateride command with ride ID and new parameters
 
-Example:
+Example with ID:
 /updateride
+id: abc123
 title: Updated Evening Ride
 when: 25.03.2024 19:00
 meet: City Park entrance
 speed: 26-29
 
-To cancel a ride:
-1. Reply to the ride message
-2. Use /cancelride command
-3. Only the ride creator can cancel it
+To cancel a ride (only the ride creator can do this):
+1. Reply to the ride message and use /cancelride command
+OR
+2. Use /cancelride command with ride ID:
+/cancelride
+id: abc123
 
-To delete a ride:
-1. Reply to the ride message
-2. Use /deleteride command
-3. Only the ride creator can delete it
-4. Confirm the deletion when prompted
+To delete a ride (only the ride creator can do this):
+1. Reply to the ride message and use /deleteride command
+OR
+2. Use /deleteride command with ride ID:
+/deleteride
+id: abc123
+
+After using /deleteride, confirm the deletion when prompted.
 `;
     await ctx.reply(helpText, { parse_mode: 'Markdown' });
   }
@@ -98,6 +104,56 @@ To delete a ride:
     }
 
     return params;
+  }
+
+  /**
+   * Extract and validate ride from command parameters or replied message
+   * @param {Context} ctx - Grammy context
+   * @param {boolean} requireCreator - Whether the command requires ride creator permissions
+   * @returns {Promise<{ride: Object|null, error: string|null}>}
+   */
+  async extractRide(ctx, requireCreator = false) {
+    let rideId = null;
+
+    // First check if ID is provided in parameters
+    const params = this.parseCommandParams(ctx.message.text);
+    if (params.id) {
+      rideId = params.id;
+    }
+    // Then check replied message
+    else if (ctx.message.reply_to_message) {
+      const originalMessage = ctx.message.reply_to_message.text;
+      const rideIdMatch = originalMessage.match(/🎫\s*Ride\s*#(\w+)/i);
+      
+      if (!rideIdMatch) {
+        return { 
+          ride: null, 
+          error: 'Could not find ride ID in the message. Please make sure you are replying to a ride message or provide ID parameter.'
+        };
+      }
+      rideId = rideIdMatch[1];
+    }
+    else {
+      return { 
+        ride: null, 
+        error: 'Please reply to the ride message or provide ID parameter. Use /help for format example.'
+      };
+    }
+
+    try {
+      const ride = await this.storage.getRide(rideId);
+      if (!ride) {
+        return { ride: null, error: `Ride #${rideId} not found` };
+      }
+
+      if (requireCreator && ride.createdBy !== ctx.from.id) {
+        return { ride: null, error: 'Only the ride creator can perform this action' };
+      }
+
+      return { ride, error: null };
+    } catch (error) {
+      return { ride: null, error: 'Error accessing ride data' };
+    }
   }
 
   async handleNewRide(ctx) {
@@ -180,31 +236,14 @@ To delete a ride:
 
   async handleUpdateRide(ctx) {
     const params = this.parseCommandParams(ctx.message.text);
+    const { ride, error } = await this.extractRide(ctx, true);
     
-    // Check if this is a reply to a message
-    if (!ctx.message.reply_to_message) {
-      await ctx.reply('Please reply to the ride message you want to update.');
+    if (error) {
+      await ctx.reply(error);
       return;
     }
 
     try {
-      // Extract ride ID from the original message
-      const originalMessage = ctx.message.reply_to_message.text;
-      const rideIdMatch = originalMessage.match(/🎫\s*Ride\s*#(\w+)/i);
-      
-      if (!rideIdMatch) {
-        await ctx.reply('Could not find ride ID in the message. Please make sure you are replying to a ride message.');
-        return;
-      }
-
-      const rideId = rideIdMatch[1];
-      const ride = await this.storage.getRide(rideId);
-
-      if (ride.createdBy !== ctx.from.id) {
-        await ctx.reply('Only the ride creator can update it');
-        return;
-      }
-
       const updates = {};
 
       if (params.title) updates.title = params.title;
@@ -242,7 +281,7 @@ To delete a ride:
         if (!isNaN(max)) updates.speedMax = max;
       }
 
-      const updatedRide = await this.storage.updateRide(rideId, updates);
+      const updatedRide = await this.storage.updateRide(ride.id, updates);
       await this.updateRideMessage(updatedRide);
       await ctx.reply('Ride updated successfully');
     } catch (error) {
@@ -251,36 +290,20 @@ To delete a ride:
   }
 
   async handleCancelRide(ctx) {
-    // Check if this is a reply to a message
-    if (!ctx.message.reply_to_message) {
-      await ctx.reply('Please reply to the ride message you want to cancel.');
+    const { ride, error } = await this.extractRide(ctx, true);
+    
+    if (error) {
+      await ctx.reply(error);
       return;
     }
 
     try {
-      // Extract ride ID from the original message
-      const originalMessage = ctx.message.reply_to_message.text;
-      const rideIdMatch = originalMessage.match(/🎫\s*Ride\s*#(\w+)/i);
-      
-      if (!rideIdMatch) {
-        await ctx.reply('Could not find ride ID in the message. Please make sure you are replying to a ride message.');
-        return;
-      }
-
-      const rideId = rideIdMatch[1];
-      const ride = await this.storage.getRide(rideId);
-
-      if (ride.createdBy !== ctx.from.id) {
-        await ctx.reply('Only the ride creator can cancel it');
-        return;
-      }
-
       if (ride.cancelled) {
         await ctx.reply('This ride is already cancelled');
         return;
       }
 
-      const updatedRide = await this.storage.updateRide(rideId, { cancelled: true });
+      const updatedRide = await this.storage.updateRide(ride.id, { cancelled: true });
       await this.updateRideMessage(updatedRide);
       await ctx.reply('Ride cancelled successfully');
     } catch (error) {
@@ -292,6 +315,11 @@ To delete a ride:
     const rideId = ctx.match[1];
     try {
       const ride = await this.storage.getRide(rideId);
+      
+      if (!ride) {
+        await ctx.answerCallbackQuery(`Ride #${rideId} not found`);
+        return;
+      }
       
       if (ride.cancelled) {
         await ctx.answerCallbackQuery('This ride has been cancelled');
@@ -317,6 +345,11 @@ To delete a ride:
     const rideId = ctx.match[1];
     try {
       const ride = await this.storage.getRide(rideId);
+      
+      if (!ride) {
+        await ctx.answerCallbackQuery(`Ride #${rideId} not found`);
+        return;
+      }
       
       if (ride.cancelled) {
         await ctx.answerCallbackQuery('This ride has been cancelled');
@@ -457,34 +490,18 @@ To delete a ride:
   }
 
   async handleDeleteRide(ctx) {
-    // Check if this is a reply to a message
-    if (!ctx.message.reply_to_message) {
-      await ctx.reply('Please reply to the ride message you want to delete.');
+    const { ride, error } = await this.extractRide(ctx, true);
+    
+    if (error) {
+      await ctx.reply(error);
       return;
     }
 
     try {
-      // Extract ride ID from the original message
-      const originalMessage = ctx.message.reply_to_message.text;
-      const rideIdMatch = originalMessage.match(/🎫\s*Ride\s*#(\w+)/i);
-      
-      if (!rideIdMatch) {
-        await ctx.reply('Could not find ride ID in the message. Please make sure you are replying to a ride message.');
-        return;
-      }
-
-      const rideId = rideIdMatch[1];
-      const ride = await this.storage.getRide(rideId);
-
-      if (ride.createdBy !== ctx.from.id) {
-        await ctx.reply('Only the ride creator can delete it');
-        return;
-      }
-
       // Create confirmation keyboard
       const keyboard = new InlineKeyboard()
-        .text(config.buttons.confirmDelete, `delete:confirm:${rideId}`)
-        .text(config.buttons.cancelDelete, `delete:cancel:${rideId}`);
+        .text(config.buttons.confirmDelete, `delete:confirm:${ride.id}`)
+        .text(config.buttons.cancelDelete, `delete:cancel:${ride.id}`);
 
       await ctx.reply(config.messageTemplates.deleteConfirmation, {
         reply_to_message_id: ctx.message.message_id,
@@ -506,6 +523,11 @@ To delete a ride:
       }
 
       const ride = await this.storage.getRide(rideId);
+
+      if (!ride) {
+        await ctx.answerCallbackQuery(`Ride #${rideId} not found`);
+        return;
+      }
 
       if (ride.createdBy !== ctx.from.id) {
         await ctx.answerCallbackQuery('Only the ride creator can delete it');
