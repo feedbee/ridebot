@@ -626,7 +626,7 @@ Use navigation buttons to move between pages.
         minute: '2-digit'
       });
       const status = ride.cancelled ? ' ❌ Cancelled' : '';
-      return `🎫 *Ride #${ride.id}*${status}\n${ride.title}\n📅 ${dateStr} ${timeStr}\n`;
+      return `🎫 *Ride #${ride.id}*${status}\n🚲 ${ride.title}\n📅 ${dateStr} ${timeStr}\n`;
     }).join('\n');
   }
 
