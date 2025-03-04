@@ -18,9 +18,11 @@ export class BikeRideBot {
     this.bot.command('updateride', this.handleUpdateRide.bind(this));
     this.bot.command('cancelride', this.handleCancelRide.bind(this));
     this.bot.command('deleteride', this.handleDeleteRide.bind(this));
+    this.bot.command('listrides', this.handleListRides.bind(this));
     this.bot.callbackQuery(/^join:(.+)$/, this.handleJoinRide.bind(this));
     this.bot.callbackQuery(/^leave:(.+)$/, this.handleLeaveRide.bind(this));
     this.bot.callbackQuery(/^delete:(\w+):(\w+)$/, this.handleDeleteConfirmation.bind(this));
+    this.bot.callbackQuery(/^list:(\d+)$/, this.handleListPage.bind(this));
     this.bot.command('help', this.handleHelp.bind(this));
   }
 
@@ -75,6 +77,10 @@ OR
 id: abc123
 
 After using /deleteride, confirm the deletion when prompted.
+
+To list your rides:
+Use /listrides command to see all rides you've created, sorted by date (newest first).
+Use navigation buttons to move between pages.
 `;
     await ctx.reply(helpText, { parse_mode: 'Markdown' });
   }
@@ -554,6 +560,84 @@ After using /deleteride, confirm the deletion when prompted.
       await ctx.answerCallbackQuery('Ride deleted successfully');
     } catch (error) {
       await ctx.answerCallbackQuery('Error deleting ride: ' + error.message);
+    }
+  }
+
+  /**
+   * Format a list of rides for display
+   * @param {Array<Object>} rides - Array of ride objects
+   * @returns {string} Formatted message
+   */
+  formatRidesList(rides) {
+    if (rides.length === 0) {
+      return 'No rides found';
+    }
+
+    return rides.map(ride => {
+      const dateStr = ride.date.toLocaleDateString('en-GB');
+      const timeStr = ride.date.toLocaleTimeString('en-GB', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      const status = ride.cancelled ? ' ❌ Cancelled' : '';
+      return `🎫 *Ride #${ride.id}*${status}\n${ride.title}\n📅 ${dateStr} ${timeStr}\n`;
+    }).join('\n');
+  }
+
+  async handleListRides(ctx) {
+    try {
+      const PAGE_SIZE = 5;
+      const { total, rides } = await this.storage.getRidesByCreator(
+        ctx.from.id,
+        0,
+        PAGE_SIZE
+      );
+
+      const message = `Found ${total} ride${total !== 1 ? 's' : ''}\n\n${this.formatRidesList(rides)}`;
+      
+      // Only add pagination if there are more pages
+      const keyboard = total > PAGE_SIZE ? new InlineKeyboard()
+        .text('Next ▶️', `list:1`) : null;
+
+      await ctx.reply(message, {
+        parse_mode: 'Markdown',
+        reply_markup: keyboard
+      });
+    } catch (error) {
+      await ctx.reply('Error listing rides: ' + error.message);
+    }
+  }
+
+  async handleListPage(ctx) {
+    try {
+      const PAGE_SIZE = 5;
+      const page = parseInt(ctx.match[1]);
+      
+      const { total, rides } = await this.storage.getRidesByCreator(
+        ctx.from.id,
+        page * PAGE_SIZE,
+        PAGE_SIZE
+      );
+
+      const message = `Found ${total} ride${total !== 1 ? 's' : ''}\n\n${this.formatRidesList(rides)}`;
+      
+      const totalPages = Math.ceil(total / PAGE_SIZE);
+      const keyboard = new InlineKeyboard();
+      
+      if (page > 0) {
+        keyboard.text('◀️ Prev', `list:${page - 1}`);
+      }
+      if (page < totalPages - 1) {
+        keyboard.text('Next ▶️', `list:${page + 1}`);
+      }
+
+      await ctx.editMessageText(message, {
+        parse_mode: 'Markdown',
+        reply_markup: keyboard.length > 0 ? keyboard : undefined
+      });
+      await ctx.answerCallbackQuery();
+    } catch (error) {
+      await ctx.answerCallbackQuery('Error loading rides');
     }
   }
 } 

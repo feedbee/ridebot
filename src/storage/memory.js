@@ -63,11 +63,18 @@ export class MemoryStorage extends StorageInterface {
   }
 
   async getRide(rideId) {
-    const ride = this.rides.get(rideId);
-    if (!ride) {
-      throw new Error('Ride not found');
-    }
-    return ride;
+    return this.rides.get(rideId) || null;
+  }
+
+  async getRidesByCreator(userId, skip, limit) {
+    const userRides = Array.from(this.rides.values())
+      .filter(ride => ride.createdBy === userId)
+      .sort((a, b) => b.date.getTime() - a.date.getTime());
+
+    return {
+      total: userRides.length,
+      rides: userRides.slice(skip, skip + limit)
+    };
   }
 
   async addParticipant(rideId, participant) {

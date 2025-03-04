@@ -23,6 +23,12 @@
  * @property {Date} joinedAt
  */
 
+/**
+ * @typedef {Object} RidesList
+ * @property {number} total - Total number of rides
+ * @property {Array<Ride>} rides - Array of rides for current page
+ */
+
 export class StorageInterface {
   /**
    * Create a new ride
@@ -87,6 +93,17 @@ export class StorageInterface {
    * @returns {Promise<boolean>}
    */
   async deleteRide(rideId) {
+    throw new Error('Not implemented');
+  }
+
+  /**
+   * Get rides created by user
+   * @param {number} userId - Creator's user ID
+   * @param {number} skip - Number of items to skip
+   * @param {number} limit - Maximum number of items to return
+   * @returns {Promise<RidesList>}
+   */
+  async getRidesByCreator(userId, skip, limit) {
     throw new Error('Not implemented');
   }
 } 
