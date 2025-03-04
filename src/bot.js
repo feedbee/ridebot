@@ -17,8 +17,10 @@ export class BikeRideBot {
     this.bot.command('newride', this.handleNewRide.bind(this));
     this.bot.command('updateride', this.handleUpdateRide.bind(this));
     this.bot.command('cancelride', this.handleCancelRide.bind(this));
+    this.bot.command('deleteride', this.handleDeleteRide.bind(this));
     this.bot.callbackQuery(/^join:(.+)$/, this.handleJoinRide.bind(this));
     this.bot.callbackQuery(/^leave:(.+)$/, this.handleLeaveRide.bind(this));
+    this.bot.callbackQuery(/^delete:(\w+):(\w+)$/, this.handleDeleteConfirmation.bind(this));
     this.bot.command('help', this.handleHelp.bind(this));
   }
 
@@ -61,6 +63,12 @@ To cancel a ride:
 1. Reply to the ride message
 2. Use /cancelride command
 3. Only the ride creator can cancel it
+
+To delete a ride:
+1. Reply to the ride message
+2. Use /deleteride command
+3. Only the ride creator can delete it
+4. Confirm the deletion when prompted
 `;
     await ctx.reply(helpText, { parse_mode: 'Markdown' });
   }
@@ -434,5 +442,84 @@ To cancel a ride:
     }
 
     return date;
+  }
+
+  async handleDeleteRide(ctx) {
+    // Check if this is a reply to a message
+    if (!ctx.message.reply_to_message) {
+      await ctx.reply('Please reply to the ride message you want to delete.');
+      return;
+    }
+
+    try {
+      // Extract ride ID from the original message
+      const originalMessage = ctx.message.reply_to_message.text;
+      const rideIdMatch = originalMessage.match(/🎫\s*Ride\s*#(\w+)/i);
+      
+      if (!rideIdMatch) {
+        await ctx.reply('Could not find ride ID in the message. Please make sure you are replying to a ride message.');
+        return;
+      }
+
+      const rideId = rideIdMatch[1];
+      const ride = await this.storage.getRide(rideId);
+
+      if (ride.createdBy !== ctx.from.id) {
+        await ctx.reply('Only the ride creator can delete it');
+        return;
+      }
+
+      // Create confirmation keyboard
+      const keyboard = new InlineKeyboard()
+        .text(config.buttons.confirmDelete, `delete:confirm:${rideId}`)
+        .text(config.buttons.cancelDelete, `delete:cancel:${rideId}`);
+
+      await ctx.reply(config.messageTemplates.deleteConfirmation, {
+        reply_to_message_id: ctx.message.message_id,
+        reply_markup: keyboard
+      });
+    } catch (error) {
+      await ctx.reply('Error preparing ride deletion: ' + error.message);
+    }
+  }
+
+  async handleDeleteConfirmation(ctx) {
+    const [action, rideId] = ctx.match.slice(1);
+    
+    try {
+      if (action === 'cancel') {
+        await ctx.deleteMessage();
+        await ctx.answerCallbackQuery('Deletion cancelled');
+        return;
+      }
+
+      const ride = await this.storage.getRide(rideId);
+
+      if (ride.createdBy !== ctx.from.id) {
+        await ctx.answerCallbackQuery('Only the ride creator can delete it');
+        return;
+      }
+
+      // Delete the ride from database
+      const success = await this.storage.deleteRide(rideId);
+      if (!success) {
+        await ctx.answerCallbackQuery('Failed to delete the ride');
+        return;
+      }
+
+      // Delete the confirmation message
+      await ctx.deleteMessage();
+
+      // Delete the original ride message
+      try {
+        await this.bot.api.deleteMessage(ride.chatId, ride.messageId);
+      } catch (error) {
+        console.error('Error deleting ride message:', error);
+      }
+
+      await ctx.answerCallbackQuery('Ride deleted successfully');
+    } catch (error) {
+      await ctx.answerCallbackQuery('Error deleting ride: ' + error.message);
+    }
   }
 } 

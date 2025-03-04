@@ -3,15 +3,17 @@ import { StorageInterface } from './interface.js';
 import { config } from '../config.js';
 
 const rideSchema = new mongoose.Schema({
-  messageId: { type: Number, required: true },
-  chatId: { type: Number, required: true },
   title: { type: String, required: true },
   date: { type: Date, required: true },
+  messageId: { type: Number, required: true },
+  chatId: { type: Number, required: true },
   routeLink: String,
+  meetingPoint: String,
   distance: Number,
   duration: Number,
   speedMin: Number,
   speedMax: Number,
+  cancelled: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   createdBy: { type: Number, required: true }
 });
@@ -22,6 +24,10 @@ const participantSchema = new mongoose.Schema({
   username: { type: String, required: true },
   joinedAt: { type: Date, default: Date.now }
 });
+
+// Create indexes
+rideSchema.index({ chatId: 1, messageId: 1 }, { unique: true });
+participantSchema.index({ rideId: 1, userId: 1 }, { unique: true });
 
 const Ride = mongoose.model('Ride', rideSchema);
 const Participant = mongoose.model('Participant', participantSchema);
@@ -42,6 +48,10 @@ export class MongoDBStorage extends StorageInterface {
     }
   }
 
+  async disconnect() {
+    await mongoose.disconnect();
+  }
+
   async createRide(ride) {
     const newRide = new Ride(ride);
     await newRide.save();
@@ -53,15 +63,13 @@ export class MongoDBStorage extends StorageInterface {
   }
 
   async updateRide(rideId, updates) {
-    const ride = await Ride.findByIdAndUpdate(
-      rideId,
-      updates,
-      { new: true }
-    );
-    
+    const ride = await Ride.findById(rideId);
     if (!ride) {
       throw new Error('Ride not found');
     }
+
+    Object.assign(ride, updates);
+    await ride.save();
 
     return {
       ...ride.toObject(),
@@ -83,7 +91,7 @@ export class MongoDBStorage extends StorageInterface {
 
   async addParticipant(rideId, participant) {
     const existingParticipant = await Participant.findOne({
-      rideId,
+      rideId: new mongoose.Types.ObjectId(rideId),
       userId: participant.userId
     });
 
@@ -92,7 +100,7 @@ export class MongoDBStorage extends StorageInterface {
     }
 
     const newParticipant = new Participant({
-      rideId,
+      rideId: new mongoose.Types.ObjectId(rideId),
       ...participant
     });
     await newParticipant.save();
@@ -101,18 +109,47 @@ export class MongoDBStorage extends StorageInterface {
 
   async removeParticipant(rideId, userId) {
     const result = await Participant.deleteOne({
-      rideId,
+      rideId: new mongoose.Types.ObjectId(rideId),
       userId
     });
     return result.deletedCount > 0;
   }
 
   async getParticipants(rideId) {
-    const participants = await Participant.find({ rideId });
+    const participants = await Participant.find({
+      rideId: new mongoose.Types.ObjectId(rideId)
+    });
     return participants.map(p => ({
       userId: p.userId,
       username: p.username,
       joinedAt: p.joinedAt
     }));
+  }
+
+  async deleteRide(rideId) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // Delete the ride
+      const ride = await Ride.findByIdAndDelete(rideId).session(session);
+      if (!ride) {
+        await session.abortTransaction();
+        return false;
+      }
+
+      // Delete all participants
+      await Participant.deleteMany({
+        rideId: new mongoose.Types.ObjectId(rideId)
+      }).session(session);
+
+      await session.commitTransaction();
+      return true;
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
   }
 } 

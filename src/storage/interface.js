@@ -80,4 +80,13 @@ export class StorageInterface {
   async getParticipants(rideId) {
     throw new Error('Not implemented');
   }
+
+  /**
+   * Delete a ride and all its participants
+   * @param {string} rideId
+   * @returns {Promise<boolean>}
+   */
+  async deleteRide(rideId) {
+    throw new Error('Not implemented');
+  }
 } 

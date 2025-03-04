@@ -1,15 +1,43 @@
 import { StorageInterface } from './interface.js';
+import { randomUUID } from 'crypto';
+
+const BASE62_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 
 export class MemoryStorage extends StorageInterface {
   constructor() {
     super();
     this.rides = new Map();
     this.participants = new Map();
-    this.lastId = 0;
+  }
+
+  /**
+   * Convert a hex string to base62 string
+   * @param {string} hex
+   * @returns {string}
+   */
+  hexToBase62(hex) {
+    let decimal = BigInt('0x' + hex);
+    let result = '';
+    while (decimal > 0) {
+      result = BASE62_CHARS[decimal % BigInt(62)] + result;
+      decimal = decimal / BigInt(62);
+    }
+    return result;
+  }
+
+  /**
+   * Generate a short unique ID (11 characters)
+   * Base62 encoding of first 16 characters of UUID (64 bits)
+   * @returns {string}
+   */
+  generateShortId() {
+    const uuid = randomUUID().replace(/-/g, '');
+    const first16Chars = uuid.substring(0, 16); // Take first 64 bits
+    return this.hexToBase62(first16Chars).padStart(11, '0');
   }
 
   async createRide(ride) {
-    const id = (++this.lastId).toString();
+    const id = this.generateShortId();
     const newRide = {
       ...ride,
       id,
@@ -78,5 +106,16 @@ export class MemoryStorage extends StorageInterface {
       throw new Error('Ride not found');
     }
     return participants;
+  }
+
+  async deleteRide(rideId) {
+    const ride = this.rides.get(rideId);
+    if (!ride) {
+      return false;
+    }
+
+    this.rides.delete(rideId);
+    this.participants.delete(rideId);
+    return true;
   }
 } 

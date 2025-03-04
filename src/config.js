@@ -47,10 +47,13 @@ export const config = {
 {joinInstructions}
     `.trim(),
     cancelled: '❌ CANCELLED',
-    cancelledInstructions: 'This ride has been cancelled'
+    cancelledInstructions: 'This ride has been cancelled',
+    deleteConfirmation: '⚠️ Are you sure you want to delete this ride? This action cannot be undone.'
   },
   buttons: {
     join: "I'm in! 🚴",
-    leave: "Leave 👋"
+    leave: "Leave 👋",
+    confirmDelete: "Yes, delete ❌",
+    cancelDelete: "No, keep it ✅"
   }
 }; 
