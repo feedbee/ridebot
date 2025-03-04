@@ -11,6 +11,7 @@
  * @property {number} [duration]
  * @property {number} [speedMin]
  * @property {number} [speedMax]
+ * @property {boolean} [cancelled]
  * @property {Date} createdAt
  * @property {number} createdBy
  */

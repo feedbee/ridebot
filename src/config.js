@@ -35,7 +35,7 @@ export const config = {
   },
   messageTemplates: {
     ride: `
-🚲 *{title}*
+🚲 *{title}*{cancelledBadge}
 
 📅 Date: {date}
 ⏰ Time: {time}
@@ -45,7 +45,9 @@ export const config = {
 {participants}
 
 {joinInstructions}
-    `.trim()
+    `.trim(),
+    cancelled: '❌ CANCELLED',
+    cancelledInstructions: 'This ride has been cancelled'
   },
   buttons: {
     join: "I'm in! 🚴",

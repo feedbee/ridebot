@@ -16,6 +16,7 @@ export class BikeRideBot {
   setupHandlers() {
     this.bot.command('newride', this.handleNewRide.bind(this));
     this.bot.command('updateride', this.handleUpdateRide.bind(this));
+    this.bot.command('cancelride', this.handleCancelRide.bind(this));
     this.bot.callbackQuery(/^join:(.+)$/, this.handleJoinRide.bind(this));
     this.bot.callbackQuery(/^leave:(.+)$/, this.handleLeaveRide.bind(this));
     this.bot.command('help', this.handleHelp.bind(this));
@@ -55,6 +56,11 @@ title: Updated Evening Ride
 when: 25.03.2024 19:00
 meet: City Park entrance
 speed: 26-29
+
+To cancel a ride:
+1. Reply to the ride message
+2. Use /cancelride command
+3. Only the ride creator can cancel it
 `;
     await ctx.reply(helpText, { parse_mode: 'Markdown' });
   }
@@ -224,16 +230,60 @@ speed: 26-29
     }
   }
 
+  async handleCancelRide(ctx) {
+    // Check if this is a reply to a message
+    if (!ctx.message.reply_to_message) {
+      await ctx.reply('Please reply to the ride message you want to cancel.');
+      return;
+    }
+
+    try {
+      // Extract ride ID from the original message
+      const originalMessage = ctx.message.reply_to_message.text;
+      const rideIdMatch = originalMessage.match(/🎫\s*Ride\s*#(\w+)/i);
+      
+      if (!rideIdMatch) {
+        await ctx.reply('Could not find ride ID in the message. Please make sure you are replying to a ride message.');
+        return;
+      }
+
+      const rideId = rideIdMatch[1];
+      const ride = await this.storage.getRide(rideId);
+
+      if (ride.createdBy !== ctx.from.id) {
+        await ctx.reply('Only the ride creator can cancel it');
+        return;
+      }
+
+      if (ride.cancelled) {
+        await ctx.reply('This ride is already cancelled');
+        return;
+      }
+
+      const updatedRide = await this.storage.updateRide(rideId, { cancelled: true });
+      await this.updateRideMessage(updatedRide);
+      await ctx.reply('Ride cancelled successfully');
+    } catch (error) {
+      await ctx.reply('Error cancelling ride: ' + error.message);
+    }
+  }
+
   async handleJoinRide(ctx) {
     const rideId = ctx.match[1];
     try {
+      const ride = await this.storage.getRide(rideId);
+      
+      if (ride.cancelled) {
+        await ctx.answerCallbackQuery('This ride has been cancelled');
+        return;
+      }
+
       const success = await this.storage.addParticipant(rideId, {
         userId: ctx.from.id,
         username: ctx.from.username || ctx.from.first_name
       });
 
       if (success) {
-        const ride = await this.storage.getRide(rideId);
         await this.updateRideMessage(ride);
       }
 
@@ -246,10 +296,16 @@ speed: 26-29
   async handleLeaveRide(ctx) {
     const rideId = ctx.match[1];
     try {
+      const ride = await this.storage.getRide(rideId);
+      
+      if (ride.cancelled) {
+        await ctx.answerCallbackQuery('This ride has been cancelled');
+        return;
+      }
+
       const success = await this.storage.removeParticipant(rideId, ctx.from.id);
 
       if (success) {
-        const ride = await this.storage.getRide(rideId);
         await this.updateRideMessage(ride);
       }
 
@@ -269,15 +325,18 @@ speed: 26-29
     const participants = await this.storage.getParticipants(ride.id);
     const keyboard = new InlineKeyboard();
 
-    const participantIds = participants.map(p => p.userId);
-    const buttonText = participantIds.includes(ride.createdBy) 
-      ? config.buttons.leave 
-      : config.buttons.join;
-    const callbackData = participantIds.includes(ride.createdBy)
-      ? `leave:${ride.id}`
-      : `join:${ride.id}`;
+    // Don't show join/leave buttons for cancelled rides
+    if (!ride.cancelled) {
+      const participantIds = participants.map(p => p.userId);
+      const buttonText = participantIds.includes(ride.createdBy) 
+        ? config.buttons.leave 
+        : config.buttons.join;
+      const callbackData = participantIds.includes(ride.createdBy)
+        ? `leave:${ride.id}`
+        : `join:${ride.id}`;
 
-    keyboard.text(buttonText, callbackData);
+      keyboard.text(buttonText, callbackData);
+    }
 
     const message = this.formatRideMessage(ride, participants);
 
@@ -344,8 +403,14 @@ speed: 26-29
     // Add ride ID in a visually pleasing way
     const rideInfo = `🎫 Ride #${ride.id}`;
 
+    const cancelledBadge = ride.cancelled ? ` ${config.messageTemplates.cancelled}` : '';
+    const joinInstructions = ride.cancelled 
+      ? config.messageTemplates.cancelledInstructions
+      : `${rideInfo}\nClick the button below to join or leave the ride`;
+
     return config.messageTemplates.ride
       .replace('{title}', ride.title)
+      .replace('{cancelledBadge}', cancelledBadge)
       .replace('{date}', dateStr)
       .replace('{time}', timeStr)
       .replace('{meetingInfo}', meetingInfo)
@@ -355,7 +420,7 @@ speed: 26-29
       .replace('{speedInfo}', speedInfo)
       .replace('{participantCount}', participants.length)
       .replace('{participants}', participantList)
-      .replace('{joinInstructions}', `${rideInfo}\nClick the button below to join or leave the ride`);
+      .replace('{joinInstructions}', joinInstructions);
   }
 
   parseDateTime(dateTimeStr) {
