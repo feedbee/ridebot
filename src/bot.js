@@ -10,10 +10,12 @@ export class BikeRideBot {
   constructor(storage) {
     this.storage = storage;
     this.bot = new Bot(config.bot.token);
+    this.wizardStates = new Map();
     this.setupHandlers();
   }
 
   setupHandlers() {
+    this.bot.command('help', this.handleHelp.bind(this));
     this.bot.command('newride', this.handleNewRide.bind(this));
     this.bot.command('updateride', this.handleUpdateRide.bind(this));
     this.bot.command('cancelride', this.handleCancelRide.bind(this));
@@ -23,14 +25,24 @@ export class BikeRideBot {
     this.bot.callbackQuery(/^leave:(.+)$/, this.handleLeaveRide.bind(this));
     this.bot.callbackQuery(/^delete:(\w+):(\w+)$/, this.handleDeleteConfirmation.bind(this));
     this.bot.callbackQuery(/^list:(\d+)$/, this.handleListRides.bind(this));
-    this.bot.command('help', this.handleHelp.bind(this));
+    this.bot.callbackQuery(/^wizard:(\w+)(?::(\w+))?$/, this.handleWizardAction.bind(this));
+    this.bot.on('message:text', this.handleWizardInput.bind(this));
   }
 
   async handleHelp(ctx) {
     const helpText = `
 *Bike Ride Bot Help*
 
-Create a new ride with /newride command followed by parameters (one per line):
+Create a new ride:
+1. Using the wizard (recommended):
+Simply send /newride command without any parameters to start an interactive wizard that will:
+- Guide you through each step
+- Allow going back to previous steps
+- Let you skip optional fields
+- Show a final confirmation before creating the ride
+
+2. Using command with parameters:
+Use /newride command followed by parameters (one per line):
 title: Ride title
 when: Date and time (DD.MM.YYYY HH:MM)
 meet: Meeting point (optional)
@@ -49,12 +61,10 @@ dist: 35
 time: 90
 speed: 25-28
 
-To update a ride (only the ride creator can do this):
-1. Reply to the ride message and use /updateride command with new parameters
+Update a ride (only the ride creator can do this):
+- Reply to the ride message and use /updateride command with new parameters
 OR
-2. Use /updateride command with ride ID and new parameters
-
-Example with ID:
+- Use /updateride command with ride ID and new parameters:
 /updateride
 id: abc123
 title: Updated Evening Ride
@@ -162,9 +172,45 @@ Use navigation buttons to move between pages.
     }
   }
 
+  /**
+   * Generate a unique key for wizard state based on user ID and chat ID
+   * @param {number} userId - Telegram user ID
+   * @param {number} chatId - Telegram chat ID
+   * @returns {string} Composite key for wizard state
+   */
+  getWizardStateKey(userId, chatId) {
+    return `${userId}:${chatId}`;
+  }
+
   async handleNewRide(ctx) {
-    const params = this.parseCommandParams(ctx.message.text);
-    
+    // If parameters are provided, use the old behavior
+    if (ctx.message.text.includes('\n')) {
+      const params = this.parseCommandParams(ctx.message.text);
+      return this.handleNewRideWithParams(ctx, params);
+    }
+
+    // Check if there's already an active wizard in this chat
+    const stateKey = this.getWizardStateKey(ctx.from.id, ctx.chat.id);
+    if (this.wizardStates.has(stateKey)) {
+      await ctx.reply('Please complete or cancel the current ride creation wizard before starting a new one.');
+      return;
+    }
+
+    // Otherwise, start the wizard
+    const state = {
+      step: 'title',
+      data: {
+        chatId: ctx.chat.id,
+        createdBy: ctx.from.id
+      },
+      lastMessageId: null // Track the last wizard message
+    };
+    this.wizardStates.set(stateKey, state);
+
+    await this.sendWizardStep(ctx);
+  }
+
+  async handleNewRideWithParams(ctx, params) {
     if (!params.title || !params.when) {
       await ctx.reply(
         'Please provide at least title and date/time. Use /help for format example.'
@@ -630,6 +676,273 @@ Use navigation buttons to move between pages.
       } else {
         await ctx.reply('Error listing rides: ' + error.message);
       }
+    }
+  }
+
+  async handleWizardAction(ctx) {
+    const [action, param] = ctx.match.slice(1);
+    const stateKey = this.getWizardStateKey(ctx.from.id, ctx.chat.id);
+    const state = this.wizardStates.get(stateKey);
+
+    if (!state) {
+      await ctx.answerCallbackQuery('Wizard session expired');
+      return;
+    }
+
+    try {
+      switch (action) {
+        case 'back':
+          switch (state.step) {
+            case 'date': state.step = 'title'; break;
+            case 'route': state.step = 'date'; break;
+            case 'distance': state.step = 'route'; break;
+            case 'duration': state.step = 'distance'; break;
+            case 'speed': state.step = 'duration'; break;
+            case 'meet': state.step = 'speed'; break;
+            case 'confirm': state.step = 'meet'; break;
+          }
+          // Delete the current message since we're going back
+          await ctx.deleteMessage();
+          await this.sendWizardStep(ctx);
+          break;
+
+        case 'skip':
+          switch (state.step) {
+            case 'route': state.step = 'distance'; break;
+            case 'distance': state.step = 'duration'; break;
+            case 'duration': state.step = 'speed'; break;
+            case 'speed': state.step = 'meet'; break;
+            case 'meet': state.step = 'confirm'; break;
+          }
+          // Update the current message with new step
+          await this.sendWizardStep(ctx, true);
+          break;
+
+        case 'cancel':
+          await ctx.deleteMessage();
+          this.wizardStates.delete(stateKey);
+          await ctx.reply('Ride creation cancelled');
+          await ctx.answerCallbackQuery();
+          return;
+
+        case 'confirm':
+          const ride = await this.storage.createRide(state.data);
+          const participants = await this.storage.getParticipants(ride.id);
+          const keyboard = new InlineKeyboard()
+            .text(config.buttons.join, `join:${ride.id}`);
+
+          const message = this.formatRideMessage(ride, participants);
+          await ctx.deleteMessage();
+          const sentMessage = await ctx.reply(message, {
+            parse_mode: 'Markdown',
+            reply_markup: keyboard
+          });
+
+          await this.storage.updateRide(ride.id, {
+            messageId: sentMessage.message_id
+          });
+
+          this.wizardStates.delete(stateKey);
+          await ctx.answerCallbackQuery('Ride created successfully!');
+          return;
+      }
+
+      await ctx.answerCallbackQuery();
+    } catch (error) {
+      await ctx.answerCallbackQuery('Error: ' + error.message);
+    }
+  }
+
+  async handleWizardInput(ctx) {
+    // Skip if it's a command
+    if (ctx.message.text.startsWith('/')) return;
+
+    const stateKey = this.getWizardStateKey(ctx.from.id, ctx.chat.id);
+    const state = this.wizardStates.get(stateKey);
+    if (!state) return;
+
+    try {
+      switch (state.step) {
+        case 'title':
+          state.data.title = ctx.message.text;
+          state.step = 'date';
+          break;
+
+        case 'date':
+          state.data.date = this.parseDateTime(ctx.message.text);
+          state.step = 'route';
+          break;
+
+        case 'route':
+          if (RouteParser.isValidRouteUrl(ctx.message.text)) {
+            state.data.routeLink = ctx.message.text;
+            if (RouteParser.isKnownProvider(ctx.message.text)) {
+              const routeInfo = await RouteParser.parseRoute(ctx.message.text);
+              if (routeInfo) {
+                state.data.distance = routeInfo.distance;
+                state.data.duration = routeInfo.duration;
+                state.step = 'speed';
+              }
+            } else {
+              state.step = 'distance';
+            }
+          } else {
+            await ctx.reply('Invalid route URL format. Please provide a valid URL or click Skip.');
+            return;
+          }
+          break;
+
+        case 'distance':
+          state.data.distance = parseFloat(ctx.message.text);
+          state.step = 'duration';
+          break;
+
+        case 'duration':
+          state.data.duration = parseInt(ctx.message.text);
+          state.step = 'speed';
+          break;
+
+        case 'speed':
+          const [min, max] = ctx.message.text.split('-').map(s => parseFloat(s.trim()));
+          if (!isNaN(min)) state.data.speedMin = min;
+          if (!isNaN(max)) state.data.speedMax = max;
+          state.step = 'meet';
+          break;
+
+        case 'meet':
+          state.data.meetingPoint = ctx.message.text;
+          state.step = 'confirm';
+          break;
+      }
+
+      // Delete user's input message
+      await ctx.deleteMessage();
+      
+      // Delete previous wizard message if it exists
+      if (state.lastMessageId) {
+        try {
+          await ctx.api.deleteMessage(ctx.chat.id, state.lastMessageId);
+        } catch (error) {
+          console.error('Error deleting previous wizard message:', error);
+        }
+      }
+
+      await this.sendWizardStep(ctx);
+    } catch (error) {
+      await ctx.reply('Error: ' + error.message);
+    }
+  }
+
+  async sendWizardStep(ctx, edit = false) {
+    const stateKey = this.getWizardStateKey(ctx.from.id, ctx.chat.id);
+    const state = this.wizardStates.get(stateKey);
+    if (!state) return;
+
+    const keyboard = new InlineKeyboard();
+    let message = '';
+
+    switch (state.step) {
+      case 'title':
+        message = '📝 Please enter the ride title:';
+        keyboard.text('❌ Cancel', 'wizard:cancel');
+        break;
+
+      case 'date':
+        message = '📅 Please enter the date and time (DD.MM.YYYY HH:MM):';
+        keyboard
+          .text('⬅️ Back', 'wizard:back')
+          .text('❌ Cancel', 'wizard:cancel');
+        break;
+
+      case 'route':
+        message = '🔗 Please enter the route link (or skip):';
+        keyboard
+          .text('⬅️ Back', 'wizard:back')
+          .text('⏩ Skip', 'wizard:skip')
+          .row()
+          .text('❌ Cancel', 'wizard:cancel');
+        break;
+
+      case 'distance':
+        message = '📏 Please enter the distance in kilometers (or skip):';
+        keyboard
+          .text('⬅️ Back', 'wizard:back')
+          .text('⏩ Skip', 'wizard:skip')
+          .row()
+          .text('❌ Cancel', 'wizard:cancel');
+        break;
+
+      case 'duration':
+        message = '⏱ Please enter the duration in minutes (or skip):';
+        keyboard
+          .text('⬅️ Back', 'wizard:back')
+          .text('⏩ Skip', 'wizard:skip')
+          .row()
+          .text('❌ Cancel', 'wizard:cancel');
+        break;
+
+      case 'speed':
+        message = '🚴 Please enter the speed range in km/h (e.g., 25-28) or skip:';
+        keyboard
+          .text('⬅️ Back', 'wizard:back')
+          .text('⏩ Skip', 'wizard:skip')
+          .row()
+          .text('❌ Cancel', 'wizard:cancel');
+        break;
+
+      case 'meet':
+        message = '📍 Please enter the meeting point (or skip):';
+        keyboard
+          .text('⬅️ Back', 'wizard:back')
+          .text('⏩ Skip', 'wizard:skip')
+          .row()
+          .text('❌ Cancel', 'wizard:cancel');
+        break;
+
+      case 'confirm':
+        const { title, date, routeLink, distance, duration, speedMin, speedMax, meetingPoint } = state.data;
+        message = '*Please confirm the ride details:*\n\n';
+        message += `📝 Title: ${title}\n`;
+        message += `📅 Date: ${date.toLocaleDateString('en-GB')} ${date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}\n`;
+        if (routeLink) message += `🔗 Route: ${routeLink}\n`;
+        if (distance) message += `📏 Distance: ${distance} km\n`;
+        if (duration) {
+          const hours = Math.floor(duration / 60);
+          const minutes = duration % 60;
+          message += `⏱ Duration: ${hours}h ${minutes}m\n`;
+        }
+        if (speedMin || speedMax) {
+          message += '🚴 Speed: ';
+          if (speedMin && speedMax) message += `${speedMin}-${speedMax} km/h\n`;
+          else if (speedMin) message += `min ${speedMin} km/h\n`;
+          else message += `max ${speedMax} km/h\n`;
+        }
+        if (meetingPoint) message += `📍 Meeting Point: ${meetingPoint}\n`;
+
+        keyboard
+          .text('⬅️ Back', 'wizard:back')
+          .text('✅ Create', 'wizard:confirm')
+          .row()
+          .text('❌ Cancel', 'wizard:cancel');
+        break;
+    }
+
+    try {
+      let sentMessage;
+      if (edit && ctx.callbackQuery) {
+        sentMessage = await ctx.editMessageText(message, {
+          parse_mode: 'Markdown',
+          reply_markup: keyboard
+        });
+      } else {
+        sentMessage = await ctx.reply(message, {
+          parse_mode: 'Markdown',
+          reply_markup: keyboard
+        });
+      }
+      state.lastMessageId = sentMessage.message_id;
+    } catch (error) {
+      console.error('Error sending wizard step:', error);
     }
   }
 } 
