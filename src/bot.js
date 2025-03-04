@@ -22,7 +22,7 @@ export class BikeRideBot {
     this.bot.callbackQuery(/^join:(.+)$/, this.handleJoinRide.bind(this));
     this.bot.callbackQuery(/^leave:(.+)$/, this.handleLeaveRide.bind(this));
     this.bot.callbackQuery(/^delete:(\w+):(\w+)$/, this.handleDeleteConfirmation.bind(this));
-    this.bot.callbackQuery(/^list:(\d+)$/, this.handleListPage.bind(this));
+    this.bot.callbackQuery(/^list:(\d+)$/, this.handleListRides.bind(this));
     this.bot.command('help', this.handleHelp.bind(this));
   }
 
@@ -587,31 +587,8 @@ Use navigation buttons to move between pages.
   async handleListRides(ctx) {
     try {
       const PAGE_SIZE = 5;
-      const { total, rides } = await this.storage.getRidesByCreator(
-        ctx.from.id,
-        0,
-        PAGE_SIZE
-      );
-
-      const message = `Found ${total} ride${total !== 1 ? 's' : ''}\n\n${this.formatRidesList(rides)}`;
-      
-      // Only add pagination if there are more pages
-      const keyboard = total > PAGE_SIZE ? new InlineKeyboard()
-        .text('Next ▶️', `list:1`) : null;
-
-      await ctx.reply(message, {
-        parse_mode: 'Markdown',
-        reply_markup: keyboard
-      });
-    } catch (error) {
-      await ctx.reply('Error listing rides: ' + error.message);
-    }
-  }
-
-  async handleListPage(ctx) {
-    try {
-      const PAGE_SIZE = 5;
-      const page = parseInt(ctx.match[1]);
+      // If it's a callback query, get page from match, otherwise start from 0
+      const page = ctx.callbackQuery ? parseInt(ctx.match[1]) : 0;
       
       const { total, rides } = await this.storage.getRidesByCreator(
         ctx.from.id,
@@ -619,25 +596,40 @@ Use navigation buttons to move between pages.
         PAGE_SIZE
       );
 
-      const message = `Found ${total} ride${total !== 1 ? 's' : ''}\n\n${this.formatRidesList(rides)}`;
-      
       const totalPages = Math.ceil(total / PAGE_SIZE);
       const keyboard = new InlineKeyboard();
       
+      // Add Prev/Next navigation buttons if needed
       if (page > 0) {
-        keyboard.text('◀️ Prev', `list:${page - 1}`);
+        keyboard.text('◀️ Previous', `list:${page - 1}`);
       }
       if (page < totalPages - 1) {
         keyboard.text('Next ▶️', `list:${page + 1}`);
       }
 
-      await ctx.editMessageText(message, {
-        parse_mode: 'Markdown',
-        reply_markup: keyboard.length > 0 ? keyboard : undefined
-      });
-      await ctx.answerCallbackQuery();
+      const message = `Found ${total} ride${total !== 1 ? 's' : ''}\n\n${this.formatRidesList(rides)}`;
+      const pageInfo = totalPages > 1 ? `\nPage ${page + 1} of ${totalPages}` : '';
+
+      if (ctx.callbackQuery) {
+        // Update existing message
+        await ctx.editMessageText(message + pageInfo, {
+          parse_mode: 'Markdown',
+          reply_markup: keyboard
+        });
+        await ctx.answerCallbackQuery();
+      } else {
+        // Send new message
+        await ctx.reply(message + pageInfo, {
+          parse_mode: 'Markdown',
+          reply_markup: keyboard
+        });
+      }
     } catch (error) {
-      await ctx.answerCallbackQuery('Error loading rides');
+      if (ctx.callbackQuery) {
+        await ctx.answerCallbackQuery('Error loading rides');
+      } else {
+        await ctx.reply('Error listing rides: ' + error.message);
+      }
     }
   }
 } 
