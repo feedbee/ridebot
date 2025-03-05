@@ -48,6 +48,78 @@ export const config = {
     }
   },
   messageTemplates: {
+    help: `
+*🚲 Bike Ride Bot Help*
+
+*➕ Creating a New Ride*
+Create a new ride:
+1. Using the wizard (recommended):
+Simply send \`/newride\` command without any parameters to start an interactive wizard that will guide you through each step.
+
+2. Using command with parameters:
+Use \`/newride\` command followed by parameters (one per line):
+\`\`\`
+/newride
+title: Ride title
+when: Date and time (e.g., "tomorrow at 6pm", "next saturday 10am", "21 Jul 14:30")
+meet: Meeting point (optional)
+route: Route link (optional)
+dist: Distance in km (optional)
+time: Duration in minutes (optional)
+speed: Speed range in km/h (optional)
+\`\`\`
+
+Example:
+\`\`\`
+/newride
+title: Evening Ride
+when: tomorrow at 6pm
+meet: Bike Shop on Main St
+route: https://www.strava.com/routes/123456
+dist: 35
+time: 90
+speed: 25-28
+\`\`\`
+
+*Managing Rides*
+
+*🔄 Updating a Ride*
+Only the ride creator can update. Two ways:
+1. Reply to the ride message with \`/updateride\` and new parameters
+2. Use \`/updateride\` with ride ID:
+\`\`\`
+/updateride
+id: abc123
+title: Updated Evening Ride
+when: 25.03.2024 19:00
+meet: City Park entrance
+speed: 26-29
+\`\`\`
+
+*❌ Cancelling a Ride*
+Only the ride creator can cancel. Two ways:
+1. Reply to the ride message with \`/cancelride\`
+2. Use \`/cancelride\` with ID:
+\`\`\`
+/cancelride
+id: abc123
+\`\`\`
+
+*🗑 Deleting a Ride*
+Only the ride creator can delete. Two ways:
+1. Reply to the ride message with \`/deleteride\`
+2. Use \`/deleteride\` with ID:
+\`\`\`
+/deleteride
+id: abc123
+\`\`\`
+You'll need to confirm deletion when prompted.
+
+*📋 Listing Your Rides*
+Use \`/listrides\` to see all rides you've created:
+• Rides are sorted by date (newest first)
+• Use navigation buttons to browse pages
+    `.trim(),
     ride: `
 🚲 *{title}*{cancelledBadge}
 

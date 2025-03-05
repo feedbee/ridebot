@@ -31,69 +31,7 @@ export class BikeRideBot {
   }
 
   async handleHelp(ctx) {
-    const helpText = `
-*Bike Ride Bot Help*
-
-Create a new ride:
-1. Using the wizard (recommended):
-Simply send /newride command without any parameters to start an interactive wizard that will:
-- Guide you through each step
-- Allow going back to previous steps
-- Let you skip optional fields
-- Show a final confirmation before creating the ride
-
-2. Using command with parameters:
-Use /newride command followed by parameters (one per line):
-title: Ride title
-when: Date and time (DD.MM.YYYY HH:MM)
-meet: Meeting point (optional)
-route: Route link (optional)
-dist: Distance in km (optional)
-time: Duration in minutes (optional)
-speed: Speed range in km/h (optional)
-
-Example:
-/newride
-title: Evening Ride
-when: 25.03.2024 18:30
-meet: Bike Shop on Main St
-route: https://www.strava.com/routes/123456
-dist: 35
-time: 90
-speed: 25-28
-
-Update a ride (only the ride creator can do this):
-- Reply to the ride message and use /updateride command with new parameters
-OR
-- Use /updateride command with ride ID and new parameters:
-/updateride
-id: abc123
-title: Updated Evening Ride
-when: 25.03.2024 19:00
-meet: City Park entrance
-speed: 26-29
-
-To cancel a ride (only the ride creator can do this):
-1. Reply to the ride message and use /cancelride command
-OR
-2. Use /cancelride command with ride ID:
-/cancelride
-id: abc123
-
-To delete a ride (only the ride creator can do this):
-1. Reply to the ride message and use /deleteride command
-OR
-2. Use /deleteride command with ride ID:
-/deleteride
-id: abc123
-
-After using /deleteride, confirm the deletion when prompted.
-
-To list your rides:
-Use /listrides command to see all rides you've created, sorted by date (newest first).
-Use navigation buttons to move between pages.
-`;
-    await ctx.reply(helpText, { parse_mode: 'Markdown' });
+    await ctx.reply(config.messageTemplates.help, { parse_mode: 'Markdown' });
   }
 
   async start() {
