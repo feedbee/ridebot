@@ -3,6 +3,7 @@ import { config } from './config.js';
 import { RouteParser } from './utils/route-parser.js';
 import { StorageInterface } from './storage/interface.js';
 import { DateParser } from './utils/date-parser.js';
+import { WizardManager } from './wizard/WizardManager.js';
 
 export class BikeRideBot {
   /**
@@ -11,7 +12,7 @@ export class BikeRideBot {
   constructor(storage) {
     this.storage = storage;
     this.bot = new Bot(config.bot.token);
-    this.wizardStates = new Map();
+    this.wizard = new WizardManager(storage);
     this.setupHandlers();
   }
 
@@ -26,8 +27,8 @@ export class BikeRideBot {
     this.bot.callbackQuery(/^leave:(.+)$/, this.handleLeaveRide.bind(this));
     this.bot.callbackQuery(/^delete:(\w+):(\w+)$/, this.handleDeleteConfirmation.bind(this));
     this.bot.callbackQuery(/^list:(\d+)$/, this.handleListRides.bind(this));
-    this.bot.callbackQuery(/^wizard:(\w+)(?::(\w+))?$/, this.handleWizardAction.bind(this));
-    this.bot.on('message:text', this.handleWizardInput.bind(this));
+    this.bot.callbackQuery(/^wizard:(\w+)(?::(\w+))?$/, this.wizard.handleAction.bind(this.wizard));
+    this.bot.on('message:text', this.wizard.handleInput.bind(this.wizard));
   }
 
   async handleHelp(ctx) {
@@ -173,16 +174,6 @@ Use navigation buttons to move between pages.
     }
   }
 
-  /**
-   * Generate a unique key for wizard state based on user ID and chat ID
-   * @param {number} userId - Telegram user ID
-   * @param {number} chatId - Telegram chat ID
-   * @returns {string} Composite key for wizard state
-   */
-  getWizardStateKey(userId, chatId) {
-    return `${userId}:${chatId}`;
-  }
-
   async handleNewRide(ctx) {
     // If parameters are provided, use the old behavior
     if (ctx.message.text.includes('\n')) {
@@ -190,46 +181,8 @@ Use navigation buttons to move between pages.
       return this.handleNewRideWithParams(ctx, params);
     }
 
-    // Check if there's already an active wizard in this chat
-    const stateKey = this.getWizardStateKey(ctx.from.id, ctx.chat.id);
-    if (this.wizardStates.has(stateKey)) {
-      await ctx.reply('Please complete or cancel the current ride creation wizard before starting a new one.');
-      return;
-    }
-
     // Otherwise, start the wizard
-    const state = {
-      step: 'title',
-      data: {
-        chatId: ctx.chat.id,
-        createdBy: ctx.from.id
-      },
-      lastMessageId: null // Track the last wizard message
-    };
-    this.wizardStates.set(stateKey, state);
-
-    await this.sendWizardStep(ctx);
-  }
-
-  /**
-   * Parse and validate date/time input
-   * @param {string} text - Date/time text to parse
-   * @param {Context} ctx - Grammy context for sending error messages
-   * @returns {Date|null} Parsed date or null if invalid
-   */
-  async parseDateTimeInput(text, ctx) {
-    const parsedDate = DateParser.parseDateTime(text);
-    if (!parsedDate) {
-      await ctx.reply('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30');
-      return null;
-    }
-    
-    if (DateParser.isPast(parsedDate.date)) {
-      await ctx.reply('❌ The ride can\'t be scheduled in the past! Please provide a future date and time.');
-      return null;
-    }
-
-    return parsedDate.date;
+    await this.wizard.startWizard(ctx);
   }
 
   async handleNewRideWithParams(ctx, params) {
@@ -688,276 +641,24 @@ Use navigation buttons to move between pages.
     }
   }
 
-  async handleWizardAction(ctx) {
-    const [action, param] = ctx.match.slice(1);
-    const stateKey = this.getWizardStateKey(ctx.from.id, ctx.chat.id);
-    const state = this.wizardStates.get(stateKey);
-
-    if (!state) {
-      await ctx.answerCallbackQuery('Wizard session expired');
-      return;
+  /**
+   * Parse and validate date/time input
+   * @param {string} text - Date/time text to parse
+   * @param {Context} ctx - Grammy context for sending error messages
+   * @returns {Date|null} Parsed date or null if invalid
+   */
+  async parseDateTimeInput(text, ctx) {
+    const parsedDate = DateParser.parseDateTime(text);
+    if (!parsedDate) {
+      await ctx.reply('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30');
+      return null;
+    }
+    
+    if (DateParser.isPast(parsedDate.date)) {
+      await ctx.reply('❌ The ride can\'t be scheduled in the past! Please provide a future date and time.');
+      return null;
     }
 
-    try {
-      switch (action) {
-        case 'back':
-          switch (state.step) {
-            case 'date': state.step = 'title'; break;
-            case 'route': state.step = 'date'; break;
-            case 'distance': state.step = 'route'; break;
-            case 'duration': state.step = 'distance'; break;
-            case 'speed': state.step = 'duration'; break;
-            case 'meet': state.step = 'speed'; break;
-            case 'confirm': state.step = 'meet'; break;
-          }
-          // Delete the current message since we're going back
-          await ctx.deleteMessage();
-          await this.sendWizardStep(ctx);
-          break;
-
-        case 'skip':
-          switch (state.step) {
-            case 'route': state.step = 'distance'; break;
-            case 'distance': state.step = 'duration'; break;
-            case 'duration': state.step = 'speed'; break;
-            case 'speed': state.step = 'meet'; break;
-            case 'meet': state.step = 'confirm'; break;
-          }
-          // Update the current message with new step
-          await this.sendWizardStep(ctx, true);
-          break;
-
-        case 'cancel':
-          await ctx.deleteMessage();
-          this.wizardStates.delete(stateKey);
-          await ctx.reply('Ride creation cancelled');
-          await ctx.answerCallbackQuery();
-          return;
-
-        case 'confirm':
-          const ride = await this.storage.createRide(state.data);
-          const participants = await this.storage.getParticipants(ride.id);
-          const keyboard = new InlineKeyboard()
-            .text(config.buttons.join, `join:${ride.id}`);
-
-          const message = this.formatRideMessage(ride, participants);
-          await ctx.deleteMessage();
-          const sentMessage = await ctx.reply(message, {
-            parse_mode: 'Markdown',
-            reply_markup: keyboard
-          });
-
-          await this.storage.updateRide(ride.id, {
-            messageId: sentMessage.message_id
-          });
-
-          this.wizardStates.delete(stateKey);
-          await ctx.answerCallbackQuery('Ride created successfully!');
-          return;
-      }
-
-      await ctx.answerCallbackQuery();
-    } catch (error) {
-      await ctx.answerCallbackQuery('Error: ' + error.message);
-    }
-  }
-
-  async handleWizardInput(ctx) {
-    // Skip if it's a command
-    if (ctx.message.text.startsWith('/')) return;
-
-    const stateKey = this.getWizardStateKey(ctx.from.id, ctx.chat.id);
-    const state = this.wizardStates.get(stateKey);
-    if (!state) return;
-
-    try {
-      switch (state.step) {
-        case 'title':
-          state.data.title = ctx.message.text;
-          state.step = 'date';
-          break;
-
-        case 'date':
-          const date = await this.parseDateTimeInput(ctx.message.text, ctx);
-          if (!date) return;
-
-          state.data.datetime = date;
-          const { date: dateStr, time: timeStr } = DateParser.formatDateTime(date);
-          state.data.date = dateStr;
-          state.data.time = timeStr;
-          state.step = 'route';
-          break;
-
-        case 'route':
-          if (RouteParser.isValidRouteUrl(ctx.message.text)) {
-            state.data.routeLink = ctx.message.text;
-            if (RouteParser.isKnownProvider(ctx.message.text)) {
-              const routeInfo = await RouteParser.parseRoute(ctx.message.text);
-              if (routeInfo) {
-                state.data.distance = routeInfo.distance;
-                state.data.duration = routeInfo.duration;
-                state.step = 'speed';
-              }
-            } else {
-              state.step = 'distance';
-            }
-          } else {
-            await ctx.reply('Invalid route URL format. Please provide a valid URL or click Skip.');
-            return;
-          }
-          break;
-
-        case 'distance':
-          state.data.distance = parseFloat(ctx.message.text);
-          state.step = 'duration';
-          break;
-
-        case 'duration':
-          state.data.duration = parseInt(ctx.message.text);
-          state.step = 'speed';
-          break;
-
-        case 'speed':
-          const [min, max] = ctx.message.text.split('-').map(s => parseFloat(s.trim()));
-          if (!isNaN(min)) state.data.speedMin = min;
-          if (!isNaN(max)) state.data.speedMax = max;
-          state.step = 'meet';
-          break;
-
-        case 'meet':
-          state.data.meetingPoint = ctx.message.text;
-          state.step = 'confirm';
-          break;
-      }
-
-      // Delete user's input message
-      await ctx.deleteMessage();
-      
-      // Delete previous wizard message if it exists
-      if (state.lastMessageId) {
-        try {
-          await ctx.api.deleteMessage(ctx.chat.id, state.lastMessageId);
-        } catch (error) {
-          console.error('Error deleting previous wizard message:', error);
-        }
-      }
-
-      await this.sendWizardStep(ctx);
-    } catch (error) {
-      await ctx.reply('Error: ' + error.message);
-    }
-  }
-
-  async sendWizardStep(ctx, edit = false) {
-    const stateKey = this.getWizardStateKey(ctx.from.id, ctx.chat.id);
-    const state = this.wizardStates.get(stateKey);
-    if (!state) return;
-
-    const keyboard = new InlineKeyboard();
-    let message = '';
-
-    switch (state.step) {
-      case 'title':
-        message = '📝 Please enter the ride title:';
-        keyboard.text(config.buttons.cancel, 'wizard:cancel');
-        break;
-
-      case 'date':
-        message = '📅 Please enter the date and time (DD.MM.YYYY HH:MM):';
-        keyboard
-          .text(config.buttons.back, 'wizard:back')
-          .text(config.buttons.cancel, 'wizard:cancel');
-        break;
-
-      case 'route':
-        message = '🔗 Please enter the route link (or skip):';
-        keyboard
-          .text(config.buttons.back, 'wizard:back')
-          .text(config.buttons.skip, 'wizard:skip')
-          .row()
-          .text(config.buttons.cancel, 'wizard:cancel');
-        break;
-
-      case 'distance':
-        message = '📏 Please enter the distance in kilometers (or skip):';
-        keyboard
-          .text(config.buttons.back, 'wizard:back')
-          .text(config.buttons.skip, 'wizard:skip')
-          .row()
-          .text(config.buttons.cancel, 'wizard:cancel');
-        break;
-
-      case 'duration':
-        message = '⏱ Please enter the duration in minutes (or skip):';
-        keyboard
-          .text(config.buttons.back, 'wizard:back')
-          .text(config.buttons.skip, 'wizard:skip')
-          .row()
-          .text(config.buttons.cancel, 'wizard:cancel');
-        break;
-
-      case 'speed':
-        message = '🚴 Please enter the speed range in km/h (e.g., 25-28) or skip:';
-        keyboard
-          .text(config.buttons.back, 'wizard:back')
-          .text(config.buttons.skip, 'wizard:skip')
-          .row()
-          .text(config.buttons.cancel, 'wizard:cancel');
-        break;
-
-      case 'meet':
-        message = '📍 Please enter the meeting point (or skip):';
-        keyboard
-          .text(config.buttons.back, 'wizard:back')
-          .text(config.buttons.skip, 'wizard:skip')
-          .row()
-          .text(config.buttons.cancel, 'wizard:cancel');
-        break;
-
-      case 'confirm':
-        const { title, date, routeLink, distance, duration, speedMin, speedMax, meetingPoint } = state.data;
-        message = '*Please confirm the ride details:*\n\n';
-        message += `📝 Title: ${title}\n`;
-        message += `📅 Date: ${date.toLocaleDateString(config.dateFormat.locale)} ${date.toLocaleTimeString(config.dateFormat.locale, config.dateFormat.time)}\n`;
-        if (routeLink) message += `🔗 Route: ${routeLink}\n`;
-        if (distance) message += `📏 Distance: ${distance} km\n`;
-        if (duration) {
-          const hours = Math.floor(duration / 60);
-          const minutes = duration % 60;
-          message += `⏱ Duration: ${hours}h ${minutes}m\n`;
-        }
-        if (speedMin || speedMax) {
-          message += '🚴 Speed: ';
-          if (speedMin && speedMax) message += `${speedMin}-${speedMax} km/h\n`;
-          else if (speedMin) message += `min ${speedMin} km/h\n`;
-          else message += `max ${speedMax} km/h\n`;
-        }
-        if (meetingPoint) message += `📍 Meeting Point: ${meetingPoint}\n`;
-
-        keyboard
-          .text(config.buttons.back, 'wizard:back')
-          .text(config.buttons.create, 'wizard:confirm')
-          .row()
-          .text(config.buttons.cancel, 'wizard:cancel');
-        break;
-    }
-
-    try {
-      let sentMessage;
-      if (edit && ctx.callbackQuery) {
-        sentMessage = await ctx.editMessageText(message, {
-          parse_mode: 'Markdown',
-          reply_markup: keyboard
-        });
-      } else {
-        sentMessage = await ctx.reply(message, {
-          parse_mode: 'Markdown',
-          reply_markup: keyboard
-        });
-      }
-      state.lastMessageId = sentMessage.message_id;
-    } catch (error) {
-      console.error('Error sending wizard step:', error);
-    }
+    return parsedDate.date;
   }
 } 
