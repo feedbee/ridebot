@@ -163,6 +163,8 @@ Use \`/listrides\` to see all rides you've created:
     skip: "⏩ Skip",
     cancel: "❌ Cancel",
     create: "✅ Create",
+    update: "✅ Update",
+    keep: "↩️ Keep current",
     previous: "◀️ Previous",
     next: "Next ▶️"
   }

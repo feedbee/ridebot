@@ -23,6 +23,8 @@ export class BikeRideBot {
     this.bot.command('deleteride', this.handleDeleteRide.bind(this));
     this.bot.command('listrides', this.handleListRides.bind(this));
     this.bot.command('dupride', this.handleDuplicateRide.bind(this));
+    this.bot.command('dupridex', this.handleDuplicateRideWizard.bind(this));
+    this.bot.command('updateridex', this.handleUpdateRideWizard.bind(this));
     this.bot.callbackQuery(/^join:(.+)$/, this.handleJoinRide.bind(this));
     this.bot.callbackQuery(/^leave:(.+)$/, this.handleLeaveRide.bind(this));
     this.bot.callbackQuery(/^delete:(\w+):(\w+)$/, this.handleDeleteConfirmation.bind(this));
@@ -122,7 +124,7 @@ export class BikeRideBot {
     return `${userId}:${chatId}`;
   }
 
-  async handleNewRide(ctx) {
+  async handleNewRide(ctx, prefillData = null) {
     // If parameters are provided, use the old behavior
     if (ctx.message.text.includes('\n')) {
       const params = this.parseCommandParams(ctx.message.text);
@@ -136,14 +138,17 @@ export class BikeRideBot {
       return;
     }
 
-    // Otherwise, start the wizard
+    // Initialize wizard state with prefilled data if provided
     const state = {
       step: 'title',
       data: {
         chatId: ctx.chat.id,
-        createdBy: ctx.from.id
+        createdBy: ctx.from.id,
+        ...(prefillData || {})  // Merge prefilled data if provided
       },
-      lastMessageId: null // Track the last wizard message
+      lastMessageId: null,
+      isUpdate: prefillData?.isUpdate || false,  // Flag to indicate if this is an update
+      originalRideId: prefillData?.originalRideId // Store original ride ID for updates
     };
     this.wizardStates.set(stateKey, state);
 
@@ -654,6 +659,20 @@ export class BikeRideBot {
           await this.sendWizardStep(ctx);
           break;
 
+        case 'keep':
+          // Move to the next step based on current step
+          switch (state.step) {
+            case 'title': state.step = 'date'; break;
+            case 'date': state.step = 'route'; break;
+            case 'route': state.step = 'distance'; break;
+            case 'distance': state.step = 'duration'; break;
+            case 'duration': state.step = 'speed'; break;
+            case 'speed': state.step = 'meet'; break;
+            case 'meet': state.step = 'confirm'; break;
+          }
+          await this.sendWizardStep(ctx, true);
+          break;
+
         case 'skip':
           switch (state.step) {
             case 'route': state.step = 'distance'; break;
@@ -674,24 +693,57 @@ export class BikeRideBot {
           return;
 
         case 'confirm':
-          const ride = await this.storage.createRide(state.data);
-          const participants = await this.storage.getParticipants(ride.id);
-          const keyboard = new InlineKeyboard()
-            .text(config.buttons.join, `join:${ride.id}`);
+          if (state.isUpdate) {
+            // Update existing ride
+            const updates = {
+              title: state.data.title,
+              date: state.data.datetime,
+              meetingPoint: state.data.meetingPoint,
+              routeLink: state.data.routeLink,
+              distance: state.data.distance,
+              duration: state.data.duration,
+              speedMin: state.data.speedMin,
+              speedMax: state.data.speedMax
+            };
 
-          const message = this.formatRideMessage(ride, participants);
-          await ctx.deleteMessage();
-          const sentMessage = await ctx.reply(message, {
-            parse_mode: 'Markdown',
-            reply_markup: keyboard
-          });
+            const updatedRide = await this.storage.updateRide(state.data.originalRideId, updates);
+            await this.updateRideMessage(updatedRide);
+            await ctx.deleteMessage();
+            this.wizardStates.delete(stateKey);
+            await ctx.answerCallbackQuery('Ride updated successfully!');
+          } else {
+            // Create new ride
+            const ride = await this.storage.createRide({
+              title: state.data.title,
+              date: state.data.datetime,
+              chatId: state.data.chatId,
+              createdBy: state.data.createdBy,
+              meetingPoint: state.data.meetingPoint,
+              routeLink: state.data.routeLink,
+              distance: state.data.distance,
+              duration: state.data.duration,
+              speedMin: state.data.speedMin,
+              speedMax: state.data.speedMax
+            });
 
-          await this.storage.updateRide(ride.id, {
-            messageId: sentMessage.message_id
-          });
+            const participants = await this.storage.getParticipants(ride.id);
+            const keyboard = new InlineKeyboard()
+              .text(config.buttons.join, `join:${ride.id}`);
 
-          this.wizardStates.delete(stateKey);
-          await ctx.answerCallbackQuery('Ride created successfully!');
+            const message = this.formatRideMessage(ride, participants);
+            await ctx.deleteMessage();
+            const sentMessage = await ctx.reply(message, {
+              parse_mode: 'Markdown',
+              reply_markup: keyboard
+            });
+
+            await this.storage.updateRide(ride.id, {
+              messageId: sentMessage.message_id
+            });
+
+            this.wizardStates.delete(stateKey);
+            await ctx.answerCallbackQuery(state.data.originalRideId ? 'Ride duplicated successfully!' : 'Ride created successfully!');
+          }
           return;
       }
 
@@ -721,9 +773,6 @@ export class BikeRideBot {
           if (!date) return;
 
           state.data.datetime = date;
-          const { date: dateStr, time: timeStr } = DateParser.formatDateTime(date);
-          state.data.date = dateStr;
-          state.data.time = timeStr;
           state.step = 'route';
           break;
 
@@ -795,69 +844,123 @@ export class BikeRideBot {
     const keyboard = new InlineKeyboard();
     let message = '';
 
+    // Helper to get current value display
+    const getCurrentValue = (field, formatter = null) => {
+      const value = state.data[field];
+      if (value === undefined || value === null) return '';
+      return `\n\nCurrent value: ${formatter ? formatter(value) : value}`;
+    };
+
+    // Helper to check if there's a current value
+    const hasCurrentValue = (field) => {
+      const value = state.data[field];
+      return value !== undefined && value !== null;
+    };
+
+    // Helper to add keep button if there's a current value
+    const addKeepButton = (field) => {
+      if (hasCurrentValue(field)) {
+        keyboard.text(config.buttons.keep, 'wizard:keep');
+      }
+    };
+
     switch (state.step) {
       case 'title':
-        message = '📝 Please enter the ride title:';
+        message = '📝 Please enter the ride title:' + getCurrentValue('title');
+        addKeepButton('title');
         keyboard.text(config.buttons.cancel, 'wizard:cancel');
         break;
 
       case 'date':
-        message = '📅 Please enter the date and time:\nYou can use natural language like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30';
+        const dateFormatter = (date) => date.toLocaleString(config.dateFormat.locale);
+        message = '📅 When is the ride?\nYou can use natural language like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30' + 
+          getCurrentValue('datetime', dateFormatter);
+        addKeepButton('datetime');
         keyboard
           .text(config.buttons.back, 'wizard:back')
           .text(config.buttons.cancel, 'wizard:cancel');
         break;
 
       case 'route':
-        message = '🔗 Please enter the route link (or skip):';
+        message = '🔗 Please enter the route link (or skip):' + getCurrentValue('routeLink');
         keyboard
-          .text(config.buttons.back, 'wizard:back')
+          .text(config.buttons.back, 'wizard:back');
+        addKeepButton('routeLink');
+        keyboard
           .text(config.buttons.skip, 'wizard:skip')
           .row()
           .text(config.buttons.cancel, 'wizard:cancel');
         break;
 
       case 'distance':
-        message = '📏 Please enter the distance in kilometers (or skip):';
+        message = '📏 Please enter the distance in kilometers (or skip):' + 
+          getCurrentValue('distance', v => `${v} km`);
         keyboard
-          .text(config.buttons.back, 'wizard:back')
+          .text(config.buttons.back, 'wizard:back');
+        addKeepButton('distance');
+        keyboard
           .text(config.buttons.skip, 'wizard:skip')
           .row()
           .text(config.buttons.cancel, 'wizard:cancel');
         break;
 
       case 'duration':
-        message = '⏱ Please enter the duration in minutes (or skip):';
+        const durationFormatter = (mins) => {
+          const hours = Math.floor(mins / 60);
+          const minutes = mins % 60;
+          return `${hours}h ${minutes}m`;
+        };
+        message = '⏱ Please enter the duration in minutes (or skip):' + 
+          getCurrentValue('duration', durationFormatter);
         keyboard
-          .text(config.buttons.back, 'wizard:back')
+          .text(config.buttons.back, 'wizard:back');
+        addKeepButton('duration');
+        keyboard
           .text(config.buttons.skip, 'wizard:skip')
           .row()
           .text(config.buttons.cancel, 'wizard:cancel');
         break;
 
       case 'speed':
-        message = '🚴 Please enter the speed range in km/h (e.g., 25-28) or skip:';
+        const speedFormatter = (speed) => {
+          if (state.data.speedMin && state.data.speedMax) {
+            return `${state.data.speedMin}-${state.data.speedMax} km/h`;
+          } else if (state.data.speedMin) {
+            return `min ${state.data.speedMin} km/h`;
+          } else if (state.data.speedMax) {
+            return `max ${state.data.speedMax} km/h`;
+          }
+          return '';
+        };
+        message = '🚴 Please enter the speed range in km/h (e.g., 25-28) or skip:' + 
+          getCurrentValue('speedMin', speedFormatter);
         keyboard
-          .text(config.buttons.back, 'wizard:back')
+          .text(config.buttons.back, 'wizard:back');
+        if (state.data.speedMin || state.data.speedMax) {
+          keyboard.text(config.buttons.keep, 'wizard:keep');
+        }
+        keyboard
           .text(config.buttons.skip, 'wizard:skip')
           .row()
           .text(config.buttons.cancel, 'wizard:cancel');
         break;
 
       case 'meet':
-        message = '📍 Please enter the meeting point (or skip):';
+        message = '📍 Please enter the meeting point (or skip):' + getCurrentValue('meetingPoint');
         keyboard
-          .text(config.buttons.back, 'wizard:back')
+          .text(config.buttons.back, 'wizard:back');
+        addKeepButton('meetingPoint');
+        keyboard
           .text(config.buttons.skip, 'wizard:skip')
           .row()
           .text(config.buttons.cancel, 'wizard:cancel');
         break;
 
       case 'confirm':
-        const { title, date, routeLink, distance, duration, speedMin, speedMax, meetingPoint } = state.data;
-        message = '*Please confirm the ride details:*\n\n';
+        const { title, datetime, routeLink, distance, duration, speedMin, speedMax, meetingPoint } = state.data;
+        message = `*Please confirm the ${state.isUpdate ? 'update' : 'ride'} details:*\n\n`;
         message += `📝 Title: ${title}\n`;
-        message += `📅 Date: ${date.toLocaleDateString(config.dateFormat.locale)} ${date.toLocaleTimeString(config.dateFormat.locale, config.dateFormat.time)}\n`;
+        message += `📅 Date: ${datetime.toLocaleDateString(config.dateFormat.locale)} ${datetime.toLocaleTimeString(config.dateFormat.locale, config.dateFormat.time)}\n`;
         if (routeLink) message += `🔗 Route: ${routeLink}\n`;
         if (distance) message += `📏 Distance: ${distance} km\n`;
         if (duration) {
@@ -875,7 +978,7 @@ export class BikeRideBot {
 
         keyboard
           .text(config.buttons.back, 'wizard:back')
-          .text(config.buttons.create, 'wizard:confirm')
+          .text(state.isUpdate ? config.buttons.update : config.buttons.create, 'wizard:confirm')
           .row()
           .text(config.buttons.cancel, 'wizard:cancel');
         break;
@@ -884,10 +987,22 @@ export class BikeRideBot {
     try {
       let sentMessage;
       if (edit && ctx.callbackQuery) {
-        sentMessage = await ctx.editMessageText(message, {
-          parse_mode: 'Markdown',
-          reply_markup: keyboard
-        });
+        // Get current message content and keyboard
+        const currentMessage = ctx.callbackQuery.message;
+        const currentText = currentMessage.text;
+        const currentMarkup = JSON.stringify(currentMessage.reply_markup);
+        const newMarkup = JSON.stringify(keyboard);
+
+        // Only update if content or keyboard changed
+        if (currentText !== message || currentMarkup !== newMarkup) {
+          sentMessage = await ctx.editMessageText(message, {
+            parse_mode: 'Markdown',
+            reply_markup: keyboard
+          });
+        } else {
+          // No changes, use current message
+          sentMessage = currentMessage;
+        }
       } else {
         sentMessage = await ctx.reply(message, {
           parse_mode: 'Markdown',
@@ -987,6 +1102,65 @@ export class BikeRideBot {
       await ctx.reply('Ride duplicated successfully!' + (params.when ? '' : ' The new ride is scheduled for tomorrow at the same time.'));
     } catch (error) {
       await ctx.reply('Error duplicating ride: ' + error.message);
+    }
+  }
+
+  async handleDuplicateRideWizard(ctx) {
+    const { ride, error } = await this.extractRide(ctx);
+    
+    if (error) {
+      await ctx.reply(error);
+      return;
+    }
+
+    try {
+      // Prefill data from the existing ride
+      const prefillData = {
+        title: `Copy of ${ride.title}`,
+        datetime: new Date(ride.date.getTime() + 24 * 60 * 60 * 1000), // Tomorrow by default
+        meetingPoint: ride.meetingPoint,
+        routeLink: ride.routeLink,
+        distance: ride.distance,
+        duration: ride.duration,
+        speedMin: ride.speedMin,
+        speedMax: ride.speedMax,
+        originalRideId: ride.id
+      };
+
+      // Start the wizard with prefilled data
+      await this.handleNewRide(ctx, prefillData);
+    } catch (error) {
+      await ctx.reply('Error starting duplicate wizard: ' + error.message);
+    }
+  }
+
+  async handleUpdateRideWizard(ctx) {
+    const { ride, error } = await this.extractRide(ctx, true);
+    
+    if (error) {
+      await ctx.reply(error);
+      return;
+    }
+
+    try {
+      // Prefill data from the existing ride
+      const prefillData = {
+        title: ride.title,
+        datetime: ride.date,
+        meetingPoint: ride.meetingPoint,
+        routeLink: ride.routeLink,
+        distance: ride.distance,
+        duration: ride.duration,
+        speedMin: ride.speedMin,
+        speedMax: ride.speedMax,
+        isUpdate: true,
+        originalRideId: ride.id
+      };
+
+      // Start the wizard with prefilled data
+      await this.handleNewRide(ctx, prefillData);
+    } catch (error) {
+      await ctx.reply('Error starting update wizard: ' + error.message);
     }
   }
 } 
