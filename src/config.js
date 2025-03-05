@@ -115,6 +115,24 @@ id: abc123
 \`\`\`
 You'll need to confirm deletion when prompted.
 
+*🔁 Duplicating a Ride*
+Create a copy of an existing ride. Two ways:
+1. Reply to the ride message with \`/dupride\` and optional parameters
+2. Use \`/dupride\` with ID and optional parameters:
+\`\`\`
+/dupride
+id: abc123
+title: New title (optional)
+when: New date/time (optional)
+meet: New meeting point (optional)
+route: New route link (optional)
+dist: New distance (optional)
+time: New duration (optional)
+speed: New speed range (optional)
+\`\`\`
+Any parameters not provided will be copied from the original ride.
+By default, the new ride will be scheduled for tomorrow at the same time.
+
 *📋 Listing Your Rides*
 Use \`/listrides\` to see all rides you've created:
 • Rides are sorted by date (newest first)

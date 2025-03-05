@@ -22,6 +22,7 @@ export class BikeRideBot {
     this.bot.command('cancelride', this.handleCancelRide.bind(this));
     this.bot.command('deleteride', this.handleDeleteRide.bind(this));
     this.bot.command('listrides', this.handleListRides.bind(this));
+    this.bot.command('dupride', this.handleDuplicateRide.bind(this));
     this.bot.callbackQuery(/^join:(.+)$/, this.handleJoinRide.bind(this));
     this.bot.callbackQuery(/^leave:(.+)$/, this.handleLeaveRide.bind(this));
     this.bot.callbackQuery(/^delete:(\w+):(\w+)$/, this.handleDeleteConfirmation.bind(this));
@@ -896,6 +897,96 @@ export class BikeRideBot {
       state.lastMessageId = sentMessage.message_id;
     } catch (error) {
       console.error('Error sending wizard step:', error);
+    }
+  }
+
+  async handleDuplicateRide(ctx) {
+    const { ride, error } = await this.extractRide(ctx);
+    
+    if (error) {
+      await ctx.reply(error);
+      return;
+    }
+
+    try {
+      // Parse optional override parameters
+      const params = this.parseCommandParams(ctx.message.text);
+      
+      // Create a new ride object with the same properties
+      const newRideData = {
+        title: params.title || `Copy of ${ride.title}`,
+        chatId: ctx.chat.id,
+        createdBy: ctx.from.id,
+        meetingPoint: ride.meetingPoint,
+        routeLink: ride.routeLink,
+        distance: ride.distance,
+        duration: ride.duration,
+        speedMin: ride.speedMin,
+        speedMax: ride.speedMax,
+        // Default to tomorrow if no date provided
+        date: new Date(ride.date.getTime() + 24 * 60 * 60 * 1000)
+      };
+
+      // Override properties with provided parameters
+      if (params.when) {
+        const date = await this.parseDateTimeInput(params.when, ctx);
+        if (!date) return;
+        newRideData.date = date;
+      }
+
+      if (params.meet) {
+        newRideData.meetingPoint = params.meet;
+      }
+
+      if (params.route) {
+        if (RouteParser.isValidRouteUrl(params.route)) {
+          newRideData.routeLink = params.route;
+          // Only try to parse details if it's a known provider
+          if (RouteParser.isKnownProvider(params.route)) {
+            const routeInfo = await RouteParser.parseRoute(params.route);
+            if (routeInfo) {
+              if (!params.dist) newRideData.distance = routeInfo.distance;
+              if (!params.time) newRideData.duration = routeInfo.duration;
+            }
+          }
+        } else {
+          await ctx.reply('Invalid route URL format. Please provide a valid URL.');
+          return;
+        }
+      }
+
+      if (params.dist) {
+        newRideData.distance = parseFloat(params.dist);
+      }
+
+      if (params.time) {
+        newRideData.duration = parseInt(params.time);
+      }
+
+      if (params.speed) {
+        const [min, max] = params.speed.split('-').map(s => parseFloat(s.trim()));
+        if (!isNaN(min)) newRideData.speedMin = min;
+        if (!isNaN(max)) newRideData.speedMax = max;
+      }
+
+      const newRide = await this.storage.createRide(newRideData);
+      const participants = await this.storage.getParticipants(newRide.id);
+      const keyboard = new InlineKeyboard()
+        .text(config.buttons.join, `join:${newRide.id}`);
+
+      const message = this.formatRideMessage(newRide, participants);
+      const sentMessage = await ctx.reply(message, {
+        parse_mode: 'Markdown',
+        reply_markup: keyboard
+      });
+
+      await this.storage.updateRide(newRide.id, {
+        messageId: sentMessage.message_id
+      });
+
+      await ctx.reply('Ride duplicated successfully!' + (params.when ? '' : ' The new ride is scheduled for tomorrow at the same time.'));
+    } catch (error) {
+      await ctx.reply('Error duplicating ride: ' + error.message);
     }
   }
 } 
