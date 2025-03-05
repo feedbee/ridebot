@@ -68,6 +68,12 @@ export const config = {
     join: "I'm in! 🚴",
     leave: "Leave 👋",
     confirmDelete: "Yes, delete ❌",
-    cancelDelete: "No, keep it ✅"
+    cancelDelete: "No, keep it ✅",
+    back: "⬅️ Back",
+    skip: "⏩ Skip",
+    cancel: "❌ Cancel",
+    create: "✅ Create",
+    previous: "◀️ Previous",
+    next: "Next ▶️"
   }
 }; 

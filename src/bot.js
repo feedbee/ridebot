@@ -656,10 +656,10 @@ Use navigation buttons to move between pages.
       
       // Add Prev/Next navigation buttons if needed
       if (page > 0) {
-        keyboard.text('◀️ Previous', `list:${page - 1}`);
+        keyboard.text(config.buttons.previous, `list:${page - 1}`);
       }
       if (page < totalPages - 1) {
-        keyboard.text('Next ▶️', `list:${page + 1}`);
+        keyboard.text(config.buttons.next, `list:${page + 1}`);
       }
 
       const message = `Found ${total} ride${total !== 1 ? 's' : ''}\n\n${this.formatRidesList(rides)}`;
@@ -859,59 +859,59 @@ Use navigation buttons to move between pages.
     switch (state.step) {
       case 'title':
         message = '📝 Please enter the ride title:';
-        keyboard.text('❌ Cancel', 'wizard:cancel');
+        keyboard.text(config.buttons.cancel, 'wizard:cancel');
         break;
 
       case 'date':
         message = '📅 Please enter the date and time (DD.MM.YYYY HH:MM):';
         keyboard
-          .text('⬅️ Back', 'wizard:back')
-          .text('❌ Cancel', 'wizard:cancel');
+          .text(config.buttons.back, 'wizard:back')
+          .text(config.buttons.cancel, 'wizard:cancel');
         break;
 
       case 'route':
         message = '🔗 Please enter the route link (or skip):';
         keyboard
-          .text('⬅️ Back', 'wizard:back')
-          .text('⏩ Skip', 'wizard:skip')
+          .text(config.buttons.back, 'wizard:back')
+          .text(config.buttons.skip, 'wizard:skip')
           .row()
-          .text('❌ Cancel', 'wizard:cancel');
+          .text(config.buttons.cancel, 'wizard:cancel');
         break;
 
       case 'distance':
         message = '📏 Please enter the distance in kilometers (or skip):';
         keyboard
-          .text('⬅️ Back', 'wizard:back')
-          .text('⏩ Skip', 'wizard:skip')
+          .text(config.buttons.back, 'wizard:back')
+          .text(config.buttons.skip, 'wizard:skip')
           .row()
-          .text('❌ Cancel', 'wizard:cancel');
+          .text(config.buttons.cancel, 'wizard:cancel');
         break;
 
       case 'duration':
         message = '⏱ Please enter the duration in minutes (or skip):';
         keyboard
-          .text('⬅️ Back', 'wizard:back')
-          .text('⏩ Skip', 'wizard:skip')
+          .text(config.buttons.back, 'wizard:back')
+          .text(config.buttons.skip, 'wizard:skip')
           .row()
-          .text('❌ Cancel', 'wizard:cancel');
+          .text(config.buttons.cancel, 'wizard:cancel');
         break;
 
       case 'speed':
         message = '🚴 Please enter the speed range in km/h (e.g., 25-28) or skip:';
         keyboard
-          .text('⬅️ Back', 'wizard:back')
-          .text('⏩ Skip', 'wizard:skip')
+          .text(config.buttons.back, 'wizard:back')
+          .text(config.buttons.skip, 'wizard:skip')
           .row()
-          .text('❌ Cancel', 'wizard:cancel');
+          .text(config.buttons.cancel, 'wizard:cancel');
         break;
 
       case 'meet':
         message = '📍 Please enter the meeting point (or skip):';
         keyboard
-          .text('⬅️ Back', 'wizard:back')
-          .text('⏩ Skip', 'wizard:skip')
+          .text(config.buttons.back, 'wizard:back')
+          .text(config.buttons.skip, 'wizard:skip')
           .row()
-          .text('❌ Cancel', 'wizard:cancel');
+          .text(config.buttons.cancel, 'wizard:cancel');
         break;
 
       case 'confirm':
@@ -935,10 +935,10 @@ Use navigation buttons to move between pages.
         if (meetingPoint) message += `📍 Meeting Point: ${meetingPoint}\n`;
 
         keyboard
-          .text('⬅️ Back', 'wizard:back')
-          .text('✅ Create', 'wizard:confirm')
+          .text(config.buttons.back, 'wizard:back')
+          .text(config.buttons.create, 'wizard:confirm')
           .row()
-          .text('❌ Cancel', 'wizard:cancel');
+          .text(config.buttons.cancel, 'wizard:cancel');
         break;
     }
 
