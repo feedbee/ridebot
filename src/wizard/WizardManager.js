@@ -349,8 +349,26 @@ export class WizardManager {
       return;
     }
 
-    // Clean up previous messages before showing new step
-    await this.cleanupCurrentMessages(ctx, state);
+    // Clean up answer and error messages before showing new step
+    if (state.currentAnswerId) {
+      try {
+        await ctx.api.deleteMessage(ctx.chat.id, state.currentAnswerId);
+      } catch (error) {
+        console.error('Error deleting answer message:', error);
+      }
+      state.currentAnswerId = null;
+    }
+
+    if (state.errorMessageIds?.length > 0) {
+      for (const messageId of state.errorMessageIds) {
+        try {
+          await ctx.api.deleteMessage(ctx.chat.id, messageId);
+        } catch (error) {
+          console.error('Error deleting error message:', error);
+        }
+      }
+      state.errorMessageIds = [];
+    }
 
     let keyboard = new InlineKeyboard();
     let message = '';
@@ -406,12 +424,30 @@ export class WizardManager {
         break;
     }
 
-    // Send new message and store its ID
-    const sentMessage = await ctx.reply(message, {
-      parse_mode: 'Markdown',
-      reply_markup: keyboard
-    });
-    state.currentQuestionId = sentMessage.message_id;
+    // If we have a current question message, update it
+    // Otherwise, send a new one
+    try {
+      if (state.currentQuestionId) {
+        await ctx.api.editMessageText(
+          ctx.chat.id,
+          state.currentQuestionId,
+          message,
+          {
+            parse_mode: 'Markdown',
+            reply_markup: keyboard
+          }
+        );
+      } else {
+        const sentMessage = await ctx.reply(message, {
+          parse_mode: 'Markdown',
+          reply_markup: keyboard
+        });
+        state.currentQuestionId = sentMessage.message_id;
+      }
+    } catch (error) {
+      console.error('Error updating wizard message:', error);
+      // If editing fails (e.g., identical message), just continue
+    }
   }
 
   buildConfirmationMessage(data, participants = []) {
