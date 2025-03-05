@@ -2,6 +2,7 @@ import { Bot, InlineKeyboard, Context } from 'grammy';
 import { config } from './config.js';
 import { RouteParser } from './utils/route-parser.js';
 import { StorageInterface } from './storage/interface.js';
+import { DateParser } from './utils/date-parser.js';
 
 export class BikeRideBot {
   /**
@@ -210,6 +211,27 @@ Use navigation buttons to move between pages.
     await this.sendWizardStep(ctx);
   }
 
+  /**
+   * Parse and validate date/time input
+   * @param {string} text - Date/time text to parse
+   * @param {Context} ctx - Grammy context for sending error messages
+   * @returns {Date|null} Parsed date or null if invalid
+   */
+  async parseDateTimeInput(text, ctx) {
+    const parsedDate = DateParser.parseDateTime(text);
+    if (!parsedDate) {
+      await ctx.reply('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30');
+      return null;
+    }
+    
+    if (DateParser.isPast(parsedDate.date)) {
+      await ctx.reply('❌ The ride can\'t be scheduled in the past! Please provide a future date and time.');
+      return null;
+    }
+
+    return parsedDate.date;
+  }
+
   async handleNewRideWithParams(ctx, params) {
     if (!params.title || !params.when) {
       await ctx.reply(
@@ -219,7 +241,8 @@ Use navigation buttons to move between pages.
     }
 
     try {
-      const date = this.parseDateTime(params.when);
+      const date = await this.parseDateTimeInput(params.when, ctx);
+      if (!date) return;
       
       // First create the ride without messageId
       const rideData = {
@@ -299,7 +322,13 @@ Use navigation buttons to move between pages.
       const updates = {};
 
       if (params.title) updates.title = params.title;
-      if (params.when) updates.date = this.parseDateTime(params.when);
+      
+      if (params.when) {
+        const date = await this.parseDateTimeInput(params.when, ctx);
+        if (!date) return;
+        updates.date = date;
+      }
+
       if (params.meet) updates.meetingPoint = params.meet;
 
       if (params.route) {
@@ -461,11 +490,7 @@ Use navigation buttons to move between pages.
   }
 
   formatRideMessage(ride, participants) {
-    const dateStr = ride.date.toLocaleDateString('en-GB');
-    const timeStr = ride.date.toLocaleTimeString('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    const { date: dateStr, time: timeStr } = DateParser.formatDateTime(ride.date);
 
     let meetingInfo = '';
     if (ride.meetingPoint) {
@@ -526,19 +551,6 @@ Use navigation buttons to move between pages.
       .replace('{participantCount}', participants.length)
       .replace('{participants}', participantList)
       .replace('{joinInstructions}', joinInstructions);
-  }
-
-  parseDateTime(dateTimeStr) {
-    const [dateStr, timeStr] = dateTimeStr.split(' ');
-    const [day, month, year] = dateStr.split('.').map(Number);
-    const [hours, minutes] = timeStr.split(':').map(Number);
-
-    const date = new Date(year, month - 1, day, hours, minutes);
-    if (isNaN(date.getTime())) {
-      throw new Error('Invalid date/time format');
-    }
-
-    return date;
   }
 
   async handleDeleteRide(ctx) {
@@ -620,11 +632,8 @@ Use navigation buttons to move between pages.
     }
 
     return rides.map(ride => {
-      const dateStr = ride.date.toLocaleDateString('en-GB');
-      const timeStr = ride.date.toLocaleTimeString('en-GB', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
+      const dateStr = ride.date.toLocaleDateString(config.dateFormat.locale);
+      const timeStr = ride.date.toLocaleTimeString(config.dateFormat.locale, config.dateFormat.time);
       const status = ride.cancelled ? ' ❌ Cancelled' : '';
       return `🎫 *Ride #${ride.id}*${status}\n🚲 ${ride.title}\n📅 ${dateStr} ${timeStr}\n`;
     }).join('\n');
@@ -769,7 +778,13 @@ Use navigation buttons to move between pages.
           break;
 
         case 'date':
-          state.data.date = this.parseDateTime(ctx.message.text);
+          const date = await this.parseDateTimeInput(ctx.message.text, ctx);
+          if (!date) return;
+
+          state.data.datetime = date;
+          const { date: dateStr, time: timeStr } = DateParser.formatDateTime(date);
+          state.data.date = dateStr;
+          state.data.time = timeStr;
           state.step = 'route';
           break;
 
@@ -903,7 +918,7 @@ Use navigation buttons to move between pages.
         const { title, date, routeLink, distance, duration, speedMin, speedMax, meetingPoint } = state.data;
         message = '*Please confirm the ride details:*\n\n';
         message += `📝 Title: ${title}\n`;
-        message += `📅 Date: ${date.toLocaleDateString('en-GB')} ${date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}\n`;
+        message += `📅 Date: ${date.toLocaleDateString(config.dateFormat.locale)} ${date.toLocaleTimeString(config.dateFormat.locale, config.dateFormat.time)}\n`;
         if (routeLink) message += `🔗 Route: ${routeLink}\n`;
         if (distance) message += `📏 Distance: ${distance} km\n`;
         if (duration) {

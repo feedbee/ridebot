@@ -13,6 +13,19 @@ export const config = {
   mongodb: {
     uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/bikebot'
   },
+  dateFormat: {
+    locale: 'en-GB',
+    date: {
+      weekday: 'short',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    },
+    time: {
+      hour: '2-digit',
+      minute: '2-digit'
+    }
+  },
   routeProviders: {
     strava: {
       domain: 'strava.com',
