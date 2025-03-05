@@ -474,7 +474,7 @@ export class BikeRideBot {
 
     const cancelledBadge = ride.cancelled ? ` ${config.messageTemplates.cancelled}` : '';
     const joinInstructions = ride.cancelled 
-      ? config.messageTemplates.cancelledInstructions
+      ? config.messageTemplates.cancelledInstructions.replace('{id}', ride.id)
       : `${rideInfo}\nClick the button below to join or leave the ride`;
 
     return config.messageTemplates.ride

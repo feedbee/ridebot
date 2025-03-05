@@ -151,7 +151,7 @@ Use \`/listrides\` to see all rides you've created:
 {joinInstructions}
     `.trim(),
     cancelled: '❌ CANCELLED',
-    cancelledInstructions: 'This ride has been cancelled',
+    cancelledInstructions: '🎫 Ride #{id}\nThis ride has been cancelled',
     deleteConfirmation: '⚠️ Are you sure you want to delete this ride? This action cannot be undone.'
   },
   buttons: {
