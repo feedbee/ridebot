@@ -802,7 +802,7 @@ export class BikeRideBot {
         break;
 
       case 'date':
-        message = '📅 Please enter the date and time (DD.MM.YYYY HH:MM):';
+        message = '📅 Please enter the date and time:\nYou can use natural language like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30';
         keyboard
           .text(config.buttons.back, 'wizard:back')
           .text(config.buttons.cancel, 'wizard:cancel');
