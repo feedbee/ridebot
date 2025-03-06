@@ -38,7 +38,8 @@ export class RideWizard {
       },
       lastMessageId: null,
       isUpdate: prefillData?.isUpdate || false,  // Flag to indicate if this is an update
-      originalRideId: prefillData?.originalRideId // Store original ride ID for updates
+      originalRideId: prefillData?.originalRideId, // Store original ride ID for updates
+      errorMessageIds: [] // Track error message IDs
     };
     this.wizardStates.set(stateKey, state);
 
@@ -175,6 +176,9 @@ export class RideWizard {
     if (!state) return;
 
     try {
+      let shouldProceed = true;
+      state.errorMessageIds.push(ctx.message.message_id); // Always delete user's input
+
       switch (state.step) {
         case 'title':
           state.data.title = ctx.message.text;
@@ -182,10 +186,14 @@ export class RideWizard {
           break;
 
         case 'date':
-          const date = await parseDateTimeInput(ctx.message.text, ctx);
-          if (!date) return;
-
-          state.data.datetime = date;
+          const result = parseDateTimeInput(ctx.message.text);
+          if (!result.date) {
+            shouldProceed = false;
+            const errorMsg = await ctx.reply(result.error);
+            state.errorMessageIds.push(errorMsg.message_id);
+            return;
+          }
+          state.data.datetime = result.date;
           state.step = 'route';
           break;
 
@@ -203,18 +211,34 @@ export class RideWizard {
               state.step = 'distance';
             }
           } else {
-            await ctx.reply('Invalid route URL format. Please provide a valid URL or click Skip.');
+            shouldProceed = false;
+            const errorMsg = await ctx.reply('Invalid route URL format. Please provide a valid URL or click Skip.');
+            state.errorMessageIds.push(errorMsg.message_id);
             return;
           }
           break;
 
         case 'distance':
-          state.data.distance = parseFloat(ctx.message.text);
+          const distance = parseFloat(ctx.message.text);
+          if (isNaN(distance)) {
+            shouldProceed = false;
+            const errorMsg = await ctx.reply('Please enter a valid number for distance.');
+            state.errorMessageIds.push(errorMsg.message_id);
+            return;
+          }
+          state.data.distance = distance;
           state.step = 'duration';
           break;
 
         case 'duration':
-          state.data.duration = parseInt(ctx.message.text);
+          const duration = parseInt(ctx.message.text);
+          if (isNaN(duration)) {
+            shouldProceed = false;
+            const errorMsg = await ctx.reply('Please enter a valid number for duration.');
+            state.errorMessageIds.push(errorMsg.message_id);
+            return;
+          }
+          state.data.duration = duration;
           state.step = 'speed';
           break;
 
@@ -231,19 +255,29 @@ export class RideWizard {
           break;
       }
 
-      // Delete user's input message
-      await ctx.deleteMessage();
-      
-      // Delete previous wizard message if it exists
-      if (state.lastMessageId) {
+      // Delete all messages in reverse order (newest first)
+      for (const messageId of state.errorMessageIds.reverse()) {
         try {
-          await ctx.api.deleteMessage(ctx.chat.id, state.lastMessageId);
+          await ctx.api.deleteMessage(ctx.chat.id, messageId);
         } catch (error) {
-          console.error('Error deleting previous wizard message:', error);
+          console.error('Error deleting message:', error);
         }
       }
 
-      await this.sendWizardStep(ctx);
+      if (shouldProceed) {
+        // Delete previous wizard message if it exists
+        if (state.lastMessageId) {
+          try {
+            await ctx.api.deleteMessage(ctx.chat.id, state.lastMessageId);
+          } catch (error) {
+            console.error('Error deleting previous wizard message:', error);
+          }
+        }
+
+        // Clear error message IDs when proceeding to next step
+        state.errorMessageIds = [];
+        await this.sendWizardStep(ctx);
+      }
     } catch (error) {
       await ctx.reply('Error: ' + error.message);
     }

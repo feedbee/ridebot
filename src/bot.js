@@ -136,13 +136,16 @@ export class BikeRideBot {
     }
 
     try {
-      const date = await parseDateTimeInput(params.when, ctx);
-      if (!date) return;
+      const result = parseDateTimeInput(params.when);
+      if (!result.date) {
+        await ctx.reply(result.error);
+        return;
+      }
       
       // First create the ride without messageId
       const rideData = {
         title: params.title,
-        date,
+        date: result.date,
         chatId: ctx.chat.id,
         createdBy: ctx.from.id
       };
@@ -219,9 +222,12 @@ export class BikeRideBot {
       if (params.title) updates.title = params.title;
       
       if (params.when) {
-        const date = await parseDateTimeInput(params.when, ctx);
-        if (!date) return;
-        updates.date = date;
+        const result = parseDateTimeInput(params.when);
+        if (!result.date) {
+          await ctx.reply(result.error);
+          return;
+        }
+        updates.date = result.date;
       }
 
       if (params.meet) updates.meetingPoint = params.meet;
@@ -259,7 +265,7 @@ export class BikeRideBot {
 
       const updatedRide = await this.storage.updateRide(ride.id, updates);
       await this.updateRideMessage(updatedRide);
-      await ctx.reply('Ride updated successfully');
+      await ctx.reply('Ride updated successfully!');
     } catch (error) {
       await ctx.reply('Error updating ride: ' + error.message);
     }

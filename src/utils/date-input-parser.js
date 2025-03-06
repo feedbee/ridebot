@@ -3,20 +3,23 @@ import { DateParser } from './date-parser.js';
 /**
  * Parse and validate date/time input
  * @param {string} text - Date/time text to parse
- * @param {Object} ctx - Context object for sending error messages
- * @returns {Date|null} Parsed date or null if invalid
+ * @returns {{date: Date|null, error?: string}} Result object containing either the parsed date or error message
  */
-export async function parseDateTimeInput(text, ctx) {
+export function parseDateTimeInput(text) {
   const parsedDate = DateParser.parseDateTime(text);
   if (!parsedDate) {
-    await ctx.reply('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30');
-    return null;
+    return {
+      date: null,
+      error: '❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30'
+    };
   }
   
   if (DateParser.isPast(parsedDate.date)) {
-    await ctx.reply('❌ The ride can\'t be scheduled in the past! Please provide a future date and time.');
-    return null;
+    return {
+      date: null,
+      error: '❌ The ride can\'t be scheduled in the past! Please provide a future date and time.'
+    };
   }
 
-  return parsedDate.date;
+  return { date: parsedDate.date };
 } 
