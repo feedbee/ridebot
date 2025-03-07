@@ -4,7 +4,7 @@ import { MemoryStorage } from './storage/memory.js';
 import { MongoDBStorage } from './storage/mongodb.js';
 
 async function main() {
-  const storage = config.isDev ? new MemoryStorage() : new MongoDBStorage();вщсл
+  const storage = config.isDev ? new MemoryStorage() : new MongoDBStorage();
   const bot = new BikeRideBot(storage);
   
   try {

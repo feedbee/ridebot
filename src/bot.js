@@ -5,6 +5,7 @@ import { StorageInterface } from './storage/interface.js';
 import { DateParser } from './utils/date-parser.js';
 import { RideWizard } from './wizard/RideWizard.js';
 import { parseDateTimeInput } from './utils/date-input-parser.js';
+import { escapeRideMarkdown, escapeMarkdown } from './utils/markdown-escape.js';
 
 export class BikeRideBot {
   /**
@@ -391,39 +392,41 @@ export class BikeRideBot {
   }
 
   formatRideMessage(ride, participants) {
-    const { date: dateStr, time: timeStr } = DateParser.formatDateTime(ride.date);
+    // Escape Markdown in ride data
+    const escapedRide = escapeRideMarkdown(ride);
+    const { date: dateStr, time: timeStr } = DateParser.formatDateTime(escapedRide.date);
 
     let meetingInfo = '';
-    if (ride.meetingPoint) {
-      meetingInfo = `\n📍 Meeting point: ${ride.meetingPoint}`;
+    if (escapedRide.meetingPoint) {
+      meetingInfo = `\n📍 Meeting point: ${escapedRide.meetingPoint}`;
     }
 
     let routeInfo = '';
-    if (ride.routeLink) {
-      routeInfo = `\n🔗 Route: ${ride.routeLink}`;
+    if (escapedRide.routeLink) {
+      routeInfo = `\n🔗 Route: ${escapedRide.routeLink}`;
     }
 
     let distanceInfo = '';
-    if (ride.distance) {
-      distanceInfo = `\n📏 Distance: ${ride.distance} km`;
+    if (escapedRide.distance) {
+      distanceInfo = `\n📏 Distance: ${escapedRide.distance} km`;
     }
 
     let durationInfo = '';
-    if (ride.duration) {
-      const hours = Math.floor(ride.duration / 60);
-      const minutes = ride.duration % 60;
+    if (escapedRide.duration) {
+      const hours = Math.floor(escapedRide.duration / 60);
+      const minutes = escapedRide.duration % 60;
       durationInfo = `\n⏱ Duration: ${hours}h ${minutes}m`;
     }
 
     let speedInfo = '';
-    if (ride.speedMin || ride.speedMax) {
+    if (escapedRide.speedMin || escapedRide.speedMax) {
       speedInfo = '\n🚴 Speed: ';
-      if (ride.speedMin && ride.speedMax) {
-        speedInfo += `${ride.speedMin}-${ride.speedMax} km/h`;
-      } else if (ride.speedMin) {
-        speedInfo += `min ${ride.speedMin} km/h`;
+      if (escapedRide.speedMin && escapedRide.speedMax) {
+        speedInfo += `${escapedRide.speedMin}-${escapedRide.speedMax} km/h`;
+      } else if (escapedRide.speedMin) {
+        speedInfo += `min ${escapedRide.speedMin} km/h`;
       } else {
-        speedInfo += `max ${ride.speedMax} km/h`;
+        speedInfo += `max ${escapedRide.speedMax} km/h`;
       }
     }
 
@@ -432,15 +435,15 @@ export class BikeRideBot {
       : 'No participants yet';
 
     // Add ride ID in a visually pleasing way
-    const rideInfo = `🎫 Ride #${ride.id}`;
+    const rideInfo = `🎫 Ride #${escapedRide.id}`;
 
-    const cancelledBadge = ride.cancelled ? ` ${config.messageTemplates.cancelled}` : '';
-    const joinInstructions = ride.cancelled 
-      ? config.messageTemplates.cancelledInstructions.replace('{id}', ride.id)
+    const cancelledBadge = escapedRide.cancelled ? ` ${config.messageTemplates.cancelled}` : '';
+    const joinInstructions = escapedRide.cancelled 
+      ? config.messageTemplates.cancelledInstructions.replace('{id}', escapedRide.id)
       : `${rideInfo}\nClick the button below to join or leave the ride`;
 
     return config.messageTemplates.ride
-      .replace('{title}', ride.title)
+      .replace('{title}', escapedRide.title)
       .replace('{cancelledBadge}', cancelledBadge)
       .replace('{date}', dateStr)
       .replace('{time}', timeStr)
@@ -536,7 +539,7 @@ export class BikeRideBot {
       const dateStr = ride.date.toLocaleDateString(config.dateFormat.locale);
       const timeStr = ride.date.toLocaleTimeString(config.dateFormat.locale, config.dateFormat.time);
       const status = ride.cancelled ? ' ❌ Cancelled' : '';
-      return `🎫 *Ride #${ride.id}*${status}\n🚲 ${ride.title}\n📅 ${dateStr} ${timeStr}\n`;
+      return `🎫 *Ride #${ride.id}*${status}\n🚲 ${escapeMarkdown(ride.title)}\n📅 ${dateStr} ${timeStr}\n`;
     }).join('\n');
   }
 

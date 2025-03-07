@@ -3,6 +3,7 @@ import { config } from '../config.js';
 import { RouteParser } from '../utils/route-parser.js';
 import { DateParser } from '../utils/date-parser.js';
 import { parseDateTimeInput } from '../utils/date-input-parser.js';
+import { escapeMarkdown } from '../utils/markdown-escape.js';
 
 export class RideWizard {
   constructor(storage) {
@@ -131,7 +132,7 @@ export class RideWizard {
             };
 
             const updatedRide = await this.storage.updateRide(state.data.originalRideId, updates);
-            await this.updateRideMessage(updatedRide);
+            await this.updateRideMessage(updatedRide, ctx);
             await ctx.deleteMessage();
             this.wizardStates.delete(stateKey);
             await ctx.answerCallbackQuery('Ride updated successfully!');
@@ -296,7 +297,8 @@ export class RideWizard {
     const getCurrentValue = (field, formatter = null) => {
       const value = state.data[field];
       if (value === undefined || value === null) return '';
-      return `\n\nCurrent value: ${formatter ? formatter(value) : value}`;
+      const formattedValue = formatter ? formatter(value) : value;
+      return `\n\nCurrent value: ${escapeMarkdown(formattedValue.toString())}`;
     };
 
     // Helper to check if there's a current value
@@ -320,7 +322,10 @@ export class RideWizard {
         break;
 
       case 'date':
-        const dateFormatter = (date) => date.toLocaleString(config.dateFormat.locale);
+        const dateFormatter = (date) => {
+          if (!(date instanceof Date) || isNaN(date)) return '';
+          return date.toLocaleString(config.dateFormat.locale);
+        };
         message = '📅 When is the ride?\nYou can use natural language like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30' + 
           getCurrentValue('datetime', dateFormatter);
         addKeepButton('datetime');
@@ -354,6 +359,7 @@ export class RideWizard {
 
       case 'duration':
         const durationFormatter = (mins) => {
+          if (!mins && mins !== 0) return '';
           const hours = Math.floor(mins / 60);
           const minutes = mins % 60;
           return `${hours}h ${minutes}m`;
@@ -378,7 +384,7 @@ export class RideWizard {
           } else if (state.data.speedMax) {
             return `max ${state.data.speedMax} km/h`;
           }
-          return '';
+          return speed || '';
         };
         message = '🚴 Please enter the speed range in km/h (e.g., 25-28) or skip:' + 
           getCurrentValue('speedMin', speedFormatter);
@@ -407,9 +413,9 @@ export class RideWizard {
       case 'confirm':
         const { title, datetime, routeLink, distance, duration, speedMin, speedMax, meetingPoint } = state.data;
         message = `*Please confirm the ${state.isUpdate ? 'update' : 'ride'} details:*\n\n`;
-        message += `📝 Title: ${title}\n`;
+        message += `📝 Title: ${escapeMarkdown(title)}\n`;
         message += `📅 Date: ${datetime.toLocaleDateString(config.dateFormat.locale)} ${datetime.toLocaleTimeString(config.dateFormat.locale, config.dateFormat.time)}\n`;
-        if (routeLink) message += `🔗 Route: ${routeLink}\n`;
+        if (routeLink) message += `🔗 Route: ${escapeMarkdown(routeLink)}\n`;
         if (distance) message += `📏 Distance: ${distance} km\n`;
         if (duration) {
           const hours = Math.floor(duration / 60);
@@ -422,7 +428,7 @@ export class RideWizard {
           else if (speedMin) message += `min ${speedMin} km/h\n`;
           else message += `max ${speedMax} km/h\n`;
         }
-        if (meetingPoint) message += `📍 Meeting Point: ${meetingPoint}\n`;
+        if (meetingPoint) message += `📍 Meeting Point: ${escapeMarkdown(meetingPoint)}\n`;
 
         keyboard
           .text(config.buttons.back, 'wizard:back')
@@ -528,7 +534,7 @@ export class RideWizard {
       .replace('{joinInstructions}', joinInstructions);
   }
 
-  async updateRideMessage(ride) {
+  async updateRideMessage(ride, ctx) {
     // Skip if no messageId (shouldn't happen, but just in case)
     if (!ride.messageId) {
       console.error('No messageId for ride:', ride.id);
@@ -554,7 +560,7 @@ export class RideWizard {
     const message = this.formatRideMessage(ride, participants);
 
     try {
-      await this.bot.api.editMessageText(
+      await ctx.api.editMessageText(
         ride.chatId,
         ride.messageId,
         message,
