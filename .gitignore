@@ -30,3 +30,6 @@ pids
 # OS
 .DS_Store
 Thumbs.db 
+
+# Cursor rules
+.cursor/rules
