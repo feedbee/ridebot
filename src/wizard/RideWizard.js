@@ -36,14 +36,18 @@ export class RideWizard {
         createdBy: ctx.from.id,
         ...(prefillData || {})  // Merge prefilled data if provided
       },
-      lastMessageId: null,
       isUpdate: prefillData?.isUpdate || false,  // Flag to indicate if this is an update
       originalRideId: prefillData?.originalRideId, // Store original ride ID for updates
-      errorMessageIds: [] // Track error message IDs
+      errorMessageIds: [], // Track error message IDs
+      primaryMessageId: null // Track the primary wizard message ID
     };
     this.wizardStates.set(stateKey, state);
 
-    await this.sendWizardStep(ctx);
+    // Send initial wizard message and store its ID
+    const message = await this.sendWizardStep(ctx);
+    if (message) {
+      state.primaryMessageId = message.message_id;
+    }
   }
 
   async handleWizardAction(ctx) {
@@ -68,9 +72,7 @@ export class RideWizard {
             case 'meet': state.step = 'speed'; break;
             case 'confirm': state.step = 'meet'; break;
           }
-          // Delete the current message since we're going back
-          await ctx.deleteMessage();
-          await this.sendWizardStep(ctx);
+          await this.sendWizardStep(ctx, true);
           break;
 
         case 'keep':
@@ -100,6 +102,14 @@ export class RideWizard {
           break;
 
         case 'cancel':
+          // Delete error messages first
+          for (const messageId of state.errorMessageIds.reverse()) {
+            try {
+              await ctx.api.deleteMessage(ctx.chat.id, messageId);
+            } catch (error) {
+              console.error('Error deleting error message:', error);
+            }
+          }
           await ctx.deleteMessage();
           this.wizardStates.delete(stateKey);
           await ctx.reply('Ride creation cancelled');
@@ -255,7 +265,7 @@ export class RideWizard {
           break;
       }
 
-      // Delete all messages in reverse order (newest first)
+      // Delete error messages and user inputs in reverse order (newest first)
       for (const messageId of state.errorMessageIds.reverse()) {
         try {
           await ctx.api.deleteMessage(ctx.chat.id, messageId);
@@ -265,21 +275,12 @@ export class RideWizard {
       }
 
       if (shouldProceed) {
-        // Delete previous wizard message if it exists
-        if (state.lastMessageId) {
-          try {
-            await ctx.api.deleteMessage(ctx.chat.id, state.lastMessageId);
-          } catch (error) {
-            console.error('Error deleting previous wizard message:', error);
-          }
-        }
-
         // Clear error message IDs when proceeding to next step
         state.errorMessageIds = [];
-        await this.sendWizardStep(ctx);
+        await this.sendWizardStep(ctx, true);
       }
     } catch (error) {
-      await ctx.reply('Error: ' + error.message);
+      console.error('Error in handleWizardInput:', error);
     }
   }
 
@@ -433,30 +434,31 @@ export class RideWizard {
 
     try {
       let sentMessage;
-      if (edit && ctx.callbackQuery) {
-        // Get current message content and keyboard
-        const currentMessage = ctx.callbackQuery.message;
-        const currentText = currentMessage.text;
-        const currentMarkup = JSON.stringify(currentMessage.reply_markup);
-        const newMarkup = JSON.stringify(keyboard);
-
-        // Only update if content or keyboard changed
-        if (currentText !== message || currentMarkup !== newMarkup) {
-          sentMessage = await ctx.editMessageText(message, {
+      if (edit && state.primaryMessageId) {
+        // Update existing message
+        try {
+          sentMessage = await ctx.api.editMessageText(ctx.chat.id, state.primaryMessageId, message, {
             parse_mode: 'Markdown',
             reply_markup: keyboard
           });
-        } else {
-          // No changes, use current message
-          sentMessage = currentMessage;
+        } catch (error) {
+          console.error('Error updating wizard message:', error);
+          // If update fails (e.g., message too old), send a new message
+          sentMessage = await ctx.reply(message, {
+            parse_mode: 'Markdown',
+            reply_markup: keyboard
+          });
+          state.primaryMessageId = sentMessage.message_id;
         }
       } else {
+        // Send new message
         sentMessage = await ctx.reply(message, {
           parse_mode: 'Markdown',
           reply_markup: keyboard
         });
+        state.primaryMessageId = sentMessage.message_id;
       }
-      state.lastMessageId = sentMessage.message_id;
+      return sentMessage;
     } catch (error) {
       console.error('Error sending wizard step:', error);
     }
