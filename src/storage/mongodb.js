@@ -2,10 +2,16 @@ import mongoose from 'mongoose';
 import { StorageInterface } from './interface.js';
 import { config } from '../config.js';
 
+const participantSchema = new mongoose.Schema({
+  userId: { type: Number, required: true },
+  username: { type: String, required: true },
+  joinedAt: { type: Date, default: Date.now }
+});
+
 const rideSchema = new mongoose.Schema({
   title: { type: String, required: true },
   date: { type: Date, required: true },
-  messageId: { type: Number, required: true },
+  messageId: { type: Number },
   chatId: { type: Number, required: true },
   routeLink: String,
   meetingPoint: String,
@@ -15,22 +21,19 @@ const rideSchema = new mongoose.Schema({
   speedMax: Number,
   cancelled: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
-  createdBy: { type: Number, required: true }
-});
-
-const participantSchema = new mongoose.Schema({
-  rideId: { type: mongoose.Schema.Types.ObjectId, ref: 'Ride', required: true },
-  userId: { type: Number, required: true },
-  username: { type: String, required: true },
-  joinedAt: { type: Date, default: Date.now }
+  createdBy: { type: Number, required: true },
+  participants: [participantSchema]
 });
 
 // Create indexes
-rideSchema.index({ chatId: 1, messageId: 1 }, { unique: true });
-participantSchema.index({ rideId: 1, userId: 1 }, { unique: true });
+rideSchema.index({ chatId: 1, messageId: 1 }, { 
+  unique: true, 
+  sparse: true,
+  partialFilterExpression: { messageId: { $type: "number" } }
+});
+rideSchema.index({ createdBy: 1, date: -1 }); // For efficient querying of rides by creator
 
 const Ride = mongoose.model('Ride', rideSchema);
-const Participant = mongoose.model('Participant', participantSchema);
 
 export class MongoDBStorage extends StorageInterface {
   constructor() {
@@ -49,17 +52,18 @@ export class MongoDBStorage extends StorageInterface {
   }
 
   async disconnect() {
-    await mongoose.disconnect();
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.disconnect();
+    }
   }
 
   async createRide(ride) {
-    const newRide = new Ride(ride);
-    await newRide.save();
-    return {
+    const newRide = new Ride({
       ...ride,
-      id: newRide._id.toString(),
-      createdAt: newRide.createdAt
-    };
+      participants: []
+    });
+    await newRide.save();
+    return this.mapRideToInterface(newRide);
   }
 
   async updateRide(rideId, updates) {
@@ -70,17 +74,13 @@ export class MongoDBStorage extends StorageInterface {
 
     Object.assign(ride, updates);
     await ride.save();
-
-    return {
-      ...ride.toObject(),
-      id: ride._id.toString()
-    };
+    return this.mapRideToInterface(ride);
   }
 
   async getRide(rideId) {
     try {
       const ride = await Ride.findById(rideId);
-      return ride ? this.mapRideToInterface(ride) : null;
+      return this.mapRideToInterface(ride);
     } catch (error) {
       console.error('Error getting ride:', error);
       return null;
@@ -108,36 +108,51 @@ export class MongoDBStorage extends StorageInterface {
   }
 
   async addParticipant(rideId, participant) {
-    const existingParticipant = await Participant.findOne({
-      rideId: new mongoose.Types.ObjectId(rideId),
-      userId: participant.userId
-    });
-
-    if (existingParticipant) {
+    const ride = await Ride.findById(rideId);
+    if (!ride) {
       return false;
     }
 
-    const newParticipant = new Participant({
-      rideId: new mongoose.Types.ObjectId(rideId),
-      ...participant
+    // Check if participant already exists
+    const exists = ride.participants.some(p => p.userId === participant.userId);
+    if (exists) {
+      return false;
+    }
+
+    ride.participants.push({
+      userId: participant.userId,
+      username: participant.username,
+      joinedAt: new Date()
     });
-    await newParticipant.save();
+
+    await ride.save();
     return true;
   }
 
   async removeParticipant(rideId, userId) {
-    const result = await Participant.deleteOne({
-      rideId: new mongoose.Types.ObjectId(rideId),
-      userId
-    });
-    return result.deletedCount > 0;
+    const ride = await Ride.findById(rideId);
+    if (!ride) {
+      return false;
+    }
+
+    const initialLength = ride.participants.length;
+    ride.participants = ride.participants.filter(p => p.userId !== userId);
+
+    if (ride.participants.length === initialLength) {
+      return false;
+    }
+
+    await ride.save();
+    return true;
   }
 
   async getParticipants(rideId) {
-    const participants = await Participant.find({
-      rideId: new mongoose.Types.ObjectId(rideId)
-    });
-    return participants.map(p => ({
+    const ride = await Ride.findById(rideId);
+    if (!ride) {
+      return [];
+    }
+
+    return ride.participants.map(p => ({
       userId: p.userId,
       username: p.username,
       joinedAt: p.joinedAt
@@ -145,29 +160,33 @@ export class MongoDBStorage extends StorageInterface {
   }
 
   async deleteRide(rideId) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    const ride = await Ride.findByIdAndDelete(rideId);
+    return ride !== null;
+  }
 
-    try {
-      // Delete the ride
-      const ride = await Ride.findByIdAndDelete(rideId).session(session);
-      if (!ride) {
-        await session.abortTransaction();
-        return false;
-      }
-
-      // Delete all participants
-      await Participant.deleteMany({
-        rideId: new mongoose.Types.ObjectId(rideId)
-      }).session(session);
-
-      await session.commitTransaction();
-      return true;
-    } catch (error) {
-      await session.abortTransaction();
-      throw error;
-    } finally {
-      session.endSession();
-    }
+  mapRideToInterface(ride) {
+    if (!ride) return null;
+    const rideObj = ride.toObject ? ride.toObject() : ride;
+    return {
+      id: rideObj._id.toString(),
+      title: rideObj.title,
+      date: rideObj.date,
+      messageId: rideObj.messageId,
+      chatId: rideObj.chatId,
+      routeLink: rideObj.routeLink,
+      meetingPoint: rideObj.meetingPoint,
+      distance: rideObj.distance,
+      duration: rideObj.duration,
+      speedMin: rideObj.speedMin,
+      speedMax: rideObj.speedMax,
+      cancelled: rideObj.cancelled,
+      createdAt: rideObj.createdAt,
+      createdBy: rideObj.createdBy,
+      participants: rideObj.participants?.map(p => ({
+        userId: p.userId,
+        username: p.username,
+        joinedAt: p.joinedAt
+      })) || []
+    };
   }
 } 

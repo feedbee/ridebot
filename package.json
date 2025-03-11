@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "NODE_ENV=development nodemon src/index.js",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+    "test": "MONGOMS_DOWNLOAD_DIR=/tmp/mongodb-binaries node --experimental-vm-modules node_modules/jest/bin/jest.js --testTimeout=30000"
   },
   "dependencies": {
     "grammy": "^1.21.1",
@@ -19,7 +19,8 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.3",
-    "jest": "^29.7.0"
+    "jest": "^29.7.0",
+    "mongodb-memory-server": "^9.1.6"
   },
   "type": "module",
   "jest": {

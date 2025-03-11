@@ -174,6 +174,7 @@ export class RideWizard {
 
       await ctx.answerCallbackQuery();
     } catch (error) {
+      console.error('Error in handleWizardAction:', error);
       await ctx.answerCallbackQuery('Error: ' + error.message);
     }
   }
