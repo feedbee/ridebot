@@ -104,19 +104,28 @@ export class RouteParser {
       const isActivity = url.includes('/activities/');
 
       if (isActivity) {
-        // Parse activity page
-        const distanceText = $('.actual-distance').text().trim();
-        const durationText = $('.actual-time').text().trim();
+        // Parse activity page using stable data-cy attributes
+        const distanceContainer = $('[data-cy="summary-distance"]');
+        const timeContainer = $('[data-cy="summary-time"]');
+        
+        // Get text from the last div in each container (avoiding class-based selectors)
+        const distanceText = distanceContainer.find('div').last().text().trim();
+        const durationText = timeContainer.find('div').last().text().trim();
 
-        // Convert distance from km to meters
-        distance = parseFloat(distanceText) * 1000;
+        // Extract distance (removing 'km' and converting to number)
+        const distanceMatch = distanceText.match(/(\d+(?:\.\d+)?)\s*km/);
+        if (distanceMatch) {
+          distance = parseFloat(distanceMatch[1]);
+        }
 
-        // Parse duration in format "1h 30m" or "45m"
-        const durationMatch = durationText.match(/(?:(\d+)h\s*)?(?:(\d+)m)?/);
+        // Parse duration in format "36m 57s" or "1h 30m" or similar
+        const durationMatch = durationText.match(/(?:(\d+)h\s*)?(?:(\d+)m\s*)?(?:(\d+)s)?/);
         if (durationMatch) {
           const hours = parseInt(durationMatch[1] || '0');
           const minutes = parseInt(durationMatch[2] || '0');
-          duration = hours * 60 + minutes;
+          // We'll round to nearest minute if seconds are present
+          const seconds = parseInt(durationMatch[3] || '0');
+          duration = hours * 60 + minutes + (seconds >= 30 ? 1 : 0);
         }
       } else {
         // Parse route page
@@ -126,7 +135,7 @@ export class RouteParser {
         // Extract distance in kilometers
         const distanceMatch = distanceText.match(/(\d+(?:\.\d+)?)\s*km/);
         if (distanceMatch) {
-          distance = parseFloat(distanceMatch[1]) * 1000; // Convert to meters
+          distance = parseFloat(distanceMatch[1]);
         }
 
         // Extract duration in format "1h 30m" or "45m"
@@ -140,7 +149,7 @@ export class RouteParser {
 
       if (distance && duration) {
         return {
-          distance: Math.round(distance / 1000), // Convert back to km
+          distance: Math.round(distance), // Already in km from the new format
           duration
         };
       }
