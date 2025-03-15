@@ -128,22 +128,28 @@ export class RouteParser {
           duration = hours * 60 + minutes + (seconds >= 30 ? 1 : 0);
         }
       } else {
-        // Parse route page
-        const distanceText = $('.route-stats').find('li:contains("Distance")').text();
-        const durationText = $('.route-stats').find('li:contains("Est. Time")').text();
-
-        // Extract distance in kilometers
-        const distanceMatch = distanceText.match(/(\d+(?:\.\d+)?)\s*km/);
-        if (distanceMatch) {
-          distance = parseFloat(distanceMatch[1]);
+        // Parse route page using stable selectors
+        // Find elements with class starting with Detail_routeStat
+        const routeStats = $('div[class^="Detail_routeStat"]');
+        
+        // Find the distance element by looking for elements with both svg and span
+        const distanceElement = routeStats.filter(function() {
+          return $(this).find('svg').length > 0 && $(this).find('span').length > 0;
+        }).first(); // Take the first one as distance is typically the first stat
+        
+        if (distanceElement.length) {
+          const distanceText = distanceElement.find('span').text().trim();
+          
+          // Extract distance in kilometers
+          const distanceMatch = distanceText.match(/(\d+(?:\.\d+)?)\s*km/);
+          if (distanceMatch) {
+            distance = parseFloat(distanceMatch[1]);
+          }
         }
 
-        // Extract duration in format "1h 30m" or "45m"
-        const durationMatch = durationText.match(/(?:(\d+)h\s*)?(?:(\d+)m)?/);
-        if (durationMatch) {
-          const hours = parseInt(durationMatch[1] || '0');
-          const minutes = parseInt(durationMatch[2] || '0');
-          duration = hours * 60 + minutes;
+        // For routes, we'll estimate duration based on average speed of 20 km/h
+        if (distance) {
+          duration = Math.round((distance / 20) * 60); // Convert to minutes
         }
       }
 
