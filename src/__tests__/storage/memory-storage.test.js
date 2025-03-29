@@ -55,7 +55,7 @@ describe('MemoryStorage', () => {
     });
 
     it('should throw error when adding participant to non-existent ride', async () => {
-      await expect(storage.addParticipant('non_existent', { userId: 123, username: 'test' }))
+      await expect(storage.addParticipant('non_existent', { userId: 123, username: 'test', firstName: 'Test', lastName: 'User' }))
         .rejects
         .toThrow('Ride not found');
     });
@@ -67,7 +67,7 @@ describe('MemoryStorage', () => {
       const ride = await storage.createRide(testRide);
       
       // Add participant
-      await storage.addParticipant(ride.id, { userId: 123, username: 'test' });
+      await storage.addParticipant(ride.id, { userId: 123, username: 'test', firstName: 'Test', lastName: 'User' });
       
       // Update ride
       await storage.updateRide(ride.id, { title: 'Updated Ride' });
@@ -85,8 +85,8 @@ describe('MemoryStorage', () => {
       const ride1 = await storage.createRide(testRide);
       const ride2 = await storage.createRide({ ...testRide, title: 'Second Ride' });
 
-      await storage.addParticipant(ride1.id, { userId: 123, username: 'user1' });
-      await storage.addParticipant(ride2.id, { userId: 456, username: 'user2' });
+      await storage.addParticipant(ride1.id, { userId: 123, username: 'user1', firstName: 'First', lastName: 'User' });
+      await storage.addParticipant(ride2.id, { userId: 456, username: 'user2', firstName: 'Second', lastName: 'User' });
 
       const participants1 = await storage.getParticipants(ride1.id);
       const participants2 = await storage.getParticipants(ride2.id);

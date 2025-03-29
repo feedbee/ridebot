@@ -5,6 +5,8 @@ import { config } from '../config.js';
 const participantSchema = new mongoose.Schema({
   userId: { type: Number, required: true },
   username: { type: String, required: true },
+  firstName: { type: String, default: '' },
+  lastName: { type: String, default: '' },
   joinedAt: { type: Date, default: Date.now }
 });
 
@@ -122,6 +124,8 @@ export class MongoDBStorage extends StorageInterface {
     ride.participants.push({
       userId: participant.userId,
       username: participant.username,
+      firstName: participant.firstName || '',
+      lastName: participant.lastName || '',
       joinedAt: new Date()
     });
 
@@ -155,6 +159,8 @@ export class MongoDBStorage extends StorageInterface {
     return ride.participants.map(p => ({
       userId: p.userId,
       username: p.username,
+      firstName: p.firstName || '',
+      lastName: p.lastName || '',
       joinedAt: p.joinedAt
     }));
   }

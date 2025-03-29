@@ -64,7 +64,26 @@ export class MessageFormatter {
     const participantCount = participants.length;
     const participantsList = participants.length > 0
       ? participants
-          .map(p => `[@${escapeMarkdown(p.username)}](tg://user?id=${p.userId})`)
+          .map(p => {
+            // Format the display name based on available information
+            let displayName;
+            
+            // If we have first name or last name (new format)
+            if (p.firstName || p.lastName) {
+              const fullName = `${p.firstName} ${p.lastName}`.trim();
+              // If we also have a username, show both
+              if (p.username) {
+                displayName = `${fullName} <@${p.username}>`;
+              } else {
+                displayName = fullName;
+              }
+            } else {
+              // Legacy format or username-only
+              displayName = p.username.includes(' ') ? p.username : `@${p.username}`;
+            }
+            
+            return `[${escapeMarkdown(displayName)}](tg://user?id=${p.userId})`;
+          })
           .join('\n')
       : 'No participants yet';
     

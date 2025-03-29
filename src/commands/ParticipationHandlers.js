@@ -25,7 +25,9 @@ export class ParticipationHandlers extends BaseCommandHandler {
       
       const participant = {
         userId: ctx.from.id,
-        username: ctx.from.username || `${ctx.from.first_name || ''} ${ctx.from.last_name || ''}`.trim()
+        username: ctx.from.username || '',
+        firstName: ctx.from.first_name || '',
+        lastName: ctx.from.last_name || ''
       };
       
       const success = await this.rideService.addParticipant(rideId, participant);

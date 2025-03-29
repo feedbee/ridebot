@@ -20,6 +20,8 @@
  * @typedef {Object} Participant
  * @property {number} userId
  * @property {string} username
+ * @property {string} [firstName]
+ * @property {string} [lastName]
  * @property {Date} joinedAt
  */
 

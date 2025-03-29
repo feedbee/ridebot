@@ -21,7 +21,9 @@ const testRide = {
 
 const testParticipant = {
   userId: 101,
-  username: 'testuser'
+  username: 'testuser',
+  firstName: 'Test',
+  lastName: 'User'
 };
 
 beforeAll(async () => {
@@ -108,7 +110,13 @@ describe('MongoDBStorage', () => {
 
       const participants = await storage.getParticipants(rideId);
       expect(participants).toHaveLength(1);
-      expect(participants[0]).toMatchObject(testParticipant);
+      
+      // Check each property individually
+      const participant = participants[0];
+      expect(participant.userId).toBe(testParticipant.userId);
+      expect(participant.username).toBe(testParticipant.username);
+      expect(participant.firstName).toBe(testParticipant.firstName);
+      expect(participant.lastName).toBe(testParticipant.lastName);
     });
 
     test('should not add duplicate participant', async () => {
