@@ -22,6 +22,11 @@ export class RideWizard {
    * @returns {Promise<boolean>} - True if the bot has admin permissions, false otherwise
    */
   async checkAdminPermissions(ctx, cleanupState = false) {
+    // Skip permission check for private chats (type 'private')
+    if (ctx.chat.type === 'private') {
+      return true;
+    }
+    
     const hasAdminPermissions = await checkBotAdminPermissions(ctx);
     if (!hasAdminPermissions) {
       if (cleanupState) {
@@ -29,7 +34,7 @@ export class RideWizard {
         this.wizardStates.delete(stateKey);
       }
       
-      await ctx.reply('⚠️ I need administrator permissions to use the wizard mode. Please add me as an administrator or use the non-wizard commands instead.');
+      await ctx.reply('⚠️ I need administrator permissions in group chats to use the wizard mode. Please add me as an administrator or use the non-wizard commands instead.');
       return false;
     }
     return true;
@@ -91,8 +96,9 @@ export class RideWizard {
     }
     
     // Check if the bot has admin permissions in the chat
+    // This will automatically pass for private chats
     if (!await this.checkAdminPermissions(ctx, true)) {
-      await ctx.answerCallbackQuery('⚠️ I need administrator permissions to use the wizard mode');
+      await ctx.answerCallbackQuery('⚠️ I need administrator permissions in group chats to use the wizard mode');
       return;
     }
 
