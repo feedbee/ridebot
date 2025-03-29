@@ -55,7 +55,6 @@ export class Bot {
     this.bot.command('listrides', ctx => this.listRidesHandler.handle(ctx));
     this.bot.command('dupride', ctx => this.duplicateRideHandler.handle(ctx));
     this.bot.command('dupridex', ctx => this.duplicateRideHandler.handleWizard(ctx));
-    this.bot.command('updateridex', ctx => this.updateRideHandler.handle(ctx));
     
     // Callback query handlers
     this.bot.callbackQuery(/^join:(.+)$/, ctx => this.participationHandlers.handleJoinRide(ctx));
