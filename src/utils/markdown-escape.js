@@ -7,7 +7,7 @@ export function escapeMarkdown(text) {
   if (!text) return text;
   
   // Replace special Markdown characters with their escaped versions
-  return text.replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1');
+  return text.replace(/([_*\[\]()~`>#+\-=|{}!])/g, '\\$1');
 }
 
 /**

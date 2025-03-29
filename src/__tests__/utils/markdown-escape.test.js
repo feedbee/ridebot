@@ -48,7 +48,7 @@ describe('escapeRideMarkdown', () => {
     
     expect(escaped.title).toBe('\\*Important\\* Ride');
     expect(escaped.meetingPoint).toBe('\\_Central\\_ Park');
-    expect(escaped.routeLink).toBe('\\[Route\\]\\(http://example\\.com\\)');
+    expect(escaped.routeLink).toBe('\\[Route\\]\\(http://example.com\\)');
     expect(escaped.otherField).toBe('*should not escape*');
   });
 
@@ -104,4 +104,4 @@ describe('escapeRideMarkdown', () => {
     expect(escaped.participants).toEqual(ride.participants);
     expect(escaped.maxParticipants).toBe(10);
   });
-}); 
+});
