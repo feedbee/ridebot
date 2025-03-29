@@ -252,10 +252,23 @@ export class RideWizard {
             state.data.routeLink = ctx.message.text;
             if (RouteParser.isKnownProvider(ctx.message.text)) {
               const routeInfo = await RouteParser.parseRoute(ctx.message.text);
+              
+              // Set any data that was successfully parsed
               if (routeInfo) {
-                state.data.distance = routeInfo.distance;
-                state.data.duration = routeInfo.duration;
+                if (routeInfo.distance) state.data.distance = routeInfo.distance;
+                if (routeInfo.duration) state.data.duration = routeInfo.duration;
+              }
+              
+              // Determine next step based on what data we have
+              if (state.data.distance && state.data.duration) {
+                // If we have both distance and duration, skip to speed
                 state.step = 'speed';
+              } else if (state.data.distance) {
+                // If we only have distance, go to duration
+                state.step = 'duration';
+              } else {
+                // If we have neither, start with distance
+                state.step = 'distance';
               }
             } else {
               state.step = 'distance';

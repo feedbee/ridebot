@@ -59,21 +59,24 @@ export class RouteParser {
    * @returns {Promise<{distance: number, duration: number, error?: string}|null>}
    */
   static async parseRoute(url) {
-    // If it's not a known provider, don't try to parse
+    // If it's not a known provider, don't try to parse but don't return an error
     if (!this.isKnownProvider(url)) {
-      return { error: 'URL is not from a supported route provider' };
+      console.warn(`[RouteParser] URL is not from a supported route provider: ${url}`);
+      return null;
     }
 
     const provider = this.getRouteProvider(url);
     if (!provider) {
-      return { error: 'Could not determine route provider' };
+      console.warn(`[RouteParser] Could not determine route provider for URL: ${url}`);
+      return null;
     }
 
     try {
       const response = await fetch(url);
       
       if (!response.ok) {
-        return { error: `Failed to fetch route data: ${response.status} ${response.statusText}` };
+        console.warn(`[RouteParser] Failed to fetch route data: ${response.status} ${response.statusText} for URL: ${url}`);
+        return null;
       }
       
       const html = await response.text();
@@ -91,17 +94,19 @@ export class RouteParser {
           result = this.parseKomootRoute($);
           break;
         default:
-          return { error: `Unsupported provider: ${provider}` };
+          console.warn(`[RouteParser] Unsupported provider: ${provider} for URL: ${url}`);
+          return null;
       }
       
       if (!result) {
-        return { error: `Could not parse route data from ${provider}` };
+        console.warn(`[RouteParser] Could not parse route data from ${provider} for URL: ${url}`);
+        return null;
       }
       
       return result;
     } catch (error) {
-      console.error('Error parsing route:', error);
-      return { error: `Error parsing route: ${error.message}` };
+      console.warn(`[RouteParser] Error parsing route: ${error.message} for URL: ${url}`);
+      return null;
     }
   }
 
@@ -109,7 +114,7 @@ export class RouteParser {
    * Parse Strava route/activity details
    * @param {cheerio.Root} $ 
    * @param {string} url
-   * @returns {{distance: number, duration: number}|null}
+   * @returns {{distance?: number, duration?: number}|null}
    */
   static parseStravaRoute($, url) {
     try {
@@ -168,43 +173,57 @@ export class RouteParser {
         }
       }
 
-      if (distance && duration) {
-        return {
-          distance: Math.round(distance), // Already in km from the new format
-          duration
-        };
-      }
+      // Return any data we were able to parse
+      const result = {};
+      if (distance) result.distance = Math.round(distance);
+      if (duration) result.duration = duration;
+      
+      // Only return null if we couldn't parse anything
+      return Object.keys(result).length > 0 ? result : null;
     } catch (error) {
-      console.error('Error parsing Strava route:', error);
+      console.warn(`[RouteParser] Error parsing Strava route: ${error.message} for URL: ${url}`);
+      return null;
     }
-    return null;
   }
 
   /**
    * Parse RideWithGPS route details
    * @param {cheerio.Root} $ 
-   * @returns {{distance: number, duration: number}|null}
+   * @returns {{distance?: number, duration?: number}|null}
    */
   static parseRideWithGPSRoute($) {
     try {
+      let distance, duration;
       const distanceText = $('.route-stats').find('.distance').text();
       const durationText = $('.route-stats').find('.time').text();
 
       // Extract distance in kilometers
       const distanceMatch = distanceText.match(/(\d+(?:\.\d+)?)\s*km/);
-      if (!distanceMatch) return null;
-      const distance = parseFloat(distanceMatch[1]);
+      if (distanceMatch) {
+        distance = parseFloat(distanceMatch[1]);
+      } else {
+        console.warn('[RouteParser] Could not extract distance from RideWithGPS route');
+      }
 
       // Extract duration in format "1h 30m" or "45m"
       const durationMatch = durationText.match(/(?:(\d+)h\s*)?(?:(\d+)m)?/);
-      if (!durationMatch) return null;
-      const hours = parseInt(durationMatch[1] || '0');
-      const minutes = parseInt(durationMatch[2] || '0');
-      const duration = hours * 60 + minutes;
+      if (durationMatch) {
+        const hours = parseInt(durationMatch[1] || '0');
+        const minutes = parseInt(durationMatch[2] || '0');
+        duration = hours * 60 + minutes;
+      } else {
+        console.warn('[RouteParser] Could not extract duration from RideWithGPS route');
+      }
 
-      return { distance, duration };
+      // Return any data we were able to parse
+      const result = {};
+      if (distance) result.distance = distance;
+      if (duration) result.duration = duration;
+      
+      // Only return null if we couldn't parse anything
+      return Object.keys(result).length > 0 ? result : null;
     } catch (error) {
-      console.error('Error parsing RideWithGPS route:', error);
+      console.warn(`[RouteParser] Error parsing RideWithGPS route: ${error.message}`);
       return null;
     }
   }
@@ -212,28 +231,41 @@ export class RouteParser {
   /**
    * Parse Komoot route details
    * @param {cheerio.Root} $ 
-   * @returns {{distance: number, duration: number}|null}
+   * @returns {{distance?: number, duration?: number}|null}
    */
   static parseKomootRoute($) {
     try {
+      let distance, duration;
       const distanceText = $('.tour-stats').find('.distance').text();
       const durationText = $('.tour-stats').find('.duration').text();
 
       // Extract distance in kilometers
       const distanceMatch = distanceText.match(/(\d+(?:\.\d+)?)\s*km/);
-      if (!distanceMatch) return null;
-      const distance = parseFloat(distanceMatch[1]);
+      if (distanceMatch) {
+        distance = parseFloat(distanceMatch[1]);
+      } else {
+        console.warn('[RouteParser] Could not extract distance from Komoot route');
+      }
 
       // Extract duration in format "1h 30m" or "45m"
       const durationMatch = durationText.match(/(?:(\d+)h\s*)?(?:(\d+)m)?/);
-      if (!durationMatch) return null;
-      const hours = parseInt(durationMatch[1] || '0');
-      const minutes = parseInt(durationMatch[2] || '0');
-      const duration = hours * 60 + minutes;
+      if (durationMatch) {
+        const hours = parseInt(durationMatch[1] || '0');
+        const minutes = parseInt(durationMatch[2] || '0');
+        duration = hours * 60 + minutes;
+      } else {
+        console.warn('[RouteParser] Could not extract duration from Komoot route');
+      }
 
-      return { distance, duration };
+      // Return any data we were able to parse
+      const result = {};
+      if (distance) result.distance = distance;
+      if (duration) result.duration = duration;
+      
+      // Only return null if we couldn't parse anything
+      return Object.keys(result).length > 0 ? result : null;
     } catch (error) {
-      console.error('Error parsing Komoot route:', error);
+      console.warn(`[RouteParser] Error parsing Komoot route: ${error.message}`);
       return null;
     }
   }

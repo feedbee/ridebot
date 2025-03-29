@@ -130,11 +130,17 @@ export class RideService {
 
     if (RouteParser.isKnownProvider(routeUrl)) {
       const result = await RouteParser.parseRoute(routeUrl);
-      // If there's an error in the result, return it
-      if (result && result.error) {
-        return result;
+      
+      // Create a response object with the route link
+      const response = { routeLink: routeUrl };
+      
+      // Add any available data from the parser
+      if (result) {
+        if (result.distance) response.distance = result.distance;
+        if (result.duration) response.duration = result.duration;
       }
-      return result || { error: 'Failed to parse route information' };
+      
+      return response;
     }
 
     // For non-supported providers, just return the URL without error
