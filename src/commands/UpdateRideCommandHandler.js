@@ -1,6 +1,4 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
-import { InlineKeyboard } from 'grammy';
-import { config } from '../config.js';
 
 /**
  * Handler for the updateride command

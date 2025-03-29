@@ -1,5 +1,4 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
-import { InlineKeyboard } from 'grammy';
 
 /**
  * Handler for the newride command
