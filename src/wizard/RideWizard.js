@@ -1,11 +1,11 @@
 import { InlineKeyboard } from 'grammy';
 import { config } from '../config.js';
 import { RouteParser } from '../utils/route-parser.js';
-import { DateParser } from '../utils/date-parser.js';
 import { parseDateTimeInput } from '../utils/date-input-parser.js';
 import { escapeMarkdown } from '../utils/markdown-escape.js';
 import { MessageFormatter } from '../formatters/MessageFormatter.js';
 import { RideService } from '../services/RideService.js';
+import { checkBotAdminPermissions } from '../utils/permission-checker.js';
 
 export class RideWizard {
   constructor(storage) {
@@ -13,6 +13,26 @@ export class RideWizard {
     this.rideService = new RideService(storage);
     this.messageFormatter = new MessageFormatter();
     this.wizardStates = new Map();
+  }
+  
+  /**
+   * Check if the bot has admin permissions and notify the user if not
+   * @param {import('grammy').Context} ctx - Grammy context
+   * @param {boolean} cleanupState - Whether to clean up the wizard state if permissions are missing
+   * @returns {Promise<boolean>} - True if the bot has admin permissions, false otherwise
+   */
+  async checkAdminPermissions(ctx, cleanupState = false) {
+    const hasAdminPermissions = await checkBotAdminPermissions(ctx);
+    if (!hasAdminPermissions) {
+      if (cleanupState) {
+        const stateKey = this.getWizardStateKey(ctx.from.id, ctx.chat.id);
+        this.wizardStates.delete(stateKey);
+      }
+      
+      await ctx.reply('⚠️ I need administrator permissions to use the wizard mode. Please add me as an administrator or use the non-wizard commands instead.');
+      return false;
+    }
+    return true;
   }
 
   /**
@@ -30,6 +50,11 @@ export class RideWizard {
     const stateKey = this.getWizardStateKey(ctx.from.id, ctx.chat.id);
     if (this.wizardStates.has(stateKey)) {
       await ctx.reply('Please complete or cancel the current ride creation wizard before starting a new one.');
+      return;
+    }
+
+    // Check if the bot has admin permissions in the chat
+    if (!await this.checkAdminPermissions(ctx)) {
       return;
     }
 
@@ -62,6 +87,12 @@ export class RideWizard {
 
     if (!state) {
       await ctx.answerCallbackQuery('Wizard session expired');
+      return;
+    }
+    
+    // Check if the bot has admin permissions in the chat
+    if (!await this.checkAdminPermissions(ctx, true)) {
+      await ctx.answerCallbackQuery('⚠️ I need administrator permissions to use the wizard mode');
       return;
     }
 
@@ -190,6 +221,11 @@ export class RideWizard {
     const stateKey = this.getWizardStateKey(ctx.from.id, ctx.chat.id);
     const state = this.wizardStates.get(stateKey);
     if (!state) return;
+    
+    // Check if the bot has admin permissions in the chat
+    if (!await this.checkAdminPermissions(ctx, true)) {
+      return;
+    }
 
     try {
       let shouldProceed = true;
@@ -454,7 +490,17 @@ export class RideWizard {
           });
         } catch (error) {
           console.error('Error updating wizard message:', error);
-          // If update fails (e.g., message too old), send a new message
+          
+          // Check if this is a permission error
+          if (error.description && (error.description.includes('not enough rights') || 
+              error.description.includes('bot was kicked') || 
+              error.description.includes('bot is not a member'))) {
+            // Use our utility method to handle the permission error
+            await this.checkAdminPermissions(ctx, true);
+            return null;
+          }
+          
+          // If update fails for other reasons (e.g., message too old), send a new message
           sentMessage = await ctx.reply(message, {
             parse_mode: 'Markdown',
             reply_markup: keyboard
@@ -472,6 +518,15 @@ export class RideWizard {
       return sentMessage;
     } catch (error) {
       console.error('Error sending wizard step:', error);
+      
+      // Check if this is a permission error
+      if (error.description && (error.description.includes('not enough rights') || 
+          error.description.includes('bot was kicked') || 
+          error.description.includes('bot is not a member'))) {
+        // Use our utility method to handle the permission error
+        await this.checkAdminPermissions(ctx, true);
+      }
+      return null;
     }
   }
 
