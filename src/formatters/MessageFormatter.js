@@ -64,7 +64,7 @@ export class MessageFormatter {
     const participantCount = participants.length;
     const participantsList = participants.length > 0
       ? participants
-          .map(p => escapeMarkdown(p.username))
+          .map(p => `[@${escapeMarkdown(p.username)}](tg://user?id=${p.userId})`)
           .join('\n')
       : 'No participants yet';
     
