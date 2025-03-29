@@ -117,34 +117,4 @@ export class DuplicateRideCommandHandler extends BaseCommandHandler {
       await ctx.reply('An error occurred while duplicating the ride.');
     }
   }
-
-  /**
-   * Handle the dupridex command (wizard version)
-   * @param {import('grammy').Context} ctx - Grammy context
-   */
-  async handleWizard(ctx) {
-    // Extract the original ride
-    const { ride, error } = await this.extractRide(ctx);
-    if (error) {
-      await ctx.reply(error);
-      return;
-    }
-
-    // Start the wizard with prefilled data from the original ride
-    const tomorrow = new Date(ride.date);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const prefillData = {
-      title: ride.title,
-      datetime: tomorrow,
-      meetingPoint: ride.meetingPoint,
-      routeLink: ride.routeLink,
-      distance: ride.distance,
-      duration: ride.duration,
-      speedMin: ride.speedMin,
-      speedMax: ride.speedMax
-    };
-
-    await this.wizard.startWizard(ctx, prefillData);
-  }
 }
