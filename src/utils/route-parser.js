@@ -56,37 +56,52 @@ export class RouteParser {
   /**
    * Parse route details from URL
    * @param {string} url 
-   * @returns {Promise<{distance: number, duration: number}|null>}
+   * @returns {Promise<{distance: number, duration: number, error?: string}|null>}
    */
   static async parseRoute(url) {
     // If it's not a known provider, don't try to parse
     if (!this.isKnownProvider(url)) {
-      return null;
+      return { error: 'URL is not from a supported route provider' };
     }
 
     const provider = this.getRouteProvider(url);
     if (!provider) {
-      return null;
+      return { error: 'Could not determine route provider' };
     }
 
     try {
       const response = await fetch(url);
+      
+      if (!response.ok) {
+        return { error: `Failed to fetch route data: ${response.status} ${response.statusText}` };
+      }
+      
       const html = await response.text();
       const $ = cheerio.load(html);
 
+      let result;
       switch (provider) {
         case 'strava':
-          return this.parseStravaRoute($, url);
+          result = this.parseStravaRoute($, url);
+          break;
         case 'ridewithgps':
-          return this.parseRideWithGPSRoute($);
+          result = this.parseRideWithGPSRoute($);
+          break;
         case 'komoot':
-          return this.parseKomootRoute($);
+          result = this.parseKomootRoute($);
+          break;
         default:
-          return null;
+          return { error: `Unsupported provider: ${provider}` };
       }
+      
+      if (!result) {
+        return { error: `Could not parse route data from ${provider}` };
+      }
+      
+      return result;
     } catch (error) {
       console.error('Error parsing route:', error);
-      return null;
+      return { error: `Error parsing route: ${error.message}` };
     }
   }
 

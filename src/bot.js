@@ -6,6 +6,7 @@ import { DateParser } from './utils/date-parser.js';
 import { RideWizard } from './wizard/RideWizard.js';
 import { parseDateTimeInput } from './utils/date-input-parser.js';
 import { escapeRideMarkdown, escapeMarkdown } from './utils/markdown-escape.js';
+import { MessageFormatter } from './formatters/MessageFormatter.js';
 
 export class BikeRideBot {
   /**
@@ -14,6 +15,7 @@ export class BikeRideBot {
   constructor(storage) {
     this.storage = storage;
     this.bot = new Bot(config.bot.token);
+    this.messageFormatter = new MessageFormatter();
     this.wizard = new RideWizard(storage);
     this.setupHandlers();
   }
@@ -161,10 +163,12 @@ export class BikeRideBot {
           // Only try to parse details if it's a known provider
           if (RouteParser.isKnownProvider(params.route)) {
             const routeInfo = await RouteParser.parseRoute(params.route);
-            if (routeInfo) {
-              if (!params.dist) rideData.distance = routeInfo.distance;
-              if (!params.time) rideData.duration = routeInfo.duration;
+            if (routeInfo.error) {
+              await ctx.reply(`Route error: ${routeInfo.error}`);
+              return;
             }
+            if (routeInfo.distance && !params.dist) rideData.distance = routeInfo.distance;
+            if (routeInfo.duration && !params.time) rideData.duration = routeInfo.duration;
           }
         } else {
           await ctx.reply('Invalid route URL format. Please provide a valid URL.');
@@ -188,14 +192,12 @@ export class BikeRideBot {
 
       const ride = await this.storage.createRide(rideData);
       
-      // Create initial message
+      // Create initial message using the centralized formatter
       const participants = await this.storage.getParticipants(ride.id);
-      const keyboard = new InlineKeyboard();
-      keyboard.text(config.buttons.join, `join:${ride.id}`);
-
-      const message = this.formatRideMessage(ride, participants);
+      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants, ctx.from.id);
+      
       const sentMessage = await ctx.reply(message, {
-        parse_mode: 'Markdown',
+        parse_mode: parseMode,
         reply_markup: keyboard
       });
 
@@ -239,10 +241,12 @@ export class BikeRideBot {
           // Only try to parse details if it's a known provider
           if (RouteParser.isKnownProvider(params.route)) {
             const routeInfo = await RouteParser.parseRoute(params.route);
-            if (routeInfo) {
-              if (!params.dist) updates.distance = routeInfo.distance;
-              if (!params.time) updates.duration = routeInfo.duration;
+            if (routeInfo.error) {
+              await ctx.reply(`Route error: ${routeInfo.error}`);
+              return;
             }
+            if (routeInfo.distance && !params.dist) updates.distance = routeInfo.distance;
+            if (routeInfo.duration && !params.time) updates.duration = routeInfo.duration;
           }
         } else {
           await ctx.reply('Invalid route URL format. Please provide a valid URL.');
@@ -359,22 +363,9 @@ export class BikeRideBot {
     }
 
     const participants = await this.storage.getParticipants(ride.id);
-    const keyboard = new InlineKeyboard();
-
-    // Don't show join/leave buttons for cancelled rides
-    if (!ride.cancelled) {
-      const participantIds = participants.map(p => p.userId);
-      const buttonText = participantIds.includes(ride.createdBy) 
-        ? config.buttons.leave 
-        : config.buttons.join;
-      const callbackData = participantIds.includes(ride.createdBy)
-        ? `leave:${ride.id}`
-        : `join:${ride.id}`;
-
-      keyboard.text(buttonText, callbackData);
-    }
-
-    const message = this.formatRideMessage(ride, participants);
+    
+    // Use the centralized formatter for both message and keyboard
+    const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants, ride.createdBy);
 
     try {
       await this.bot.api.editMessageText(
@@ -382,7 +373,7 @@ export class BikeRideBot {
         ride.messageId,
         message,
         {
-          parse_mode: 'Markdown',
+          parse_mode: parseMode,
           reply_markup: keyboard
         }
       );
@@ -391,70 +382,10 @@ export class BikeRideBot {
     }
   }
 
-  formatRideMessage(ride, participants) {
-    // Escape Markdown in ride data
-    const escapedRide = escapeRideMarkdown(ride);
-    const { date: dateStr, time: timeStr } = DateParser.formatDateTime(escapedRide.date);
-
-    let meetingInfo = '';
-    if (escapedRide.meetingPoint) {
-      meetingInfo = `\n📍 Meeting point: ${escapedRide.meetingPoint}`;
-    }
-
-    let routeInfo = '';
-    if (escapedRide.routeLink) {
-      routeInfo = `\n🔗 Route: ${escapedRide.routeLink}`;
-    }
-
-    let distanceInfo = '';
-    if (escapedRide.distance) {
-      distanceInfo = `\n📏 Distance: ${escapedRide.distance} km`;
-    }
-
-    let durationInfo = '';
-    if (escapedRide.duration) {
-      const hours = Math.floor(escapedRide.duration / 60);
-      const minutes = escapedRide.duration % 60;
-      durationInfo = `\n⏱ Duration: ${hours}h ${minutes}m`;
-    }
-
-    let speedInfo = '';
-    if (escapedRide.speedMin || escapedRide.speedMax) {
-      speedInfo = '\n🚴 Speed: ';
-      if (escapedRide.speedMin && escapedRide.speedMax) {
-        speedInfo += `${escapedRide.speedMin}-${escapedRide.speedMax} km/h`;
-      } else if (escapedRide.speedMin) {
-        speedInfo += `min ${escapedRide.speedMin} km/h`;
-      } else {
-        speedInfo += `max ${escapedRide.speedMax} km/h`;
-      }
-    }
-
-    const participantList = participants.length > 0
-      ? participants.map(p => `@${p.username}`).join('\n')
-      : 'No participants yet';
-
-    // Add ride ID in a visually pleasing way
-    const rideInfo = `🎫 Ride #${escapedRide.id}`;
-
-    const cancelledBadge = escapedRide.cancelled ? ` ${config.messageTemplates.cancelled}` : '';
-    const joinInstructions = escapedRide.cancelled 
-      ? config.messageTemplates.cancelledInstructions.replace('{id}', escapedRide.id)
-      : `${rideInfo}\nClick the button below to join or leave the ride`;
-
-    return config.messageTemplates.ride
-      .replace('{title}', escapedRide.title)
-      .replace('{cancelledBadge}', cancelledBadge)
-      .replace('{date}', dateStr)
-      .replace('{time}', timeStr)
-      .replace('{meetingInfo}', meetingInfo)
-      .replace('{routeInfo}', routeInfo)
-      .replace('{distanceInfo}', distanceInfo)
-      .replace('{durationInfo}', durationInfo)
-      .replace('{speedInfo}', speedInfo)
-      .replace('{participantCount}', participants.length)
-      .replace('{participants}', participantList)
-      .replace('{joinInstructions}', joinInstructions);
+  formatRideMessage(ride, participants, userId = null) {
+    // Use the centralized message formatter for consistent formatting
+    const { message } = this.messageFormatter.formatRideWithKeyboard(ride, participants, userId);
+    return message;
   }
 
   async handleDeleteRide(ctx) {

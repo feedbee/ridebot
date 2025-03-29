@@ -4,10 +4,14 @@ import { RouteParser } from '../utils/route-parser.js';
 import { DateParser } from '../utils/date-parser.js';
 import { parseDateTimeInput } from '../utils/date-input-parser.js';
 import { escapeMarkdown } from '../utils/markdown-escape.js';
+import { MessageFormatter } from '../formatters/MessageFormatter.js';
+import { RideService } from '../services/RideService.js';
 
 export class RideWizard {
   constructor(storage) {
     this.storage = storage;
+    this.rideService = new RideService(storage);
+    this.messageFormatter = new MessageFormatter();
     this.wizardStates = new Map();
   }
 
@@ -471,68 +475,10 @@ export class RideWizard {
     }
   }
 
-  formatRideMessage(ride, participants) {
-    const { date: dateStr, time: timeStr } = DateParser.formatDateTime(ride.date);
-
-    let meetingInfo = '';
-    if (ride.meetingPoint) {
-      meetingInfo = `\n📍 Meeting point: ${ride.meetingPoint}`;
-    }
-
-    let routeInfo = '';
-    if (ride.routeLink) {
-      routeInfo = `\n🔗 Route: ${ride.routeLink}`;
-    }
-
-    let distanceInfo = '';
-    if (ride.distance) {
-      distanceInfo = `\n📏 Distance: ${ride.distance} km`;
-    }
-
-    let durationInfo = '';
-    if (ride.duration) {
-      const hours = Math.floor(ride.duration / 60);
-      const minutes = ride.duration % 60;
-      durationInfo = `\n⏱ Duration: ${hours}h ${minutes}m`;
-    }
-
-    let speedInfo = '';
-    if (ride.speedMin || ride.speedMax) {
-      speedInfo = '\n🚴 Speed: ';
-      if (ride.speedMin && ride.speedMax) {
-        speedInfo += `${ride.speedMin}-${ride.speedMax} km/h`;
-      } else if (ride.speedMin) {
-        speedInfo += `min ${ride.speedMin} km/h`;
-      } else {
-        speedInfo += `max ${ride.speedMax} km/h`;
-      }
-    }
-
-    const participantList = participants.length > 0
-      ? participants.map(p => `@${p.username}`).join('\n')
-      : 'No participants yet';
-
-    // Add ride ID in a visually pleasing way
-    const rideInfo = `🎫 Ride #${ride.id}`;
-
-    const cancelledBadge = ride.cancelled ? ` ${config.messageTemplates.cancelled}` : '';
-    const joinInstructions = ride.cancelled 
-      ? config.messageTemplates.cancelledInstructions.replace('{id}', ride.id)
-      : `${rideInfo}\nClick the button below to join or leave the ride`;
-
-    return config.messageTemplates.ride
-      .replace('{title}', ride.title)
-      .replace('{cancelledBadge}', cancelledBadge)
-      .replace('{date}', dateStr)
-      .replace('{time}', timeStr)
-      .replace('{meetingInfo}', meetingInfo)
-      .replace('{routeInfo}', routeInfo)
-      .replace('{distanceInfo}', distanceInfo)
-      .replace('{durationInfo}', durationInfo)
-      .replace('{speedInfo}', speedInfo)
-      .replace('{participantCount}', participants.length)
-      .replace('{participants}', participantList)
-      .replace('{joinInstructions}', joinInstructions);
+  formatRideMessage(ride, participants, userId = null) {
+    // Use the centralized message formatter
+    const { message } = this.messageFormatter.formatRideWithKeyboard(ride, participants, userId);
+    return message;
   }
 
   async updateRideMessage(ride, ctx) {
