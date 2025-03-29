@@ -1,11 +1,9 @@
 {
   "name": "Node.js Dev Container",
   "dockerFile": "Dockerfile",
-  //"image": "node:22",
   "workspaceFolder": "/workspace",
   "mounts": [
-    "source=${localWorkspaceFolder},target=/workspace,type=bind",
-    // "source=node_modules,target=/workspace/node_modules,type=volume"
+    "source=${localWorkspaceFolder},target=/workspace,type=bind"
   ],
   "customizations": {
     "vscode": {
