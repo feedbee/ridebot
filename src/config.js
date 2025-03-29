@@ -49,16 +49,16 @@ export const config = {
   },
   messageTemplates: {
     help: `
-*🚲 Bike Ride Bot Help*
+<b>🚲 Bike Ride Bot Help</b>
 
-*➕ Creating a New Ride*
+<b>➕ Creating a New Ride</b>
 Create a new ride:
 1. Using the wizard (recommended):
-Simply send \`/newride\` command without any parameters to start an interactive wizard that will guide you through each step.
+Simply send <code>/newride</code> command without any parameters to start an interactive wizard that will guide you through each step.
 
 2. Using command with parameters:
-Use \`/newride\` command followed by parameters (one per line):
-\`\`\`
+Use <code>/newride</code> command followed by parameters (one per line):
+<pre>
 /newride
 title: Ride title
 when: Date and time (e.g., "tomorrow at 6pm", "next saturday 10am", "21 Jul 14:30")
@@ -67,10 +67,10 @@ route: Route link (optional)
 dist: Distance in km (optional)
 time: Duration in minutes (optional)
 speed: Speed range in km/h (optional)
-\`\`\`
+</pre>
 
 Example:
-\`\`\`
+<pre>
 /newride
 title: Evening Ride
 when: tomorrow at 6pm
@@ -79,47 +79,45 @@ route: https://www.strava.com/routes/123456
 dist: 35
 time: 90
 speed: 25-28
-\`\`\`
+</pre>
 
-*Managing Rides*
+<b>Managing Rides</b>
 
-*🔄 Updating a Ride*
+<b>🔄 Updating a Ride</b>
 Only the ride creator can update. Two ways:
-1. Reply to the ride message with \`/updateride\` and new parameters
-2. Use \`/updateride\` with ride ID:
-\`\`\`
+1. Reply to the ride message with <code>/updateride</code> and new parameters
+2. Use <code>/updateride</code> with ride ID:
+<pre>
 /updateride
 id: abc123
-title: Updated Evening Ride
-when: 25.03.2024 19:00
-meet: City Park entrance
-speed: 26-29
-\`\`\`
+title: New title (optional)
+when: New date/time (optional)
+meet: New meeting point (optional)
+route: New route link (optional)
+dist: New distance (optional)
+time: New duration (optional)
+speed: New speed range (optional)
+</pre>
 
-*❌ Cancelling a Ride*
-Only the ride creator can cancel. Two ways:
-1. Reply to the ride message with \`/cancelride\`
-2. Use \`/cancelride\` with ID:
-\`\`\`
-/cancelride
-id: abc123
-\`\`\`
+<b>❌ Cancelling a Ride</b>
+Only the ride creator can cancel:
+1. Reply to the ride message with <code>/cancelride</code>
+2. Use <code>/cancelride</code> with ride ID:
+<pre>/cancelride id: abc123</pre>
 
-*🗑 Deleting a Ride*
-Only the ride creator can delete. Two ways:
-1. Reply to the ride message with \`/deleteride\`
-2. Use \`/deleteride\` with ID:
-\`\`\`
-/deleteride
-id: abc123
-\`\`\`
-You'll need to confirm deletion when prompted.
+<b>🗑 Deleting a Ride</b>
+Only the ride creator can delete:
+1. Reply to the ride message with <code>/deleteride</code>
+2. Use <code>/deleteride</code> with ride ID:
+<pre>/deleteride id: abc123</pre>
 
-*🔁 Duplicating a Ride*
-Create a copy of an existing ride. Two ways:
-1. Reply to the ride message with \`/dupride\` and optional parameters
-2. Use \`/dupride\` with ID and optional parameters:
-\`\`\`
+<b>🔄 Duplicating a Ride</b>
+Only the ride creator can duplicate. Two ways:
+1. Use the wizard (recommended):
+Send <code>/dupridex</code> to start an interactive wizard.
+
+2. Use <code>/dupride</code> with ID and optional parameters:
+<pre>
 /dupride
 id: abc123
 title: New title (optional)
@@ -129,17 +127,17 @@ route: New route link (optional)
 dist: New distance (optional)
 time: New duration (optional)
 speed: New speed range (optional)
-\`\`\`
+</pre>
 Any parameters not provided will be copied from the original ride.
 By default, the new ride will be scheduled for tomorrow at the same time.
 
-*📋 Listing Your Rides*
-Use \`/listrides\` to see all rides you've created:
+<b>📋 Listing Your Rides</b>
+Use <code>/listrides</code> to see all rides you've created:
 • Rides are sorted by date (newest first)
 • Use navigation buttons to browse pages
     `.trim(),
     ride: `
-🚲 *{title}*{cancelledBadge}
+🚲 <b>{title}</b>{cancelledBadge}
 
 📅 Date: {date}
 ⏰ Time: {time}
@@ -151,7 +149,7 @@ Use \`/listrides\` to see all rides you've created:
 {joinInstructions}
     `.trim(),
     cancelled: '❌ CANCELLED',
-    cancelledInstructions: '🎫 Ride #{id}\nThis ride has been cancelled',
+    cancelledInstructions: 'This ride has been cancelled. Ride #<b>{id}</b>',
     deleteConfirmation: '⚠️ Are you sure you want to delete this ride? This action cannot be undone.'
   },
   buttons: {

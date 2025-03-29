@@ -56,7 +56,7 @@ export class ListRidesCommandHandler extends BaseCommandHandler {
     }
     
     const options = {
-      parse_mode: 'Markdown',
+      parse_mode: 'HTML',
       reply_markup: keyboard.length > 0 ? keyboard : undefined
     };
     

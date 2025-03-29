@@ -1,5 +1,5 @@
 import { config } from '../config.js';
-import { escapeMarkdown } from '../utils/markdown-escape.js';
+import { escapeHtml } from '../utils/html-escape.js';
 import { InlineKeyboard } from 'grammy';
 
 /**
@@ -19,7 +19,7 @@ export class MessageFormatter {
     return {
       message,
       keyboard,
-      parseMode: 'Markdown'
+      parseMode: 'HTML'
     };
   }
 
@@ -67,22 +67,24 @@ export class MessageFormatter {
               const fullName = `${p.firstName} ${p.lastName}`.trim();
               // If we also have a username, show both
               if (p.username) {
-                displayName = `${fullName} <@${p.username}>`;
+                displayName = `${escapeHtml(fullName)} (@${escapeHtml(p.username)})`;
               } else {
-                displayName = fullName;
+                displayName = escapeHtml(fullName);
               }
             } else {
               // Legacy format or username-only
-              displayName = p.username.includes(' ') ? p.username : `@${p.username}`;
+              displayName = p.username.includes(' ') ? escapeHtml(p.username) : `@${escapeHtml(p.username)}`;
             }
             
-            return `[${escapeMarkdown(displayName)}](tg://user?id=${p.userId})`;
+            return `<a href="tg://user?id=${p.userId}">${displayName}</a>`;
           })
           .join('\n')
       : 'No participants yet';
     
+    // Convert Markdown template to HTML
     let message = config.messageTemplates.ride
-      .replace('{title}', escapeMarkdown(ride.title))
+      .replace(/\*([^*]+)\*/g, '<b>$1</b>') // Bold text
+      .replace('{title}', escapeHtml(ride.title))
       .replace('{cancelledBadge}', ride.cancelled ? ` ${config.messageTemplates.cancelled}` : '')
       .replace('{date}', date)
       .replace('{time}', time)
@@ -91,12 +93,12 @@ export class MessageFormatter {
     
     // Optional fields
     const meetingInfo = ride.meetingPoint
-      ? `📍 Meeting point: ${escapeMarkdown(ride.meetingPoint)}\n`
+      ? `📍 Meeting point: ${escapeHtml(ride.meetingPoint)}\n`
       : '';
     message = message.replace('{meetingInfo}', meetingInfo);
     
     const routeInfo = ride.routeLink
-      ? `🔄 Route: [Link](${ride.routeLink})\n`
+      ? `🔄 Route: <a href="${ride.routeLink}">Link</a>\n`
       : '';
     message = message.replace('{routeInfo}', routeInfo);
     
@@ -117,7 +119,7 @@ export class MessageFormatter {
     
     // Always just show the ride ID, no additional instructions
     const joinInstructions = ride.cancelled
-      ? config.messageTemplates.cancelledInstructions.replace('{id}', ride.id)
+      ? config.messageTemplates.cancelledInstructions.replace('{id}', ride.id).replace(/\*([^*]+)\*/g, '<b>$1</b>')
       : `🎫 Ride #${ride.id}`;
     message = message.replace('{joinInstructions}', joinInstructions);
     
@@ -140,19 +142,26 @@ export class MessageFormatter {
     const timeOptions = config.dateFormat.time;
     const locale = config.dateFormat.locale;
     
-    let message = '🚲 *Your Rides*\n\n';
+    let message = '🚲 <b>Your Rides</b>\n\n';
     
     for (const ride of rides) {
       const date = ride.date.toLocaleDateString(locale, dateOptions);
       const time = ride.date.toLocaleTimeString(locale, timeOptions);
       const status = ride.cancelled ? '❌ CANCELLED' : '';
       
-      message += `*${escapeMarkdown(ride.title)}* ${status}\n`;
+      message += `<b>${escapeHtml(ride.title)}</b> ${status}\n`;
       message += `📅 ${date} ⏰ ${time}\n`;
+      
+      if (ride.meetingPoint) {
+        message += `📍 ${escapeHtml(ride.meetingPoint)}\n`;
+      }
+      
       message += `🎫 Ride #${ride.id}\n\n`;
     }
     
-    message += `Page ${page}/${totalPages}`;
+    if (totalPages > 1) {
+      message += `\nPage ${page + 1}/${totalPages}`;
+    }
     
     return message;
   }
@@ -197,14 +206,6 @@ export class MessageFormatter {
     }
     
     return '';
-  }
-
-  /**
-   * Format a help message
-   * @returns {string} - Help message
-   */
-  formatHelpMessage() {
-    return config.messageTemplates.help;
   }
 
   /**

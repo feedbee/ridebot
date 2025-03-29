@@ -9,7 +9,7 @@ export class HelpCommandHandler extends BaseCommandHandler {
    * @param {import('grammy').Context} ctx - Grammy context
    */
   async handle(ctx) {
-    const helpMessage = this.messageFormatter.formatHelpMessage();
-    await ctx.reply(helpMessage, { parse_mode: 'Markdown' });
+    const helpMessage = config.messageTemplates.help;
+    await ctx.reply(helpMessage, { parse_mode: 'HTML' });
   }
 }

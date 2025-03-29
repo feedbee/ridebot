@@ -2,7 +2,7 @@ import { InlineKeyboard } from 'grammy';
 import { config } from '../config.js';
 import { RouteParser } from '../utils/route-parser.js';
 import { parseDateTimeInput } from '../utils/date-input-parser.js';
-import { escapeMarkdown } from '../utils/markdown-escape.js';
+import { escapeHtml } from '../utils/html-escape.js';
 import { MessageFormatter } from '../formatters/MessageFormatter.js';
 import { RideService } from '../services/RideService.js';
 import { checkBotAdminPermissions } from '../utils/permission-checker.js';
@@ -337,7 +337,7 @@ export class RideWizard {
       const value = state.data[field];
       if (value === undefined || value === null) return '';
       const formattedValue = formatter ? formatter(value) : value;
-      return `\n\nCurrent value: ${escapeMarkdown(formattedValue.toString())}`;
+      return `\n\nCurrent value: ${escapeHtml(formattedValue.toString())}`;
     };
 
     // Helper to check if there's a current value
@@ -451,10 +451,10 @@ export class RideWizard {
 
       case 'confirm':
         const { title, datetime, routeLink, distance, duration, speedMin, speedMax, meetingPoint } = state.data;
-        message = `*Please confirm the ${state.isUpdate ? 'update' : 'ride'} details:*\n\n`;
-        message += `📝 Title: ${escapeMarkdown(title)}\n`;
+        message = `<b>Please confirm the ${state.isUpdate ? 'update' : 'ride'} details:</b>\n\n`;
+        message += `📝 Title: ${escapeHtml(title)}\n`;
         message += `📅 Date: ${datetime.toLocaleDateString(config.dateFormat.locale)} ${datetime.toLocaleTimeString(config.dateFormat.locale, config.dateFormat.time)}\n`;
-        if (routeLink) message += `🔗 Route: ${escapeMarkdown(routeLink)}\n`;
+        if (routeLink) message += `🔗 Route: ${escapeHtml(routeLink)}\n`;
         if (distance) message += `📏 Distance: ${distance} km\n`;
         if (duration) {
           const hours = Math.floor(duration / 60);
@@ -467,7 +467,7 @@ export class RideWizard {
           else if (speedMin) message += `min ${speedMin} km/h\n`;
           else message += `max ${speedMax} km/h\n`;
         }
-        if (meetingPoint) message += `📍 Meeting Point: ${escapeMarkdown(meetingPoint)}\n`;
+        if (meetingPoint) message += `📍 Meeting Point: ${escapeHtml(meetingPoint)}\n`;
 
         keyboard
           .text(config.buttons.back, 'wizard:back')
@@ -483,7 +483,7 @@ export class RideWizard {
         // Update existing message
         try {
           sentMessage = await ctx.api.editMessageText(ctx.chat.id, state.primaryMessageId, message, {
-            parse_mode: 'Markdown',
+            parse_mode: 'HTML',
             reply_markup: keyboard
           });
         } catch (error) {
@@ -500,7 +500,7 @@ export class RideWizard {
           
           // If update fails for other reasons (e.g., message too old), send a new message
           sentMessage = await ctx.reply(message, {
-            parse_mode: 'Markdown',
+            parse_mode: 'HTML',
             reply_markup: keyboard
           });
           state.primaryMessageId = sentMessage.message_id;
@@ -508,7 +508,7 @@ export class RideWizard {
       } else {
         // Send new message
         sentMessage = await ctx.reply(message, {
-          parse_mode: 'Markdown',
+          parse_mode: 'HTML',
           reply_markup: keyboard
         });
         state.primaryMessageId = sentMessage.message_id;
@@ -544,7 +544,7 @@ export class RideWizard {
         ride.messageId,
         message,
         {
-          parse_mode: parseMode,
+          parse_mode: 'HTML',
           reply_markup: keyboard
         }
       );
