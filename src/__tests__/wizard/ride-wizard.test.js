@@ -56,6 +56,12 @@ const createMockContext = (userId = 123, chatId = 456) => {
         const message = { chatId, messageId, text, ...extra };
         editedMessages.push(message);
         return message;
+      },
+      getMe: async () => {
+        return { id: 999, username: 'test_bot' };
+      },
+      getChatMember: async (chatId, userId) => {
+        return { status: 'administrator' };
       }
     },
     deleteMessage: async () => {
