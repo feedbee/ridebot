@@ -187,13 +187,11 @@ export class RideWizard {
             });
 
             const participants = await this.storage.getParticipants(ride.id);
-            const keyboard = new InlineKeyboard()
-              .text(config.buttons.join, `join:${ride.id}`);
+            const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
 
-            const message = this.formatRideMessage(ride, participants);
             await ctx.deleteMessage();
             const sentMessage = await ctx.reply(message, {
-              parse_mode: 'Markdown',
+              parse_mode: parseMode,
               reply_markup: keyboard
             });
 
@@ -530,12 +528,6 @@ export class RideWizard {
     }
   }
 
-  formatRideMessage(ride, participants, userId = null) {
-    // Use the centralized message formatter
-    const { message } = this.messageFormatter.formatRideWithKeyboard(ride, participants, userId);
-    return message;
-  }
-
   async updateRideMessage(ride, ctx) {
     // Skip if no messageId (shouldn't happen, but just in case)
     if (!ride.messageId) {
@@ -544,22 +536,7 @@ export class RideWizard {
     }
 
     const participants = await this.storage.getParticipants(ride.id);
-    const keyboard = new InlineKeyboard();
-
-    // Don't show join/leave buttons for cancelled rides
-    if (!ride.cancelled) {
-      const participantIds = participants.map(p => p.userId);
-      const buttonText = participantIds.includes(ride.createdBy) 
-        ? config.buttons.leave 
-        : config.buttons.join;
-      const callbackData = participantIds.includes(ride.createdBy)
-        ? `leave:${ride.id}`
-        : `join:${ride.id}`;
-
-      keyboard.text(buttonText, callbackData);
-    }
-
-    const message = this.formatRideMessage(ride, participants);
+    const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
 
     try {
       await ctx.api.editMessageText(
@@ -567,7 +544,7 @@ export class RideWizard {
         ride.messageId,
         message,
         {
-          parse_mode: 'Markdown',
+          parse_mode: parseMode,
           reply_markup: keyboard
         }
       );

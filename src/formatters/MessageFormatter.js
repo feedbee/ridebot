@@ -10,12 +10,11 @@ export class MessageFormatter {
    * Format a ride message with keyboard
    * @param {Object} ride - Ride object
    * @param {Array} participants - List of participants
-   * @param {number|null} currentUserId - Current user ID for determining join/leave button
    * @returns {Object} - Object containing message text and keyboard
    */
-  formatRideWithKeyboard(ride, participants, currentUserId = null) {
+  formatRideWithKeyboard(ride, participants) {
     const message = this.formatRideMessage(ride, participants);
-    const keyboard = this.createRideKeyboard(ride, participants, currentUserId);
+    const keyboard = this.getRideKeyboard(ride);
     
     return {
       message,
@@ -25,23 +24,18 @@ export class MessageFormatter {
   }
 
   /**
-   * Create keyboard for ride message
+   * Get a standard ride keyboard with join/leave buttons
    * @param {Object} ride - Ride object
-   * @param {Array} participants - List of participants
-   * @param {number|null} currentUserId - Current user ID
    * @returns {InlineKeyboard} - Keyboard markup
    */
-  createRideKeyboard(ride, participants, currentUserId) {
+  getRideKeyboard(ride) {
     const keyboard = new InlineKeyboard();
     
     // Don't add join/leave buttons for cancelled rides
-    if (!ride.cancelled && currentUserId) {
-      const userIsParticipant = participants.some(p => p.userId === currentUserId);
-      if (userIsParticipant) {
-        keyboard.text(config.buttons.leave, `leave:${ride.id}`);
-      } else {
-        keyboard.text(config.buttons.join, `join:${ride.id}`);
-      }
+    if (!ride.cancelled) {
+      // Always show both buttons
+      keyboard.text(config.buttons.join, `join:${ride.id}`);
+      keyboard.text(config.buttons.leave, `leave:${ride.id}`);
     }
     
     return keyboard;

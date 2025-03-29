@@ -89,7 +89,7 @@ export class ParticipationHandlers extends BaseCommandHandler {
 
     try {
       const participants = await this.rideService.getParticipants(ride.id);
-      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants, ctx.from.id);
+      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
       
       await ctx.api.editMessageText(
         ride.chatId,

@@ -49,7 +49,7 @@ export class NewRideCommandHandler extends BaseCommandHandler {
     
     // Create initial message using the centralized formatter
     const participants = await this.rideService.getParticipants(ride.id);
-    const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants, ctx.from.id);
+    const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
     
     const sentMessage = await ctx.reply(message, {
       parse_mode: parseMode,

@@ -193,7 +193,7 @@ export class BikeRideBot {
       
       // Create initial message using the centralized formatter
       const participants = await this.storage.getParticipants(ride.id);
-      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants, ctx.from.id);
+      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
       
       const sentMessage = await ctx.reply(message, {
         parse_mode: parseMode,
@@ -364,7 +364,7 @@ export class BikeRideBot {
     const participants = await this.storage.getParticipants(ride.id);
     
     // Use the centralized formatter for both message and keyboard
-    const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants, ride.createdBy);
+    const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
 
     try {
       await this.bot.api.editMessageText(
@@ -379,12 +379,6 @@ export class BikeRideBot {
     } catch (error) {
       console.error('Error updating message:', error);
     }
-  }
-
-  formatRideMessage(ride, participants, userId = null) {
-    // Use the centralized message formatter for consistent formatting
-    const { message } = this.messageFormatter.formatRideWithKeyboard(ride, participants, userId);
-    return message;
   }
 
   async handleDeleteRide(ctx) {
@@ -593,12 +587,10 @@ export class BikeRideBot {
 
       const newRide = await this.storage.createRide(newRideData);
       const participants = await this.storage.getParticipants(newRide.id);
-      const keyboard = new InlineKeyboard()
-        .text(config.buttons.join, `join:${newRide.id}`);
+      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(newRide, participants);
 
-      const message = this.formatRideMessage(newRide, participants);
       const sentMessage = await ctx.reply(message, {
-        parse_mode: 'Markdown',
+        parse_mode: parseMode,
         reply_markup: keyboard
       });
 
