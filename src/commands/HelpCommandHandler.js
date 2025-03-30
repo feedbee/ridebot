@@ -1,4 +1,5 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
+import { config } from '../config.js';
 
 /**
  * Handler for the help command
