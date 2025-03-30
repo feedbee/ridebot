@@ -25,3 +25,4 @@ alwaysApply: true
 - Mocking data is only needed for tests, never mock data for dev or prod
 - Never add stubbing or fake data patterns to code that affects the dev or prod environments
 - Never overwrite my .env file without first asking and confirming
+- Cover new features with tests
