@@ -38,11 +38,31 @@ export class MemoryStorage extends StorageInterface {
 
   async createRide(ride) {
     const id = this.generateShortId();
+    
+    // Convert legacy format to new format if needed
+    let rideData = { ...ride };
+    
+    // If old messageId/chatId format is provided, convert to messages array
+    if (ride.messageId !== undefined && ride.chatId !== undefined && !ride.messages) {
+      rideData.messages = [{ messageId: ride.messageId, chatId: ride.chatId }];
+      delete rideData.messageId;
+      delete rideData.chatId;
+    } else if (!rideData.messages) {
+      rideData.messages = [];
+    }
+    
     const newRide = {
-      ...ride,
+      ...rideData,
       id,
       createdAt: new Date()
     };
+    
+    // For backward compatibility, add messageId and chatId from the first message
+    if (newRide.messages && newRide.messages.length > 0) {
+      newRide.messageId = newRide.messages[0].messageId;
+      newRide.chatId = newRide.messages[0].chatId;
+    }
+    
     this.rides.set(id, newRide);
     this.participants.set(id, []);
     return newRide;
@@ -53,11 +73,47 @@ export class MemoryStorage extends StorageInterface {
     if (!ride) {
       throw new Error('Ride not found');
     }
-
+    
+    // Handle updates to messageId/chatId by updating the messages array
+    let updatesWithMessages = { ...updates };
+    
+    // If updating messageId/chatId directly, convert to messages array update
+    if ((updates.messageId !== undefined || updates.chatId !== undefined) && !updates.messages) {
+      // Get existing messages array or create empty one
+      const messages = [...(ride.messages || [])];
+      
+      // If first message exists, update it; otherwise create a new one
+      if (messages.length > 0) {
+        if (updates.messageId !== undefined) {
+          messages[0].messageId = updates.messageId;
+        }
+        if (updates.chatId !== undefined) {
+          messages[0].chatId = updates.chatId;
+        }
+      } else if (updates.messageId !== undefined && updates.chatId !== undefined) {
+        messages.push({
+          messageId: updates.messageId,
+          chatId: updates.chatId
+        });
+      }
+      
+      // Replace direct messageId/chatId with messages array
+      updatesWithMessages.messages = messages;
+      delete updatesWithMessages.messageId;
+      delete updatesWithMessages.chatId;
+    }
+    
     const updatedRide = {
       ...ride,
-      ...updates
+      ...updatesWithMessages
     };
+    
+    // For backward compatibility, add messageId and chatId from the first message
+    if (updatedRide.messages && updatedRide.messages.length > 0) {
+      updatedRide.messageId = updatedRide.messages[0].messageId;
+      updatedRide.chatId = updatedRide.messages[0].chatId;
+    }
+    
     this.rides.set(rideId, updatedRide);
     return updatedRide;
   }

@@ -10,11 +10,15 @@ const participantSchema = new mongoose.Schema({
   joinedAt: { type: Date, default: Date.now }
 });
 
+const messageSchema = new mongoose.Schema({
+  messageId: { type: Number, required: true },
+  chatId: { type: Number, required: true }
+});
+
 const rideSchema = new mongoose.Schema({
   title: { type: String, required: true },
   date: { type: Date, required: true },
-  messageId: { type: Number },
-  chatId: { type: Number, required: true },
+  messages: [messageSchema],
   routeLink: String,
   meetingPoint: String,
   distance: Number,
@@ -28,11 +32,7 @@ const rideSchema = new mongoose.Schema({
 });
 
 // Create indexes
-rideSchema.index({ chatId: 1, messageId: 1 }, { 
-  unique: true, 
-  sparse: true,
-  partialFilterExpression: { messageId: { $type: "number" } }
-});
+rideSchema.index({ 'messages.chatId': 1, 'messages.messageId': 1 });
 rideSchema.index({ createdBy: 1, date: -1 }); // For efficient querying of rides by creator
 
 const Ride = mongoose.model('Ride', rideSchema);
@@ -60,10 +60,19 @@ export class MongoDBStorage extends StorageInterface {
   }
 
   async createRide(ride) {
-    const newRide = new Ride({
-      ...ride,
-      participants: []
-    });
+    // Convert legacy format to new format if needed
+    let rideData = { ...ride, participants: [] };
+    
+    // If old messageId/chatId format is provided, convert to messages array
+    if (ride.messageId !== undefined && ride.chatId !== undefined && !ride.messages) {
+      rideData.messages = [{ messageId: ride.messageId, chatId: ride.chatId }];
+      delete rideData.messageId;
+      delete rideData.chatId;
+    } else if (!rideData.messages) {
+      rideData.messages = [];
+    }
+    
+    const newRide = new Ride(rideData);
     await newRide.save();
     return this.mapRideToInterface(newRide);
   }
@@ -73,8 +82,37 @@ export class MongoDBStorage extends StorageInterface {
     if (!ride) {
       throw new Error('Ride not found');
     }
-
-    Object.assign(ride, updates);
+    
+    // Handle updates to messageId/chatId by updating the messages array
+    let updatesToApply = { ...updates };
+    
+    // If updating messageId/chatId directly, convert to messages array update
+    if ((updates.messageId !== undefined || updates.chatId !== undefined) && !updates.messages) {
+      // Get existing messages array
+      const messages = [...(ride.messages || [])];
+      
+      // If first message exists, update it; otherwise create a new one
+      if (messages.length > 0) {
+        if (updates.messageId !== undefined) {
+          messages[0].messageId = updates.messageId;
+        }
+        if (updates.chatId !== undefined) {
+          messages[0].chatId = updates.chatId;
+        }
+      } else if (updates.messageId !== undefined && updates.chatId !== undefined) {
+        messages.push({
+          messageId: updates.messageId,
+          chatId: updates.chatId
+        });
+      }
+      
+      // Replace direct messageId/chatId with messages array
+      updatesToApply.messages = messages;
+      delete updatesToApply.messageId;
+      delete updatesToApply.chatId;
+    }
+    
+    Object.assign(ride, updatesToApply);
     await ride.save();
     return this.mapRideToInterface(ride);
   }
@@ -173,12 +211,13 @@ export class MongoDBStorage extends StorageInterface {
   mapRideToInterface(ride) {
     if (!ride) return null;
     const rideObj = ride.toObject ? ride.toObject() : ride;
-    return {
+    
+    // Create the base ride object with the new messages array
+    const result = {
       id: rideObj._id.toString(),
       title: rideObj.title,
       date: rideObj.date,
-      messageId: rideObj.messageId,
-      chatId: rideObj.chatId,
+      messages: rideObj.messages || [],
       routeLink: rideObj.routeLink,
       meetingPoint: rideObj.meetingPoint,
       distance: rideObj.distance,
@@ -191,8 +230,18 @@ export class MongoDBStorage extends StorageInterface {
       participants: rideObj.participants?.map(p => ({
         userId: p.userId,
         username: p.username,
+        firstName: p.firstName || '',
+        lastName: p.lastName || '',
         joinedAt: p.joinedAt
       })) || []
     };
+    
+    // For backward compatibility, add messageId and chatId from the first message
+    if (result.messages && result.messages.length > 0) {
+      result.messageId = result.messages[0].messageId;
+      result.chatId = result.messages[0].chatId;
+    }
+    
+    return result;
   }
 } 

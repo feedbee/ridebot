@@ -1,8 +1,13 @@
 /**
- * @typedef {Object} Ride
- * @property {string} id
+ * @typedef {Object} RideMessage
  * @property {number} messageId
  * @property {number} chatId
+ */
+
+/**
+ * @typedef {Object} Ride
+ * @property {string} id
+ * @property {RideMessage[]} messages
  * @property {string} title
  * @property {Date} date
  * @property {string} [routeLink]

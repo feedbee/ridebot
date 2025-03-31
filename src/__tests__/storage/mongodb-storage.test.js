@@ -10,6 +10,20 @@ const testRide = {
   title: 'Test Ride',
   date: new Date('2024-03-20T10:00:00Z'),
   chatId: 123456,
+  messageId: 789012,
+  createdBy: 789,
+  routeLink: 'https://example.com/route',
+  meetingPoint: 'Test Location',
+  distance: 50,
+  duration: 180,
+  speedMin: 25,
+  speedMax: 30
+};
+
+const testRideWithMessages = {
+  title: 'Test Ride with Messages',
+  date: new Date('2024-03-20T10:00:00Z'),
+  messages: [{ chatId: 123456, messageId: 789012 }],
   createdBy: 789,
   routeLink: 'https://example.com/route',
   meetingPoint: 'Test Location',
@@ -49,29 +63,115 @@ afterEach(async () => {
 
 describe('MongoDBStorage', () => {
   describe('Ride Management', () => {
-    test('should create a new ride', async () => {
+    test('should create a new ride with legacy format', async () => {
       const ride = await storage.createRide(testRide);
-      expect(ride).toMatchObject({
-        ...testRide,
-        participants: []
-      });
+      
+      // Verify the ride was created with expected properties
+      expect(ride.title).toBe(testRide.title);
+      expect(ride.date).toEqual(testRide.date);
+      expect(ride.participants).toEqual([]);
       expect(ride.id).toBeDefined();
+      
+      // Verify messages array was created from legacy format
+      expect(ride.messages).toBeDefined();
+      expect(ride.messages).toHaveLength(1);
+      expect(ride.messages[0].chatId).toBe(testRide.chatId);
+      expect(ride.messages[0].messageId).toBe(testRide.messageId);
+      
+      // Verify backward compatibility
+      expect(ride.chatId).toBe(testRide.chatId);
+      expect(ride.messageId).toBe(testRide.messageId);
+    });
+    
+    test('should create a new ride with messages array', async () => {
+      const ride = await storage.createRide(testRideWithMessages);
+      
+      // Verify the ride was created with expected properties
+      expect(ride.title).toBe(testRideWithMessages.title);
+      expect(ride.date).toEqual(testRideWithMessages.date);
+      expect(ride.participants).toEqual([]);
+      expect(ride.id).toBeDefined();
+      
+      // Verify messages array was maintained
+      expect(ride.messages).toBeDefined();
+      expect(ride.messages).toHaveLength(1);
+      expect(ride.messages[0].chatId).toBe(testRideWithMessages.messages[0].chatId);
+      expect(ride.messages[0].messageId).toBe(testRideWithMessages.messages[0].messageId);
+      
+      // Verify backward compatibility fields
+      expect(ride.chatId).toBe(testRideWithMessages.messages[0].chatId);
+      expect(ride.messageId).toBe(testRideWithMessages.messages[0].messageId);
     });
 
     test('should get a ride by id', async () => {
-      const created = await storage.createRide(testRide);
+      const created = await storage.createRide(testRideWithMessages);
       const retrieved = await storage.getRide(created.id);
-      expect(retrieved).toMatchObject(testRide);
+      
+      // Verify basic properties
+      expect(retrieved.title).toBe(testRideWithMessages.title);
+      expect(retrieved.date.getTime()).toBe(testRideWithMessages.date.getTime());
+      
+      // Verify messages array
+      expect(retrieved.messages).toHaveLength(1);
+      expect(retrieved.messages[0].chatId).toBe(testRideWithMessages.messages[0].chatId);
+      expect(retrieved.messages[0].messageId).toBe(testRideWithMessages.messages[0].messageId);
     });
 
     test('should update a ride', async () => {
-      const created = await storage.createRide(testRide);
+      const created = await storage.createRide(testRideWithMessages);
       const updates = { title: 'Updated Ride', distance: 60 };
       const updated = await storage.updateRide(created.id, updates);
-      expect(updated).toMatchObject({
-        ...testRide,
-        ...updates
+      
+      // Verify updates were applied
+      expect(updated.title).toBe(updates.title);
+      expect(updated.distance).toBe(updates.distance);
+      
+      // Verify messages array was preserved
+      expect(updated.messages).toHaveLength(1);
+      expect(updated.messages[0].chatId).toBe(testRideWithMessages.messages[0].chatId);
+      expect(updated.messages[0].messageId).toBe(testRideWithMessages.messages[0].messageId);
+    });
+    
+    test('should update messageId/chatId via messages array', async () => {
+      const created = await storage.createRide(testRide);
+      
+      // Update with new messages array
+      const newMessages = [
+        { messageId: 111111, chatId: 222222 },
+        { messageId: 333333, chatId: 444444 }
+      ];
+      
+      const updated = await storage.updateRide(created.id, { messages: newMessages });
+      
+      // Verify messages array was updated
+      expect(updated.messages).toHaveLength(2);
+      expect(updated.messages[0].messageId).toBe(111111);
+      expect(updated.messages[0].chatId).toBe(222222);
+      expect(updated.messages[1].messageId).toBe(333333);
+      expect(updated.messages[1].chatId).toBe(444444);
+      
+      // Verify backward compatibility fields use first message
+      expect(updated.messageId).toBe(111111);
+      expect(updated.chatId).toBe(222222);
+    });
+    
+    test('should update messageId/chatId directly and convert to messages array', async () => {
+      const created = await storage.createRide(testRide);
+      
+      // Update messageId/chatId directly
+      const updated = await storage.updateRide(created.id, { 
+        messageId: 999999,
+        chatId: 888888
       });
+      
+      // Verify messages array was updated
+      expect(updated.messages).toHaveLength(1);
+      expect(updated.messages[0].messageId).toBe(999999);
+      expect(updated.messages[0].chatId).toBe(888888);
+      
+      // Verify backward compatibility fields
+      expect(updated.messageId).toBe(999999);
+      expect(updated.chatId).toBe(888888);
     });
 
     test('should delete a ride', async () => {
@@ -83,9 +183,9 @@ describe('MongoDBStorage', () => {
     });
 
     test('should get rides by creator', async () => {
-      await storage.createRide(testRide);
+      await storage.createRide(testRideWithMessages);
       await storage.createRide({
-        ...testRide,
+        ...testRideWithMessages,
         title: 'Second Ride'
       });
 
