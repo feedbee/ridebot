@@ -182,7 +182,7 @@ export class RideWizard {
             const ride = await this.storage.createRide({
               title: state.data.title,
               date: state.data.datetime,
-              chatId: state.data.chatId,
+              messages: [{ chatId: state.data.chatId, messageId: null }],
               createdBy: state.data.createdBy,
               meetingPoint: state.data.meetingPoint,
               routeLink: state.data.routeLink,
@@ -202,7 +202,10 @@ export class RideWizard {
             });
 
             await this.storage.updateRide(ride.id, {
-              messageId: sentMessage.message_id
+              messages: [{
+                chatId: state.data.chatId,
+                messageId: sentMessage.message_id
+              }]
             });
 
             this.wizardStates.delete(stateKey);
@@ -548,27 +551,35 @@ export class RideWizard {
   }
 
   async updateRideMessage(ride, ctx) {
-    // Skip if no messageId (shouldn't happen, but just in case)
-    if (!ride.messageId) {
-      console.error('No messageId for ride:', ride.id);
+    // If no messages to update, return early
+    if (!ride.messages || ride.messages.length === 0) {
+      console.error('No messages to update for ride:', ride.id);
       return;
     }
 
-    const participants = await this.storage.getParticipants(ride.id);
-    const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
-
     try {
-      await ctx.api.editMessageText(
-        ride.chatId,
-        ride.messageId,
-        message,
-        {
-          parse_mode: 'HTML',
-          reply_markup: keyboard
+      const participants = await this.storage.getParticipants(ride.id);
+      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
+      
+      // Update all messages for this ride
+      for (const messageInfo of ride.messages) {
+        try {
+          await ctx.api.editMessageText(
+            messageInfo.chatId,
+            messageInfo.messageId,
+            message,
+            {
+              parse_mode: parseMode,
+              reply_markup: keyboard
+            }
+          );
+        } catch (messageError) {
+          console.error(`Error updating message in chat ${messageInfo.chatId}:`, messageError);
+          // Continue with other messages even if one fails
         }
-      );
+      }
     } catch (error) {
-      console.error('Error updating message:', error);
+      console.error('Error updating ride messages:', error);
     }
   }
 } 

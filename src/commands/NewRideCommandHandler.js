@@ -56,9 +56,12 @@ export class NewRideCommandHandler extends BaseCommandHandler {
       reply_markup: keyboard
     });
 
-    // Update the ride with the message ID
+    // Update the ride with the message info in the messages array
     await this.rideService.updateRide(ride.id, {
-      messageId: sentMessage.message_id
+      messages: [{
+        messageId: sentMessage.message_id,
+        chatId: ctx.chat.id
+      }]
     });
   }
 }

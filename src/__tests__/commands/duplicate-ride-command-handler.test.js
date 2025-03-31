@@ -241,7 +241,7 @@ describe('DuplicateRideCommandHandler', () => {
       expect(mockRideService.parseDateTimeInput).toHaveBeenCalledWith('tomorrow 11:00');
       expect(mockRideService.createRide).toHaveBeenCalledWith(expect.objectContaining({
         title: 'New Ride',
-        chatId: 789,
+        messages: [],
         createdBy: 101112,
         meetingPoint: 'New Location',
         routeLink: 'https://example.com/route',
@@ -262,7 +262,10 @@ describe('DuplicateRideCommandHandler', () => {
       }));
       
       expect(mockRideService.updateRide).toHaveBeenCalledWith('456', {
-        messageId: 13579
+        messages: [{
+          chatId: 789,
+          messageId: 13579
+        }]
       });
       
       expect(mockCtx.reply).toHaveBeenCalledWith('Ride duplicated successfully!');
@@ -338,7 +341,7 @@ describe('DuplicateRideCommandHandler', () => {
       // Verify
       expect(mockRideService.createRide).toHaveBeenCalledWith(expect.objectContaining({
         title: 'Test Ride',
-        chatId: 789,
+        messages: [],
         createdBy: 101112,
         meetingPoint: 'Test Location',
         routeLink: 'https://example.com/route',

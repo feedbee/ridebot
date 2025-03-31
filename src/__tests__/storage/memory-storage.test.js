@@ -10,8 +10,7 @@ describe('MemoryStorage', () => {
   const testRide = {
     title: 'Test Ride',
     date: new Date('2024-03-15T15:00:00Z'),
-    chatId: 123456,
-    messageId: 789012,
+    messages: [{ chatId: 123456, messageId: 789012 }],
     createdBy: 789,
     meetingPoint: 'Test Location',
     distance: 50,
@@ -74,38 +73,9 @@ describe('MemoryStorage', () => {
   });
 
   describe('Data Persistence', () => {
-    it('should maintain ride data between operations with legacy format', async () => {
-      // Create ride with legacy format
+    it('should maintain ride data between operations', async () => {
+      // Create ride
       const ride = await storage.createRide(testRide);
-      
-      // Add participant
-      await storage.addParticipant(ride.id, { userId: 123, username: 'test', firstName: 'Test', lastName: 'User' });
-      
-      // Update ride
-      await storage.updateRide(ride.id, { title: 'Updated Ride' });
-      
-      // Verify all data is maintained
-      const updatedRide = await storage.getRide(ride.id);
-      const participants = await storage.getParticipants(ride.id);
-      
-      expect(updatedRide.title).toBe('Updated Ride');
-      expect(participants).toHaveLength(1);
-      expect(participants[0].username).toBe('test');
-      
-      // Verify messages array was created
-      expect(updatedRide.messages).toBeDefined();
-      expect(updatedRide.messages).toHaveLength(1);
-      expect(updatedRide.messages[0].chatId).toBe(testRide.chatId);
-      expect(updatedRide.messages[0].messageId).toBe(testRide.messageId);
-      
-      // Verify backward compatibility
-      expect(updatedRide.chatId).toBe(testRide.chatId);
-      expect(updatedRide.messageId).toBe(testRide.messageId);
-    });
-    
-    it('should maintain ride data between operations with new messages format', async () => {
-      // Create ride with new messages format
-      const ride = await storage.createRide(testRideWithMessages);
       
       // Add participant
       await storage.addParticipant(ride.id, { userId: 123, username: 'test', firstName: 'Test', lastName: 'User' });
@@ -124,12 +94,8 @@ describe('MemoryStorage', () => {
       // Verify messages array is maintained
       expect(updatedRide.messages).toBeDefined();
       expect(updatedRide.messages).toHaveLength(1);
-      expect(updatedRide.messages[0].chatId).toBe(testRideWithMessages.messages[0].chatId);
-      expect(updatedRide.messages[0].messageId).toBe(testRideWithMessages.messages[0].messageId);
-      
-      // Verify backward compatibility fields
-      expect(updatedRide.chatId).toBe(testRideWithMessages.messages[0].chatId);
-      expect(updatedRide.messageId).toBe(testRideWithMessages.messages[0].messageId);
+      expect(updatedRide.messages[0].chatId).toBe(testRide.messages[0].chatId);
+      expect(updatedRide.messages[0].messageId).toBe(testRide.messages[0].messageId);
     });
 
     it('should maintain separate participant lists for different rides', async () => {
@@ -177,55 +143,30 @@ describe('MemoryStorage', () => {
   });
   
   describe('Messages Array Handling', () => {
-    it('should update the first message when updating messageId/chatId directly', async () => {
-      // Create ride with legacy format
+    it('should add a new message to the messages array', async () => {
+      // Create ride with initial message
       const ride = await storage.createRide(testRide);
       
-      // Update messageId/chatId directly
+      // Update with new messages array
+      const newMessages = [
+        ...ride.messages,
+        { messageId: 111111, chatId: 222222 }
+      ];
+      
       const updatedRide = await storage.updateRide(ride.id, { 
-        messageId: 999999,
-        chatId: 888888
+        messages: newMessages
       });
       
       // Verify messages array was updated
-      expect(updatedRide.messages).toHaveLength(1);
-      expect(updatedRide.messages[0].messageId).toBe(999999);
-      expect(updatedRide.messages[0].chatId).toBe(888888);
-      
-      // Verify backward compatibility fields
-      expect(updatedRide.messageId).toBe(999999);
-      expect(updatedRide.chatId).toBe(888888);
+      expect(updatedRide.messages).toHaveLength(2);
+      expect(updatedRide.messages[0].messageId).toBe(testRide.messages[0].messageId);
+      expect(updatedRide.messages[0].chatId).toBe(testRide.messages[0].chatId);
+      expect(updatedRide.messages[1].messageId).toBe(111111);
+      expect(updatedRide.messages[1].chatId).toBe(222222);
     });
     
-    it('should add a new message when updating empty messages array with messageId/chatId', async () => {
-      // Create ride with no messages
-      const noMessagesRide = {
-        title: 'Ride with no messages',
-        date: new Date('2024-03-15T15:00:00Z'),
-        createdBy: 789,
-        messages: []
-      };
-      
-      const ride = await storage.createRide(noMessagesRide);
-      
-      // Update messageId/chatId directly
-      const updatedRide = await storage.updateRide(ride.id, { 
-        messageId: 111111,
-        chatId: 222222
-      });
-      
-      // Verify a new message was added to the array
-      expect(updatedRide.messages).toHaveLength(1);
-      expect(updatedRide.messages[0].messageId).toBe(111111);
-      expect(updatedRide.messages[0].chatId).toBe(222222);
-      
-      // Verify backward compatibility fields
-      expect(updatedRide.messageId).toBe(111111);
-      expect(updatedRide.chatId).toBe(222222);
-    });
-    
-    it('should directly update the messages array when provided', async () => {
-      // Create ride with legacy format
+    it('should replace the messages array when provided', async () => {
+      // Create ride
       const ride = await storage.createRide(testRide);
       
       // Update with new messages array
@@ -244,10 +185,6 @@ describe('MemoryStorage', () => {
       expect(updatedRide.messages[0].chatId).toBe(222222);
       expect(updatedRide.messages[1].messageId).toBe(333333);
       expect(updatedRide.messages[1].chatId).toBe(444444);
-      
-      // Verify backward compatibility fields use first message
-      expect(updatedRide.messageId).toBe(111111);
-      expect(updatedRide.chatId).toBe(222222);
     });
   });
 }); 

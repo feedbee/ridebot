@@ -128,8 +128,9 @@ describe('CancelRideCommandHandler', () => {
       const mockRide = { 
         id: '456', 
         cancelled: true,
-        messageId: 789,
-        chatId: 101112
+        messages: [
+          { messageId: 789, chatId: 101112 }
+        ]
       };
       
       const mockParticipants = [{ id: 123, name: 'Test User' }];
@@ -167,8 +168,9 @@ describe('CancelRideCommandHandler', () => {
       const mockRide = { 
         id: '456', 
         cancelled: true,
-        messageId: 789,
-        chatId: 101112
+        messages: [
+          { messageId: 789, chatId: 101112 }
+        ]
       };
       
       const mockParticipants = [{ id: 123, name: 'Test User' }];

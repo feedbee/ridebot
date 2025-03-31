@@ -181,7 +181,7 @@ export class RideService {
       const rideData = {
         title: params.title,
         date: result.date,
-        chatId: chatId,
+        messages: [{ chatId: chatId, messageId: null }],
         createdBy: userId
       };
 

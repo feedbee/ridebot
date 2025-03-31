@@ -9,8 +9,7 @@ let storage;
 const testRide = {
   title: 'Test Ride',
   date: new Date('2024-03-20T10:00:00Z'),
-  chatId: 123456,
-  messageId: 789012,
+  messages: [{ chatId: 123456, messageId: 789012 }],
   createdBy: 789,
   routeLink: 'https://example.com/route',
   meetingPoint: 'Test Location',
@@ -63,7 +62,7 @@ afterEach(async () => {
 
 describe('MongoDBStorage', () => {
   describe('Ride Management', () => {
-    test('should create a new ride with legacy format', async () => {
+    test('should create a new ride', async () => {
       const ride = await storage.createRide(testRide);
       
       // Verify the ride was created with expected properties
@@ -72,35 +71,11 @@ describe('MongoDBStorage', () => {
       expect(ride.participants).toEqual([]);
       expect(ride.id).toBeDefined();
       
-      // Verify messages array was created from legacy format
-      expect(ride.messages).toBeDefined();
-      expect(ride.messages).toHaveLength(1);
-      expect(ride.messages[0].chatId).toBe(testRide.chatId);
-      expect(ride.messages[0].messageId).toBe(testRide.messageId);
-      
-      // Verify backward compatibility
-      expect(ride.chatId).toBe(testRide.chatId);
-      expect(ride.messageId).toBe(testRide.messageId);
-    });
-    
-    test('should create a new ride with messages array', async () => {
-      const ride = await storage.createRide(testRideWithMessages);
-      
-      // Verify the ride was created with expected properties
-      expect(ride.title).toBe(testRideWithMessages.title);
-      expect(ride.date).toEqual(testRideWithMessages.date);
-      expect(ride.participants).toEqual([]);
-      expect(ride.id).toBeDefined();
-      
       // Verify messages array was maintained
       expect(ride.messages).toBeDefined();
       expect(ride.messages).toHaveLength(1);
-      expect(ride.messages[0].chatId).toBe(testRideWithMessages.messages[0].chatId);
-      expect(ride.messages[0].messageId).toBe(testRideWithMessages.messages[0].messageId);
-      
-      // Verify backward compatibility fields
-      expect(ride.chatId).toBe(testRideWithMessages.messages[0].chatId);
-      expect(ride.messageId).toBe(testRideWithMessages.messages[0].messageId);
+      expect(ride.messages[0].chatId).toBe(testRide.messages[0].chatId);
+      expect(ride.messages[0].messageId).toBe(testRide.messages[0].messageId);
     });
 
     test('should get a ride by id', async () => {
@@ -132,7 +107,7 @@ describe('MongoDBStorage', () => {
       expect(updated.messages[0].messageId).toBe(testRideWithMessages.messages[0].messageId);
     });
     
-    test('should update messageId/chatId via messages array', async () => {
+    test('should update messages array', async () => {
       const created = await storage.createRide(testRide);
       
       // Update with new messages array
@@ -149,29 +124,6 @@ describe('MongoDBStorage', () => {
       expect(updated.messages[0].chatId).toBe(222222);
       expect(updated.messages[1].messageId).toBe(333333);
       expect(updated.messages[1].chatId).toBe(444444);
-      
-      // Verify backward compatibility fields use first message
-      expect(updated.messageId).toBe(111111);
-      expect(updated.chatId).toBe(222222);
-    });
-    
-    test('should update messageId/chatId directly and convert to messages array', async () => {
-      const created = await storage.createRide(testRide);
-      
-      // Update messageId/chatId directly
-      const updated = await storage.updateRide(created.id, { 
-        messageId: 999999,
-        chatId: 888888
-      });
-      
-      // Verify messages array was updated
-      expect(updated.messages).toHaveLength(1);
-      expect(updated.messages[0].messageId).toBe(999999);
-      expect(updated.messages[0].chatId).toBe(888888);
-      
-      // Verify backward compatibility fields
-      expect(updated.messageId).toBe(999999);
-      expect(updated.chatId).toBe(888888);
     });
 
     test('should delete a ride', async () => {

@@ -77,31 +77,5 @@ export class ParticipationHandlers extends BaseCommandHandler {
     }
   }
 
-  /**
-   * Update the ride message
-   * @param {Object} ride - Ride object
-   * @param {import('grammy').Context} ctx - Grammy context
-   */
-  async updateRideMessage(ride, ctx) {
-    if (!ride.messageId || !ride.chatId) {
-      return;
-    }
 
-    try {
-      const participants = await this.rideService.getParticipants(ride.id);
-      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
-      
-      await ctx.api.editMessageText(
-        ride.chatId,
-        ride.messageId,
-        message,
-        {
-          parse_mode: parseMode,
-          reply_markup: keyboard
-        }
-      );
-    } catch (error) {
-      console.error('Error updating ride message:', error);
-    }
-  }
 }

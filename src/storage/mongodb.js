@@ -60,15 +60,10 @@ export class MongoDBStorage extends StorageInterface {
   }
 
   async createRide(ride) {
-    // Convert legacy format to new format if needed
     let rideData = { ...ride, participants: [] };
     
-    // If old messageId/chatId format is provided, convert to messages array
-    if (ride.messageId !== undefined && ride.chatId !== undefined && !ride.messages) {
-      rideData.messages = [{ messageId: ride.messageId, chatId: ride.chatId }];
-      delete rideData.messageId;
-      delete rideData.chatId;
-    } else if (!rideData.messages) {
+    // Ensure messages array exists
+    if (!rideData.messages) {
       rideData.messages = [];
     }
     
@@ -83,35 +78,15 @@ export class MongoDBStorage extends StorageInterface {
       throw new Error('Ride not found');
     }
     
-    // Handle updates to messageId/chatId by updating the messages array
+    // Preserve the messages array if it's not being updated
+    // This is critical to ensure message tracking works properly
     let updatesToApply = { ...updates };
-    
-    // If updating messageId/chatId directly, convert to messages array update
-    if ((updates.messageId !== undefined || updates.chatId !== undefined) && !updates.messages) {
-      // Get existing messages array
-      const messages = [...(ride.messages || [])];
-      
-      // If first message exists, update it; otherwise create a new one
-      if (messages.length > 0) {
-        if (updates.messageId !== undefined) {
-          messages[0].messageId = updates.messageId;
-        }
-        if (updates.chatId !== undefined) {
-          messages[0].chatId = updates.chatId;
-        }
-      } else if (updates.messageId !== undefined && updates.chatId !== undefined) {
-        messages.push({
-          messageId: updates.messageId,
-          chatId: updates.chatId
-        });
-      }
-      
-      // Replace direct messageId/chatId with messages array
-      updatesToApply.messages = messages;
-      delete updatesToApply.messageId;
-      delete updatesToApply.chatId;
+    if (!updates.messages && ride.messages && ride.messages.length > 0) {
+      // We don't need to modify updatesToApply here since MongoDB will only
+      // update the fields that are provided in the updates object
     }
     
+    // Apply updates
     Object.assign(ride, updatesToApply);
     await ride.save();
     return this.mapRideToInterface(ride);
@@ -212,7 +187,7 @@ export class MongoDBStorage extends StorageInterface {
     if (!ride) return null;
     const rideObj = ride.toObject ? ride.toObject() : ride;
     
-    // Create the base ride object with the new messages array
+    // Create the ride object with the messages array
     const result = {
       id: rideObj._id.toString(),
       title: rideObj.title,
@@ -235,12 +210,6 @@ export class MongoDBStorage extends StorageInterface {
         joinedAt: p.joinedAt
       })) || []
     };
-    
-    // For backward compatibility, add messageId and chatId from the first message
-    if (result.messages && result.messages.length > 0) {
-      result.messageId = result.messages[0].messageId;
-      result.chatId = result.messages[0].chatId;
-    }
     
     return result;
   }
