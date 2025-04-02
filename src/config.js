@@ -8,7 +8,8 @@ export const config = {
     token: process.env.BOT_TOKEN,
     webhookDomain: process.env.WEBHOOK_DOMAIN,
     webhookPath: '/webhook',
-    useWebhook: process.env.NODE_ENV === 'production'
+    useWebhook: process.env.NODE_ENV === 'production',
+    wizardOnlyInPrivateChats: process.env.WIZARD_ONLY_IN_PRIVATE === 'true' || false
   },
   mongodb: {
     uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/bikebot'
@@ -54,7 +55,7 @@ export const config = {
 <b>➕ Creating a New Ride</b>
 Create a new ride:
 1. Using the wizard (recommended):
-Simply send <code>/newride</code> command without any parameters to start an interactive wizard that will guide you through each step.
+Simply send <code>/newride</code> command without any parameters to start an interactive wizard that will guide you through each step.${process.env.WIZARD_ONLY_IN_PRIVATE === 'true' ? ' <i>(Note: Wizard mode is only available in private chats with the bot)</i>' : ''}
 
 2. Using command with parameters:
 Use <code>/newride</code> command followed by parameters (one per line):
@@ -114,7 +115,7 @@ Only the ride creator can delete:
 <b>🔄 Duplicating a Ride</b>
 Only the ride creator can duplicate. Two ways:
 1. Use the wizard (recommended):
-Send <code>/dupridex</code> to start an interactive wizard.
+Send <code>/dupride</code> to start an interactive wizard.
 
 2. Use <code>/dupride</code> with ID and optional parameters:
 <pre>

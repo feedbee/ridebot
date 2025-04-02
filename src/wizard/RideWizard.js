@@ -15,6 +15,8 @@ export class RideWizard {
     this.wizardStates = new Map();
   }
   
+
+  
   /**
    * Check if the bot has admin permissions and notify the user if not
    * @param {import('grammy').Context} ctx - Grammy context
@@ -58,6 +60,12 @@ export class RideWizard {
       return;
     }
 
+    // Check if wizards are only allowed in private chats
+    if (config.bot.wizardOnlyInPrivateChats && ctx.chat.type !== 'private') {
+      await ctx.reply('⚠️ Wizard commands are only available in private chats with the bot. Please use the command with parameters instead.');
+      return;
+    }
+
     // Check if the bot has admin permissions in the chat
     if (!await this.checkAdminPermissions(ctx)) {
       return;
@@ -92,6 +100,13 @@ export class RideWizard {
 
     if (!state) {
       await ctx.answerCallbackQuery('Wizard session expired');
+      return;
+    }
+    
+    // Check if wizards are only allowed in private chats
+    if (config.bot.wizardOnlyInPrivateChats && ctx.chat.type !== 'private') {
+      await ctx.answerCallbackQuery('⚠️ Wizard commands are only available in private chats with the bot');
+      this.wizardStates.delete(stateKey);
       return;
     }
     
@@ -228,6 +243,13 @@ export class RideWizard {
     const stateKey = this.getWizardStateKey(ctx.from.id, ctx.chat.id);
     const state = this.wizardStates.get(stateKey);
     if (!state) return;
+    
+    // Check if wizards are only allowed in private chats
+    if (config.bot.wizardOnlyInPrivateChats && ctx.chat.type !== 'private') {
+      await ctx.reply('⚠️ Wizard commands are only available in private chats with the bot. Please use the command with parameters instead.');
+      this.wizardStates.delete(stateKey);
+      return;
+    }
     
     // Check if the bot has admin permissions in the chat
     if (!await this.checkAdminPermissions(ctx, true)) {
