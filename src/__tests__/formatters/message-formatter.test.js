@@ -143,7 +143,7 @@ describe('MessageFormatter', () => {
       // Verify
       expect(result).toContain(config.messageTemplates.cancelled);
       expect(result).toContain('No participants yet');
-      expect(result).toContain(config.messageTemplates.cancelledInstructions.replace('{id}', '123'));
+      expect(result).toContain(config.messageTemplates.cancelledMessage);
     });
     
     it('should handle empty optional fields', () => {
