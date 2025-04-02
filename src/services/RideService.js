@@ -181,7 +181,7 @@ export class RideService {
       const rideData = {
         title: params.title,
         date: result.date,
-        messages: [{ chatId: chatId, messageId: null }],
+        messages: [], // Initialize with empty array instead of null messageId
         createdBy: userId
       };
 

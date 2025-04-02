@@ -182,7 +182,7 @@ export class RideWizard {
             const ride = await this.storage.createRide({
               title: state.data.title,
               date: state.data.datetime,
-              messages: [{ chatId: state.data.chatId, messageId: null }],
+              messages: [], // Initialize with empty array instead of null messageId
               createdBy: state.data.createdBy,
               meetingPoint: state.data.meetingPoint,
               routeLink: state.data.routeLink,
