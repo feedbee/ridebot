@@ -4,7 +4,7 @@ import { config } from '../config.js';
 
 const participantSchema = new mongoose.Schema({
   userId: { type: Number, required: true },
-  username: { type: String, required: true },
+  username: { type: String, default: '' }, // Optional as Telegram usernames are optional
   firstName: { type: String, default: '' },
   lastName: { type: String, default: '' },
   joinedAt: { type: Date, default: Date.now }
