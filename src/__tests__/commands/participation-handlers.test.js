@@ -29,7 +29,8 @@ describe('ParticipationHandlers', () => {
       getRide: jest.fn(),
       addParticipant: jest.fn(),
       removeParticipant: jest.fn(),
-      getParticipants: jest.fn()
+      getParticipants: jest.fn(),
+      updateRideMessages: jest.fn().mockResolvedValue({ success: true, updatedCount: 1, removedCount: 0 })
     };
     
     // Create mock MessageFormatter
@@ -283,31 +284,12 @@ describe('ParticipationHandlers', () => {
           { messageId: 789, chatId: 101112 }
         ]
       };
-      const mockParticipants = [
-        { userId: 456, firstName: 'Test', lastName: 'User' }
-      ];
-      mockRideService.getParticipants.mockResolvedValue(mockParticipants);
-      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
-        message: 'Updated ride message',
-        keyboard: { inline_keyboard: [] },
-        parseMode: 'HTML'
-      });
       
       // Execute
       await participationHandlers.updateRideMessage(mockRide, mockCtx);
       
       // Verify
-      expect(mockRideService.getParticipants).toHaveBeenCalledWith('123');
-      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(mockRide, mockParticipants);
-      expect(mockCtx.api.editMessageText).toHaveBeenCalledWith(
-        101112,
-        789,
-        'Updated ride message',
-        {
-          parse_mode: 'HTML',
-          reply_markup: { inline_keyboard: [] }
-        }
-      );
+      expect(mockRideService.updateRideMessages).toHaveBeenCalledWith(mockRide, mockCtx);
     });
     
     it('should handle error during message update', async () => {
@@ -318,7 +300,7 @@ describe('ParticipationHandlers', () => {
           { messageId: 789, chatId: 101112 }
         ]
       };
-      mockRideService.getParticipants.mockRejectedValue(new Error('Database error'));
+      mockRideService.updateRideMessages.mockResolvedValue({ success: false, error: 'Database error' });
       
       // Spy on console.error
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -327,8 +309,8 @@ describe('ParticipationHandlers', () => {
       await participationHandlers.updateRideMessage(mockRide, mockCtx);
       
       // Verify
+      expect(mockRideService.updateRideMessages).toHaveBeenCalledWith(mockRide, mockCtx);
       expect(consoleErrorSpy).toHaveBeenCalled();
-      expect(mockCtx.api.editMessageText).not.toHaveBeenCalled();
       
       // Restore console.error
       consoleErrorSpy.mockRestore();
