@@ -178,7 +178,8 @@ describe('PostRideCommandHandler', () => {
         101112,
         mockCtx
       );
-      expect(mockCtx.reply).toHaveBeenCalledWith('Ride #123 successfully posted to this chat.');
+      // No confirmation message is expected now
+      expect(mockCtx.reply).not.toHaveBeenCalledWith('Ride #123 successfully posted to this chat.');
     });
     
     it('should handle error when posting ride', async () => {

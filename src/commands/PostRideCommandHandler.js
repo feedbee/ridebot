@@ -47,9 +47,7 @@ export class PostRideCommandHandler extends BaseCommandHandler {
       // Post the ride to the current chat
       const result = await this.postRideToChat(ride, currentChatId, ctx);
       
-      if (result.success) {
-        await ctx.reply(`Ride #${rideId} successfully posted to this chat.`);
-      } else {
+      if (!result.success) {
         await ctx.reply(`Failed to post ride: ${result.error}`);
       }
     } catch (error) {
