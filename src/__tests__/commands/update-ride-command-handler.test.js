@@ -32,7 +32,8 @@ describe('UpdateRideCommandHandler', () => {
       isRideCreator: jest.fn(),
       parseRideParams: jest.fn(),
       updateRideFromParams: jest.fn(),
-      getParticipants: jest.fn()
+      getParticipants: jest.fn(),
+      updateRideMessages: jest.fn().mockResolvedValue({ success: true, updatedCount: 1, removedCount: 0 })
     };
     
     // Create mock MessageFormatter
@@ -302,17 +303,7 @@ describe('UpdateRideCommandHandler', () => {
       await updateRideCommandHandler.updateRideMessage(ride, mockCtx);
       
       // Verify
-      expect(mockRideService.getParticipants).toHaveBeenCalledWith('123');
-      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(ride, participants);
-      expect(mockCtx.api.editMessageText).toHaveBeenCalledWith(
-        101112,
-        789,
-        'Updated ride message',
-        {
-          parse_mode: 'HTML',
-          reply_markup: { inline_keyboard: [] }
-        }
-      );
+      expect(mockRideService.updateRideMessages).toHaveBeenCalledWith(ride, mockCtx);
     });
     
     it('should handle error during message update', async () => {
@@ -325,7 +316,7 @@ describe('UpdateRideCommandHandler', () => {
         ]
       };
       
-      mockRideService.getParticipants.mockRejectedValue(new Error('Database error'));
+      mockRideService.updateRideMessages.mockResolvedValue({ success: false, error: 'Database error' });
       
       // Temporarily mock console.error
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -334,8 +325,8 @@ describe('UpdateRideCommandHandler', () => {
       await updateRideCommandHandler.updateRideMessage(ride, mockCtx);
       
       // Verify
+      expect(mockRideService.updateRideMessages).toHaveBeenCalledWith(ride, mockCtx);
       expect(consoleErrorSpy).toHaveBeenCalled();
-      expect(mockCtx.api.editMessageText).not.toHaveBeenCalled();
       
       // Restore console.error
       consoleErrorSpy.mockRestore();

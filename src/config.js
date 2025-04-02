@@ -8,7 +8,8 @@ export const config = {
     token: process.env.BOT_TOKEN,
     webhookDomain: process.env.WEBHOOK_DOMAIN,
     webhookPath: '/webhook',
-    useWebhook: process.env.NODE_ENV === 'production'
+    useWebhook: process.env.NODE_ENV === 'production',
+    wizardOnlyInPrivateChats: process.env.WIZARD_ONLY_IN_PRIVATE === 'true' || false
   },
   mongodb: {
     uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/bikebot'
@@ -54,7 +55,7 @@ export const config = {
 <b>➕ Creating a New Ride</b>
 Create a new ride:
 1. Using the wizard (recommended):
-Simply send <code>/newride</code> command without any parameters to start an interactive wizard that will guide you through each step.
+Simply send <code>/newride</code> command without any parameters to start an interactive wizard that will guide you through each step.${process.env.WIZARD_ONLY_IN_PRIVATE === 'true' ? ' <i>(Note: Wizard mode is only available in private chats with the bot)</i>' : ''}
 
 2. Using command with parameters:
 Use <code>/newride</code> command followed by parameters (one per line):
@@ -84,9 +85,10 @@ speed: 25-28
 <b>Managing Rides</b>
 
 <b>🔄 Updating a Ride</b>
-Only the ride creator can update. Two ways:
-1. Reply to the ride message with <code>/updateride</code> and new parameters
-2. Use <code>/updateride</code> with ride ID:
+Only the ride creator can update. Three ways:
+1. Reply to the ride message with <code>/updateride</code> without any parameters to start an interactive wizard.${process.env.WIZARD_ONLY_IN_PRIVATE === 'true' ? ' <i>(Note: Wizard mode is only available in private chats with the bot)</i>' : ''}
+2. Reply to the ride message with <code>/updateride</code> and new parameters
+3. Use <code>/updateride</code> with ride ID:
 <pre>
 /updateride
 id: abc123
@@ -112,11 +114,10 @@ Only the ride creator can delete:
 <pre>/deleteride id: abc123</pre>
 
 <b>🔄 Duplicating a Ride</b>
-Only the ride creator can duplicate. Two ways:
-1. Use the wizard (recommended):
-Send <code>/dupridex</code> to start an interactive wizard.
-
-2. Use <code>/dupride</code> with ID and optional parameters:
+Only the ride creator can duplicate. Three ways:
+1. Reply to the ride message with <code>/dupride</code> without any parameters to start an interactive wizard.${process.env.WIZARD_ONLY_IN_PRIVATE === 'true' ? ' <i>(Note: Wizard mode is only available in private chats with the bot)</i>' : ''}
+2. Reply to the ride message with <code>/updateride</code> and new parameters
+3. Use <code>/dupride</code> with ride ID and optional parameters:
 <pre>
 /dupride
 id: abc123
@@ -135,6 +136,13 @@ By default, the new ride will be scheduled for tomorrow at the same time.
 Use <code>/listrides</code> to see all rides you've created:
 • Rides are sorted by date (newest first)
 • Use navigation buttons to browse pages
+
+<b>📢 Reposting a Ride</b>
+Only the ride creator can repost a ride to another chat:
+1. Go to the target chat where you want to post the ride
+2. Use <code>/postride</code> with the ride ID:
+<pre>/postride abc123</pre>
+The ride will be posted to the current chat and all instances will be synchronized when details change or participants join/leave.
     `.trim(),
     ride: `
 🚲 <b>{title}</b>{cancelledBadge}

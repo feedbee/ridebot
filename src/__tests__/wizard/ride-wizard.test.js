@@ -30,15 +30,16 @@ class MockStorage {
 }
 
 // Mock context factory
-const createMockContext = (userId = 123, chatId = 456) => {
+const createMockContext = (userId = 123, chatId = 456, chatType = 'private') => {
   const messages = [];
   const deletedMessages = [];
   const editedMessages = [];
+  const callbackAnswers = [];
   let lastCallbackAnswer = null;
 
   return {
     from: { id: userId },
-    chat: { id: chatId },
+    chat: { id: chatId, type: chatType },
     message: { message_id: 1 },
     match: [],
     reply: async (text, extra = {}) => {
@@ -70,17 +71,20 @@ const createMockContext = (userId = 123, chatId = 456) => {
     },
     answerCallbackQuery: async (text) => {
       lastCallbackAnswer = text;
+      callbackAnswers.push(text);
       return true;
     },
     _test: {
       messages,
       deletedMessages,
       editedMessages,
+      callbackAnswers,
       getLastCallbackAnswer: () => lastCallbackAnswer,
       reset: () => {
         messages.length = 0;
         deletedMessages.length = 0;
         editedMessages.length = 0;
+        callbackAnswers.length = 0;
         lastCallbackAnswer = null;
       }
     }
@@ -103,9 +107,25 @@ describe('RideWizard', () => {
   });
 
   describe('Wizard State Management', () => {
-    test('should start a new wizard session', async () => {
+    test('should start a new wizard session in private chat', async () => {
       await wizard.startWizard(ctx);
       expect(ctx._test.messages[0].text).toContain('Please enter the ride title');
+    });
+
+    test('should prevent starting wizard in public chat if wizardOnlyInPrivateChats is true', async () => {
+      // Store original value
+      const originalValue = process.env.WIZARD_ONLY_IN_PRIVATE;
+      // Set environment variable for test
+      process.env.WIZARD_ONLY_IN_PRIVATE = 'true';
+      
+      // Create a public chat context
+      const publicCtx = createMockContext(123, 456, 'group');
+      
+      await wizard.startWizard(publicCtx);
+      expect(publicCtx._test.messages[0].text).toContain('Wizard commands are only available in private chats');
+      
+      // Restore original value
+      process.env.WIZARD_ONLY_IN_PRIVATE = originalValue;
     });
 
     test('should prevent starting multiple wizards', async () => {
@@ -136,6 +156,52 @@ describe('RideWizard', () => {
       
       const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
       expect(lastMessage.text).toContain('Please enter the ride title');
+    });
+    
+    test('should prevent wizard actions in public chat if wizardOnlyInPrivateChats is true', async () => {
+      // Store original value
+      const originalValue = process.env.WIZARD_ONLY_IN_PRIVATE;
+      // Set environment variable for test
+      process.env.WIZARD_ONLY_IN_PRIVATE = 'true';
+      
+      // Create a public chat context
+      const publicCtx = createMockContext(123, 456, 'group');
+      
+      // Initialize wizard state manually since startWizard won't work in public chat
+      const stateKey = wizard.getWizardStateKey(publicCtx.from.id, publicCtx.chat.id);
+      wizard.wizardStates.set(stateKey, { step: 'title', data: {} });
+      
+      // Try to use wizard action in public chat
+      publicCtx.match = ['wizard:back', 'back'];
+      await wizard.handleWizardAction(publicCtx);
+      
+      expect(publicCtx._test.callbackAnswers[0]).toContain('Wizard commands are only available in private chats');
+      
+      // Restore original value
+      process.env.WIZARD_ONLY_IN_PRIVATE = originalValue;
+    });
+    
+    test('should prevent wizard input in public chat if wizardOnlyInPrivateChats is true', async () => {
+      // Store original value
+      const originalValue = process.env.WIZARD_ONLY_IN_PRIVATE;
+      // Set environment variable for test
+      process.env.WIZARD_ONLY_IN_PRIVATE = 'true';
+      
+      // Create a public chat context
+      const publicCtx = createMockContext(123, 456, 'group');
+      
+      // Initialize wizard state manually since startWizard won't work in public chat
+      const stateKey = wizard.getWizardStateKey(publicCtx.from.id, publicCtx.chat.id);
+      wizard.wizardStates.set(stateKey, { step: 'title', data: {} });
+      
+      // Try to use wizard input in public chat
+      publicCtx.message = { text: 'Test Ride', message_id: 2 };
+      await wizard.handleWizardInput(publicCtx);
+      
+      expect(publicCtx._test.messages[0].text).toContain('Wizard commands are only available in private chats');
+      
+      // Restore original value
+      process.env.WIZARD_ONLY_IN_PRIVATE = originalValue;
     });
 
     test('should handle skip button for optional fields', async () => {

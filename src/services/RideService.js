@@ -1,8 +1,9 @@
 import { RouteParser } from '../utils/route-parser.js';
 import { parseDateTimeInput } from '../utils/date-input-parser.js';
+import { MessageFormatter } from '../formatters/MessageFormatter.js';
 
 /**
- * Service class for managing rides
+ * Service class for managing rides and their messages
  */
 export class RideService {
   /**
@@ -10,6 +11,7 @@ export class RideService {
    */
   constructor(storage) {
     this.storage = storage;
+    this.messageFormatter = new MessageFormatter();
   }
 
   /**
@@ -335,5 +337,85 @@ export class RideService {
    */
   isRideCreator(ride, userId) {
     return ride.createdBy === userId;
+  }
+
+  /**
+   * Update all messages for a ride across all chats
+   * @param {Object} ride - Ride object
+   * @param {import('grammy').Context} ctx - Grammy context
+   * @returns {Promise<{success: boolean, updatedCount: number, removedCount: number}>} - Result of the update operation
+   */
+  async updateRideMessages(ride, ctx) {
+    // If no messages to update, return early
+    if (!ride.messages || ride.messages.length === 0) {
+      return { success: true, updatedCount: 0, removedCount: 0 };
+    }
+
+    try {
+      const participants = await this.getParticipants(ride.id);
+      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
+      
+      let updatedCount = 0;
+      let removedCount = 0;
+      const messagesToRemove = [];
+      
+      // Update all messages for this ride
+      for (const messageInfo of ride.messages) {
+        try {
+          await ctx.api.editMessageText(
+            messageInfo.chatId,
+            messageInfo.messageId,
+            message,
+            {
+              parse_mode: parseMode,
+              reply_markup: keyboard
+            }
+          );
+          updatedCount++;
+        } catch (messageError) {
+          console.warn(`Error updating message in chat ${messageInfo.chatId}:`, messageError);
+          
+          // Check if the message is no longer available (deleted or bot kicked)
+          if (messageError.description && (
+              messageError.description.includes('message to edit not found') ||
+              messageError.description.includes('bot was blocked by the user') ||
+              messageError.description.includes('chat not found') ||
+              messageError.description.includes('user is deactivated') ||
+              messageError.description.includes('not enough rights')
+          )) {
+            // Mark this message for removal from the tracking array
+            messagesToRemove.push(messageInfo);
+            removedCount++;
+          }
+        }
+      }
+      
+      // Remove messages that couldn't be updated from the tracking array
+      if (messagesToRemove.length > 0) {
+        // Filter out messages that should be removed
+        const updatedMessages = ride.messages.filter(msg => 
+          !messagesToRemove.some(toRemove => 
+            toRemove.chatId === msg.chatId && toRemove.messageId === msg.messageId
+          )
+        );
+        
+        // Update the ride with the filtered messages array
+        await this.updateRide(ride.id, { messages: updatedMessages });
+      }
+      
+      return { 
+        success: true, 
+        updatedCount, 
+        removedCount 
+      };
+    } catch (error) {
+      console.error('Error updating ride messages:', error);
+      return { 
+        success: false, 
+        updatedCount: 0, 
+        removedCount: 0, 
+        error: error.message || 'Unknown error' 
+      };
+    }
   }
 }

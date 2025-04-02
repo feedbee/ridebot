@@ -18,7 +18,8 @@ describe('CancelRideCommandHandler', () => {
       getRide: jest.fn(),
       isRideCreator: jest.fn(),
       cancelRide: jest.fn(),
-      getParticipants: jest.fn()
+      getParticipants: jest.fn(),
+      updateRideMessages: jest.fn().mockResolvedValue({ success: true, updatedCount: 1, removedCount: 0 })
     };
     
     // Create mock MessageFormatter
@@ -147,17 +148,7 @@ describe('CancelRideCommandHandler', () => {
       await cancelRideCommandHandler.updateRideMessage(mockRide, mockCtx);
       
       // Verify
-      expect(mockRideService.getParticipants).toHaveBeenCalledWith('456');
-      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(mockRide, mockParticipants);
-      expect(mockCtx.api.editMessageText).toHaveBeenCalledWith(
-        101112,
-        789,
-        'Formatted ride message',
-        {
-          parse_mode: 'HTML',
-          reply_markup: { inline_keyboard: [] }
-        }
-      );
+      expect(mockRideService.updateRideMessages).toHaveBeenCalledWith(mockRide, mockCtx);
     });
     
     it('should handle errors when updating message', async () => {
@@ -180,9 +171,7 @@ describe('CancelRideCommandHandler', () => {
         parseMode: 'HTML'
       };
       
-      mockRideService.getParticipants.mockResolvedValue(mockParticipants);
-      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue(mockFormatResult);
-      mockCtx.api.editMessageText.mockRejectedValue(new Error('API error'));
+      mockRideService.updateRideMessages.mockResolvedValue({ success: false, error: 'API error' });
       
       // Mock console.error to prevent test output pollution
       const originalConsoleError = console.error;
@@ -193,9 +182,7 @@ describe('CancelRideCommandHandler', () => {
         await cancelRideCommandHandler.updateRideMessage(mockRide, mockCtx);
         
         // Verify
-        expect(mockRideService.getParticipants).toHaveBeenCalledWith('456');
-        expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(mockRide, mockParticipants);
-        expect(mockCtx.api.editMessageText).toHaveBeenCalled();
+        expect(mockRideService.updateRideMessages).toHaveBeenCalledWith(mockRide, mockCtx);
         expect(console.error).toHaveBeenCalled();
       } finally {
         // Restore console.error

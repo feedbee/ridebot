@@ -15,6 +15,8 @@ export class RideWizard {
     this.wizardStates = new Map();
   }
   
+
+  
   /**
    * Check if the bot has admin permissions and notify the user if not
    * @param {import('grammy').Context} ctx - Grammy context
@@ -58,6 +60,12 @@ export class RideWizard {
       return;
     }
 
+    // Check if wizards are only allowed in private chats
+    if (config.bot.wizardOnlyInPrivateChats && ctx.chat.type !== 'private') {
+      await ctx.reply('⚠️ Wizard commands are only available in private chats with the bot. Please use the command with parameters instead.');
+      return;
+    }
+
     // Check if the bot has admin permissions in the chat
     if (!await this.checkAdminPermissions(ctx)) {
       return;
@@ -92,6 +100,13 @@ export class RideWizard {
 
     if (!state) {
       await ctx.answerCallbackQuery('Wizard session expired');
+      return;
+    }
+    
+    // Check if wizards are only allowed in private chats
+    if (config.bot.wizardOnlyInPrivateChats && ctx.chat.type !== 'private') {
+      await ctx.answerCallbackQuery('⚠️ Wizard commands are only available in private chats with the bot');
+      this.wizardStates.delete(stateKey);
       return;
     }
     
@@ -228,6 +243,13 @@ export class RideWizard {
     const stateKey = this.getWizardStateKey(ctx.from.id, ctx.chat.id);
     const state = this.wizardStates.get(stateKey);
     if (!state) return;
+    
+    // Check if wizards are only allowed in private chats
+    if (config.bot.wizardOnlyInPrivateChats && ctx.chat.type !== 'private') {
+      await ctx.reply('⚠️ Wizard commands are only available in private chats with the bot. Please use the command with parameters instead.');
+      this.wizardStates.delete(stateKey);
+      return;
+    }
     
     // Check if the bot has admin permissions in the chat
     if (!await this.checkAdminPermissions(ctx, true)) {
@@ -551,35 +573,13 @@ export class RideWizard {
   }
 
   async updateRideMessage(ride, ctx) {
-    // If no messages to update, return early
-    if (!ride.messages || ride.messages.length === 0) {
-      console.error('No messages to update for ride:', ride.id);
-      return;
-    }
-
-    try {
-      const participants = await this.storage.getParticipants(ride.id);
-      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
-      
-      // Update all messages for this ride
-      for (const messageInfo of ride.messages) {
-        try {
-          await ctx.api.editMessageText(
-            messageInfo.chatId,
-            messageInfo.messageId,
-            message,
-            {
-              parse_mode: parseMode,
-              reply_markup: keyboard
-            }
-          );
-        } catch (messageError) {
-          console.error(`Error updating message in chat ${messageInfo.chatId}:`, messageError);
-          // Continue with other messages even if one fails
-        }
-      }
-    } catch (error) {
-      console.error('Error updating ride messages:', error);
+    // Use the centralized method in RideService
+    const result = await this.rideService.updateRideMessages(ride, ctx);
+    
+    if (!result.success) {
+      console.error('Error updating ride messages:', result.error);
+    } else if (result.removedCount > 0) {
+      console.info(`Removed ${result.removedCount} unavailable messages from tracking for ride ${ride.id}`);
     }
   }
 } 
