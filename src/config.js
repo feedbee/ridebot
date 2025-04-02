@@ -85,9 +85,10 @@ speed: 25-28
 <b>Managing Rides</b>
 
 <b>🔄 Updating a Ride</b>
-Only the ride creator can update. Two ways:
-1. Reply to the ride message with <code>/updateride</code> and new parameters
-2. Use <code>/updateride</code> with ride ID:
+Only the ride creator can update. Three ways:
+1. Reply to the ride message with <code>/updateride</code> without any parameters to start an interactive wizard.${process.env.WIZARD_ONLY_IN_PRIVATE === 'true' ? ' <i>(Note: Wizard mode is only available in private chats with the bot)</i>' : ''}
+2. Reply to the ride message with <code>/updateride</code> and new parameters
+3. Use <code>/updateride</code> with ride ID:
 <pre>
 /updateride
 id: abc123
@@ -113,11 +114,10 @@ Only the ride creator can delete:
 <pre>/deleteride id: abc123</pre>
 
 <b>🔄 Duplicating a Ride</b>
-Only the ride creator can duplicate. Two ways:
-1. Use the wizard (recommended):
-Send <code>/dupride</code> to start an interactive wizard.
-
-2. Use <code>/dupride</code> with ID and optional parameters:
+Only the ride creator can duplicate. Three ways:
+1. Reply to the ride message with <code>/dupride</code> without any parameters to start an interactive wizard.${process.env.WIZARD_ONLY_IN_PRIVATE === 'true' ? ' <i>(Note: Wizard mode is only available in private chats with the bot)</i>' : ''}
+2. Reply to the ride message with <code>/updateride</code> and new parameters
+3. Use <code>/dupride</code> with ride ID and optional parameters:
 <pre>
 /dupride
 id: abc123
