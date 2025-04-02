@@ -135,6 +135,13 @@ By default, the new ride will be scheduled for tomorrow at the same time.
 Use <code>/listrides</code> to see all rides you've created:
 • Rides are sorted by date (newest first)
 • Use navigation buttons to browse pages
+
+<b>📢 Reposting a Ride</b>
+Only the ride creator can repost a ride to another chat:
+1. Go to the target chat where you want to post the ride
+2. Use <code>/postride</code> with the ride ID:
+<pre>/postride abc123</pre>
+The ride will be posted to the current chat and all instances will be synchronized when details change or participants join/leave.
     `.trim(),
     ride: `
 🚲 <b>{title}</b>{cancelledBadge}

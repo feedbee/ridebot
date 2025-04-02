@@ -10,6 +10,7 @@ import { CancelRideCommandHandler } from '../commands/CancelRideCommandHandler.j
 import { DeleteRideCommandHandler } from '../commands/DeleteRideCommandHandler.js';
 import { ListRidesCommandHandler } from '../commands/ListRidesCommandHandler.js';
 import { DuplicateRideCommandHandler } from '../commands/DuplicateRideCommandHandler.js';
+import { PostRideCommandHandler } from '../commands/PostRideCommandHandler.js';
 import { ParticipationHandlers } from '../commands/ParticipationHandlers.js';
 
 /**
@@ -37,6 +38,7 @@ export class Bot {
     this.deleteRideHandler = new DeleteRideCommandHandler(this.rideService, this.messageFormatter);
     this.listRidesHandler = new ListRidesCommandHandler(this.rideService, this.messageFormatter);
     this.duplicateRideHandler = new DuplicateRideCommandHandler(this.rideService, this.messageFormatter, this.wizard);
+    this.postRideHandler = new PostRideCommandHandler(this.rideService, this.messageFormatter);
     this.participationHandlers = new ParticipationHandlers(this.rideService, this.messageFormatter);
     
     this.setupHandlers();
@@ -54,6 +56,7 @@ export class Bot {
     this.bot.command('deleteride', ctx => this.deleteRideHandler.handle(ctx));
     this.bot.command('listrides', ctx => this.listRidesHandler.handle(ctx));
     this.bot.command('dupride', ctx => this.duplicateRideHandler.handle(ctx));
+    this.bot.command('postride', ctx => this.postRideHandler.handle(ctx));
     
     // Callback query handlers
     this.bot.callbackQuery(/^join:(.+)$/, ctx => this.participationHandlers.handleJoinRide(ctx));
