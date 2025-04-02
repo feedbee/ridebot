@@ -117,11 +117,11 @@ export class MessageFormatter {
       : '';
     message = message.replace('{speedInfo}', speedInfo);
     
-    // Always just show the ride ID, no additional instructions
-    const joinInstructions = ride.cancelled
-      ? config.messageTemplates.cancelledInstructions.replace('{id}', ride.id).replace(/\*([^*]+)\*/g, '<b>$1</b>')
-      : `🎫 Ride #${ride.id}`;
-    message = message.replace('{joinInstructions}', joinInstructions);
+    // Add cancellation instructions if the ride is cancelled
+    const cancelledInstructions = ride.cancelled ? '\n\n' + config.messageTemplates.cancelledMessage : '';
+    message = message.replace('{cancelledInstructions}', cancelledInstructions);
+
+    message = message.replace('{id}', ride.id);
     
     return message;
   }
