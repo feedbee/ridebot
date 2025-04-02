@@ -61,7 +61,7 @@ export class DuplicateRideCommandHandler extends BaseCommandHandler {
       // Create a new ride data object based on the original ride
       const rideData = {
         title: params.title || originalRide.title,
-        chatId: ctx.chat.id,
+        messages: [],
         createdBy: ctx.from.id,
         meetingPoint: params.meet || originalRide.meetingPoint,
         routeLink: params.route || originalRide.routeLink,
@@ -106,9 +106,12 @@ export class DuplicateRideCommandHandler extends BaseCommandHandler {
         reply_markup: keyboard
       });
 
-      // Update the ride with the message ID
+      // Update the ride with the message info in the messages array
       await this.rideService.updateRide(ride.id, {
-        messageId: sentMessage.message_id
+        messages: [{
+          chatId: ctx.chat.id,
+          messageId: sentMessage.message_id
+        }]
       });
 
       await ctx.reply('Ride duplicated successfully!');

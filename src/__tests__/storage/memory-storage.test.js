@@ -10,8 +10,19 @@ describe('MemoryStorage', () => {
   const testRide = {
     title: 'Test Ride',
     date: new Date('2024-03-15T15:00:00Z'),
-    chatId: 123456,
-    messageId: 789012,
+    messages: [{ chatId: 123456, messageId: 789012 }],
+    createdBy: 789,
+    meetingPoint: 'Test Location',
+    distance: 50,
+    duration: 180,
+    speedMin: 25,
+    speedMax: 28
+  };
+  
+  const testRideWithMessages = {
+    title: 'Test Ride with Messages',
+    date: new Date('2024-03-15T15:00:00Z'),
+    messages: [{ chatId: 123456, messageId: 789012 }],
     createdBy: 789,
     meetingPoint: 'Test Location',
     distance: 50,
@@ -79,6 +90,12 @@ describe('MemoryStorage', () => {
       expect(updatedRide.title).toBe('Updated Ride');
       expect(participants).toHaveLength(1);
       expect(participants[0].username).toBe('test');
+      
+      // Verify messages array is maintained
+      expect(updatedRide.messages).toBeDefined();
+      expect(updatedRide.messages).toHaveLength(1);
+      expect(updatedRide.messages[0].chatId).toBe(testRide.messages[0].chatId);
+      expect(updatedRide.messages[0].messageId).toBe(testRide.messages[0].messageId);
     });
 
     it('should maintain separate participant lists for different rides', async () => {
@@ -102,17 +119,17 @@ describe('MemoryStorage', () => {
     it('should sort rides by date in descending order', async () => {
       // Create rides with different dates
       await storage.createRide({
-        ...testRide,
+        ...testRideWithMessages,
         title: 'Ride 1',
         date: new Date('2024-03-15T15:00:00Z')
       });
       await storage.createRide({
-        ...testRide,
+        ...testRideWithMessages,
         title: 'Ride 2',
         date: new Date('2024-03-16T15:00:00Z')
       });
       await storage.createRide({
-        ...testRide,
+        ...testRideWithMessages,
         title: 'Ride 3',
         date: new Date('2024-03-17T15:00:00Z')
       });
@@ -122,6 +139,52 @@ describe('MemoryStorage', () => {
       // Verify descending order
       expect(result.rides[0].date.getTime()).toBeGreaterThan(result.rides[1].date.getTime());
       expect(result.rides[1].date.getTime()).toBeGreaterThan(result.rides[2].date.getTime());
+    });
+  });
+  
+  describe('Messages Array Handling', () => {
+    it('should add a new message to the messages array', async () => {
+      // Create ride with initial message
+      const ride = await storage.createRide(testRide);
+      
+      // Update with new messages array
+      const newMessages = [
+        ...ride.messages,
+        { messageId: 111111, chatId: 222222 }
+      ];
+      
+      const updatedRide = await storage.updateRide(ride.id, { 
+        messages: newMessages
+      });
+      
+      // Verify messages array was updated
+      expect(updatedRide.messages).toHaveLength(2);
+      expect(updatedRide.messages[0].messageId).toBe(testRide.messages[0].messageId);
+      expect(updatedRide.messages[0].chatId).toBe(testRide.messages[0].chatId);
+      expect(updatedRide.messages[1].messageId).toBe(111111);
+      expect(updatedRide.messages[1].chatId).toBe(222222);
+    });
+    
+    it('should replace the messages array when provided', async () => {
+      // Create ride
+      const ride = await storage.createRide(testRide);
+      
+      // Update with new messages array
+      const newMessages = [
+        { messageId: 111111, chatId: 222222 },
+        { messageId: 333333, chatId: 444444 }
+      ];
+      
+      const updatedRide = await storage.updateRide(ride.id, { 
+        messages: newMessages
+      });
+      
+      // Verify messages array was updated
+      expect(updatedRide.messages).toHaveLength(2);
+      expect(updatedRide.messages[0].messageId).toBe(111111);
+      expect(updatedRide.messages[0].chatId).toBe(222222);
+      expect(updatedRide.messages[1].messageId).toBe(333333);
+      expect(updatedRide.messages[1].chatId).toBe(444444);
     });
   });
 }); 

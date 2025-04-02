@@ -168,7 +168,7 @@ describe('NewRideCommandHandler', () => {
       }));
       
       expect(mockRideService.updateRide).toHaveBeenCalledWith('123', {
-        messageId: 13579
+        messages: [{ chatId: 789, messageId: 13579 }]
       });
     });
     

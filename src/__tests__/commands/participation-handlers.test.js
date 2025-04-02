@@ -245,11 +245,26 @@ describe('ParticipationHandlers', () => {
   });
   
   describe('updateRideMessage', () => {
-    it('should not update if messageId or chatId is missing', async () => {
+    it('should not update if messages array is missing', async () => {
       // Setup
       const mockRide = {
         id: '123'
-        // No messageId or chatId
+        // No messages array
+      };
+      
+      // Execute
+      await participationHandlers.updateRideMessage(mockRide, mockCtx);
+      
+      // Verify
+      expect(mockRideService.getParticipants).not.toHaveBeenCalled();
+      expect(mockCtx.api.editMessageText).not.toHaveBeenCalled();
+    });
+    
+    it('should not update if messages array is empty', async () => {
+      // Setup
+      const mockRide = {
+        id: '123',
+        messages: []
       };
       
       // Execute
@@ -264,8 +279,9 @@ describe('ParticipationHandlers', () => {
       // Setup
       const mockRide = {
         id: '123',
-        messageId: 789,
-        chatId: 101112
+        messages: [
+          { messageId: 789, chatId: 101112 }
+        ]
       };
       const mockParticipants = [
         { userId: 456, firstName: 'Test', lastName: 'User' }
@@ -298,8 +314,9 @@ describe('ParticipationHandlers', () => {
       // Setup
       const mockRide = {
         id: '123',
-        messageId: 789,
-        chatId: 101112
+        messages: [
+          { messageId: 789, chatId: 101112 }
+        ]
       };
       mockRideService.getParticipants.mockRejectedValue(new Error('Database error'));
       

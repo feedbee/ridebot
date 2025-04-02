@@ -169,7 +169,7 @@ describe('DeleteRideCommandHandler', () => {
     
     it('should handle successful deletion with message ID', async () => {
       // Setup
-      const mockRide = { id: '456', messageId: 789, chatId: 101112 };
+      const mockRide = { id: '456', messages: [{ messageId: 789, chatId: 101112 }] };
       mockRideService.getRide.mockResolvedValue(mockRide);
       mockRideService.isRideCreator.mockReturnValue(true);
       mockRideService.deleteRide.mockResolvedValue(true);
@@ -188,7 +188,7 @@ describe('DeleteRideCommandHandler', () => {
     
     it('should handle error when deleting original message', async () => {
       // Setup
-      const mockRide = { id: '456', messageId: 789, chatId: 101112 };
+      const mockRide = { id: '456', messages: [{ messageId: 789, chatId: 101112 }] };
       mockRideService.getRide.mockResolvedValue(mockRide);
       mockRideService.isRideCreator.mockReturnValue(true);
       mockRideService.deleteRide.mockResolvedValue(true);

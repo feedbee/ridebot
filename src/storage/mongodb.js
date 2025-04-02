@@ -4,17 +4,21 @@ import { config } from '../config.js';
 
 const participantSchema = new mongoose.Schema({
   userId: { type: Number, required: true },
-  username: { type: String, required: true },
+  username: { type: String, default: '' }, // Optional as Telegram usernames are optional
   firstName: { type: String, default: '' },
   lastName: { type: String, default: '' },
   joinedAt: { type: Date, default: Date.now }
 });
 
+const messageSchema = new mongoose.Schema({
+  messageId: { type: Number, required: true },
+  chatId: { type: Number, required: true }
+});
+
 const rideSchema = new mongoose.Schema({
   title: { type: String, required: true },
   date: { type: Date, required: true },
-  messageId: { type: Number },
-  chatId: { type: Number, required: true },
+  messages: [messageSchema],
   routeLink: String,
   meetingPoint: String,
   distance: Number,
@@ -28,11 +32,7 @@ const rideSchema = new mongoose.Schema({
 });
 
 // Create indexes
-rideSchema.index({ chatId: 1, messageId: 1 }, { 
-  unique: true, 
-  sparse: true,
-  partialFilterExpression: { messageId: { $type: "number" } }
-});
+rideSchema.index({ 'messages.chatId': 1, 'messages.messageId': 1 });
 rideSchema.index({ createdBy: 1, date: -1 }); // For efficient querying of rides by creator
 
 const Ride = mongoose.model('Ride', rideSchema);
@@ -60,10 +60,14 @@ export class MongoDBStorage extends StorageInterface {
   }
 
   async createRide(ride) {
-    const newRide = new Ride({
-      ...ride,
-      participants: []
-    });
+    let rideData = { ...ride, participants: [] };
+    
+    // Ensure messages array exists
+    if (!rideData.messages) {
+      rideData.messages = [];
+    }
+    
+    const newRide = new Ride(rideData);
     await newRide.save();
     return this.mapRideToInterface(newRide);
   }
@@ -73,8 +77,17 @@ export class MongoDBStorage extends StorageInterface {
     if (!ride) {
       throw new Error('Ride not found');
     }
-
-    Object.assign(ride, updates);
+    
+    // Preserve the messages array if it's not being updated
+    // This is critical to ensure message tracking works properly
+    let updatesToApply = { ...updates };
+    if (!updates.messages && ride.messages && ride.messages.length > 0) {
+      // We don't need to modify updatesToApply here since MongoDB will only
+      // update the fields that are provided in the updates object
+    }
+    
+    // Apply updates
+    Object.assign(ride, updatesToApply);
     await ride.save();
     return this.mapRideToInterface(ride);
   }
@@ -173,12 +186,13 @@ export class MongoDBStorage extends StorageInterface {
   mapRideToInterface(ride) {
     if (!ride) return null;
     const rideObj = ride.toObject ? ride.toObject() : ride;
-    return {
+    
+    // Create the ride object with the messages array
+    const result = {
       id: rideObj._id.toString(),
       title: rideObj.title,
       date: rideObj.date,
-      messageId: rideObj.messageId,
-      chatId: rideObj.chatId,
+      messages: rideObj.messages || [],
       routeLink: rideObj.routeLink,
       meetingPoint: rideObj.meetingPoint,
       distance: rideObj.distance,
@@ -191,8 +205,12 @@ export class MongoDBStorage extends StorageInterface {
       participants: rideObj.participants?.map(p => ({
         userId: p.userId,
         username: p.username,
+        firstName: p.firstName || '',
+        lastName: p.lastName || '',
         joinedAt: p.joinedAt
       })) || []
     };
+    
+    return result;
   }
 } 

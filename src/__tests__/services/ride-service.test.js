@@ -21,7 +21,7 @@ describe('RideService', () => {
   const testRide = {
     title: 'Test Ride',
     date: new Date('2024-03-15T15:00:00Z'),
-    chatId: 123456,
+    messages: [{ chatId: 123456, messageId: 789123 }],
     createdBy: 789,
     meetingPoint: 'Test Location',
     routeLink: 'https://example.com/route',
@@ -54,7 +54,7 @@ describe('RideService', () => {
       expect(ride).toHaveProperty('id');
       expect(ride.title).toBe(testRide.title);
       expect(ride.date).toEqual(testRide.date);
-      expect(ride.chatId).toBe(testRide.chatId);
+      expect(ride.messages).toEqual(testRide.messages);
     });
 
     it('should get a ride by ID', async () => {
@@ -104,7 +104,7 @@ describe('RideService', () => {
         title: 'Test Ride',
         date: new Date(),
         createdBy: 123,
-        chatId: 456,
+
         messages: [{ chatId: 456, messageId: 789 }, { chatId: 789, messageId: 123 }]
       };
       
@@ -126,7 +126,7 @@ describe('RideService', () => {
         title: 'Test Ride',
         date: new Date(),
         createdBy: 123,
-        chatId: 456,
+
         messages: [{ chatId: 456, messageId: 789 }, { chatId: 789, messageId: 123 }]
       };
       

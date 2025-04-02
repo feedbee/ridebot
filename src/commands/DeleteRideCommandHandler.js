@@ -61,12 +61,14 @@ export class DeleteRideCommandHandler extends BaseCommandHandler {
     if (success) {
       await ctx.editMessageText('Ride deleted successfully.');
       
-      // Try to delete the original ride message
-      if (ride.messageId) {
-        try {
-          await ctx.api.deleteMessage(ride.chatId, ride.messageId);
-        } catch (error) {
-          console.error('Error deleting ride message:', error);
+      // Try to delete all ride messages
+      if (ride.messages && ride.messages.length > 0) {
+        for (const message of ride.messages) {
+          try {
+            await ctx.api.deleteMessage(message.chatId, message.messageId);
+          } catch (error) {
+            console.error(`Error deleting ride message in chat ${message.chatId}:`, error);
+          }
         }
       }
       

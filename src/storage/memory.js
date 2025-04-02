@@ -38,11 +38,20 @@ export class MemoryStorage extends StorageInterface {
 
   async createRide(ride) {
     const id = this.generateShortId();
+    
+    let rideData = { ...ride };
+    
+    // Ensure messages array exists
+    if (!rideData.messages) {
+      rideData.messages = [];
+    }
+    
     const newRide = {
-      ...ride,
+      ...rideData,
       id,
       createdAt: new Date()
     };
+    
     this.rides.set(id, newRide);
     this.participants.set(id, []);
     return newRide;
@@ -53,11 +62,21 @@ export class MemoryStorage extends StorageInterface {
     if (!ride) {
       throw new Error('Ride not found');
     }
-
+    
+    // Preserve the messages array if it's not being updated
+    // This is critical to ensure message tracking works properly
+    if (!updates.messages && ride.messages) {
+      updates = {
+        ...updates,
+        messages: ride.messages
+      };
+    }
+    
     const updatedRide = {
       ...ride,
       ...updates
     };
+    
     this.rides.set(rideId, updatedRide);
     return updatedRide;
   }

@@ -48,4 +48,41 @@ export class BaseCommandHandler {
       return { ride: null, error: 'Error accessing ride data' };
     }
   }
+  
+  /**
+   * Update the ride message
+   * @param {Object} ride - Ride object
+   * @param {import('grammy').Context} ctx - Grammy context
+   */
+  async updateRideMessage(ride, ctx) {
+    // If no messages to update, return early
+    if (!ride.messages || ride.messages.length === 0) {
+      return;
+    }
+
+    try {
+      const participants = await this.rideService.getParticipants(ride.id);
+      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
+      
+      // Update all messages for this ride
+      for (const messageInfo of ride.messages) {
+        try {
+          await ctx.api.editMessageText(
+            messageInfo.chatId,
+            messageInfo.messageId,
+            message,
+            {
+              parse_mode: parseMode,
+              reply_markup: keyboard
+            }
+          );
+        } catch (messageError) {
+          console.error(`Error updating message in chat ${messageInfo.chatId}:`, messageError);
+          // Continue with other messages even if one fails
+        }
+      }
+    } catch (error) {
+      console.error('Error updating ride messages:', error);
+    }
+  }
 }
