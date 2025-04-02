@@ -156,6 +156,14 @@ export class MessageFormatter {
         message += `📍 ${escapeHtml(ride.meetingPoint)}\n`;
       }
       
+      // Add chat information
+      if (ride.messages && ride.messages.length > 0) {
+        const chatCount = ride.messages.length;
+        message += `📢 Posted in ${chatCount} ${chatCount === 1 ? 'chat' : 'chats'}\n`;
+      } else {
+        message += `📢 Not posted in any chats\n`;
+      }
+      
       message += `🎫 Ride #${ride.id}\n\n`;
     }
     
