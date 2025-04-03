@@ -33,3 +33,6 @@ Thumbs.db
 
 # Cursor rules
 .cursor/rules
+
+# Custom local notes and other files
+z_ignore
