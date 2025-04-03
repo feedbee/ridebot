@@ -1,0 +1,23 @@
+# Version control
+.git
+.gitignore
+
+# Environment variables
+.env
+.env.*
+
+# Development files
+node_modules
+npm-debug.log
+.cursor
+.devcontainer
+.windsurfrules
+
+# Test files
+src/__tests__
+src/e2e_tests
+*.test.js
+jest.config.js
+
+# Custom local notes and other files
+z_ignore
