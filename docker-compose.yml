@@ -4,6 +4,7 @@ services:
     env_file: .env
     environment:
       - NODE_ENV=staging
+      - USE_WEBHOOK=false
       - MONGODB_URI=mongodb://mongodb:27017/bikebot
     depends_on:
       - mongodb

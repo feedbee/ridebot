@@ -8,7 +8,7 @@ export const config = {
     token: process.env.BOT_TOKEN,
     webhookDomain: process.env.WEBHOOK_DOMAIN,
     webhookPath: '/webhook',
-    useWebhook: process.env.NODE_ENV === 'production',
+    useWebhook: process.env.USE_WEBHOOK === 'true' || false,
     wizardOnlyInPrivateChats: process.env.WIZARD_ONLY_IN_PRIVATE === 'true' || false
   },
   mongodb: {
