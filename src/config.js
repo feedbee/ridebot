@@ -148,18 +148,24 @@ speed: New speed range (optional)
 Only the ride creator can cancel:
 1. Reply to the ride message with /cancelride
 2. Use /cancelride with ride ID:
-<pre>/cancelride id: abc123</pre>
+<pre>
+/cancelride
+id: abc123
+</pre>
 
 <b>🗑 Deleting a Ride</b>
 Only the ride creator can delete:
 1. Reply to the ride message with /deleteride
 2. Use /deleteride with ride ID:
-<pre>/deleteride id: abc123</pre>
+<pre>
+/deleteride
+id: abc123
+</pre>
 
 <b>🔄 Duplicating a Ride</b>
 Only the ride creator can duplicate. Three ways:
 1. Reply to the ride message with /dupride without any parameters to start an interactive wizard.${process.env.WIZARD_ONLY_IN_PRIVATE === 'true' ? ' <i>(Note: Wizard mode is only available in private chats with the bot)</i>' : ''}
-2. Reply to the ride message with /updateride and new parameters
+2. Reply to the ride message with /dupride and new parameters
 3. Use /dupride with ride ID and optional parameters:
 <pre>
 /dupride
@@ -184,7 +190,10 @@ Use /listrides to see all rides you've created:
 Only the ride creator can repost a ride to another chat:
 1. Go to the target chat where you want to post the ride
 2. Use /postride with the ride ID:
-<pre>/postride abc123</pre>
+<pre>
+/postride
+id: abc123
+</pre>
 The ride will be posted to the current chat and all instances will be synchronized when details change or participants join/leave.
     `.trim(),
     ride: `
