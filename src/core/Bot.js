@@ -4,6 +4,7 @@ import { RideWizard } from '../wizard/RideWizard.js';
 import { RideService } from '../services/RideService.js';
 import { MessageFormatter } from '../formatters/MessageFormatter.js';
 import { HelpCommandHandler } from '../commands/HelpCommandHandler.js';
+import { StartCommandHandler } from '../commands/StartCommandHandler.js';
 import { NewRideCommandHandler } from '../commands/NewRideCommandHandler.js';
 import { UpdateRideCommandHandler } from '../commands/UpdateRideCommandHandler.js';
 import { CancelRideCommandHandler } from '../commands/CancelRideCommandHandler.js';
@@ -32,6 +33,7 @@ export class Bot {
     
     // Initialize command handlers
     this.helpHandler = new HelpCommandHandler(this.rideService, this.messageFormatter);
+    this.startHandler = new StartCommandHandler(this.rideService, this.messageFormatter);
     this.newRideHandler = new NewRideCommandHandler(this.rideService, this.messageFormatter, this.wizard);
     this.updateRideHandler = new UpdateRideCommandHandler(this.rideService, this.messageFormatter, this.wizard);
     this.cancelRideHandler = new CancelRideCommandHandler(this.rideService, this.messageFormatter);
@@ -49,6 +51,7 @@ export class Bot {
    */
   setupHandlers() {
     // Command handlers
+    this.bot.command('start', ctx => this.startHandler.handle(ctx));
     this.bot.command('help', ctx => this.helpHandler.handle(ctx));
     this.bot.command('newride', ctx => this.newRideHandler.handle(ctx));
     this.bot.command('updateride', ctx => this.updateRideHandler.handle(ctx));

@@ -49,8 +49,24 @@ export const config = {
     }
   },
   messageTemplates: {
+    start: `
+<b>🚲 Welcome to Ride Announcement Bot!</b>
+
+I'm here to help you organize and manage bike rides with your friends and community.
+
+With me, you can:
+• Create and schedule rides
+• Track participants
+• Share route details
+• Post the same ride in multiple chats
+• Keep everyone updated when plans change
+
+To get started, try the /newride command to create your first ride, or use /help for a detailed guide to all my features.
+
+Happy cycling! 🚴‍♀️💨
+    `.trim(),
     help: `
-<b>🚲 Bike Ride Bot Help</b>
+<b>🚲 Ride Announcement Bot Help</b>
 
 <b>➕ Creating a New Ride</b>
 Create a new ride:
