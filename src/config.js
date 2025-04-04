@@ -52,16 +52,41 @@ export const config = {
     start: `
 <b>🚲 Welcome to Ride Announcement Bot!</b>
 
-I'm here to help you organize and manage bike rides with your friends and community.
+I help you organize bike rides with your friends and community.
 
-With me, you can:
+<b>Key Features:</b>
 • Create and schedule rides
 • Track participants
 • Share route details
-• Post the same ride in multiple chats
-• Keep everyone updated when plans change
+• Post rides in multiple chats
+• Keep everyone updated
 
-To get started, try the /newride command to create your first ride, or use /help for a detailed guide to all my features.
+<b>Create Rides and Sync Them Across Chats:</b>
+1. Create a ride with /newride in private chat
+2. Share to other chats with /postride
+3. All instances stay synchronized
+4. Join/leave updates appear everywhere
+5. Changes and cancellations sync automatically
+
+<b>Important:</b> Never forward the ride announcements manually - they won't have join buttons and won't stay in sync.
+
+<b>Command Modes:</b>
+All main commands (/newride, /updateride, /dupride, /cancelride, /deleteride) work in two modes:
+• Step-by-step wizard - interactive and beginner-friendly${process.env.WIZARD_ONLY_IN_PRIVATE === 'true' ? ' <b>available in private chats with the bot only.</b>' : ''}
+• Parametrized mode - faster for experienced users
+See /help for detailed examples of both modes.
+To create less noise for others, it is recommended to create the rides in private chat with the bot and repost them in other chats after.
+
+<b>Easy Ride Reference:</b>
+• When working with existing ride, reply to the ride message with /updateride, /cancelride, /deleteride, /dupride, /postride to identify the ride to modify
+• Alternatively, pass the ride ID in the id: parameter
+
+<b>Manage Your Rides:</b>
+• Use /listrides to see all rides you've created
+• Navigate through pages with buttons
+• Easily access ride IDs for management
+
+Get started with /newride or type /help for a full guide.
 
 Happy cycling! 🚴‍♀️💨
     `.trim(),
