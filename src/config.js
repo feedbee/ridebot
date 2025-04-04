@@ -93,13 +93,15 @@ Happy cycling! 🚴‍♀️💨
     help: `
 <b>🚲 Ride Announcement Bot Help</b>
 
+<i>For an overview of features and how to use the bot, use the /start command.</i>
+
 <b>➕ Creating a New Ride</b>
 Create a new ride:
 1. Using the wizard (recommended):
-Simply send <code>/newride</code> command without any parameters to start an interactive wizard that will guide you through each step.${process.env.WIZARD_ONLY_IN_PRIVATE === 'true' ? ' <i>(Note: Wizard mode is only available in private chats with the bot)</i>' : ''}
+Simply send /newride command without any parameters to start an interactive wizard that will guide you through each step.${process.env.WIZARD_ONLY_IN_PRIVATE === 'true' ? ' <i>(Note: Wizard mode is only available in private chats with the bot)</i>' : ''}
 
 2. Using command with parameters:
-Use <code>/newride</code> command followed by parameters (one per line):
+Use /newride command followed by parameters (one per line):
 <pre>
 /newride
 title: Ride title
@@ -127,9 +129,9 @@ speed: 25-28
 
 <b>🔄 Updating a Ride</b>
 Only the ride creator can update. Three ways:
-1. Reply to the ride message with <code>/updateride</code> without any parameters to start an interactive wizard.${process.env.WIZARD_ONLY_IN_PRIVATE === 'true' ? ' <i>(Note: Wizard mode is only available in private chats with the bot)</i>' : ''}
-2. Reply to the ride message with <code>/updateride</code> and new parameters
-3. Use <code>/updateride</code> with ride ID:
+1. Reply to the ride message with /updateride without any parameters to start an interactive wizard.${process.env.WIZARD_ONLY_IN_PRIVATE === 'true' ? ' <i>(Note: Wizard mode is only available in private chats with the bot)</i>' : ''}
+2. Reply to the ride message with /updateride and new parameters
+3. Use /updateride with ride ID:
 <pre>
 /updateride
 id: abc123
@@ -144,21 +146,21 @@ speed: New speed range (optional)
 
 <b>❌ Cancelling a Ride</b>
 Only the ride creator can cancel:
-1. Reply to the ride message with <code>/cancelride</code>
-2. Use <code>/cancelride</code> with ride ID:
+1. Reply to the ride message with /cancelride
+2. Use /cancelride with ride ID:
 <pre>/cancelride id: abc123</pre>
 
 <b>🗑 Deleting a Ride</b>
 Only the ride creator can delete:
-1. Reply to the ride message with <code>/deleteride</code>
-2. Use <code>/deleteride</code> with ride ID:
+1. Reply to the ride message with /deleteride
+2. Use /deleteride with ride ID:
 <pre>/deleteride id: abc123</pre>
 
 <b>🔄 Duplicating a Ride</b>
 Only the ride creator can duplicate. Three ways:
-1. Reply to the ride message with <code>/dupride</code> without any parameters to start an interactive wizard.${process.env.WIZARD_ONLY_IN_PRIVATE === 'true' ? ' <i>(Note: Wizard mode is only available in private chats with the bot)</i>' : ''}
-2. Reply to the ride message with <code>/updateride</code> and new parameters
-3. Use <code>/dupride</code> with ride ID and optional parameters:
+1. Reply to the ride message with /dupride without any parameters to start an interactive wizard.${process.env.WIZARD_ONLY_IN_PRIVATE === 'true' ? ' <i>(Note: Wizard mode is only available in private chats with the bot)</i>' : ''}
+2. Reply to the ride message with /updateride and new parameters
+3. Use /dupride with ride ID and optional parameters:
 <pre>
 /dupride
 id: abc123
@@ -174,14 +176,14 @@ Any parameters not provided will be copied from the original ride.
 By default, the new ride will be scheduled for tomorrow at the same time.
 
 <b>📋 Listing Your Rides</b>
-Use <code>/listrides</code> to see all rides you've created:
+Use /listrides to see all rides you've created:
 • Rides are sorted by date (newest first)
 • Use navigation buttons to browse pages
 
 <b>📢 Reposting a Ride</b>
 Only the ride creator can repost a ride to another chat:
 1. Go to the target chat where you want to post the ride
-2. Use <code>/postride</code> with the ride ID:
+2. Use /postride with the ride ID:
 <pre>/postride abc123</pre>
 The ride will be posted to the current chat and all instances will be synchronized when details change or participants join/leave.
     `.trim(),
