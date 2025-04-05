@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { StorageInterface } from './interface.js';
 import { config } from '../config.js';
+import { DEFAULT_CATEGORY } from '../utils/category-utils.js';
 
 const participantSchema = new mongoose.Schema({
   userId: { type: Number, required: true },
@@ -17,6 +18,7 @@ const messageSchema = new mongoose.Schema({
 
 const rideSchema = new mongoose.Schema({
   title: { type: String, required: true },
+  category: { type: String, default: DEFAULT_CATEGORY },
   date: { type: Date, required: true },
   messages: [messageSchema],
   routeLink: String,
@@ -192,6 +194,7 @@ export class MongoDBStorage extends StorageInterface {
     const result = {
       id: rideObj._id.toString(),
       title: rideObj.title,
+      category: rideObj.category || DEFAULT_CATEGORY,
       date: rideObj.date,
       messages: rideObj.messages || [],
       routeLink: rideObj.routeLink,

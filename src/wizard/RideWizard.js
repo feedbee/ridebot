@@ -2,6 +2,7 @@ import { InlineKeyboard } from 'grammy';
 import { config } from '../config.js';
 import { RouteParser } from '../utils/route-parser.js';
 import { parseDateTimeInput } from '../utils/date-input-parser.js';
+import { normalizeCategory, DEFAULT_CATEGORY, VALID_CATEGORIES } from '../utils/category-utils.js';
 import { escapeHtml } from '../utils/html-escape.js';
 import { MessageFormatter } from '../formatters/MessageFormatter.js';
 import { RideService } from '../services/RideService.js';
@@ -121,7 +122,8 @@ export class RideWizard {
       switch (action) {
         case 'back':
           switch (state.step) {
-            case 'date': state.step = 'title'; break;
+            case 'category': state.step = 'title'; break;
+            case 'date': state.step = 'category'; break;
             case 'route': state.step = 'date'; break;
             case 'distance': state.step = 'route'; break;
             case 'duration': state.step = 'distance'; break;
@@ -136,7 +138,8 @@ export class RideWizard {
         case 'keep':
           // Move to the next step based on current step
           switch (state.step) {
-            case 'title': state.step = 'date'; break;
+            case 'title': state.step = 'category'; break;
+            case 'category': state.step = 'date'; break;
             case 'date': state.step = 'route'; break;
             case 'route': state.step = 'distance'; break;
             case 'distance': state.step = 'duration'; break;
@@ -150,6 +153,7 @@ export class RideWizard {
 
         case 'skip':
           switch (state.step) {
+            case 'category': state.step = 'date'; break;
             case 'route': state.step = 'distance'; break;
             case 'distance': state.step = 'duration'; break;
             case 'duration': state.step = 'speed'; break;
@@ -181,6 +185,7 @@ export class RideWizard {
             // Update existing ride
             const updates = {
               title: state.data.title,
+              category: state.data.category || DEFAULT_CATEGORY,
               date: state.data.datetime,
               meetingPoint: state.data.meetingPoint,
               routeLink: state.data.routeLink,
@@ -200,6 +205,7 @@ export class RideWizard {
             // Create new ride
             const ride = await this.storage.createRide({
               title: state.data.title,
+              category: state.data.category || DEFAULT_CATEGORY,
               date: state.data.datetime,
               messages: [], // Initialize with empty array instead of null messageId
               createdBy: state.data.createdBy,
@@ -268,6 +274,12 @@ export class RideWizard {
       switch (state.step) {
         case 'title':
           state.data.title = ctx.message.text;
+          state.step = 'category';
+          break;
+
+        case 'category':
+          // Validate and normalize the ride category
+          state.data.category = normalizeCategory(ctx.message.text);
           state.step = 'date';
           break;
 
@@ -445,6 +457,20 @@ export class RideWizard {
         message = '📝 Please enter the ride title:' + getCurrentValue('title');
         addKeepButton('title');
         keyboard.text(config.buttons.cancel, 'wizard:cancel');
+        break;
+        
+      case 'category':
+        // Use the shared list of valid categories
+        const validCategories = VALID_CATEGORIES;
+        
+        message = '🚲 Please select the ride category:' + getCurrentValue('category') + 
+          '\n\nOptions:\n' + validCategories.map(category => `• ${category}`).join('\n') + 
+          '\n\n<i>You can type the full name or just the category (e.g., "road" for "Road Ride")</i>';
+        
+        keyboard.text(config.buttons.back, 'wizard:back');
+        addKeepButton('category');
+        keyboard.text(config.buttons.skip, 'wizard:skip');
+        keyboard.row().text(config.buttons.cancel, 'wizard:cancel');
         break;
 
       case 'date':
@@ -637,4 +663,6 @@ export class RideWizard {
       console.info(`Removed ${result.removedCount} unavailable messages from tracking for ride ${ride.id}`);
     }
   }
+  
+
 } 

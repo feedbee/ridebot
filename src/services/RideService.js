@@ -1,6 +1,7 @@
 import { RouteParser } from '../utils/route-parser.js';
 import { parseDateTimeInput } from '../utils/date-input-parser.js';
 import { MessageFormatter } from '../formatters/MessageFormatter.js';
+import { normalizeCategory, DEFAULT_CATEGORY } from '../utils/category-utils.js';
 
 /**
  * Service class for managing rides and their messages
@@ -191,6 +192,7 @@ export class RideService {
       // Create ride data object
       const rideData = {
         title: params.title,
+        category: params.category ? normalizeCategory(params.category) : DEFAULT_CATEGORY,
         date: result.date,
         messages: [], // Initialize with empty array instead of null messageId
         createdBy: userId
@@ -256,6 +258,15 @@ export class RideService {
       
       if (params.title) {
         updates.title = params.title;
+      }
+      
+      if (params.category !== undefined) {
+        // Use dash ('-') to remove the field value and set to default
+        if (params.category === '-') {
+          updates.category = DEFAULT_CATEGORY; // Reset to default
+        } else {
+          updates.category = normalizeCategory(params.category);
+        }
       }
       
       if (params.when) {

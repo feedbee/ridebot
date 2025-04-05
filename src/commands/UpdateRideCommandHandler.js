@@ -1,4 +1,5 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
+import { DEFAULT_CATEGORY } from '../utils/category-utils.js';
 
 /**
  * Handler for the updateride command
@@ -37,6 +38,7 @@ export class UpdateRideCommandHandler extends BaseCommandHandler {
       isUpdate: true,
       originalRideId: ride.id,
       title: ride.title,
+      category: ride.category || DEFAULT_CATEGORY,
       datetime: ride.date,
       meetingPoint: ride.meetingPoint,
       routeLink: ride.routeLink,

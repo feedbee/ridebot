@@ -7,6 +7,7 @@ A Telegram bot for organizing bike rides within multiple chats. The bot allows u
 - Create bike ride announcements with:
   - Start date and time
   - Title
+  - Category (Road Ride, Gravel Ride, Mountain Bike Ride, etc.)
   - Optional meeting point
   - Optional route link (Strava, Ridewithgps, Komoot)
   - Optional distance
@@ -66,6 +67,7 @@ All main commands work in two modes:
 /newride
 title: Evening Ride
 when: 25.03.2024 18:30
+category: Road Ride
 meet: Bike Shop on Main St
 route: https://www.strava.com/routes/123456
 dist: 35
@@ -78,6 +80,7 @@ This creates a ride with:
 - Title: Evening Ride
 - Date: March 25, 2024
 - Time: 18:30
+- Category: Road Ride (optional, defaults to "Regular/Mixed Ride")
 - Meeting point: Bike Shop on Main St
 - Route: Strava route link
 - Distance: 35 km (optional if route provided)
@@ -98,6 +101,7 @@ Four ways to update a ride:
 id: abc123
 title: Updated Evening Ride
 when: 25.03.2024 19:00
+category: Gravel Ride
 meet: New Meeting Point
 route: https://www.strava.com/routes/123456
 dist: 40
@@ -163,6 +167,19 @@ The bot supports route links from:
 - Komoot
 
 Route information (distance and estimated time) will be automatically parsed when available.
+
+## Ride Categories
+
+The bot supports the following ride categories:
+- Regular/Mixed Ride (default)
+- Road Ride
+- Gravel Ride
+- Mountain/Enduro/Downhill Ride
+- MTB-XC Ride
+- E-Bike Ride
+- Virtual/Indoor Ride
+
+The category helps participants understand what type of bike and equipment to bring.
 
 ## Multi-Chat Support
 

@@ -96,6 +96,7 @@ describe('UpdateRideCommandHandler', () => {
       const mockRide = {
         id: '123',
         title: 'Test Ride',
+        category: 'Regular/Mixed Ride',
         date: new Date('2025-03-30T10:00:00Z'),
         meetingPoint: 'Test Location',
         routeLink: 'https://example.com/route',
@@ -119,6 +120,7 @@ describe('UpdateRideCommandHandler', () => {
         isUpdate: true,
         originalRideId: '123',
         title: 'Test Ride',
+        category: 'Regular/Mixed Ride',
         datetime: mockRide.date,
         meetingPoint: 'Test Location',
         routeLink: 'https://example.com/route',
@@ -134,6 +136,7 @@ describe('UpdateRideCommandHandler', () => {
       const mockRide = {
         id: '123',
         title: 'Test Ride',
+        category: 'Regular/Mixed Ride',
         date: new Date('2025-03-30T10:00:00Z'),
         meetingPoint: 'Test Location',
         routeLink: 'https://example.com/route',

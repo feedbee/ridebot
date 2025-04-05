@@ -107,6 +107,7 @@ Use /newride command followed by parameters (one per line):
 /newride
 title: Ride title
 when: Date and time (e.g., "tomorrow at 6pm", "next saturday 10am", "21 Jul 14:30")
+category: One of: "Regular/Mixed Ride" (default), "Road Ride", "Gravel Ride", "Mountain/Enduro/Downhill Ride", "MTB-XC Ride", "E-Bike Ride", "Virtual/Indoor Ride" (optional)
 meet: Meeting point (optional)
 route: Route link (optional)
 dist: Distance in km (optional)
@@ -120,6 +121,7 @@ Example:
 /newride
 title: Evening Ride
 when: tomorrow at 6pm
+category: Road Ride
 meet: Bike Shop on Main St
 route: https://www.strava.com/routes/123456
 dist: 35
@@ -190,6 +192,7 @@ Only the ride creator can duplicate. Four ways:
 id: abc123
 title: New title (optional)
 when: New date/time (optional)
+category: One of: "Regular/Mixed Ride" (default), "Road Ride", "Gravel Ride", "Mountain/Enduro/Downhill Ride", "MTB-XC Ride", "E-Bike Ride", "Virtual/Indoor Ride" (optional)
 meet: New meeting point (optional)
 route: New route link (optional)
 dist: New distance (optional)
@@ -221,7 +224,7 @@ The ride will be posted to the current chat and all instances will be synchroniz
 
 📅 Date: {date}
 ⏰ Time: {time}
-{meetingInfo}{routeInfo}{distanceInfo}{durationInfo}{speedInfo}{additionalInfo}
+{categoryInfo}{meetingInfo}{routeInfo}{distanceInfo}{durationInfo}{speedInfo}{additionalInfo}
 
 👥 Participants ({participantCount}):
 {participants}

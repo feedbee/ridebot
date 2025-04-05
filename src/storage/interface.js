@@ -9,6 +9,7 @@
  * @property {string} id
  * @property {RideMessage[]} messages
  * @property {string} title
+ * @property {string} [category]
  * @property {Date} date
  * @property {string} [routeLink]
  * @property {string} [meetingPoint]
