@@ -574,9 +574,10 @@ export class RideWizard {
         break;
 
       case 'confirm':
-        const { title, datetime, routeLink, distance, duration, speedMin, speedMax, meetingPoint, additionalInfo } = state.data;
+        const { title, category, datetime, routeLink, distance, duration, speedMin, speedMax, meetingPoint, additionalInfo } = state.data;
         message = `<b>Please confirm the ${state.isUpdate ? 'update' : 'ride'} details:</b>\n\n`;
         message += `📝 Title: ${escapeHtml(title)}\n`;
+        message += `🚲 Category: ${category || DEFAULT_CATEGORY}\n`;
         message += `📅 Date: ${datetime.toLocaleDateString(config.dateFormat.locale)} ${datetime.toLocaleTimeString(config.dateFormat.locale, config.dateFormat.time)}\n`;
         if (routeLink) message += `🔗 Route: ${escapeHtml(routeLink)}\n`;
         if (distance) message += `📏 Distance: ${distance} km\n`;
