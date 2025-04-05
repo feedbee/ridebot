@@ -229,7 +229,7 @@ The ride will be posted to the current chat and all instances will be synchroniz
 👥 Participants ({participantCount}):
 {participants}
 
-🎫 Ride #{id}{cancelledInstructions}
+🎫 #Ride #{id}{cancelledInstructions}
     `.trim(),
     cancelled: '❌ CANCELLED',
     cancelledMessage: 'This ride has been cancelled.',

@@ -174,7 +174,7 @@ export class MessageFormatter {
         message += `📢 Not posted in any chats\n`;
       }
       
-      message += `🎫 Ride #${ride.id}\n\n`;
+      message += `🎫 #Ride #${ride.id}\n\n`;
     }
     
     if (totalPages > 1) {

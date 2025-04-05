@@ -775,7 +775,7 @@ meet: Coffee Shop`;
       const message = {
         text: '/updateride',
         reply_to_message: {
-          text: '🎫 Ride #abc123\nSome other content'
+          text: '🎫 #Ride #abc123\nSome other content'
         }
       };
       
