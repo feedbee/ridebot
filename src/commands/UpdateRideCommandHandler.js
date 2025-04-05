@@ -67,8 +67,13 @@ export class UpdateRideCommandHandler extends BaseCommandHandler {
     }
 
     // Update the ride message
-    await this.updateRideMessage(updatedRide, ctx);
-    await ctx.reply('Ride updated successfully!');
+    const result = await this.updateRideMessage(updatedRide, ctx);
+    
+    if (result.success) {
+      await ctx.reply(`Ride updated successfully. Updated ${result.updatedCount} message(s).`);
+    } else {
+      await ctx.reply(`Ride has been updated, but no messages were updated. You may need to create a new ride message.`);
+    }
   }
 
 

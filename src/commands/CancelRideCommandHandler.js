@@ -25,8 +25,13 @@ export class CancelRideCommandHandler extends BaseCommandHandler {
     const updatedRide = await this.rideService.cancelRide(ride.id);
     
     // Update the ride message
-    await this.updateRideMessage(updatedRide, ctx);
-    await ctx.reply('Ride cancelled successfully.');
+    const result = await this.updateRideMessage(updatedRide, ctx);
+    
+    if (result.success) {
+      await ctx.reply(`Ride cancelled successfully. Updated ${result.updatedCount} message(s).`);
+    } else {
+      await ctx.reply(`Ride has been cancelled, but no messages were updated. You may need to create a new ride message.`);
+    }
   }
 
 

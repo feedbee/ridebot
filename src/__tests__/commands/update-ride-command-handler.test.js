@@ -207,7 +207,11 @@ describe('UpdateRideCommandHandler', () => {
       });
       
       // Mock the updateRideMessage method
-      updateRideCommandHandler.updateRideMessage = jest.fn().mockResolvedValue({});
+      updateRideCommandHandler.updateRideMessage = jest.fn().mockResolvedValue({
+        success: true,
+        updatedCount: 1,
+        removedCount: 0
+      });
       
       // Execute
       await updateRideCommandHandler.handleWithParams(mockCtx, originalRide, params);
@@ -215,7 +219,7 @@ describe('UpdateRideCommandHandler', () => {
       // Verify
       expect(mockRideService.updateRideFromParams).toHaveBeenCalledWith('123', params);
       expect(updateRideCommandHandler.updateRideMessage).toHaveBeenCalledWith(updatedRide, mockCtx);
-      expect(mockCtx.reply).toHaveBeenCalledWith('Ride updated successfully!');
+      expect(mockCtx.reply).toHaveBeenCalledWith('Ride updated successfully. Updated 1 message(s).');
     });
     
     it('should handle error during ride update', async () => {

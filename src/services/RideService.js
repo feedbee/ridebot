@@ -99,6 +99,15 @@ export class RideService {
   async cancelRide(rideId) {
     return await this.storage.updateRide(rideId, { cancelled: true });
   }
+  
+  /**
+   * Resume a cancelled ride
+   * @param {string} rideId - Ride ID
+   * @returns {Promise<Object>} - Updated ride
+   */
+  async resumeRide(rideId) {
+    return await this.storage.updateRide(rideId, { cancelled: false });
+  }
 
   /**
    * Parse ride parameters from text

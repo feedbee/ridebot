@@ -111,6 +111,15 @@ Three ways to cancel a ride:
 2. Use `/cancelride` with ride ID directly: `/cancelride abc123`
 3. Use `/cancelride` with ride ID as a parameter
 
+### Resuming a Cancelled Ride
+
+Three ways to resume a cancelled ride:
+1. Reply to the ride message with `/resumeride`
+2. Use `/resumeride` with ride ID directly: `/resumeride abc123`
+3. Use `/resumeride` with ride ID as a parameter
+
+Note: Only the ride creator can resume a cancelled ride.
+
 ### Duplicating a Ride
 
 Four ways to duplicate a ride:

@@ -156,6 +156,16 @@ Only the ride creator can cancel:
 id: abc123
 </pre>
 
+<b>↩️ Resuming a Cancelled Ride</b>
+Only the ride creator can resume a cancelled ride:
+1. Reply to the ride message with /resumeride
+2. Use /resumeride with ride ID directly after the command: <code>/resumeride abc123</code>
+3. Use /resumeride with ride ID as a parameter:
+<pre>
+/resumeride
+id: abc123
+</pre>
+
 <b>🗑 Deleting a Ride</b>
 Only the ride creator can delete:
 1. Reply to the ride message with /deleteride

@@ -12,6 +12,7 @@ import { DeleteRideCommandHandler } from '../commands/DeleteRideCommandHandler.j
 import { ListRidesCommandHandler } from '../commands/ListRidesCommandHandler.js';
 import { DuplicateRideCommandHandler } from '../commands/DuplicateRideCommandHandler.js';
 import { PostRideCommandHandler } from '../commands/PostRideCommandHandler.js';
+import { ResumeRideCommandHandler } from '../commands/ResumeRideCommandHandler.js';
 import { ParticipationHandlers } from '../commands/ParticipationHandlers.js';
 
 /**
@@ -41,6 +42,7 @@ export class Bot {
     this.listRidesHandler = new ListRidesCommandHandler(this.rideService, this.messageFormatter);
     this.duplicateRideHandler = new DuplicateRideCommandHandler(this.rideService, this.messageFormatter, this.wizard);
     this.postRideHandler = new PostRideCommandHandler(this.rideService, this.messageFormatter);
+    this.resumeRideHandler = new ResumeRideCommandHandler(this.rideService, this.messageFormatter);
     this.participationHandlers = new ParticipationHandlers(this.rideService, this.messageFormatter);
     
     this.setupHandlers();
@@ -56,6 +58,7 @@ export class Bot {
     this.bot.command('newride', ctx => this.newRideHandler.handle(ctx));
     this.bot.command('updateride', ctx => this.updateRideHandler.handle(ctx));
     this.bot.command('cancelride', ctx => this.cancelRideHandler.handle(ctx));
+    this.bot.command('resumeride', ctx => this.resumeRideHandler.handle(ctx));
     this.bot.command('deleteride', ctx => this.deleteRideHandler.handle(ctx));
     this.bot.command('listrides', ctx => this.listRidesHandler.handle(ctx));
     this.bot.command('dupride', ctx => this.duplicateRideHandler.handle(ctx));

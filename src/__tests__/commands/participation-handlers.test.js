@@ -99,7 +99,11 @@ describe('ParticipationHandlers', () => {
       mockRideService.addParticipant.mockResolvedValue(true);
       
       // Mock the updateRideMessage method
-      participationHandlers.updateRideMessage = jest.fn().mockResolvedValue({});
+      participationHandlers.updateRideMessage = jest.fn().mockResolvedValue({
+        success: true,
+        updatedCount: 1,
+        removedCount: 0
+      });
       
       // Execute
       await participationHandlers.handleJoinRide(mockCtx);
@@ -198,7 +202,11 @@ describe('ParticipationHandlers', () => {
       mockRideService.removeParticipant.mockResolvedValue(true);
       
       // Mock the updateRideMessage method
-      participationHandlers.updateRideMessage = jest.fn().mockResolvedValue({});
+      participationHandlers.updateRideMessage = jest.fn().mockResolvedValue({
+        success: true,
+        updatedCount: 1,
+        removedCount: 0
+      });
       
       // Execute
       await participationHandlers.handleLeaveRide(mockCtx);

@@ -95,6 +95,19 @@ describe('RideService', () => {
       
       expect(cancelledRide.cancelled).toBe(true);
     });
+    
+    it('should resume a cancelled ride', async () => {
+      // First create and cancel a ride
+      const createdRide = await rideService.createRide(testRide);
+      const cancelledRide = await rideService.cancelRide(createdRide.id);
+      expect(cancelledRide.cancelled).toBe(true);
+      
+      // Now resume the ride
+      const resumedRide = await rideService.resumeRide(cancelledRide.id);
+      
+      // Verify the ride is no longer cancelled
+      expect(resumedRide.cancelled).toBe(false);
+    });
   });
 
   describe('Message Tracking', () => {

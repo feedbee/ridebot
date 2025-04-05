@@ -53,6 +53,7 @@ export class BaseCommandHandler {
    * Update the ride message
    * @param {Object} ride - Ride object
    * @param {import('grammy').Context} ctx - Grammy context
+   * @returns {Promise<{success: boolean, updatedCount: number, removedCount: number, error: string|null}>}
    */
   async updateRideMessage(ride, ctx) {
     // Use the centralized method in RideService
@@ -63,5 +64,7 @@ export class BaseCommandHandler {
     } else if (result.removedCount > 0) {
       console.info(`Removed ${result.removedCount} unavailable messages from tracking for ride ${ride.id}`);
     }
+    
+    return result;
   }
 }

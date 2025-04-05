@@ -91,7 +91,11 @@ describe('CancelRideCommandHandler', () => {
       mockRideService.cancelRide.mockResolvedValue(updatedRide);
       
       // Mock the updateRideMessage method
-      cancelRideCommandHandler.updateRideMessage = jest.fn().mockResolvedValue({});
+      cancelRideCommandHandler.updateRideMessage = jest.fn().mockResolvedValue({
+        success: true,
+        updatedCount: 1,
+        removedCount: 0
+      });
       
       // Execute
       await cancelRideCommandHandler.handle(mockCtx);
@@ -100,7 +104,7 @@ describe('CancelRideCommandHandler', () => {
       expect(cancelRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx, true);
       expect(mockRideService.cancelRide).toHaveBeenCalledWith('456');
       expect(cancelRideCommandHandler.updateRideMessage).toHaveBeenCalledWith(updatedRide, mockCtx);
-      expect(mockCtx.reply).toHaveBeenCalledWith('Ride cancelled successfully.');
+      expect(mockCtx.reply).toHaveBeenCalledWith('Ride cancelled successfully. Updated 1 message(s).');
     });
   });
   

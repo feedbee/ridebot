@@ -33,8 +33,13 @@ export class ParticipationHandlers extends BaseCommandHandler {
       const success = await this.rideService.addParticipant(rideId, participant);
       
       if (success) {
-        await this.updateRideMessage(ride, ctx);
-        await ctx.answerCallbackQuery('You have joined the ride!');
+        const result = await this.updateRideMessage(ride, ctx);
+        
+        if (result.success) {
+          await ctx.answerCallbackQuery('You have joined the ride!');  
+        } else {
+          await ctx.answerCallbackQuery('You joined the ride, but message updates failed');
+        }
       } else {
         await ctx.answerCallbackQuery('You are already in this ride');
       }
@@ -66,8 +71,13 @@ export class ParticipationHandlers extends BaseCommandHandler {
       const success = await this.rideService.removeParticipant(rideId, ctx.from.id);
       
       if (success) {
-        await this.updateRideMessage(ride, ctx);
-        await ctx.answerCallbackQuery('You have left the ride');
+        const result = await this.updateRideMessage(ride, ctx);
+        
+        if (result.success) {
+          await ctx.answerCallbackQuery('You have left the ride');
+        } else {
+          await ctx.answerCallbackQuery('You left the ride, but message updates failed');
+        }
       } else {
         await ctx.answerCallbackQuery('You are not in this ride');
       }
