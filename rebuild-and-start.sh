@@ -1,5 +1,13 @@
 #!/bin/bash
-# Script to rebuild and start Docker containers
+# Script to rebuild and start Docker containers or just stop them
+
+# Check if the stop argument was provided
+if [ "$1" = "stop" ]; then
+    echo "Stopping containers..."
+    docker-compose down
+    echo "Containers stopped."
+    exit 0
+fi
 
 # Check if containers are running
 if docker-compose ps | grep -q "Up"; then
