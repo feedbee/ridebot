@@ -306,7 +306,8 @@ export class RideService {
     // First check if ID is provided right after the command on the same line
     // Extract just the first line to ensure we don't match across newlines
     const firstLine = message.text.split('\n')[0];
-    const commandMatch = firstLine.match(/^\/\w+\s+(\w+)/i);
+    // Updated regex to match IDs with optional leading # symbol
+    const commandMatch = firstLine.match(/^\/\w+\s+#?(\w+)/i);
     if (commandMatch && commandMatch[1]) {
       return { rideId: commandMatch[1], error: null };
     }
@@ -314,7 +315,9 @@ export class RideService {
     // Then check if ID is provided in parameters
     const params = this.parseRideParams(message.text);
     if (params && params.id) {
-      return { rideId: params.id, error: null };
+      // Remove any leading # from the ID parameter
+      const cleanId = params.id.replace(/^#/, '');
+      return { rideId: cleanId, error: null };
     }
     
     // Then check replied message
@@ -328,6 +331,7 @@ export class RideService {
           error: 'Could not find ride ID in the message. Please make sure you are replying to a ride message or provide a ride ID.'
         };
       }
+      // No need to strip # here as the regex already handles it
       return { rideId: rideIdMatch[1], error: null };
     }
     
