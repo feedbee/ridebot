@@ -79,7 +79,8 @@ To create less noise for others, it is recommended to create the rides in privat
 
 <b>Easy Ride Reference:</b>
 • When working with existing ride, reply to the ride message with /updateride, /cancelride, /deleteride, /dupride, /postride to identify the ride to modify
-• Alternatively, pass the ride ID in the id: parameter
+• Alternatively, pass the ride ID directly after the command (e.g., /updateride abc123)
+• You can also use the id: parameter in multi-line commands
 
 <b>Manage Your Rides:</b>
 • Use /listrides to see all rides you've created
@@ -128,10 +129,11 @@ speed: 25-28
 <b>Managing Rides</b>
 
 <b>🔄 Updating a Ride</b>
-Only the ride creator can update. Three ways:
+Only the ride creator can update. Four ways:
 1. Reply to the ride message with /updateride without any parameters to start an interactive wizard.${process.env.WIZARD_ONLY_IN_PRIVATE === 'true' ? ' <i>(Note: Wizard mode is only available in private chats with the bot)</i>' : ''}
 2. Reply to the ride message with /updateride and new parameters
-3. Use /updateride with ride ID:
+3. Use /updateride with ride ID directly after the command: <code>/updateride abc123</code>
+4. Use /updateride with ride ID as a parameter:
 <pre>
 /updateride
 id: abc123
@@ -147,7 +149,8 @@ speed: New speed range (optional)
 <b>❌ Cancelling a Ride</b>
 Only the ride creator can cancel:
 1. Reply to the ride message with /cancelride
-2. Use /cancelride with ride ID:
+2. Use /cancelride with ride ID directly after the command: <code>/cancelride abc123</code>
+3. Use /cancelride with ride ID as a parameter:
 <pre>
 /cancelride
 id: abc123
@@ -156,17 +159,19 @@ id: abc123
 <b>🗑 Deleting a Ride</b>
 Only the ride creator can delete:
 1. Reply to the ride message with /deleteride
-2. Use /deleteride with ride ID:
+2. Use /deleteride with ride ID directly after the command: <code>/deleteride abc123</code>
+3. Use /deleteride with ride ID as a parameter:
 <pre>
 /deleteride
 id: abc123
 </pre>
 
 <b>🔄 Duplicating a Ride</b>
-Only the ride creator can duplicate. Three ways:
+Only the ride creator can duplicate. Four ways:
 1. Reply to the ride message with /dupride without any parameters to start an interactive wizard.${process.env.WIZARD_ONLY_IN_PRIVATE === 'true' ? ' <i>(Note: Wizard mode is only available in private chats with the bot)</i>' : ''}
 2. Reply to the ride message with /dupride and new parameters
-3. Use /dupride with ride ID and optional parameters:
+3. Use /dupride with ride ID directly after the command: <code>/dupride abc123</code>
+4. Use /dupride with ride ID and optional parameters:
 <pre>
 /dupride
 id: abc123
@@ -189,7 +194,8 @@ Use /listrides to see all rides you've created:
 <b>📢 Reposting a Ride</b>
 Only the ride creator can repost a ride to another chat:
 1. Go to the target chat where you want to post the ride
-2. Use /postride with the ride ID:
+2. Use /postride with the ride ID directly after the command: <code>/postride abc123</code>
+3. Or use /postride with ride ID as a parameter:
 <pre>
 /postride
 id: abc123

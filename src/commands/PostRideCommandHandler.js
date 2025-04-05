@@ -11,9 +11,9 @@ export class PostRideCommandHandler extends BaseCommandHandler {
    */
   async handle(ctx) {
     // Extract the ride ID from the command
-    const rideId = this.extractRideId(ctx.message.text);
+    const { rideId, error } = this.rideService.extractRideId(ctx.message);
     if (!rideId) {
-      await ctx.reply('Please provide a valid ride ID. Usage: /postride [ride_id]');
+      await ctx.reply(error || 'Please provide a valid ride ID. Usage: /postride rideID');
       return;
     }
 
@@ -54,21 +54,6 @@ export class PostRideCommandHandler extends BaseCommandHandler {
       console.error('Error posting ride:', error);
       await ctx.reply('An error occurred while posting the ride.');
     }
-  }
-
-  /**
-   * Extract ride ID from command text
-   * @param {string} text - Command text
-   * @returns {string|null} - Extracted ride ID or null if invalid
-   */
-  extractRideId(text) {
-    // Format: /postride [ride_id]
-    const parts = text.trim().split(/\s+/);
-    if (parts.length !== 2) {
-      return null;
-    }
-
-    return parts[1];
   }
 
   /**

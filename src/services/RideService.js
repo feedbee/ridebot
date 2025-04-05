@@ -303,9 +303,17 @@ export class RideService {
    * @returns {Object} - Ride ID or error
    */
   extractRideId(message) {
-    // First check if ID is provided in parameters
+    // First check if ID is provided right after the command on the same line
+    // Extract just the first line to ensure we don't match across newlines
+    const firstLine = message.text.split('\n')[0];
+    const commandMatch = firstLine.match(/^\/\w+\s+(\w+)/i);
+    if (commandMatch && commandMatch[1]) {
+      return { rideId: commandMatch[1], error: null };
+    }
+    
+    // Then check if ID is provided in parameters
     const params = this.parseRideParams(message.text);
-    if (params.id) {
+    if (params && params.id) {
       return { rideId: params.id, error: null };
     }
     
@@ -317,7 +325,7 @@ export class RideService {
       if (!rideIdMatch) {
         return { 
           rideId: null, 
-          error: 'Could not find ride ID in the message. Please make sure you are replying to a ride message or provide ID parameter.'
+          error: 'Could not find ride ID in the message. Please make sure you are replying to a ride message or provide a ride ID.'
         };
       }
       return { rideId: rideIdMatch[1], error: null };
@@ -325,7 +333,7 @@ export class RideService {
     
     return { 
       rideId: null, 
-      error: 'Please reply to the ride message or provide ID parameter.'
+      error: 'Please provide a ride ID after the command (e.g., /command rideID) or reply to a ride message.'
     };
   }
 

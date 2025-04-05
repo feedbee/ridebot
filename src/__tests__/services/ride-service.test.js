@@ -517,9 +517,10 @@ meet: Coffee Shop`;
   });
 
   describe('Ride ID Extraction', () => {
-    it('should extract ride ID from parameters', () => {
+    // Test for extracting ride ID from command line
+    it('should extract ride ID from command line', () => {
       const message = {
-        text: '/updateride\nid: abc123\ntitle: New Title'
+        text: '/updateride abc123'
       };
       
       const result = rideService.extractRideId(message);
@@ -527,10 +528,11 @@ meet: Coffee Shop`;
       expect(result.rideId).toBe('abc123');
       expect(result.error).toBeNull();
     });
-
+    
+    // Test for extracting ride ID from replied message
     it('should extract ride ID from replied message', () => {
       const message = {
-        text: '/updateride\ntitle: New Title',
+        text: '/updateride',
         reply_to_message: {
           text: '🎫 Ride #abc123\nSome other content'
         }
@@ -541,22 +543,24 @@ meet: Coffee Shop`;
       expect(result.rideId).toBe('abc123');
       expect(result.error).toBeNull();
     });
-
+    
+    // Test for returning error when no ID is found
     it('should return error when no ID is found', () => {
       const message = {
-        text: '/updateride\ntitle: New Title'
+        text: '/updateride'
         // No reply and no ID parameter
       };
       
       const result = rideService.extractRideId(message);
       
       expect(result.rideId).toBeNull();
-      expect(result.error).toBe('Please reply to the ride message or provide ID parameter.');
+      expect(result.error).toBe('Please provide a ride ID after the command (e.g., /command rideID) or reply to a ride message.');
     });
-
+    
+    // Test for returning error when replied message has no ride ID
     it('should return error when replied message has no ride ID', () => {
       const message = {
-        text: '/updateride\ntitle: New Title',
+        text: '/updateride',
         reply_to_message: {
           text: 'This is not a ride message'
         }
