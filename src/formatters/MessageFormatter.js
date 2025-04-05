@@ -117,6 +117,11 @@ export class MessageFormatter {
       : '';
     message = message.replace('{speedInfo}', speedInfo);
     
+    const additionalInfo = ride.additionalInfo
+      ? `ℹ️ Additional info: ${escapeHtml(ride.additionalInfo)}\n`
+      : '';
+    message = message.replace('{additionalInfo}', additionalInfo);
+    
     // Add cancellation instructions if the ride is cancelled
     const cancelledInstructions = ride.cancelled ? '\n\n' + config.messageTemplates.cancelledMessage : '';
     message = message.replace('{cancelledInstructions}', cancelledInstructions);

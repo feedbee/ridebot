@@ -25,6 +25,7 @@ const rideSchema = new mongoose.Schema({
   duration: Number,
   speedMin: Number,
   speedMax: Number,
+  additionalInfo: String,
   cancelled: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   createdBy: { type: Number, required: true },

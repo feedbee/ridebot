@@ -28,7 +28,8 @@ describe('RideService', () => {
     distance: 50,
     duration: 180,
     speedMin: 25,
-    speedMax: 28
+    speedMax: 28,
+    additionalInfo: 'Bring lights and a jacket'
   };
 
   const testParticipant = {
@@ -239,7 +240,8 @@ title: Sunday Morning Ride
 when: Sunday 9am
 meet: Coffee Shop
 route: https://example.com/route
-speed: 25-28`;
+speed: 25-28
+info: Bring water and snacks`;
       
       const params = rideService.parseRideParams(text);
       
@@ -248,7 +250,8 @@ speed: 25-28`;
         when: 'Sunday 9am',
         meet: 'Coffee Shop',
         route: 'https://example.com/route',
-        speed: '25-28'
+        speed: '25-28',
+        info: 'Bring water and snacks'
       });
     });
 
@@ -363,7 +366,8 @@ meet: Coffee Shop`;
         when: 'tomorrow 9am',
         meet: 'Coffee Shop',
         route: 'https://example.com/route',
-        speed: '25-28'
+        speed: '25-28',
+        info: 'Bring water and snacks'
       };
       
       const result = await rideService.createRideFromParams(params, 123456, 789);
@@ -375,6 +379,7 @@ meet: Coffee Shop`;
       expect(result.ride.routeLink).toBe(params.route);
       expect(result.ride.speedMin).toBe(25);
       expect(result.ride.speedMax).toBe(28);
+      expect(result.ride.additionalInfo).toBe(params.info);
     });
 
     it('should require title and date parameters', async () => {
@@ -461,6 +466,57 @@ meet: Coffee Shop`;
       expect(result.error).toBeNull();
       expect(result.ride.distance).toBe(75); // From params, not from route parser
       expect(result.ride.duration).toBe(210); // From params, not from route parser
+    });
+  });
+
+  describe('Additional Information Field', () => {
+    it('should handle additionalInfo field when creating a ride', async () => {
+      const params = {
+        title: 'Info Test Ride',
+        when: 'tomorrow 9am',
+        info: 'Important safety information'
+      };
+      
+      // Mock date parser
+      jest.spyOn(rideService, 'parseDateTimeInput').mockReturnValueOnce({
+        date: new Date('2024-03-15T09:00:00Z'),
+        error: null
+      });
+      
+      const result = await rideService.createRideFromParams(params, 123456, 789);
+      
+      expect(result.error).toBeNull();
+      expect(result.ride.additionalInfo).toBe('Important safety information');
+    });
+    
+    it('should handle additionalInfo field when updating a ride', async () => {
+      // Create a ride first
+      const ride = await rideService.createRide(testRide);
+      
+      // Update with new additional info
+      const params = {
+        info: 'Updated information'
+      };
+      
+      const result = await rideService.updateRideFromParams(ride.id, params, 123456, 789);
+      
+      expect(result.error).toBeNull();
+      expect(result.ride.additionalInfo).toBe('Updated information');
+    });
+    
+    it('should clear additionalInfo field when updating with empty string', async () => {
+      // Create a ride first with additionalInfo
+      const ride = await rideService.createRide(testRide);
+      
+      // Update with empty additional info
+      const params = {
+        info: ''
+      };
+      
+      const result = await rideService.updateRideFromParams(ride.id, params, 123456, 789);
+      
+      expect(result.error).toBeNull();
+      expect(result.ride.additionalInfo).toBe('');
     });
   });
 

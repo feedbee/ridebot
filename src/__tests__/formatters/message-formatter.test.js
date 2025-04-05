@@ -102,7 +102,8 @@ describe('MessageFormatter', () => {
         duration: 120,
         speedMin: 25,
         speedMax: 30,
-        cancelled: false
+        cancelled: false,
+        additionalInfo: 'Bring lights and a jacket'
       };
       
       const participants = [
@@ -122,6 +123,7 @@ describe('MessageFormatter', () => {
       expect(result).toContain('https://example.com/route');
       expect(result).toContain('50 km');
       expect(result).toContain('Ride #123');
+      expect(result).toContain('Bring lights and a jacket');
       expect(messageFormatter.formatDuration).toHaveBeenCalledWith(120);
       expect(messageFormatter.formatSpeedRange).toHaveBeenCalledWith(25, 30);
     });
@@ -152,7 +154,8 @@ describe('MessageFormatter', () => {
         id: '123',
         title: 'Test Ride',
         date: new Date('2025-03-30T10:00:00Z'),
-        cancelled: false
+        cancelled: false,
+        additionalInfo: null
       };
       
       const participants = [];

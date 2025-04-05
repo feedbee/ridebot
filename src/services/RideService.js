@@ -232,6 +232,10 @@ export class RideService {
         if (!isNaN(max)) rideData.speedMax = max;
       }
 
+      if (params.info !== undefined) {
+        rideData.additionalInfo = params.info;
+      }
+
       const ride = await this.storage.createRide(rideData);
       return { ride, error: null };
     } catch (error) {
@@ -296,6 +300,10 @@ export class RideService {
         const [min, max] = params.speed.split('-').map(s => parseFloat(s.trim()));
         if (!isNaN(min)) updates.speedMin = min;
         if (!isNaN(max)) updates.speedMax = max;
+      }
+      
+      if (params.info !== undefined) {
+        updates.additionalInfo = params.info;
       }
       
       const ride = await this.storage.updateRide(rideId, updates);

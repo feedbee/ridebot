@@ -224,6 +224,76 @@ describe('RideWizard', () => {
   });
 
   describe('Input Handling', () => {
+    test('should handle additional info input', async () => {
+      await wizard.startWizard(ctx);
+      
+      // Fill required fields first
+      ctx.message = { text: 'Test Ride', message_id: 2 };
+      await wizard.handleWizardInput(ctx);
+      
+      ctx.message = { text: 'tomorrow at 2pm', message_id: 3 };
+      await wizard.handleWizardInput(ctx);
+      
+      // Skip to the additional info step
+      for (let i = 0; i < 5; i++) {
+        ctx.match = ['wizard:skip', 'skip'];
+        await wizard.handleWizardAction(ctx);
+      }
+      
+      // Set additional info
+      ctx.message = { text: 'Bring lights and a jacket', message_id: 4 };
+      await wizard.handleWizardInput(ctx);
+      
+      // Verify we're now at the confirmation step
+      const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
+      expect(lastMessage.text).toContain('Please confirm the ride details');
+      expect(lastMessage.text).toContain('Bring lights and a jacket');
+      
+      // Confirm and create the ride
+      ctx.match = ['wizard:confirm', 'confirm'];
+      await wizard.handleWizardAction(ctx);
+      
+      // Verify ride was created with additional info
+      const createdRide = Array.from(storage.rides.values())[0];
+      expect(createdRide).toBeDefined();
+      expect(createdRide.additionalInfo).toBe('Bring lights and a jacket');
+    });
+    
+    test('should handle skipping additional info step', async () => {
+      await wizard.startWizard(ctx);
+      
+      // Fill required fields first
+      ctx.message = { text: 'Test Ride', message_id: 2 };
+      await wizard.handleWizardInput(ctx);
+      
+      ctx.message = { text: 'tomorrow at 2pm', message_id: 3 };
+      await wizard.handleWizardInput(ctx);
+      
+      // Skip to the additional info step
+      for (let i = 0; i < 5; i++) {
+        ctx.match = ['wizard:skip', 'skip'];
+        await wizard.handleWizardAction(ctx);
+      }
+      
+      // Skip additional info
+      ctx.match = ['wizard:skip', 'skip'];
+      await wizard.handleWizardAction(ctx);
+      
+      // Verify we're now at the confirmation step
+      const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
+      expect(lastMessage.text).toContain('Please confirm the ride details');
+      expect(lastMessage.text).not.toContain('Additional info:');
+      
+      // Confirm and create the ride
+      ctx.match = ['wizard:confirm', 'confirm'];
+      await wizard.handleWizardAction(ctx);
+      
+      // Verify ride was created without additional info
+      const createdRide = Array.from(storage.rides.values())[0];
+      expect(createdRide).toBeDefined();
+      expect(createdRide.additionalInfo).toBeUndefined();
+    });
+
     test('should handle title input', async () => {
       await wizard.startWizard(ctx);
       ctx.message = { text: 'Evening Ride', message_id: 2 };
@@ -294,7 +364,8 @@ describe('RideWizard', () => {
         { text: '50', step: 'distance' },
         { text: '120', step: 'duration' },
         { text: '25-28', step: 'speed' },
-        { text: 'City Center', step: 'meet' }
+        { text: 'City Center', step: 'meet' },
+        { text: 'Bring lights and a jacket', step: 'additionalInfo' }
       ];
       
       for (const input of inputs) {
@@ -313,6 +384,7 @@ describe('RideWizard', () => {
       expect(createdRide.meetingPoint).toBe('City Center');
       expect(createdRide.speedMin).toBe(25);
       expect(createdRide.speedMax).toBe(28);
+      expect(createdRide.additionalInfo).toBe('Bring lights and a jacket');
     });
 
     test('should create a ride with minimal required fields', async () => {
@@ -330,7 +402,7 @@ describe('RideWizard', () => {
       }
       
       // Skip optional fields
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 6; i++) {
         ctx.match = ['wizard:skip', 'skip'];
         await wizard.handleWizardAction(ctx);
       }

@@ -127,7 +127,8 @@ export class RideWizard {
             case 'duration': state.step = 'distance'; break;
             case 'speed': state.step = 'duration'; break;
             case 'meet': state.step = 'speed'; break;
-            case 'confirm': state.step = 'meet'; break;
+            case 'info': state.step = 'meet'; break;
+            case 'confirm': state.step = 'info'; break;
           }
           await this.sendWizardStep(ctx, true);
           break;
@@ -141,7 +142,8 @@ export class RideWizard {
             case 'distance': state.step = 'duration'; break;
             case 'duration': state.step = 'speed'; break;
             case 'speed': state.step = 'meet'; break;
-            case 'meet': state.step = 'confirm'; break;
+            case 'meet': state.step = 'info'; break;
+            case 'info': state.step = 'confirm'; break;
           }
           await this.sendWizardStep(ctx, true);
           break;
@@ -152,7 +154,8 @@ export class RideWizard {
             case 'distance': state.step = 'duration'; break;
             case 'duration': state.step = 'speed'; break;
             case 'speed': state.step = 'meet'; break;
-            case 'meet': state.step = 'confirm'; break;
+            case 'meet': state.step = 'info'; break;
+            case 'info': state.step = 'confirm'; break;
           }
           // Update the current message with new step
           await this.sendWizardStep(ctx, true);
@@ -184,7 +187,8 @@ export class RideWizard {
               distance: state.data.distance,
               duration: state.data.duration,
               speedMin: state.data.speedMin,
-              speedMax: state.data.speedMax
+              speedMax: state.data.speedMax,
+              additionalInfo: state.data.additionalInfo
             };
 
             const updatedRide = await this.storage.updateRide(state.data.originalRideId, updates);
@@ -204,7 +208,8 @@ export class RideWizard {
               distance: state.data.distance,
               duration: state.data.duration,
               speedMin: state.data.speedMin,
-              speedMax: state.data.speedMax
+              speedMax: state.data.speedMax,
+              additionalInfo: state.data.additionalInfo
             });
 
             const participants = await this.storage.getParticipants(ride.id);
@@ -345,6 +350,11 @@ export class RideWizard {
 
         case 'meet':
           state.data.meetingPoint = ctx.message.text;
+          state.step = 'info';
+          break;
+
+        case 'info':
+          state.data.additionalInfo = ctx.message.text;
           state.step = 'confirm';
           break;
       }
@@ -493,8 +503,19 @@ export class RideWizard {
           .text(config.buttons.cancel, 'wizard:cancel');
         break;
 
+      case 'info':
+        message = 'ℹ️ Please enter any additional information (or skip):' + getCurrentValue('additionalInfo');
+        keyboard
+          .text(config.buttons.back, 'wizard:back');
+        addKeepButton('additionalInfo');
+        keyboard
+          .text(config.buttons.skip, 'wizard:skip')
+          .row()
+          .text(config.buttons.cancel, 'wizard:cancel');
+        break;
+
       case 'confirm':
-        const { title, datetime, routeLink, distance, duration, speedMin, speedMax, meetingPoint } = state.data;
+        const { title, datetime, routeLink, distance, duration, speedMin, speedMax, meetingPoint, additionalInfo } = state.data;
         message = `<b>Please confirm the ${state.isUpdate ? 'update' : 'ride'} details:</b>\n\n`;
         message += `📝 Title: ${escapeHtml(title)}\n`;
         message += `📅 Date: ${datetime.toLocaleDateString(config.dateFormat.locale)} ${datetime.toLocaleTimeString(config.dateFormat.locale, config.dateFormat.time)}\n`;
@@ -512,6 +533,7 @@ export class RideWizard {
           else message += `max ${speedMax} km/h\n`;
         }
         if (meetingPoint) message += `📍 Meeting Point: ${escapeHtml(meetingPoint)}\n`;
+        if (additionalInfo) message += `ℹ️ Additional Info: ${escapeHtml(additionalInfo)}\n`;
 
         keyboard
           .text(config.buttons.back, 'wizard:back')

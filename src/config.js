@@ -112,6 +112,7 @@ route: Route link (optional)
 dist: Distance in km (optional)
 time: Duration in minutes (optional)
 speed: Speed range in km/h (optional)
+info: Additional information (optional)
 </pre>
 
 Example:
@@ -124,6 +125,7 @@ route: https://www.strava.com/routes/123456
 dist: 35
 time: 90
 speed: 25-28
+info: Bring lights and a rain jacket
 </pre>
 
 <b>Managing Rides</b>
@@ -144,6 +146,7 @@ route: New route link (optional)
 dist: New distance (optional)
 time: New duration (optional)
 speed: New speed range (optional)
+info: Additional information (optional)
 </pre>
 
 <b>❌ Cancelling a Ride</b>
@@ -192,6 +195,7 @@ route: New route link (optional)
 dist: New distance (optional)
 time: New duration (optional)
 speed: New speed range (optional)
+info: Additional information (optional)
 </pre>
 Any parameters not provided will be copied from the original ride.
 By default, the new ride will be scheduled for tomorrow at the same time.
@@ -217,7 +221,7 @@ The ride will be posted to the current chat and all instances will be synchroniz
 
 📅 Date: {date}
 ⏰ Time: {time}
-{meetingInfo}{routeInfo}{distanceInfo}{durationInfo}{speedInfo}
+{meetingInfo}{routeInfo}{distanceInfo}{durationInfo}{speedInfo}{additionalInfo}
 
 👥 Participants ({participantCount}):
 {participants}
