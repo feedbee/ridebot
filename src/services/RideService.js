@@ -266,44 +266,75 @@ export class RideService {
         updates.date = result.date;
       }
       
-      if (params.meet) {
-        updates.meetingPoint = params.meet;
-      }
-      
-      if (params.route) {
-        const routeInfo = await this.processRouteInfo(params.route);
-        if (routeInfo.error) {
-          return { ride: null, error: routeInfo.error };
-        }
-        
-        updates.routeLink = params.route;
-        
-        // Use parsed details if available and not explicitly provided
-        if (routeInfo.distance && !params.dist) {
-          updates.distance = routeInfo.distance;
-        }
-        
-        if (routeInfo.duration && !params.time) {
-          updates.duration = routeInfo.duration;
+      if (params.meet !== undefined) {
+        // Use dash ('-') to remove the field value
+        if (params.meet === '-') {
+          updates.meetingPoint = '';
+        } else {
+          updates.meetingPoint = params.meet;
         }
       }
       
-      if (params.dist) {
-        updates.distance = parseFloat(params.dist);
+      if (params.route !== undefined) {
+        // Use dash ('-') to remove the field value
+        if (params.route === '-') {
+          updates.routeLink = '';
+        } else {
+          const routeInfo = await this.processRouteInfo(params.route);
+          if (routeInfo.error) {
+            return { ride: null, error: routeInfo.error };
+          }
+          
+          updates.routeLink = params.route;
+          
+          // Use parsed details if available and not explicitly provided
+          if (routeInfo.distance && !params.dist) {
+            updates.distance = routeInfo.distance;
+          }
+          
+          if (routeInfo.duration && !params.time) {
+            updates.duration = routeInfo.duration;
+          }
+        }
       }
       
-      if (params.time) {
-        updates.duration = parseInt(params.time);
+      if (params.dist !== undefined) {
+        // Use dash ('-') to remove the field value
+        if (params.dist === '-') {
+          updates.distance = null;
+        } else {
+          updates.distance = parseFloat(params.dist);
+        }
       }
       
-      if (params.speed) {
-        const [min, max] = params.speed.split('-').map(s => parseFloat(s.trim()));
-        if (!isNaN(min)) updates.speedMin = min;
-        if (!isNaN(max)) updates.speedMax = max;
+      if (params.time !== undefined) {
+        // Use dash ('-') to remove the field value
+        if (params.time === '-') {
+          updates.duration = null;
+        } else {
+          updates.duration = parseInt(params.time);
+        }
+      }
+      
+      if (params.speed !== undefined) {
+        // Use dash ('-') to remove the field value
+        if (params.speed === '-') {
+          updates.speedMin = null;
+          updates.speedMax = null;
+        } else {
+          const [min, max] = params.speed.split('-').map(s => parseFloat(s.trim()));
+          if (!isNaN(min)) updates.speedMin = min;
+          if (!isNaN(max)) updates.speedMax = max;
+        }
       }
       
       if (params.info !== undefined) {
-        updates.additionalInfo = params.info;
+        // Use dash ('-') to remove the field value
+        if (params.info === '-') {
+          updates.additionalInfo = '';
+        } else {
+          updates.additionalInfo = params.info;
+        }
       }
       
       const ride = await this.storage.updateRide(rideId, updates);

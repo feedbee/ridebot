@@ -12,6 +12,7 @@ A Telegram bot for organizing bike rides within multiple chats. The bot allows u
   - Optional distance
   - Optional estimated riding time
   - Optional speed expectations
+  - Optional additional information text
 - Join/Leave ride functionality with synchronized participant lists
 - Automatic route information parsing
 - Update ride announcements
@@ -70,6 +71,7 @@ route: https://www.strava.com/routes/123456
 dist: 35
 time: 90
 speed: 25-28
+info: Bring lights and a jacket
 ```
 
 This creates a ride with:
@@ -81,6 +83,7 @@ This creates a ride with:
 - Distance: 35 km (optional if route provided)
 - Duration: 90 minutes (optional if route provided)
 - Speed: 25-28 km/h (optional)
+- Additional Info: Bring lights and a jacket (optional)
 
 ### Updating a Ride
 
@@ -100,9 +103,22 @@ route: https://www.strava.com/routes/123456
 dist: 40
 time: 120
 speed: 26-29
+info: Bring lights and a raincoat
 ```
 
 Note: Only the ride creator can update the ride.
+
+### Removing Field Values
+
+To remove (clear) any optional field's value, use a dash (`-`) as the value:
+
+```
+/updateride
+id: abc123
+info: -
+```
+
+This will clear the additional information field.
 
 ### Cancelling a Ride
 

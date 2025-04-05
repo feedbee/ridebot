@@ -518,6 +518,81 @@ meet: Coffee Shop`;
       expect(result.error).toBeNull();
       expect(result.ride.additionalInfo).toBe('');
     });
+    
+    it('should clear additionalInfo field when updating with dash', async () => {
+      // Create a ride with additional info
+      const rideWithInfo = { ...testRide, additionalInfo: 'Original info' };
+      const ride = await rideService.createRide(rideWithInfo);
+      
+      // Update with dash to clear the field
+      const params = {
+        info: '-'
+      };
+      
+      const result = await rideService.updateRideFromParams(ride.id, params, 123456, 789);
+
+      expect(result.error).toBeNull();
+      expect(result.ride.additionalInfo).toBe('');
+    });
+    
+    it('should clear meeting point when updating with dash', async () => {
+      // Create a ride with meeting point
+      const rideWithMeetingPoint = { ...testRide, meetingPoint: 'Original meeting point' };
+      const ride = await rideService.createRide(rideWithMeetingPoint);
+      
+      // Update with dash to clear the field
+      const params = {
+        meet: '-'
+      };
+      
+      const result = await rideService.updateRideFromParams(ride.id, params, 123456, 789);
+
+      expect(result.error).toBeNull();
+      expect(result.ride.meetingPoint).toBe('');
+    });
+    
+    it('should clear route link when updating with dash', async () => {
+      // Create a ride with route link
+      const rideWithRoute = { ...testRide, routeLink: 'https://example.com/route' };
+      const ride = await rideService.createRide(rideWithRoute);
+      
+      // Update with dash to clear the field
+      const params = {
+        route: '-'
+      };
+      
+      const result = await rideService.updateRideFromParams(ride.id, params, 123456, 789);
+
+      expect(result.error).toBeNull();
+      expect(result.ride.routeLink).toBe('');
+    });
+    
+    it('should clear numeric fields when updating with dash', async () => {
+      // Create a ride with numeric fields
+      const rideWithNumericFields = { 
+        ...testRide, 
+        distance: 50, 
+        duration: 120,
+        speedMin: 25,
+        speedMax: 30
+      };
+      const ride = await rideService.createRide(rideWithNumericFields);
+      
+      // Update with dash to clear the fields
+      const params = {
+        dist: '-',
+        time: '-',
+        speed: '-'
+      };
+      
+      const result = await rideService.updateRideFromParams(ride.id, params, 123456, 789);
+
+      expect(result.error).toBeNull();
+      expect(result.ride.distance).toBeNull();
+      expect(result.ride.duration).toBeNull();
+      expect(result.ride.speedMin).toBeNull();
+      expect(result.ride.speedMax).toBeNull();
+    });
   });
 
   describe('Ride Updates from Parameters', () => {

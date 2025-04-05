@@ -284,7 +284,11 @@ export class RideWizard {
           break;
 
         case 'route':
-          if (RouteParser.isValidRouteUrl(ctx.message.text)) {
+          // Check if user wants to clear the field with a dash
+          if (ctx.message.text === '-') {
+            state.data.routeLink = '';
+            state.step = 'distance';
+          } else if (RouteParser.isValidRouteUrl(ctx.message.text)) {
             state.data.routeLink = ctx.message.text;
             if (RouteParser.isKnownProvider(ctx.message.text)) {
               const routeInfo = await RouteParser.parseRoute(ctx.message.text);
@@ -311,50 +315,79 @@ export class RideWizard {
             }
           } else {
             shouldProceed = false;
-            const errorMsg = await ctx.reply('Invalid route URL format. Please provide a valid URL or click Skip.');
+            const errorMsg = await ctx.reply('Invalid route URL format. Please provide a valid URL, use a dash (-) to clear the field, or click Skip.');
             state.errorMessageIds.push(errorMsg.message_id);
             return;
           }
           break;
 
         case 'distance':
-          const distance = parseFloat(ctx.message.text);
-          if (isNaN(distance)) {
-            shouldProceed = false;
-            const errorMsg = await ctx.reply('Please enter a valid number for distance.');
-            state.errorMessageIds.push(errorMsg.message_id);
-            return;
+          // Check if user wants to clear the field with a dash
+          if (ctx.message.text === '-') {
+            state.data.distance = null;
+            state.step = 'duration';
+          } else {
+            const distance = parseFloat(ctx.message.text);
+            if (isNaN(distance)) {
+              shouldProceed = false;
+              const errorMsg = await ctx.reply('Please enter a valid number for distance, or use a dash (-) to clear the field.');
+              state.errorMessageIds.push(errorMsg.message_id);
+              return;
+            }
+            state.data.distance = distance;
+            state.step = 'duration';
           }
-          state.data.distance = distance;
-          state.step = 'duration';
           break;
 
         case 'duration':
-          const duration = parseInt(ctx.message.text);
-          if (isNaN(duration)) {
-            shouldProceed = false;
-            const errorMsg = await ctx.reply('Please enter a valid number for duration.');
-            state.errorMessageIds.push(errorMsg.message_id);
-            return;
+          // Check if user wants to clear the field with a dash
+          if (ctx.message.text === '-') {
+            state.data.duration = null;
+            state.step = 'speed';
+          } else {
+            const duration = parseInt(ctx.message.text);
+            if (isNaN(duration)) {
+              shouldProceed = false;
+              const errorMsg = await ctx.reply('Please enter a valid number for duration, or use a dash (-) to clear the field.');
+              state.errorMessageIds.push(errorMsg.message_id);
+              return;
+            }
+            state.data.duration = duration;
+            state.step = 'speed';
           }
-          state.data.duration = duration;
-          state.step = 'speed';
           break;
 
         case 'speed':
-          const [min, max] = ctx.message.text.split('-').map(s => parseFloat(s.trim()));
-          if (!isNaN(min)) state.data.speedMin = min;
-          if (!isNaN(max)) state.data.speedMax = max;
-          state.step = 'meet';
+          // Check if user wants to clear the field with a dash
+          if (ctx.message.text === '-') {
+            state.data.speedMin = null;
+            state.data.speedMax = null;
+            state.step = 'meet';
+          } else {
+            const [min, max] = ctx.message.text.split('-').map(s => parseFloat(s.trim()));
+            if (!isNaN(min)) state.data.speedMin = min;
+            if (!isNaN(max)) state.data.speedMax = max;
+            state.step = 'meet';
+          }
           break;
 
         case 'meet':
-          state.data.meetingPoint = ctx.message.text;
+          // Check if user wants to clear the field with a dash
+          if (ctx.message.text === '-') {
+            state.data.meetingPoint = '';
+          } else {
+            state.data.meetingPoint = ctx.message.text;
+          }
           state.step = 'info';
           break;
 
         case 'info':
-          state.data.additionalInfo = ctx.message.text;
+          // Check if user wants to clear the field with a dash
+          if (ctx.message.text === '-') {
+            state.data.additionalInfo = '';
+          } else {
+            state.data.additionalInfo = ctx.message.text;
+          }
           state.step = 'confirm';
           break;
       }
@@ -428,7 +461,7 @@ export class RideWizard {
         break;
 
       case 'route':
-        message = '🔗 Please enter the route link (or skip):' + getCurrentValue('routeLink');
+        message = '🔗 Please enter the route link (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>' + getCurrentValue('routeLink');
         keyboard
           .text(config.buttons.back, 'wizard:back');
         addKeepButton('routeLink');
@@ -439,7 +472,7 @@ export class RideWizard {
         break;
 
       case 'distance':
-        message = '📏 Please enter the distance in kilometers (or skip):' + 
+        message = '📏 Please enter the distance in kilometers (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>' + 
           getCurrentValue('distance', v => `${v} km`);
         keyboard
           .text(config.buttons.back, 'wizard:back');
@@ -457,7 +490,7 @@ export class RideWizard {
           const minutes = mins % 60;
           return `${hours}h ${minutes}m`;
         };
-        message = '⏱ Please enter the duration in minutes (or skip):' + 
+        message = '⏱ Please enter the duration in minutes (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>' + 
           getCurrentValue('duration', durationFormatter);
         keyboard
           .text(config.buttons.back, 'wizard:back');
@@ -479,7 +512,7 @@ export class RideWizard {
           }
           return speed || '';
         };
-        message = '🚴 Please enter the speed range in km/h (e.g., 25-28) or skip:' + 
+        message = '🚴 Please enter the speed range in km/h (e.g., 25-28) or skip:\n<i>Enter a dash (-) to clear/skip this field</i>' + 
           getCurrentValue('speedMin', speedFormatter);
         keyboard
           .text(config.buttons.back, 'wizard:back');
@@ -493,7 +526,7 @@ export class RideWizard {
         break;
 
       case 'meet':
-        message = '📍 Please enter the meeting point (or skip):' + getCurrentValue('meetingPoint');
+        message = '📍 Please enter the meeting point (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>' + getCurrentValue('meetingPoint');
         keyboard
           .text(config.buttons.back, 'wizard:back');
         addKeepButton('meetingPoint');
@@ -504,7 +537,7 @@ export class RideWizard {
         break;
 
       case 'info':
-        message = 'ℹ️ Please enter any additional information (or skip):' + getCurrentValue('additionalInfo');
+        message = 'ℹ️ Please enter any additional information (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>' + getCurrentValue('additionalInfo');
         keyboard
           .text(config.buttons.back, 'wizard:back');
         addKeepButton('additionalInfo');
