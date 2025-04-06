@@ -29,13 +29,17 @@ describe('HelpCommandHandler', () => {
   });
   
   describe('handle', () => {
-    it('should reply with the help message from config', async () => {
+    it('should reply with both parts of the help message from config', async () => {
       // Execute
       await helpCommandHandler.handle(mockCtx);
       
       // Verify
       expect(mockCtx.reply).toHaveBeenCalledWith(
-        config.messageTemplates.help,
+        config.messageTemplates.help1,
+        { parse_mode: 'HTML' }
+      );
+      expect(mockCtx.reply).toHaveBeenCalledWith(
+        config.messageTemplates.help2,
         { parse_mode: 'HTML' }
       );
     });

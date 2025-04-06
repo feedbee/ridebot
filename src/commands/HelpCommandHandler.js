@@ -10,7 +10,8 @@ export class HelpCommandHandler extends BaseCommandHandler {
    * @param {import('grammy').Context} ctx - Grammy context
    */
   async handle(ctx) {
-    const helpMessage = config.messageTemplates.help;
-    await ctx.reply(helpMessage, { parse_mode: 'HTML' });
+    // Send both parts of the help message to avoid Telegram's message size limit
+    await ctx.reply(config.messageTemplates.help1, { parse_mode: 'HTML' });
+    await ctx.reply(config.messageTemplates.help2, { parse_mode: 'HTML' });
   }
 }

@@ -9,7 +9,8 @@ export const config = {
     webhookDomain: process.env.WEBHOOK_DOMAIN,
     webhookPath: '/webhook',
     useWebhook: process.env.USE_WEBHOOK === 'true' || false,
-    wizardOnlyInPrivateChats: process.env.WIZARD_ONLY_IN_PRIVATE === 'true' || false
+    wizardOnlyInPrivateChats: process.env.WIZARD_ONLY_IN_PRIVATE === 'true' || false,
+    privateChatCommandsMode: process.env.PRIVATE_CHAT_COMMANDS_MODE === 'true' || false
   },
   mongodb: {
     uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/bikebot'
@@ -91,7 +92,7 @@ Get started with /newride or type /help for a full guide.
 
 Happy cycling! 🚴‍♀️💨
     `.trim(),
-    help: `
+    help1: `
 <b>🚲 Ride Announcement Bot Help</b>
 
 <i>For an overview of features and how to use the bot, use the /start command.</i>
@@ -150,7 +151,8 @@ time: New duration (optional)
 speed: New speed range (optional)
 info: Additional information (optional)
 </pre>
-
+    `.trim(),
+    help2: `
 <b>❌ Cancelling a Ride</b>
 Only the ride creator can cancel:
 1. Reply to the ride message with /cancelride
