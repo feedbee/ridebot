@@ -76,9 +76,39 @@ export class Bot {
   }
 
   /**
+   * Set up bot commands in Telegram menu
+   */
+  async setupBotCommands() {
+    try {
+      const commands = [
+        { command: 'start', description: 'Start the bot and get welcome information' },
+        { command: 'help', description: 'Show help information about commands' },
+        { command: 'newride', description: 'Create a new ride' },
+        { command: 'updateride', description: 'Update an existing ride' },
+        { command: 'cancelride', description: 'Cancel a ride' },
+        { command: 'resumeride', description: 'Resume a cancelled ride' },
+        { command: 'deleteride', description: 'Delete a ride' },
+        { command: 'listrides', description: 'List all your rides' },
+        { command: 'dupride', description: 'Duplicate an existing ride' },
+        { command: 'postride', description: 'Post a ride in a chat' }
+      ];
+
+      // Set commands for both private chats and group chats
+      await this.bot.api.setMyCommands(commands, { scope: { type: 'default' } });
+      
+      console.log('Bot commands have been set up successfully');
+    } catch (error) {
+      console.error('Error setting up bot commands:', error);
+    }
+  }
+
+  /**
    * Start the bot
    */
   async start() {
+    // Set up bot commands
+    await this.setupBotCommands();
+    
     if (config.bot.useWebhook) {
       const webhookUrl = `${config.bot.webhookDomain}${config.bot.webhookPath}`;
       await this.bot.api.setWebhook(webhookUrl);
