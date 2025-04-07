@@ -13,7 +13,8 @@ const participantSchema = new mongoose.Schema({
 
 const messageSchema = new mongoose.Schema({
   messageId: { type: Number, required: true },
-  chatId: { type: Number, required: true }
+  chatId: { type: Number, required: true },
+  messageThreadId: { type: Number, default: null }
 });
 
 const rideSchema = new mongoose.Schema({
@@ -35,7 +36,7 @@ const rideSchema = new mongoose.Schema({
 });
 
 // Create indexes
-rideSchema.index({ 'messages.chatId': 1, 'messages.messageId': 1 });
+rideSchema.index({ 'messages.chatId': 1, 'messages.messageId': 1, 'messages.messageThreadId': 1 }, { sparse: true });
 rideSchema.index({ createdBy: 1, date: -1 }); // For efficient querying of rides by creator
 
 const Ride = mongoose.model('Ride', rideSchema);

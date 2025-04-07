@@ -37,10 +37,16 @@ export class PostRideCommandHandler extends BaseCommandHandler {
       }
 
       const currentChatId = ctx.chat.id;
+      const currentThreadId = ctx.message.message_thread_id || null;
 
-      // Check if the ride is already posted in the current chat
-      if (ride.messages && ride.messages.some(msg => msg.chatId === currentChatId)) {
-        await ctx.reply(`This ride is already posted in this chat.`);
+      // Check if the ride is already posted in the current chat and topic
+      if (ride.messages && ride.messages.some(msg => 
+        msg.chatId === currentChatId && 
+        (msg.messageThreadId || null) === currentThreadId
+      )) {
+        await ctx.reply(`This ride is already posted in this chat${currentThreadId ? ' topic' : ''}.`, {
+          message_thread_id: currentThreadId
+        });
         return;
       }
 
@@ -71,20 +77,35 @@ export class PostRideCommandHandler extends BaseCommandHandler {
       // Format the ride message
       const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
       
-      // Send the message to the current chat
-      const sentMessage = await ctx.reply(message, {
+      // Prepare reply options
+      const replyOptions = {
         parse_mode: parseMode,
         reply_markup: keyboard
-      });
+      };
+      
+      // If the message is in a topic, include the message_thread_id
+      if (ctx.message && ctx.message.message_thread_id) {
+        replyOptions.message_thread_id = ctx.message.message_thread_id;
+      }
+      
+      // Send the message to the current chat
+      const sentMessage = await ctx.reply(message, replyOptions);
       
       // Add the new message to the ride's messages array
+      const messageData = {
+        chatId: chatId,
+        messageId: sentMessage.message_id
+      };
+      
+      // Include message thread ID if present
+      if (ctx.message && ctx.message.message_thread_id) {
+        messageData.messageThreadId = ctx.message.message_thread_id;
+      }
+      
       const updatedRide = await this.rideService.updateRide(ride.id, {
         messages: [
           ...(ride.messages || []),
-          {
-            chatId: chatId,
-            messageId: sentMessage.message_id
-          }
+          messageData
         ]
       });
       

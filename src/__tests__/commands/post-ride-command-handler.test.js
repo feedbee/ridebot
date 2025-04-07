@@ -135,7 +135,9 @@ describe('PostRideCommandHandler', () => {
       await postRideCommandHandler.handle(mockCtx);
       
       // Verify
-      expect(mockCtx.reply).toHaveBeenCalledWith('This ride is already posted in this chat.');
+      expect(mockCtx.reply).toHaveBeenCalledWith('This ride is already posted in this chat.', {
+        message_thread_id: null
+      });
     });
     
     it('should successfully post ride to chat', async () => {
@@ -225,6 +227,9 @@ describe('PostRideCommandHandler', () => {
         ]
       });
       
+      // Mock the message object to not have a thread ID
+      mockCtx.message = { ...mockCtx.message, message_thread_id: undefined };
+      
       // Execute
       const result = await postRideCommandHandler.postRideToChat(ride, 101112, mockCtx);
       
@@ -238,9 +243,146 @@ describe('PostRideCommandHandler', () => {
       expect(mockRideService.updateRide).toHaveBeenCalledWith('123', {
         messages: [
           { chatId: 222222, messageId: 999 },
-          { chatId: 101112, messageId: 131415 }
+          { 
+            chatId: 101112, 
+            messageId: 131415
+          }
         ]
       });
+      expect(result).toEqual({ success: true, error: null });
+    });
+    
+    it('should respect message_thread_id when posting in a topic', async () => {
+      // Setup
+      const ride = { 
+        id: '123',
+        title: 'Test Ride',
+        messages: [{ chatId: 222222, messageId: 999 }]
+      };
+      
+      const participants = [
+        { userId: 111, firstName: 'User1' },
+        { userId: 222, firstName: 'User2' }
+      ];
+      
+      // Create a context with message_thread_id (topic)
+      const topicCtx = {
+        ...mockCtx,
+        message: {
+          ...mockCtx.message,
+          message_thread_id: 5678 // This is the topic ID
+        }
+      };
+      
+      mockRideService.getParticipants.mockResolvedValue(participants);
+      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
+        message: 'Formatted ride message',
+        keyboard: { inline_keyboard: [] },
+        parseMode: 'HTML'
+      });
+      
+      mockRideService.updateRide.mockResolvedValue({
+        ...ride,
+        messages: [
+          ...ride.messages,
+          { 
+            chatId: 101112, 
+            messageId: 131415, 
+            messageThreadId: 5678 
+          }
+        ]
+      });
+      
+      // Execute
+      const result = await postRideCommandHandler.postRideToChat(ride, 101112, topicCtx);
+      
+      // Verify
+      expect(mockRideService.getParticipants).toHaveBeenCalledWith('123');
+      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(ride, participants);
+      // The key test: verify that message_thread_id is passed to the reply options
+      expect(topicCtx.reply).toHaveBeenCalledWith('Formatted ride message', {
+        parse_mode: 'HTML',
+        reply_markup: { inline_keyboard: [] },
+        message_thread_id: 5678
+      });
+      expect(mockRideService.updateRide).toHaveBeenCalledWith('123', {
+        messages: [
+          { chatId: 222222, messageId: 999 },
+          { 
+            chatId: 101112, 
+            messageId: 131415,
+            messageThreadId: 5678
+          }
+        ]
+      });
+      expect(result).toEqual({ success: true, error: null });
+    });
+    
+    it('should allow posting the same ride in different topics of the same chat', async () => {
+      // Setup
+      const chatId = 101112;
+      const ride = { 
+        id: '123',
+        title: 'Test Ride',
+        messages: [
+          { 
+            chatId: chatId, 
+            messageId: 111, 
+            messageThreadId: 5678 // Already posted in topic 5678
+          }
+        ]
+      };
+      
+      const participants = [
+        { userId: 111, firstName: 'User1' },
+        { userId: 222, firstName: 'User2' }
+      ];
+      
+      // Create a context with a different message_thread_id (different topic in same chat)
+      const differentTopicCtx = {
+        ...mockCtx,
+        chat: {
+          ...mockCtx.chat,
+          id: chatId
+        },
+        message: {
+          ...mockCtx.message,
+          message_thread_id: 9999 // Different topic ID
+        }
+      };
+      
+      mockRideService.getParticipants.mockResolvedValue(participants);
+      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
+        message: 'Formatted ride message',
+        keyboard: { inline_keyboard: [] },
+        parseMode: 'HTML'
+      });
+      
+      // Mock the reply function
+      differentTopicCtx.reply = jest.fn().mockResolvedValue({ message_id: 222 });
+      
+      mockRideService.updateRide.mockResolvedValue({
+        ...ride,
+        messages: [
+          ...ride.messages,
+          { 
+            chatId: chatId, 
+            messageId: 222, 
+            messageThreadId: 9999 
+          }
+        ]
+      });
+      
+      // Execute
+      const result = await postRideCommandHandler.postRideToChat(ride, chatId, differentTopicCtx);
+      
+      // Verify
+      expect(differentTopicCtx.reply).toHaveBeenCalledWith('Formatted ride message', {
+        parse_mode: 'HTML',
+        reply_markup: { inline_keyboard: [] },
+        message_thread_id: 9999
+      });
+      expect(mockRideService.updateRide).toHaveBeenCalled();
       expect(result).toEqual({ success: true, error: null });
     });
     

@@ -433,14 +433,22 @@ export class RideService {
       // Update all messages for this ride
       for (const messageInfo of ride.messages) {
         try {
+          // Prepare options for editing the message
+          const editOptions = {
+            parse_mode: parseMode,
+            reply_markup: keyboard
+          };
+          
+          // Include message_thread_id if it exists in the message info
+          if (messageInfo.messageThreadId) {
+            editOptions.message_thread_id = messageInfo.messageThreadId;
+          }
+          
           await ctx.api.editMessageText(
             messageInfo.chatId,
             messageInfo.messageId,
             message,
-            {
-              parse_mode: parseMode,
-              reply_markup: keyboard
-            }
+            editOptions
           );
           updatedCount++;
         } catch (messageError) {
@@ -466,7 +474,9 @@ export class RideService {
         // Filter out messages that should be removed
         const updatedMessages = ride.messages.filter(msg => 
           !messagesToRemove.some(toRemove => 
-            toRemove.chatId === msg.chatId && toRemove.messageId === msg.messageId
+            toRemove.chatId === msg.chatId && 
+            toRemove.messageId === msg.messageId && 
+            toRemove.messageThreadId === msg.messageThreadId
           )
         );
         
