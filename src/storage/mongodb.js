@@ -84,10 +84,6 @@ export class MongoDBStorage extends StorageInterface {
     // Preserve the messages array if it's not being updated
     // This is critical to ensure message tracking works properly
     let updatesToApply = { ...updates };
-    if (!updates.messages && ride.messages && ride.messages.length > 0) {
-      // We don't need to modify updatesToApply here since MongoDB will only
-      // update the fields that are provided in the updates object
-    }
     
     // Apply updates
     Object.assign(ride, updatesToApply);
