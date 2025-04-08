@@ -3,6 +3,7 @@ import { config } from '../config.js';
 import { RideWizard } from '../wizard/RideWizard.js';
 import { RideService } from '../services/RideService.js';
 import { MessageFormatter } from '../formatters/MessageFormatter.js';
+import { threadMiddleware } from '../middleware/threadMiddleware.js';
 import { HelpCommandHandler } from '../commands/HelpCommandHandler.js';
 import { StartCommandHandler } from '../commands/StartCommandHandler.js';
 import { NewRideCommandHandler } from '../commands/NewRideCommandHandler.js';
@@ -52,6 +53,9 @@ export class Bot {
    * Set up all command and callback handlers
    */
   setupHandlers() {
+    // Apply middleware for handling message thread IDs in topics
+    this.bot.use(threadMiddleware);
+    
     // Command handlers
     if (config.bot.privateChatCommandsMode) {
       // In restricted mode, handle commands differently based on chat type

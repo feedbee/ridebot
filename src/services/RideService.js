@@ -414,10 +414,14 @@ export class RideService {
    * Create and store a ride message in a chat
    * @param {Object} ride - Ride object
    * @param {import('grammy').Context} ctx - Grammy context
+   * @param {number} messageThreadId - Message thread ID
    * @returns {Promise<Object>} - Object containing the sent message and updated ride
    */
-  async createRideMessage(ride, ctx) {
+  async createRideMessage(ride, ctx, messageThreadId) {
     try {
+      // Message thread id
+      const threadId = messageThreadId || ctx.message.message_thread_id;
+
       // Get participants and format the message
       const participants = await this.getParticipants(ride.id);
       const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
@@ -429,8 +433,8 @@ export class RideService {
       };
       
       // If the message is in a topic, include the message_thread_id
-      if (ctx.message && ctx.message.message_thread_id) {
-        replyOptions.message_thread_id = ctx.message.message_thread_id;
+      if (threadId) {
+        replyOptions.message_thread_id = threadId;
       }
       
       // Send the message
@@ -443,8 +447,8 @@ export class RideService {
       };
       
       // Include message thread ID if present
-      if (ctx.message && ctx.message.message_thread_id) {
-        messageData.messageThreadId = ctx.message.message_thread_id;
+      if (threadId) {
+        messageData.messageThreadId = threadId;
       }
 
       // Update the ride with the message info in the messages array

@@ -78,6 +78,8 @@ export class RideWizard {
       data: {
         chatId: ctx.chat.id,
         createdBy: ctx.from.id,
+        // Store message thread ID if present
+        messageThreadId: ctx.message?.message_thread_id,
         ...(prefillData || {})  // Merge prefilled data if provided
       },
       isUpdate: prefillData?.isUpdate || false,  // Flag to indicate if this is an update
@@ -222,7 +224,7 @@ export class RideWizard {
             await ctx.deleteMessage();
             
             // Create the ride message using the centralized method
-            await this.rideService.createRideMessage(ride, ctx);
+            await this.rideService.createRideMessage(ride, ctx, state.data.messageThreadId);
 
             this.wizardStates.delete(stateKey);
             await ctx.answerCallbackQuery(state.data.originalRideId ? 'Ride duplicated successfully!' : 'Ride created successfully!');

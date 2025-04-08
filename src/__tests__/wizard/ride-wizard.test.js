@@ -1,6 +1,10 @@
 import { RideWizard } from '../../wizard/RideWizard.js';
 import { config } from '../../config.js';
 
+// Create a backup of the original config for tests
+const originalConfig = { ...config };
+const originalBotConfig = { ...config.bot };
+
 // Mock storage implementation
 class MockStorage {
   constructor() {
@@ -105,9 +109,16 @@ describe('RideWizard', () => {
     storage = new MockStorage();
     wizard = new RideWizard(storage);
     ctx = createMockContext();
+    
+    // Reset config to original values before each test
+    config.bot.wizardOnlyInPrivateChats = originalBotConfig.wizardOnlyInPrivateChats;
   });
-
+  
   afterEach(() => {
+    // Ensure config is reset after each test
+    config.bot.wizardOnlyInPrivateChats = originalBotConfig.wizardOnlyInPrivateChats;
+    
+    // Reset test context
     ctx._test.reset();
   });
 
@@ -118,10 +129,8 @@ describe('RideWizard', () => {
     });
 
     test('should prevent starting wizard in public chat if wizardOnlyInPrivateChats is true', async () => {
-      // Store original value
-      const originalValue = process.env.WIZARD_ONLY_IN_PRIVATE;
-      // Set environment variable for test
-      process.env.WIZARD_ONLY_IN_PRIVATE = 'true';
+      // Temporarily modify the config for this test
+      config.bot.wizardOnlyInPrivateChats = true;
       
       // Create a public chat context
       const publicCtx = createMockContext(123, 456, 'group');
@@ -130,7 +139,7 @@ describe('RideWizard', () => {
       expect(publicCtx._test.messages[0].text).toContain('Wizard commands are only available in private chats');
       
       // Restore original value
-      process.env.WIZARD_ONLY_IN_PRIVATE = originalValue;
+      config.bot.wizardOnlyInPrivateChats = originalBotConfig.wizardOnlyInPrivateChats;
     });
 
     test('should prevent starting multiple wizards', async () => {
@@ -164,10 +173,8 @@ describe('RideWizard', () => {
     });
     
     test('should prevent wizard actions in public chat if wizardOnlyInPrivateChats is true', async () => {
-      // Store original value
-      const originalValue = process.env.WIZARD_ONLY_IN_PRIVATE;
-      // Set environment variable for test
-      process.env.WIZARD_ONLY_IN_PRIVATE = 'true';
+      // Temporarily modify the config for this test
+      config.bot.wizardOnlyInPrivateChats = true;
       
       // Create a public chat context
       const publicCtx = createMockContext(123, 456, 'group');
@@ -183,14 +190,12 @@ describe('RideWizard', () => {
       expect(publicCtx._test.callbackAnswers[0]).toContain('Wizard commands are only available in private chats');
       
       // Restore original value
-      process.env.WIZARD_ONLY_IN_PRIVATE = originalValue;
+      config.bot.wizardOnlyInPrivateChats = originalBotConfig.wizardOnlyInPrivateChats;
     });
     
     test('should prevent wizard input in public chat if wizardOnlyInPrivateChats is true', async () => {
-      // Store original value
-      const originalValue = process.env.WIZARD_ONLY_IN_PRIVATE;
-      // Set environment variable for test
-      process.env.WIZARD_ONLY_IN_PRIVATE = 'true';
+      // Temporarily modify the config for this test
+      config.bot.wizardOnlyInPrivateChats = true;
       
       // Create a public chat context
       const publicCtx = createMockContext(123, 456, 'group');
@@ -206,7 +211,7 @@ describe('RideWizard', () => {
       expect(publicCtx._test.messages[0].text).toContain('Wizard commands are only available in private chats');
       
       // Restore original value
-      process.env.WIZARD_ONLY_IN_PRIVATE = originalValue;
+      config.bot.wizardOnlyInPrivateChats = originalBotConfig.wizardOnlyInPrivateChats;
     });
 
     test('should handle skip button for optional fields', async () => {
