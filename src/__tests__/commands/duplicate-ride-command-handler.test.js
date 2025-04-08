@@ -271,6 +271,97 @@ describe('DuplicateRideCommandHandler', () => {
       expect(mockCtx.reply).toHaveBeenCalledWith('Ride duplicated successfully!');
     });
     
+    it('should create a duplicate ride with message thread ID in topic', async () => {
+      // Setup
+      const originalRide = {
+        id: '123',
+        title: 'Test Ride',
+        date: new Date('2025-03-30T10:00:00Z'),
+        meetingPoint: 'Test Location',
+        routeLink: 'https://example.com/route',
+        distance: 50,
+        duration: 180,
+        speedMin: 25,
+        speedMax: 30
+      };
+      
+      const params = {
+        title: 'Topic Ride',
+        when: 'tomorrow 11:00',
+        meet: 'Topic Location',
+        speed: '20-28'
+      };
+      
+      mockRideService.parseDateTimeInput.mockReturnValue({
+        date: new Date('2025-03-31T11:00:00Z'),
+        error: null
+      });
+      
+      mockRideService.createRide.mockResolvedValue({
+        id: '789',
+        title: 'Topic Ride'
+      });
+      
+      mockRideService.getParticipants.mockResolvedValue([]);
+      
+      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
+        message: 'New topic ride message',
+        keyboard: { inline_keyboard: [] },
+        parseMode: 'HTML'
+      });
+      
+      // Create a context with message_thread_id
+      const topicCtx = {
+        ...mockCtx,
+        message: {
+          ...mockCtx.message,
+          message_thread_id: 5678 // This is the topic ID
+        },
+        reply: jest.fn().mockResolvedValue({ message_id: 24680 })
+      };
+      
+      // Execute
+      await duplicateRideCommandHandler.handleWithParams(topicCtx, originalRide, params);
+      
+      // Verify
+      expect(mockRideService.parseDateTimeInput).toHaveBeenCalledWith('tomorrow 11:00');
+      expect(mockRideService.createRide).toHaveBeenCalledWith(expect.objectContaining({
+        title: 'Topic Ride',
+        messages: [],
+        createdBy: 101112,
+        meetingPoint: 'Topic Location',
+        routeLink: 'https://example.com/route',
+        distance: 50,
+        duration: 180,
+        speedMin: 20,
+        speedMax: 28
+      }));
+      
+      expect(mockRideService.getParticipants).toHaveBeenCalledWith('789');
+      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(
+        { id: '789', title: 'Topic Ride' },
+        []
+      );
+      
+      // Verify that message_thread_id is included in the reply options
+      expect(topicCtx.reply).toHaveBeenCalledWith('New topic ride message', expect.objectContaining({
+        parse_mode: 'HTML',
+        reply_markup: expect.anything(),
+        message_thread_id: 5678
+      }));
+      
+      // Verify that messageThreadId is included in the stored message data
+      expect(mockRideService.updateRide).toHaveBeenCalledWith('789', {
+        messages: [{ 
+          chatId: 789, 
+          messageId: 24680,
+          messageThreadId: 5678
+        }]
+      });
+      
+      expect(topicCtx.reply).toHaveBeenCalledWith('Ride duplicated successfully!');
+    });
+    
     it('should handle date parsing error', async () => {
       // Setup
       const originalRide = {

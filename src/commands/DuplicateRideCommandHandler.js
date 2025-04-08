@@ -101,17 +101,33 @@ export class DuplicateRideCommandHandler extends BaseCommandHandler {
       const participants = await this.rideService.getParticipants(ride.id);
       const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
       
-      const sentMessage = await ctx.reply(message, {
+      // Prepare reply options
+      const replyOptions = {
         parse_mode: parseMode,
         reply_markup: keyboard
-      });
+      };
+      
+      // If the message is in a topic, include the message_thread_id
+      if (ctx.message && ctx.message.message_thread_id) {
+        replyOptions.message_thread_id = ctx.message.message_thread_id;
+      }
+      
+      const sentMessage = await ctx.reply(message, replyOptions);
+
+      // Prepare the message data for storage
+      const messageData = {
+        chatId: ctx.chat.id,
+        messageId: sentMessage.message_id
+      };
+      
+      // Include message thread ID if present
+      if (ctx.message && ctx.message.message_thread_id) {
+        messageData.messageThreadId = ctx.message.message_thread_id;
+      }
 
       // Update the ride with the message info in the messages array
       await this.rideService.updateRide(ride.id, {
-        messages: [{
-          chatId: ctx.chat.id,
-          messageId: sentMessage.message_id
-        }]
+        messages: [messageData]
       });
 
       await ctx.reply('Ride duplicated successfully!');
