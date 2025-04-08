@@ -171,6 +171,74 @@ describe('NewRideCommandHandler', () => {
         messages: [{ chatId: 789, messageId: 13579 }]
       });
     });
+
+    it('should create a ride with parameters and include message thread ID in topic', async () => {
+      // Setup
+      const params = {
+        title: 'Topic Test Ride',
+        when: 'tomorrow 11:00',
+        meet: 'Topic Location'
+      };
+      
+      const createdRide = {
+        id: '456',
+        title: 'Topic Test Ride',
+        date: new Date('2025-03-31T11:00:00Z'),
+        meetingPoint: 'Topic Location'
+      };
+      
+      mockRideService.createRideFromParams.mockResolvedValue({
+        ride: createdRide,
+        error: null
+      });
+      
+      mockRideService.getParticipants.mockResolvedValue([]);
+      
+      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
+        message: 'New topic ride message',
+        keyboard: { inline_keyboard: [] },
+        parseMode: 'HTML'
+      });
+      
+      // Create a context with message_thread_id
+      const topicCtx = {
+        ...mockCtx,
+        message: {
+          ...mockCtx.message,
+          message_thread_id: 5678 // This is the topic ID
+        },
+        reply: jest.fn().mockResolvedValue({ message_id: 24680 })
+      };
+      
+      // Execute
+      await newRideCommandHandler.handleWithParams(topicCtx, params);
+      
+      // Verify
+      expect(mockRideService.createRideFromParams).toHaveBeenCalledWith(
+        params,
+        789, // chat.id
+        101112 // from.id
+      );
+      
+      expect(mockRideService.getParticipants).toHaveBeenCalledWith('456');
+      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(createdRide, []);
+      
+      // Verify that message_thread_id is included in the reply options
+      expect(topicCtx.reply).toHaveBeenCalledWith('New topic ride message', expect.objectContaining({
+        parse_mode: 'HTML',
+        reply_markup: { inline_keyboard: [] },
+        message_thread_id: 5678
+      }));
+      
+      // Verify that messageThreadId is included in the stored message data
+      expect(mockRideService.updateRide).toHaveBeenCalledWith('456', {
+        messages: [{ 
+          chatId: 789, 
+          messageId: 24680,
+          messageThreadId: 5678
+        }]
+      });
+    });
     
     it('should handle error during ride creation', async () => {
       // Setup

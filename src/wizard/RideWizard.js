@@ -221,17 +221,33 @@ export class RideWizard {
             const participants = await this.storage.getParticipants(ride.id);
             const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
 
-            await ctx.deleteMessage();
-            const sentMessage = await ctx.reply(message, {
+            // Prepare reply options
+            const replyOptions = {
               parse_mode: parseMode,
               reply_markup: keyboard
-            });
+            };
+            
+            // If the message is in a topic, include the message_thread_id
+            if (ctx.message && ctx.message.message_thread_id) {
+              replyOptions.message_thread_id = ctx.message.message_thread_id;
+            }
+
+            await ctx.deleteMessage();
+            const sentMessage = await ctx.reply(message, replyOptions);
+
+            // Prepare the message data for storage
+            const messageData = {
+              chatId: state.data.chatId,
+              messageId: sentMessage.message_id
+            };
+            
+            // Include message thread ID if present
+            if (ctx.message && ctx.message.message_thread_id) {
+              messageData.messageThreadId = ctx.message.message_thread_id;
+            }
 
             await this.storage.updateRide(ride.id, {
-              messages: [{
-                chatId: state.data.chatId,
-                messageId: sentMessage.message_id
-              }]
+              messages: [messageData]
             });
 
             this.wizardStates.delete(stateKey);
