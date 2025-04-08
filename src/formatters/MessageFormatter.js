@@ -178,7 +178,7 @@ export class MessageFormatter {
     }
     
     if (totalPages > 1) {
-      message += `\nPage ${page + 1}/${totalPages}`;
+      message += `\nPage ${page}/${totalPages}`;
     }
     
     return message;
