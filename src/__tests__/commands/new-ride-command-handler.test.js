@@ -30,7 +30,11 @@ describe('NewRideCommandHandler', () => {
       parseRideParams: jest.fn(),
       createRideFromParams: jest.fn(),
       getParticipants: jest.fn(),
-      updateRide: jest.fn()
+      updateRide: jest.fn(),
+      createRideMessage: jest.fn().mockResolvedValue({
+        sentMessage: { message_id: 13579 },
+        updatedRide: { id: '123' }
+      })
     };
     
     // Create mock MessageFormatter
@@ -159,17 +163,8 @@ describe('NewRideCommandHandler', () => {
         101112 // from.id
       );
       
-      expect(mockRideService.getParticipants).toHaveBeenCalledWith('123');
-      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(createdRide, []);
-      
-      expect(mockCtx.reply).toHaveBeenCalledWith('New ride message', expect.objectContaining({
-        parse_mode: 'HTML',
-        reply_markup: { inline_keyboard: [] }
-      }));
-      
-      expect(mockRideService.updateRide).toHaveBeenCalledWith('123', {
-        messages: [{ chatId: 789, messageId: 13579 }]
-      });
+      // Verify that createRideMessage was called with the correct parameters
+      expect(mockRideService.createRideMessage).toHaveBeenCalledWith(createdRide, mockCtx);
     });
 
     it('should create a ride with parameters and include message thread ID in topic', async () => {
@@ -220,24 +215,10 @@ describe('NewRideCommandHandler', () => {
         101112 // from.id
       );
       
-      expect(mockRideService.getParticipants).toHaveBeenCalledWith('456');
-      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(createdRide, []);
+      // These expectations are no longer needed since they're handled by createRideMessage
       
-      // Verify that message_thread_id is included in the reply options
-      expect(topicCtx.reply).toHaveBeenCalledWith('New topic ride message', expect.objectContaining({
-        parse_mode: 'HTML',
-        reply_markup: { inline_keyboard: [] },
-        message_thread_id: 5678
-      }));
-      
-      // Verify that messageThreadId is included in the stored message data
-      expect(mockRideService.updateRide).toHaveBeenCalledWith('456', {
-        messages: [{ 
-          chatId: 789, 
-          messageId: 24680,
-          messageThreadId: 5678
-        }]
-      });
+      // Verify that createRideMessage was called with the correct parameters
+      expect(mockRideService.createRideMessage).toHaveBeenCalledWith(createdRide, topicCtx);
     });
     
     it('should handle error during ride creation', async () => {

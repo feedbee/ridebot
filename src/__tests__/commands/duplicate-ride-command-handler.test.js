@@ -34,7 +34,11 @@ describe('DuplicateRideCommandHandler', () => {
       parseDateTimeInput: jest.fn(),
       createRide: jest.fn(),
       updateRide: jest.fn(),
-      getParticipants: jest.fn()
+      getParticipants: jest.fn(),
+      createRideMessage: jest.fn().mockResolvedValue({
+        sentMessage: { message_id: 13579 },
+        updatedRide: { id: '456' }
+      })
     };
     
     // Create mock MessageFormatter
@@ -251,22 +255,11 @@ describe('DuplicateRideCommandHandler', () => {
         speedMax: 28
       }));
       
-      expect(mockRideService.getParticipants).toHaveBeenCalledWith('456');
-      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(
+      // Verify that createRideMessage was called with the correct parameters
+      expect(mockRideService.createRideMessage).toHaveBeenCalledWith(
         { id: '456', title: 'New Ride' },
-        []
+        mockCtx
       );
-      
-      expect(mockCtx.reply).toHaveBeenCalledWith('New ride message', expect.objectContaining({
-        parse_mode: 'HTML'
-      }));
-      
-      expect(mockRideService.updateRide).toHaveBeenCalledWith('456', {
-        messages: [{
-          chatId: 789,
-          messageId: 13579
-        }]
-      });
       
       expect(mockCtx.reply).toHaveBeenCalledWith('Ride duplicated successfully!');
     });
@@ -337,27 +330,11 @@ describe('DuplicateRideCommandHandler', () => {
         speedMax: 28
       }));
       
-      expect(mockRideService.getParticipants).toHaveBeenCalledWith('789');
-      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(
+      // Verify that createRideMessage was called with the correct parameters
+      expect(mockRideService.createRideMessage).toHaveBeenCalledWith(
         { id: '789', title: 'Topic Ride' },
-        []
+        topicCtx
       );
-      
-      // Verify that message_thread_id is included in the reply options
-      expect(topicCtx.reply).toHaveBeenCalledWith('New topic ride message', expect.objectContaining({
-        parse_mode: 'HTML',
-        reply_markup: expect.anything(),
-        message_thread_id: 5678
-      }));
-      
-      // Verify that messageThreadId is included in the stored message data
-      expect(mockRideService.updateRide).toHaveBeenCalledWith('789', {
-        messages: [{ 
-          chatId: 789, 
-          messageId: 24680,
-          messageThreadId: 5678
-        }]
-      });
       
       expect(topicCtx.reply).toHaveBeenCalledWith('Ride duplicated successfully!');
     });

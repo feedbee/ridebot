@@ -218,37 +218,11 @@ export class RideWizard {
               additionalInfo: state.data.additionalInfo
             });
 
-            const participants = await this.storage.getParticipants(ride.id);
-            const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
-
-            // Prepare reply options
-            const replyOptions = {
-              parse_mode: parseMode,
-              reply_markup: keyboard
-            };
-            
-            // If the message is in a topic, include the message_thread_id
-            if (ctx.message && ctx.message.message_thread_id) {
-              replyOptions.message_thread_id = ctx.message.message_thread_id;
-            }
-
+            // Delete the wizard message before creating the ride message
             await ctx.deleteMessage();
-            const sentMessage = await ctx.reply(message, replyOptions);
-
-            // Prepare the message data for storage
-            const messageData = {
-              chatId: state.data.chatId,
-              messageId: sentMessage.message_id
-            };
             
-            // Include message thread ID if present
-            if (ctx.message && ctx.message.message_thread_id) {
-              messageData.messageThreadId = ctx.message.message_thread_id;
-            }
-
-            await this.storage.updateRide(ride.id, {
-              messages: [messageData]
-            });
+            // Create the ride message using the centralized method
+            await this.rideService.createRideMessage(ride, ctx);
 
             this.wizardStates.delete(stateKey);
             await ctx.answerCallbackQuery(state.data.originalRideId ? 'Ride duplicated successfully!' : 'Ride created successfully!');

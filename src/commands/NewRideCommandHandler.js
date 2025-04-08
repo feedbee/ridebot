@@ -47,37 +47,7 @@ export class NewRideCommandHandler extends BaseCommandHandler {
       return;
     }
     
-    // Create initial message using the centralized formatter
-    const participants = await this.rideService.getParticipants(ride.id);
-    const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
-    
-    // Prepare reply options
-    const replyOptions = {
-      parse_mode: parseMode,
-      reply_markup: keyboard
-    };
-    
-    // If the message is in a topic, include the message_thread_id
-    if (ctx.message && ctx.message.message_thread_id) {
-      replyOptions.message_thread_id = ctx.message.message_thread_id;
-    }
-    
-    const sentMessage = await ctx.reply(message, replyOptions);
-
-    // Prepare the message data for storage
-    const messageData = {
-      messageId: sentMessage.message_id,
-      chatId: ctx.chat.id
-    };
-    
-    // Include message thread ID if present
-    if (ctx.message && ctx.message.message_thread_id) {
-      messageData.messageThreadId = ctx.message.message_thread_id;
-    }
-
-    // Update the ride with the message info in the messages array
-    await this.rideService.updateRide(ride.id, {
-      messages: [messageData]
-    });
+    // Create the ride message using the centralized method
+    await this.rideService.createRideMessage(ride, ctx);
   }
 }
