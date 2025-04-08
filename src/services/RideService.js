@@ -380,7 +380,7 @@ export class RideService {
     }
     
     // Then check replied message
-    if (message.reply_to_message) {
+    if (message.reply_to_message?.text) {
       const originalMessage = message.reply_to_message.text;
       const rideIdMatch = originalMessage.match(/🎫\s*#Ride\s*#(\w+)/i);
       
