@@ -245,7 +245,7 @@ describe('MessageFormatter', () => {
       ];
       
       // Execute
-      const result = messageFormatter.formatRidesList(rides, 1, 3);
+      const result = messageFormatter.formatRidesList(rides, 2, 3);
       
       // Verify
       expect(result).toContain('Page 2/3');

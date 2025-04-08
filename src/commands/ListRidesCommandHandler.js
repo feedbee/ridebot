@@ -55,9 +55,12 @@ export class ListRidesCommandHandler extends BaseCommandHandler {
       keyboard.text(config.buttons.next, `list:${page + 1}`);
     }
     
+    // Check if keyboard has any buttons
+    const hasButtons = keyboard.inline_keyboard.some(row => row.length > 0);
+    
     const options = {
       parse_mode: 'HTML',
-      reply_markup: keyboard.inline_keyboard.length > 0 ? keyboard : undefined
+      reply_markup: hasButtons ? keyboard : undefined
     };
     
     if (isEdit) {
