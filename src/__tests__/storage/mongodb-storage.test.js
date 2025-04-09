@@ -16,7 +16,8 @@ const testRide = {
   distance: 50,
   duration: 180,
   speedMin: 25,
-  speedMax: 30
+  speedMax: 30,
+  additionalInfo: 'This is additional information'
 };
 
 const testRideWithMessages = {
@@ -145,6 +146,52 @@ describe('MongoDBStorage', () => {
       expect(result.total).toBe(2);
       expect(result.rides).toHaveLength(2);
       expect(result.rides[0].title).toBeDefined();
+    });
+
+    test('should preserve all ride fields when saving and retrieving', async () => {
+      // Create a ride with all possible fields
+      const completeRide = {
+        title: 'Complete Test Ride',
+        category: 'road',
+        date: new Date('2024-03-20T10:00:00Z'),
+        messages: [{ chatId: 123456, messageId: 789012, messageThreadId: 111222 }],
+        routeLink: 'https://example.com/complete-route',
+        meetingPoint: 'Complete Test Location',
+        distance: 75,
+        duration: 240,
+        speedMin: 20,
+        speedMax: 35,
+        additionalInfo: 'This is important additional information that should be preserved',
+        cancelled: false,
+        createdBy: 999,
+        participants: []
+      };
+      
+      // Save the ride
+      const created = await storage.createRide(completeRide);
+      
+      // Retrieve the ride
+      const retrieved = await storage.getRide(created.id);
+      
+      // Verify all fields were preserved
+      expect(retrieved.title).toBe(completeRide.title);
+      expect(retrieved.category).toBe(completeRide.category);
+      expect(retrieved.date.getTime()).toBe(completeRide.date.getTime());
+      expect(retrieved.routeLink).toBe(completeRide.routeLink);
+      expect(retrieved.meetingPoint).toBe(completeRide.meetingPoint);
+      expect(retrieved.distance).toBe(completeRide.distance);
+      expect(retrieved.duration).toBe(completeRide.duration);
+      expect(retrieved.speedMin).toBe(completeRide.speedMin);
+      expect(retrieved.speedMax).toBe(completeRide.speedMax);
+      expect(retrieved.additionalInfo).toBe(completeRide.additionalInfo);
+      expect(retrieved.cancelled).toBe(completeRide.cancelled);
+      expect(retrieved.createdBy).toBe(completeRide.createdBy);
+      
+      // Verify messages array
+      expect(retrieved.messages).toHaveLength(1);
+      expect(retrieved.messages[0].chatId).toBe(completeRide.messages[0].chatId);
+      expect(retrieved.messages[0].messageId).toBe(completeRide.messages[0].messageId);
+      expect(retrieved.messages[0].messageThreadId).toBe(completeRide.messages[0].messageThreadId);
     });
   });
 

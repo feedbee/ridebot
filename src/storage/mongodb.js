@@ -200,6 +200,7 @@ export class MongoDBStorage extends StorageInterface {
       duration: rideObj.duration,
       speedMin: rideObj.speedMin,
       speedMax: rideObj.speedMax,
+      additionalInfo: rideObj.additionalInfo,
       cancelled: rideObj.cancelled,
       createdAt: rideObj.createdAt,
       createdBy: rideObj.createdBy,
