@@ -420,7 +420,7 @@ export class RideService {
   async createRideMessage(ride, ctx, messageThreadId) {
     try {
       // Message thread id
-      const threadId = messageThreadId || ctx.message.message_thread_id;
+      const threadId = messageThreadId || ctx.message?.message_thread_id;
 
       // Get participants and format the message
       const participants = await this.getParticipants(ride.id);
