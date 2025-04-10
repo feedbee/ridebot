@@ -366,9 +366,10 @@ export class RideService {
     // Extract just the first line to ensure we don't match across newlines
     const firstLine = message.text.split('\n')[0];
     // Updated regex to match IDs with optional leading # symbol
-    const commandMatch = firstLine.match(/^\/\w+\s+#?(\w+)/i);
-    if (commandMatch && commandMatch[1]) {
-      return { rideId: commandMatch[1], error: null };
+    const commandMatch = firstLine.match(/^\/(\w+)(\s+#?(\w+))?/i);
+    const commandName = commandMatch && commandMatch[1] ? commandMatch[1] : 'command';
+    if (commandMatch && commandMatch[3]) {
+      return { rideId: commandMatch[3], error: null };
     }
     
     // Then check if ID is provided in parameters
@@ -396,7 +397,7 @@ export class RideService {
     
     return { 
       rideId: null, 
-      error: 'Please provide a ride ID after the command (e.g., /command rideID) or reply to a ride message.'
+      error: `Please provide a ride ID after the command (e.g., /${commandName} rideID) or reply to a ride message.`
     };
   }
 
