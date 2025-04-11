@@ -795,7 +795,7 @@ meet: Coffee Shop`;
       const result = rideService.extractRideId(message);
       
       expect(result.rideId).toBeNull();
-      expect(result.error).toBe('Please provide a ride ID after the command (e.g., /command rideID) or reply to a ride message.');
+      expect(result.error).toBe('Please provide a ride ID after the command (e.g., /updateride rideID) or reply to a ride message.');
     });
     
     // Test for returning error when replied message has no ride ID
