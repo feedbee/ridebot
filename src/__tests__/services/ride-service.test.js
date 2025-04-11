@@ -62,7 +62,13 @@ describe('RideService', () => {
       const createdRide = await rideService.createRide(testRide);
       const retrievedRide = await rideService.getRide(createdRide.id);
       
-      expect(retrievedRide).toEqual(createdRide);
+      // Expect all properties except participants to match
+      const { participants, ...retrievedRideWithoutParticipants } = retrievedRide;
+      const { participants: createdParticipants, ...createdRideWithoutParticipants } = createdRide;
+      
+      expect(retrievedRideWithoutParticipants).toEqual(createdRideWithoutParticipants);
+      // Participants should be an empty array
+      expect(participants).toEqual([]);
     });
 
     it('should update a ride', async () => {
@@ -162,7 +168,9 @@ describe('RideService', () => {
     it('should add a participant to a ride', async () => {
       const ride = await rideService.createRide(testRide);
       const result = await rideService.addParticipant(ride.id, testParticipant);
-      const participants = await rideService.getParticipants(ride.id);
+      // Get the updated ride to check participants
+      const updatedRide = await rideService.getRide(ride.id);
+      const participants = updatedRide.participants || [];
       
       expect(result).toBe(true);
       expect(participants).toHaveLength(1);
@@ -174,7 +182,9 @@ describe('RideService', () => {
       const ride = await rideService.createRide(testRide);
       await rideService.addParticipant(ride.id, testParticipant);
       const secondResult = await rideService.addParticipant(ride.id, testParticipant);
-      const participants = await rideService.getParticipants(ride.id);
+      // Get the updated ride to check participants
+      const updatedRide = await rideService.getRide(ride.id);
+      const participants = updatedRide.participants || [];
       
       expect(secondResult).toBe(false);
       expect(participants).toHaveLength(1);
@@ -185,7 +195,9 @@ describe('RideService', () => {
       await rideService.addParticipant(ride.id, testParticipant);
       
       const removeResult = await rideService.removeParticipant(ride.id, testParticipant.userId);
-      const participants = await rideService.getParticipants(ride.id);
+      // Get the updated ride to check participants
+      const updatedRide = await rideService.getRide(ride.id);
+      const participants = updatedRide.participants || [];
       
       expect(removeResult).toBe(true);
       expect(participants).toHaveLength(0);

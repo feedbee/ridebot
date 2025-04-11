@@ -145,9 +145,9 @@ describe('RideBot Integration Tests', () => {
       await participationHandlers.handleJoinRide(joinCtx);
       
       // Verify user joined
-      const participants = await storage.getParticipants(rideId);
-      expect(participants.length).toBe(1);
-      expect(participants[0].userId).toBe(mockCtx.from.id);
+      const rideAfterJoin = await storage.getRide(rideId);
+      expect(rideAfterJoin.participants.length).toBe(1);
+      expect(rideAfterJoin.participants[0].userId).toBe(mockCtx.from.id);
       
       // 4. Update the ride
       const updatedTitle = 'Updated Ride Title';
@@ -169,8 +169,8 @@ describe('RideBot Integration Tests', () => {
       await participationHandlers.handleLeaveRide(leaveCtx);
       
       // Verify user left
-      const participantsAfterLeave = await storage.getParticipants(rideId);
-      expect(participantsAfterLeave.length).toBe(0);
+      const rideAfterLeave = await storage.getRide(rideId);
+      expect(rideAfterLeave.participants.length).toBe(0);
       
       // 6. Cancel the ride
       await storage.updateRide(rideId, { cancelled: true });

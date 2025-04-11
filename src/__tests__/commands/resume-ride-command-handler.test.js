@@ -18,7 +18,6 @@ describe('ResumeRideCommandHandler', () => {
       getRide: jest.fn(),
       isRideCreator: jest.fn(),
       resumeRide: jest.fn(),
-      getParticipants: jest.fn(),
       updateRideMessages: jest.fn().mockResolvedValue({ success: true, updatedCount: 1, removedCount: 0 })
     };
     

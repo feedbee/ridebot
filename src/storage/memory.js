@@ -7,7 +7,6 @@ export class MemoryStorage extends StorageInterface {
   constructor() {
     super();
     this.rides = new Map();
-    this.participants = new Map();
   }
 
   /**
@@ -49,11 +48,11 @@ export class MemoryStorage extends StorageInterface {
     const newRide = {
       ...rideData,
       id,
-      createdAt: new Date()
+      createdAt: new Date(),
+      participants: []
     };
     
     this.rides.set(id, newRide);
-    this.participants.set(id, []);
     return newRide;
   }
 
@@ -82,7 +81,12 @@ export class MemoryStorage extends StorageInterface {
   }
 
   async getRide(rideId) {
-    return this.rides.get(rideId) || null;
+    const ride = this.rides.get(rideId);
+    if (!ride) {
+      return null;
+    }
+    
+    return ride;
   }
 
   async getRidesByCreator(userId, skip, limit) {
@@ -97,16 +101,20 @@ export class MemoryStorage extends StorageInterface {
   }
 
   async addParticipant(rideId, participant) {
-    const participants = this.participants.get(rideId);
-    if (!participants) {
+    const ride = this.rides.get(rideId);
+    if (!ride) {
       throw new Error('Ride not found');
     }
 
-    if (participants.some(p => p.userId === participant.userId)) {
+    if (!ride.participants) {
+      ride.participants = [];
+    }
+
+    if (ride.participants.some(p => p.userId === participant.userId)) {
       return false;
     }
 
-    participants.push({
+    ride.participants.push({
       ...participant,
       joinedAt: new Date()
     });
@@ -114,24 +122,20 @@ export class MemoryStorage extends StorageInterface {
   }
 
   async removeParticipant(rideId, userId) {
-    const participants = this.participants.get(rideId);
-    if (!participants) {
+    const ride = this.rides.get(rideId);
+    if (!ride) {
       throw new Error('Ride not found');
     }
 
-    const initialLength = participants.length;
-    const filteredParticipants = participants.filter(p => p.userId !== userId);
-    this.participants.set(rideId, filteredParticipants);
+    if (!ride.participants) {
+      ride.participants = [];
+      return false;
+    }
+
+    const initialLength = ride.participants.length;
+    ride.participants = ride.participants.filter(p => p.userId !== userId);
     
-    return filteredParticipants.length < initialLength;
-  }
-
-  async getParticipants(rideId) {
-    const participants = this.participants.get(rideId);
-    if (!participants) {
-      throw new Error('Ride not found');
-    }
-    return participants;
+    return ride.participants.length < initialLength;
   }
 
   async deleteRide(rideId) {
@@ -141,7 +145,6 @@ export class MemoryStorage extends StorageInterface {
     }
 
     this.rides.delete(rideId);
-    this.participants.delete(rideId);
     return true;
   }
 } 

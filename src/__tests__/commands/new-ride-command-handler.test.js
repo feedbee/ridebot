@@ -29,7 +29,6 @@ describe('NewRideCommandHandler', () => {
     mockRideService = {
       parseRideParams: jest.fn(),
       createRideFromParams: jest.fn(),
-      getParticipants: jest.fn(),
       updateRide: jest.fn(),
       createRideMessage: jest.fn().mockResolvedValue({
         sentMessage: { message_id: 13579 },
@@ -145,8 +144,6 @@ describe('NewRideCommandHandler', () => {
         error: null
       });
       
-      mockRideService.getParticipants.mockResolvedValue([]);
-      
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
         message: 'New ride message',
         keyboard: { inline_keyboard: [] },
@@ -186,8 +183,6 @@ describe('NewRideCommandHandler', () => {
         ride: createdRide,
         error: null
       });
-      
-      mockRideService.getParticipants.mockResolvedValue([]);
       
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
         message: 'New topic ride message',
@@ -244,7 +239,6 @@ describe('NewRideCommandHandler', () => {
       );
       
       expect(mockCtx.reply).toHaveBeenCalledWith('Invalid date format');
-      expect(mockRideService.getParticipants).not.toHaveBeenCalled();
       expect(mockRideService.updateRide).not.toHaveBeenCalled();
     });
   });

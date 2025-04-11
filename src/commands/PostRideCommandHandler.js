@@ -71,8 +71,8 @@ export class PostRideCommandHandler extends BaseCommandHandler {
    */
   async postRideToChat(ride, chatId, ctx) {
     try {
-      // Get participants to display in the message
-      const participants = await this.rideService.getParticipants(ride.id);
+      // Get participants directly from the ride object
+      const participants = ride.participants || [];
       
       // Format the ride message
       const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);

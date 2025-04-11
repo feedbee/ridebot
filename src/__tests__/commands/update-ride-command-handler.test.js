@@ -32,7 +32,6 @@ describe('UpdateRideCommandHandler', () => {
       isRideCreator: jest.fn(),
       parseRideParams: jest.fn(),
       updateRideFromParams: jest.fn(),
-      getParticipants: jest.fn(),
       updateRideMessages: jest.fn().mockResolvedValue({ success: true, updatedCount: 1, removedCount: 0 })
     };
     
@@ -264,7 +263,6 @@ describe('UpdateRideCommandHandler', () => {
       await updateRideCommandHandler.updateRideMessage(ride, mockCtx);
       
       // Verify
-      expect(mockRideService.getParticipants).not.toHaveBeenCalled();
       expect(mockCtx.api.editMessageText).not.toHaveBeenCalled();
     });
     
@@ -280,7 +278,6 @@ describe('UpdateRideCommandHandler', () => {
       await updateRideCommandHandler.updateRideMessage(ride, mockCtx);
       
       // Verify
-      expect(mockRideService.getParticipants).not.toHaveBeenCalled();
       expect(mockCtx.api.editMessageText).not.toHaveBeenCalled();
     });
     
@@ -297,8 +294,6 @@ describe('UpdateRideCommandHandler', () => {
       const participants = [
         { userId: 456, firstName: 'Test', lastName: 'User' }
       ];
-      
-      mockRideService.getParticipants.mockResolvedValue(participants);
       
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
         message: 'Updated ride message',

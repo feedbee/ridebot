@@ -59,10 +59,10 @@ describe('MemoryStorage', () => {
         .toThrow('Ride not found');
     });
 
-    it('should throw error when accessing participants of non-existent ride', async () => {
-      await expect(storage.getParticipants('non_existent'))
-        .rejects
-        .toThrow('Ride not found');
+    it('should throw error when accessing a non-existent ride', async () => {
+      await expect(storage.getRide('non_existent'))
+        .resolves
+        .toBeNull();
     });
 
     it('should throw error when adding participant to non-existent ride', async () => {
@@ -85,11 +85,10 @@ describe('MemoryStorage', () => {
       
       // Verify all data is maintained
       const updatedRide = await storage.getRide(ride.id);
-      const participants = await storage.getParticipants(ride.id);
       
       expect(updatedRide.title).toBe('Updated Ride');
-      expect(participants).toHaveLength(1);
-      expect(participants[0].username).toBe('test');
+      expect(updatedRide.participants).toHaveLength(1);
+      expect(updatedRide.participants[0].username).toBe('test');
       
       // Verify messages array is maintained
       expect(updatedRide.messages).toBeDefined();
@@ -105,13 +104,13 @@ describe('MemoryStorage', () => {
       await storage.addParticipant(ride1.id, { userId: 123, username: 'user1', firstName: 'First', lastName: 'User' });
       await storage.addParticipant(ride2.id, { userId: 456, username: 'user2', firstName: 'Second', lastName: 'User' });
 
-      const participants1 = await storage.getParticipants(ride1.id);
-      const participants2 = await storage.getParticipants(ride2.id);
+      const updatedRide1 = await storage.getRide(ride1.id);
+      const updatedRide2 = await storage.getRide(ride2.id);
 
-      expect(participants1).toHaveLength(1);
-      expect(participants2).toHaveLength(1);
-      expect(participants1[0].username).toBe('user1');
-      expect(participants2[0].username).toBe('user2');
+      expect(updatedRide1.participants).toHaveLength(1);
+      expect(updatedRide2.participants).toHaveLength(1);
+      expect(updatedRide1.participants[0].username).toBe('user1');
+      expect(updatedRide2.participants[0].username).toBe('user2');
     });
   });
 

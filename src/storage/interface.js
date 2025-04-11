@@ -88,15 +88,6 @@ export class StorageInterface {
   }
 
   /**
-   * Get all participants of a ride
-   * @param {string} rideId
-   * @returns {Promise<Participant[]>}
-   */
-  async getParticipants(rideId) {
-    throw new Error('Not implemented');
-  }
-
-  /**
    * Delete a ride and all its participants
    * @param {string} rideId
    * @returns {Promise<boolean>}

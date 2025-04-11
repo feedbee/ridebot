@@ -18,7 +18,7 @@ describe('CancelRideCommandHandler', () => {
       getRide: jest.fn(),
       isRideCreator: jest.fn(),
       cancelRide: jest.fn(),
-      getParticipants: jest.fn(),
+
       updateRideMessages: jest.fn().mockResolvedValue({ success: true, updatedCount: 1, removedCount: 0 })
     };
     
@@ -120,7 +120,6 @@ describe('CancelRideCommandHandler', () => {
       await cancelRideCommandHandler.updateRideMessage(mockRide, mockCtx);
       
       // Verify
-      expect(mockRideService.getParticipants).not.toHaveBeenCalled();
       expect(mockMessageFormatter.formatRideWithKeyboard).not.toHaveBeenCalled();
       expect(mockCtx.api.editMessageText).not.toHaveBeenCalled();
     });
@@ -145,7 +144,7 @@ describe('CancelRideCommandHandler', () => {
         parseMode: 'HTML'
       };
       
-      mockRideService.getParticipants.mockResolvedValue(mockParticipants);
+
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue(mockFormatResult);
       
       // Execute

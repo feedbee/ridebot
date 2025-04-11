@@ -28,7 +28,6 @@ describe('PostRideCommandHandler', () => {
     mockRideService = {
       getRide: jest.fn(),
       isRideCreator: jest.fn(),
-      getParticipants: jest.fn(),
       updateRide: jest.fn(),
       extractRideId: jest.fn()
     };
@@ -201,18 +200,19 @@ describe('PostRideCommandHandler', () => {
   describe('postRideToChat', () => {
     it('should successfully post ride to chat', async () => {
       // Setup
-      const ride = { 
-        id: '123',
-        title: 'Test Ride',
-        messages: [{ chatId: 222222, messageId: 999 }]
-      };
-      
       const participants = [
         { userId: 111, firstName: 'User1' },
         { userId: 222, firstName: 'User2' }
       ];
       
-      mockRideService.getParticipants.mockResolvedValue(participants);
+      const ride = { 
+        id: '123',
+        title: 'Test Ride',
+        messages: [{ chatId: 222222, messageId: 999 }],
+        participants: participants
+      };
+      
+
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
         message: 'Formatted ride message',
         keyboard: { inline_keyboard: [] },
@@ -234,7 +234,6 @@ describe('PostRideCommandHandler', () => {
       const result = await postRideCommandHandler.postRideToChat(ride, 101112, mockCtx);
       
       // Verify
-      expect(mockRideService.getParticipants).toHaveBeenCalledWith('123');
       expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(ride, participants);
       expect(mockCtx.reply).toHaveBeenCalledWith('Formatted ride message', {
         parse_mode: 'HTML',
@@ -254,16 +253,17 @@ describe('PostRideCommandHandler', () => {
     
     it('should respect message_thread_id when posting in a topic', async () => {
       // Setup
-      const ride = { 
-        id: '123',
-        title: 'Test Ride',
-        messages: [{ chatId: 222222, messageId: 999 }]
-      };
-      
       const participants = [
         { userId: 111, firstName: 'User1' },
         { userId: 222, firstName: 'User2' }
       ];
+      
+      const ride = { 
+        id: '123',
+        title: 'Test Ride',
+        messages: [{ chatId: 222222, messageId: 999 }],
+        participants: participants
+      };
       
       // Create a context with message_thread_id (topic)
       const topicCtx = {
@@ -274,7 +274,6 @@ describe('PostRideCommandHandler', () => {
         }
       };
       
-      mockRideService.getParticipants.mockResolvedValue(participants);
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
         message: 'Formatted ride message',
         keyboard: { inline_keyboard: [] },
@@ -297,7 +296,7 @@ describe('PostRideCommandHandler', () => {
       const result = await postRideCommandHandler.postRideToChat(ride, 101112, topicCtx);
       
       // Verify
-      expect(mockRideService.getParticipants).toHaveBeenCalledWith('123');
+
       expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(ride, participants);
       // The key test: verify that message_thread_id is passed to the reply options
       expect(topicCtx.reply).toHaveBeenCalledWith('Formatted ride message', {
@@ -351,7 +350,6 @@ describe('PostRideCommandHandler', () => {
         }
       };
       
-      mockRideService.getParticipants.mockResolvedValue(participants);
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
         message: 'Formatted ride message',
         keyboard: { inline_keyboard: [] },
@@ -391,7 +389,6 @@ describe('PostRideCommandHandler', () => {
       const ride = { id: '123', messages: [] };
       const participants = [];
       
-      mockRideService.getParticipants.mockResolvedValue(participants);
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
         message: 'Formatted ride message',
         keyboard: { inline_keyboard: [] },
@@ -417,7 +414,6 @@ describe('PostRideCommandHandler', () => {
       const ride = { id: '123', messages: [] };
       const participants = [];
       
-      mockRideService.getParticipants.mockResolvedValue(participants);
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
         message: 'Formatted ride message',
         keyboard: { inline_keyboard: [] },
@@ -443,7 +439,6 @@ describe('PostRideCommandHandler', () => {
       const ride = { id: '123', messages: [] };
       const participants = [];
       
-      mockRideService.getParticipants.mockResolvedValue(participants);
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
         message: 'Formatted ride message',
         keyboard: { inline_keyboard: [] },

@@ -84,15 +84,6 @@ export class RideService {
   }
 
   /**
-   * Get all participants of a ride
-   * @param {string} rideId - Ride ID
-   * @returns {Promise<Array>} - List of participants
-   */
-  async getParticipants(rideId) {
-    return await this.storage.getParticipants(rideId);
-  }
-
-  /**
    * Cancel a ride
    * @param {string} rideId - Ride ID
    * @returns {Promise<Object>} - Updated ride
@@ -423,8 +414,8 @@ export class RideService {
       // Message thread id
       const threadId = messageThreadId || ctx.message?.message_thread_id;
 
-      // Get participants and format the message
-      const participants = await this.getParticipants(ride.id);
+      // Get participants from the ride object and format the message
+      const participants = ride.participants || [];
       const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
       
       // Prepare reply options
@@ -480,7 +471,7 @@ export class RideService {
     }
 
     try {
-      const participants = await this.getParticipants(ride.id);
+      const participants = ride.participants || [];
       const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
       
       let updatedCount = 0;

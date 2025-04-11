@@ -29,7 +29,6 @@ describe('ParticipationHandlers', () => {
       getRide: jest.fn(),
       addParticipant: jest.fn(),
       removeParticipant: jest.fn(),
-      getParticipants: jest.fn(),
       updateRideMessages: jest.fn().mockResolvedValue({ success: true, updatedCount: 1, removedCount: 0 })
     };
     
@@ -265,7 +264,6 @@ describe('ParticipationHandlers', () => {
       await participationHandlers.updateRideMessage(mockRide, mockCtx);
       
       // Verify
-      expect(mockRideService.getParticipants).not.toHaveBeenCalled();
       expect(mockCtx.api.editMessageText).not.toHaveBeenCalled();
     });
     
@@ -280,7 +278,6 @@ describe('ParticipationHandlers', () => {
       await participationHandlers.updateRideMessage(mockRide, mockCtx);
       
       // Verify
-      expect(mockRideService.getParticipants).not.toHaveBeenCalled();
       expect(mockCtx.api.editMessageText).not.toHaveBeenCalled();
     });
     

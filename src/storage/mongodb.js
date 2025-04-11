@@ -163,21 +163,6 @@ export class MongoDBStorage extends StorageInterface {
     return true;
   }
 
-  async getParticipants(rideId) {
-    const ride = await Ride.findById(rideId);
-    if (!ride) {
-      return [];
-    }
-
-    return ride.participants.map(p => ({
-      userId: p.userId,
-      username: p.username,
-      firstName: p.firstName || '',
-      lastName: p.lastName || '',
-      joinedAt: p.joinedAt
-    }));
-  }
-
   async deleteRide(rideId) {
     const ride = await Ride.findByIdAndDelete(rideId);
     return ride !== null;

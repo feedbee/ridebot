@@ -34,7 +34,6 @@ describe('DuplicateRideCommandHandler', () => {
       parseDateTimeInput: jest.fn(),
       createRide: jest.fn(),
       updateRide: jest.fn(),
-      getParticipants: jest.fn(),
       createRideMessage: jest.fn().mockResolvedValue({
         sentMessage: { message_id: 13579 },
         updatedRide: { id: '456' }
@@ -169,8 +168,6 @@ describe('DuplicateRideCommandHandler', () => {
         title: 'New Ride'
       });
       
-      mockRideService.getParticipants.mockResolvedValue([]);
-      
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
         message: 'New ride message',
         keyboard: { inline_keyboard: [] },
@@ -229,8 +226,6 @@ describe('DuplicateRideCommandHandler', () => {
         id: '456',
         title: 'New Ride'
       });
-      
-      mockRideService.getParticipants.mockResolvedValue([]);
       
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
         message: 'New ride message',
@@ -294,8 +289,6 @@ describe('DuplicateRideCommandHandler', () => {
         id: '789',
         title: 'Topic Ride'
       });
-      
-      mockRideService.getParticipants.mockResolvedValue([]);
       
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
         message: 'New topic ride message',
@@ -394,8 +387,6 @@ describe('DuplicateRideCommandHandler', () => {
         id: '456',
         title: 'Test Ride'
       });
-      
-      mockRideService.getParticipants.mockResolvedValue([]);
       
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
         message: 'New ride message',
