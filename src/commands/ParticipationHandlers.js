@@ -30,12 +30,12 @@ export class ParticipationHandlers extends BaseCommandHandler {
         lastName: ctx.from.last_name || ''
       };
       
-      const success = await this.rideService.addParticipant(rideId, participant);
+      const result = await this.rideService.joinRide(rideId, participant);
       
-      if (success) {
-        const result = await this.updateRideMessage(ride, ctx);
+      if (result.success) {
+        const result2 = await this.updateRideMessage(result.ride, ctx);
         
-        if (result.success) {
+        if (result2.success) {
           await ctx.answerCallbackQuery('You have joined the ride!');  
         } else {
           await ctx.answerCallbackQuery('You joined the ride, but message updates failed');
@@ -68,12 +68,12 @@ export class ParticipationHandlers extends BaseCommandHandler {
         return;
       }
       
-      const success = await this.rideService.removeParticipant(rideId, ctx.from.id);
+      const result = await this.rideService.leaveRide(rideId, ctx.from.id);
       
-      if (success) {
-        const result = await this.updateRideMessage(ride, ctx);
+      if (result.success) {
+        const result2 = await this.updateRideMessage(result.ride, ctx);
         
-        if (result.success) {
+        if (result2.success) {
           await ctx.answerCallbackQuery('You have left the ride');
         } else {
           await ctx.answerCallbackQuery('You left the ride, but message updates failed');
@@ -86,6 +86,4 @@ export class ParticipationHandlers extends BaseCommandHandler {
       await ctx.answerCallbackQuery('An error occurred');
     }
   }
-
-
 }

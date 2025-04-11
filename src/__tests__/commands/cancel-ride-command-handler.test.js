@@ -16,9 +16,8 @@ describe('CancelRideCommandHandler', () => {
     mockRideService = {
       extractRideId: jest.fn(),
       getRide: jest.fn(),
-      isRideCreator: jest.fn(),
+      isRideCreator: jest.fn().mockReturnValue(true),
       cancelRide: jest.fn(),
-
       updateRideMessages: jest.fn().mockResolvedValue({ success: true, updatedCount: 1, removedCount: 0 })
     };
     
@@ -88,6 +87,7 @@ describe('CancelRideCommandHandler', () => {
         error: null 
       });
       
+      mockRideService.isRideCreator.mockReturnValue(true);
       mockRideService.cancelRide.mockResolvedValue(updatedRide);
       
       // Mock the updateRideMessage method
@@ -102,7 +102,7 @@ describe('CancelRideCommandHandler', () => {
       
       // Verify
       expect(cancelRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx, true);
-      expect(mockRideService.cancelRide).toHaveBeenCalledWith('456');
+      expect(mockRideService.cancelRide).toHaveBeenCalledWith('456', mockCtx.from.id);
       expect(cancelRideCommandHandler.updateRideMessage).toHaveBeenCalledWith(updatedRide, mockCtx);
       expect(mockCtx.reply).toHaveBeenCalledWith('Ride cancelled successfully. Updated 1 message(s).');
     });

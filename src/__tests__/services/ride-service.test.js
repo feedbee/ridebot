@@ -167,47 +167,46 @@ describe('RideService', () => {
   describe('Participant Management', () => {
     it('should add a participant to a ride', async () => {
       const ride = await rideService.createRide(testRide);
-      const result = await rideService.addParticipant(ride.id, testParticipant);
-      // Get the updated ride to check participants
-      const updatedRide = await rideService.getRide(ride.id);
-      const participants = updatedRide.participants || [];
+      const result = await rideService.joinRide(ride.id, testParticipant);
       
-      expect(result).toBe(true);
-      expect(participants).toHaveLength(1);
-      expect(participants[0].userId).toBe(testParticipant.userId);
-      expect(participants[0].username).toBe(testParticipant.username);
+      expect(result.success).toBe(true);
+      expect(result.ride.participants).toHaveLength(1);
+      const participant = result.ride.participants[0];
+      expect(participant.userId).toBe(testParticipant.userId);
+      expect(participant.username).toBe(testParticipant.username);
+      expect(participant.firstName).toBe(testParticipant.firstName);
+      expect(participant.lastName).toBe(testParticipant.lastName);
     });
 
     it('should not add the same participant twice', async () => {
       const ride = await rideService.createRide(testRide);
-      await rideService.addParticipant(ride.id, testParticipant);
-      const secondResult = await rideService.addParticipant(ride.id, testParticipant);
-      // Get the updated ride to check participants
+      await rideService.joinRide(ride.id, testParticipant);
+      const result = await rideService.joinRide(ride.id, testParticipant);
+      
+      expect(result.success).toBe(false);
+      expect(result.ride).toBeNull();
+
       const updatedRide = await rideService.getRide(ride.id);
       const participants = updatedRide.participants || [];
-      
-      expect(secondResult).toBe(false);
       expect(participants).toHaveLength(1);
     });
 
     it('should remove a participant from a ride', async () => {
       const ride = await rideService.createRide(testRide);
-      await rideService.addParticipant(ride.id, testParticipant);
+      await rideService.joinRide(ride.id, testParticipant);
       
-      const removeResult = await rideService.removeParticipant(ride.id, testParticipant.userId);
-      // Get the updated ride to check participants
-      const updatedRide = await rideService.getRide(ride.id);
-      const participants = updatedRide.participants || [];
+      const result = await rideService.leaveRide(ride.id, testParticipant.userId);
       
-      expect(removeResult).toBe(true);
-      expect(participants).toHaveLength(0);
+      expect(result.success).toBe(true);
+      expect(result.ride.participants).toHaveLength(0);
     });
 
-    it('should return false when removing a non-existent participant', async () => {
+    it('should handle removing non-existent participant', async () => {
       const ride = await rideService.createRide(testRide);
-      const removeResult = await rideService.removeParticipant(ride.id, 999);
+      const result = await rideService.leaveRide(ride.id, 999);
       
-      expect(removeResult).toBe(false);
+      expect(result.success).toBe(false);
+      expect(result.ride).toBeNull();
     });
   });
 

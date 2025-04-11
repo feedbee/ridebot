@@ -16,8 +16,6 @@ export class RideWizard {
     this.wizardStates = new Map();
   }
   
-
-  
   /**
    * Check if the bot has admin permissions and notify the user if not
    * @param {import('grammy').Context} ctx - Grammy context
@@ -77,7 +75,7 @@ export class RideWizard {
       step: 'title',
       data: {
         chatId: ctx.chat.id,
-        createdBy: ctx.from.id,
+        currentUser: ctx.from.id,
         // Store message thread ID if present
         messageThreadId: ctx.message?.message_thread_id,
         ...(prefillData || {})  // Merge prefilled data if provided
@@ -195,7 +193,8 @@ export class RideWizard {
               duration: state.data.duration,
               speedMin: state.data.speedMin,
               speedMax: state.data.speedMax,
-              additionalInfo: state.data.additionalInfo
+              additionalInfo: state.data.additionalInfo,
+              updatedBy: state.data.currentUser // Set updatedBy to the current user
             };
 
             const updatedRide = await this.storage.updateRide(state.data.originalRideId, updates);
@@ -210,7 +209,7 @@ export class RideWizard {
               category: state.data.category || DEFAULT_CATEGORY,
               date: state.data.datetime,
               messages: [], // Initialize with empty array instead of null messageId
-              createdBy: state.data.createdBy,
+              createdBy: state.data.currentUser,
               meetingPoint: state.data.meetingPoint,
               routeLink: state.data.routeLink,
               distance: state.data.distance,

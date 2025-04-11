@@ -21,6 +21,8 @@
  * @property {boolean} [cancelled]
  * @property {Date} createdAt
  * @property {number} createdBy
+ * @property {Date} [updatedAt]
+ * @property {number} [updatedBy]
  */
 
 /**
@@ -69,9 +71,9 @@ export class StorageInterface {
 
   /**
    * Add a participant to a ride
-   * @param {string} rideId
-   * @param {Omit<Participant, 'joinedAt'>} participant
-   * @returns {Promise<boolean>}
+   * @param {string} rideId - Ride ID
+   * @param {Object} participant - Participant data
+   * @returns {Promise<{success: boolean, ride: Ride | null}>} - Success status and updated ride
    */
   async addParticipant(rideId, participant) {
     throw new Error('Not implemented');
@@ -79,9 +81,9 @@ export class StorageInterface {
 
   /**
    * Remove a participant from a ride
-   * @param {string} rideId
-   * @param {number} userId
-   * @returns {Promise<boolean>}
+   * @param {string} rideId - Ride ID
+   * @param {number} userId - User ID to remove
+   * @returns {Promise<{success: boolean, ride: Ride | null}>} - Success status and updated ride
    */
   async removeParticipant(rideId, userId) {
     throw new Error('Not implemented');

@@ -87,6 +87,7 @@ describe('ResumeRideCommandHandler', () => {
         error: null 
       });
       
+      mockRideService.isRideCreator.mockReturnValue(true);
       mockRideService.resumeRide.mockResolvedValue(updatedRide);
       
       // Mock the updateRideMessage method
@@ -101,7 +102,7 @@ describe('ResumeRideCommandHandler', () => {
       
       // Verify
       expect(resumeRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx, true);
-      expect(mockRideService.resumeRide).toHaveBeenCalledWith('456');
+      expect(mockRideService.resumeRide).toHaveBeenCalledWith('456', mockCtx.from.id);
       expect(resumeRideCommandHandler.updateRideMessage).toHaveBeenCalledWith(updatedRide, mockCtx);
       expect(mockCtx.reply).toHaveBeenCalledWith('Ride resumed successfully. Updated 1 message(s).');
     });
@@ -116,12 +117,13 @@ describe('ResumeRideCommandHandler', () => {
         error: null 
       });
       
+      mockRideService.isRideCreator.mockReturnValue(true);
       mockRideService.resumeRide.mockResolvedValue(updatedRide);
-      mockRideService.updateRideMessages.mockResolvedValue({ success: false, updatedCount: 0, removedCount: 0 });
+      mockRideService.updateRideMessages.mockResolvedValue({ success: true, updatedCount: 0, removedCount: 0 });
       
-      // Mock the updateRideMessage method
+      // Mock the updateRideMessage method to return no updates
       resumeRideCommandHandler.updateRideMessage = jest.fn().mockResolvedValue({
-        success: false,
+        success: true,
         updatedCount: 0,
         removedCount: 0
       });
@@ -131,9 +133,9 @@ describe('ResumeRideCommandHandler', () => {
       
       // Verify
       expect(resumeRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx, true);
-      expect(mockRideService.resumeRide).toHaveBeenCalledWith('456');
+      expect(mockRideService.resumeRide).toHaveBeenCalledWith('456', mockCtx.from.id);
       expect(resumeRideCommandHandler.updateRideMessage).toHaveBeenCalledWith(updatedRide, mockCtx);
-      expect(mockCtx.reply).toHaveBeenCalledWith('Ride has been resumed, but no messages were updated. You may need to create a new ride message.');
+      expect(mockCtx.reply).toHaveBeenCalledWith('Ride has been resumed, but no messages were updated. You may want to /postride the ride in the chats of your choice again, they could have been removed.');
     });
   });
 });

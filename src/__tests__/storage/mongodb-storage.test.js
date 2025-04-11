@@ -204,14 +204,13 @@ describe('MongoDBStorage', () => {
     });
 
     test('should add a participant', async () => {
-      const added = await storage.addParticipant(rideId, testParticipant);
-      expect(added).toBe(true);
-
-      const updatedRide = await storage.getRide(rideId);
-      expect(updatedRide.participants).toHaveLength(1);
+      const result = await storage.addParticipant(rideId, testParticipant);
+      expect(result.success).toBe(true);
+      expect(result.ride).toBeDefined();
+      expect(result.ride.participants).toHaveLength(1);
       
       // Check each property individually
-      const participant = updatedRide.participants[0];
+      const participant = result.ride.participants[0];
       expect(participant.userId).toBe(testParticipant.userId);
       expect(participant.username).toBe(testParticipant.username);
       expect(participant.firstName).toBe(testParticipant.firstName);
@@ -220,8 +219,9 @@ describe('MongoDBStorage', () => {
 
     test('should not add duplicate participant', async () => {
       await storage.addParticipant(rideId, testParticipant);
-      const added = await storage.addParticipant(rideId, testParticipant);
-      expect(added).toBe(false);
+      const result = await storage.addParticipant(rideId, testParticipant);
+      expect(result.success).toBe(false);
+      expect(result.ride).toBeNull();
 
       const updatedRide = await storage.getRide(rideId);
       expect(updatedRide.participants).toHaveLength(1);
@@ -229,16 +229,16 @@ describe('MongoDBStorage', () => {
 
     test('should remove a participant', async () => {
       await storage.addParticipant(rideId, testParticipant);
-      const removed = await storage.removeParticipant(rideId, testParticipant.userId);
-      expect(removed).toBe(true);
-
-      const updatedRide = await storage.getRide(rideId);
-      expect(updatedRide.participants).toHaveLength(0);
+      const result = await storage.removeParticipant(rideId, testParticipant.userId);
+      expect(result.success).toBe(true);
+      expect(result.ride).toBeDefined();
+      expect(result.ride.participants).toHaveLength(0);
     });
 
     test('should handle removing non-existent participant', async () => {
-      const removed = await storage.removeParticipant(rideId, 999);
-      expect(removed).toBe(false);
+      const result = await storage.removeParticipant(rideId, 999);
+      expect(result.success).toBe(false);
+      expect(result.ride).toBeNull();
     });
   });
 }); 

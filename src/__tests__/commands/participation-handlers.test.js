@@ -27,8 +27,8 @@ describe('ParticipationHandlers', () => {
     // Create mock RideService
     mockRideService = {
       getRide: jest.fn(),
-      addParticipant: jest.fn(),
-      removeParticipant: jest.fn(),
+      joinRide: jest.fn(),
+      leaveRide: jest.fn(),
       updateRideMessages: jest.fn().mockResolvedValue({ success: true, updatedCount: 1, removedCount: 0 })
     };
     
@@ -67,7 +67,7 @@ describe('ParticipationHandlers', () => {
       // Verify
       expect(mockRideService.getRide).toHaveBeenCalledWith('123');
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('Ride not found');
-      expect(mockRideService.addParticipant).not.toHaveBeenCalled();
+      expect(mockRideService.joinRide).not.toHaveBeenCalled();
     });
     
     it('should handle cancelled ride', async () => {
@@ -83,7 +83,7 @@ describe('ParticipationHandlers', () => {
       // Verify
       expect(mockRideService.getRide).toHaveBeenCalledWith('123');
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('This ride has been cancelled');
-      expect(mockRideService.addParticipant).not.toHaveBeenCalled();
+      expect(mockRideService.joinRide).not.toHaveBeenCalled();
     });
     
     it('should add participant successfully', async () => {
@@ -95,7 +95,7 @@ describe('ParticipationHandlers', () => {
         chatId: 101112
       };
       mockRideService.getRide.mockResolvedValue(mockRide);
-      mockRideService.addParticipant.mockResolvedValue(true);
+      mockRideService.joinRide.mockResolvedValue({ success: true, ride: mockRide });
       
       // Mock the updateRideMessage method
       participationHandlers.updateRideMessage = jest.fn().mockResolvedValue({
@@ -109,7 +109,7 @@ describe('ParticipationHandlers', () => {
       
       // Verify
       expect(mockRideService.getRide).toHaveBeenCalledWith('123');
-      expect(mockRideService.addParticipant).toHaveBeenCalledWith('123', {
+      expect(mockRideService.joinRide).toHaveBeenCalledWith('123', {
         userId: 456,
         username: 'testuser',
         firstName: 'Test',
@@ -125,14 +125,14 @@ describe('ParticipationHandlers', () => {
         id: '123',
         cancelled: false
       });
-      mockRideService.addParticipant.mockResolvedValue(false);
+      mockRideService.joinRide.mockResolvedValue({ success: false, ride: null });
       
       // Execute
       await participationHandlers.handleJoinRide(mockCtx);
       
       // Verify
       expect(mockRideService.getRide).toHaveBeenCalledWith('123');
-      expect(mockRideService.addParticipant).toHaveBeenCalled();
+      expect(mockRideService.joinRide).toHaveBeenCalled();
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('You are already in this ride');
     });
     
@@ -170,7 +170,7 @@ describe('ParticipationHandlers', () => {
       // Verify
       expect(mockRideService.getRide).toHaveBeenCalledWith('123');
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('Ride not found');
-      expect(mockRideService.removeParticipant).not.toHaveBeenCalled();
+      expect(mockRideService.leaveRide).not.toHaveBeenCalled();
     });
     
     it('should handle cancelled ride', async () => {
@@ -186,7 +186,7 @@ describe('ParticipationHandlers', () => {
       // Verify
       expect(mockRideService.getRide).toHaveBeenCalledWith('123');
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('This ride has been cancelled');
-      expect(mockRideService.removeParticipant).not.toHaveBeenCalled();
+      expect(mockRideService.leaveRide).not.toHaveBeenCalled();
     });
     
     it('should remove participant successfully', async () => {
@@ -198,7 +198,7 @@ describe('ParticipationHandlers', () => {
         chatId: 101112
       };
       mockRideService.getRide.mockResolvedValue(mockRide);
-      mockRideService.removeParticipant.mockResolvedValue(true);
+      mockRideService.leaveRide.mockResolvedValue({ success: true, ride: mockRide });
       
       // Mock the updateRideMessage method
       participationHandlers.updateRideMessage = jest.fn().mockResolvedValue({
@@ -212,7 +212,7 @@ describe('ParticipationHandlers', () => {
       
       // Verify
       expect(mockRideService.getRide).toHaveBeenCalledWith('123');
-      expect(mockRideService.removeParticipant).toHaveBeenCalledWith('123', 456);
+      expect(mockRideService.leaveRide).toHaveBeenCalledWith('123', 456);
       expect(participationHandlers.updateRideMessage).toHaveBeenCalledWith(mockRide, mockCtx);
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('You have left the ride');
     });
@@ -223,14 +223,14 @@ describe('ParticipationHandlers', () => {
         id: '123',
         cancelled: false
       });
-      mockRideService.removeParticipant.mockResolvedValue(false);
+      mockRideService.leaveRide.mockResolvedValue({ success: false, ride: null });
       
       // Execute
       await participationHandlers.handleLeaveRide(mockCtx);
       
       // Verify
       expect(mockRideService.getRide).toHaveBeenCalledWith('123');
-      expect(mockRideService.removeParticipant).toHaveBeenCalled();
+      expect(mockRideService.leaveRide).toHaveBeenCalled();
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('You are not in this ride');
     });
     

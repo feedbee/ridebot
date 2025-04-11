@@ -71,9 +71,15 @@ export class MemoryStorage extends StorageInterface {
       };
     }
     
+    // Set updatedAt to current time only if updatedBy is set
+    let updatesToApply = { ...updates };
+    if (updatesToApply.updatedBy) {
+      updatesToApply.updatedAt = new Date();
+    }
+    
     const updatedRide = {
       ...ride,
-      ...updates
+      ...updatesToApply
     };
     
     this.rides.set(rideId, updatedRide);
@@ -106,19 +112,25 @@ export class MemoryStorage extends StorageInterface {
       throw new Error('Ride not found');
     }
 
-    if (!ride.participants) {
-      ride.participants = [];
+    // Check if participant already exists
+    const exists = ride.participants.some(p => p.userId === participant.userId);
+    if (exists) {
+      return { success: false, ride: null };
     }
 
-    if (ride.participants.some(p => p.userId === participant.userId)) {
-      return false;
-    }
+    const updatedRide = {
+      ...ride,
+      participants: [...ride.participants, {
+        userId: participant.userId,
+        username: participant.username,
+        firstName: participant.firstName || '',
+        lastName: participant.lastName || '',
+        joinedAt: new Date()
+      }]
+    };
 
-    ride.participants.push({
-      ...participant,
-      joinedAt: new Date()
-    });
-    return true;
+    this.rides.set(rideId, updatedRide);
+    return { success: true, ride: updatedRide };
   }
 
   async removeParticipant(rideId, userId) {
@@ -127,15 +139,18 @@ export class MemoryStorage extends StorageInterface {
       throw new Error('Ride not found');
     }
 
-    if (!ride.participants) {
-      ride.participants = [];
-      return false;
+    const initialLength = ride.participants.length;
+    const updatedRide = {
+      ...ride,
+      participants: ride.participants.filter(p => p.userId !== userId)
+    };
+
+    if (updatedRide.participants.length === initialLength) {
+      return { success: false, ride: null };
     }
 
-    const initialLength = ride.participants.length;
-    ride.participants = ride.participants.filter(p => p.userId !== userId);
-    
-    return ride.participants.length < initialLength;
+    this.rides.set(rideId, updatedRide);
+    return { success: true, ride: updatedRide };
   }
 
   async deleteRide(rideId) {

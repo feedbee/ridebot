@@ -32,6 +32,8 @@ const rideSchema = new mongoose.Schema({
   cancelled: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   createdBy: { type: Number, required: true },
+  updatedAt: { type: Date },
+  updatedBy: { type: Number },
   participants: [participantSchema]
 });
 
@@ -86,6 +88,11 @@ export class MongoDBStorage extends StorageInterface {
     // This is critical to ensure message tracking works properly
     let updatesToApply = { ...updates };
     
+    // Set updatedAt to current time only if updatedBy is set
+    if (updatesToApply.updatedBy) {
+      updatesToApply.updatedAt = new Date();
+    }
+    
     // Apply updates
     Object.assign(ride, updatesToApply);
     await ride.save();
@@ -125,13 +132,13 @@ export class MongoDBStorage extends StorageInterface {
   async addParticipant(rideId, participant) {
     const ride = await Ride.findById(rideId);
     if (!ride) {
-      return false;
+      throw new Error('Ride not found');
     }
 
     // Check if participant already exists
     const exists = ride.participants.some(p => p.userId === participant.userId);
     if (exists) {
-      return false;
+      return { success: false, ride: null };
     }
 
     ride.participants.push({
@@ -143,24 +150,24 @@ export class MongoDBStorage extends StorageInterface {
     });
 
     await ride.save();
-    return true;
+    return { success: true, ride: this.mapRideToInterface(ride) };
   }
 
   async removeParticipant(rideId, userId) {
     const ride = await Ride.findById(rideId);
     if (!ride) {
-      return false;
+      throw new Error('Ride not found');
     }
 
     const initialLength = ride.participants.length;
     ride.participants = ride.participants.filter(p => p.userId !== userId);
 
     if (ride.participants.length === initialLength) {
-      return false;
+      return { success: false, ride: null };
     }
 
     await ride.save();
-    return true;
+    return { success: true, ride: this.mapRideToInterface(ride) };
   }
 
   async deleteRide(rideId) {
@@ -189,6 +196,8 @@ export class MongoDBStorage extends StorageInterface {
       cancelled: rideObj.cancelled,
       createdAt: rideObj.createdAt,
       createdBy: rideObj.createdBy,
+      updatedAt: rideObj.updatedAt,
+      updatedBy: rideObj.updatedBy,
       participants: rideObj.participants?.map(p => ({
         userId: p.userId,
         username: p.username,

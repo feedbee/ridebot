@@ -219,7 +219,7 @@ describe('UpdateRideCommandHandler', () => {
       await updateRideCommandHandler.handleWithParams(mockCtx, originalRide, params);
       
       // Verify
-      expect(mockRideService.updateRideFromParams).toHaveBeenCalledWith('123', params);
+      expect(mockRideService.updateRideFromParams).toHaveBeenCalledWith('123', params, 101112);
       expect(updateRideCommandHandler.updateRideMessage).toHaveBeenCalledWith(updatedRide, mockCtx);
       expect(mockCtx.reply).toHaveBeenCalledWith('Ride updated successfully. Updated 1 message(s).');
     });
@@ -244,7 +244,7 @@ describe('UpdateRideCommandHandler', () => {
       await updateRideCommandHandler.handleWithParams(mockCtx, originalRide, params);
       
       // Verify
-      expect(mockRideService.updateRideFromParams).toHaveBeenCalledWith('123', params);
+      expect(mockRideService.updateRideFromParams).toHaveBeenCalledWith('123', params, 101112);
       expect(mockCtx.reply).toHaveBeenCalledWith('Invalid date format');
       expect(mockCtx.reply).not.toHaveBeenCalledWith('Ride updated successfully!');
     });

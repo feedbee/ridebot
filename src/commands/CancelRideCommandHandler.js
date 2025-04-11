@@ -21,18 +21,26 @@ export class CancelRideCommandHandler extends BaseCommandHandler {
       return;
     }
 
-    // Cancel the ride
-    const updatedRide = await this.rideService.cancelRide(ride.id);
+    if (!this.rideService.isRideCreator(ride, ctx.from.id)) {
+      await ctx.reply('Only the ride creator can cancel this ride');
+      return;
+    }
+
+    // Cancel the ride with user ID
+    const updatedRide = await this.rideService.cancelRide(ride.id, ctx.from.id);
     
     // Update the ride message
     const result = await this.updateRideMessage(updatedRide, ctx);
     
     if (result.success) {
-      await ctx.reply(`Ride cancelled successfully. Updated ${result.updatedCount} message(s).`);
+      if (result.updatedCount > 0) {
+        await ctx.reply(`Ride cancelled successfully. Updated ${result.updatedCount} message(s).`);
+      } else {
+        await ctx.reply(`Ride has been cancelled, but no messages were updated. You may want to /postride the ride in the chats of your choice again, they could have been removed.`);
+      }
     } else {
-      await ctx.reply(`Ride has been cancelled, but no messages were updated. You may need to create a new ride message.`);
+      await ctx.reply(`Ride has been cancelled, but there was an error updating the ride message. You may need to create a new ride message.`);
+      console.error('Error cancelling ride:', result.error);
     }
   }
-
-
 }

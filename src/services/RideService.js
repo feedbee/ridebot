@@ -28,9 +28,14 @@ export class RideService {
    * Update an existing ride
    * @param {string} rideId - Ride ID
    * @param {Object} updates - Updates to apply
+   * @param {number} [userId] - User ID of the person making the update
    * @returns {Promise<Object>} - Updated ride
    */
-  async updateRide(rideId, updates) {
+  async updateRide(rideId, updates, userId = null) {
+    // Only set updatedBy if userId is provided and there are other updates
+    if (userId !== null && Object.keys(updates).length > 0) {
+      updates.updatedBy = userId;
+    }
     return await this.storage.updateRide(rideId, updates);
   }
 
@@ -67,38 +72,42 @@ export class RideService {
    * Add a participant to a ride
    * @param {string} rideId - Ride ID
    * @param {Object} participant - Participant data
-   * @returns {Promise<boolean>} - Success status
+   * @returns {Promise<Object>} - Success status and updated ride
    */
-  async addParticipant(rideId, participant) {
-    return await this.storage.addParticipant(rideId, participant);
+  async joinRide(rideId, participant) {
+    const result = await this.storage.addParticipant(rideId, participant);
+    return result;
   }
 
   /**
    * Remove a participant from a ride
    * @param {string} rideId - Ride ID
    * @param {number} userId - User ID
-   * @returns {Promise<boolean>} - Success status
+   * @returns {Promise<Object>} - Success status and updated ride
    */
-  async removeParticipant(rideId, userId) {
-    return await this.storage.removeParticipant(rideId, userId);
+  async leaveRide(rideId, userId) {
+    const result = await this.storage.removeParticipant(rideId, userId);
+    return result;
   }
 
   /**
    * Cancel a ride
    * @param {string} rideId - Ride ID
+   * @param {number} [userId] - User ID of the person cancelling the ride
    * @returns {Promise<Object>} - Updated ride
    */
-  async cancelRide(rideId) {
-    return await this.storage.updateRide(rideId, { cancelled: true });
+  async cancelRide(rideId, userId = null) {
+    return await this.storage.updateRide(rideId, { cancelled: true, updatedBy: userId });
   }
   
   /**
    * Resume a cancelled ride
    * @param {string} rideId - Ride ID
+   * @param {number} [userId] - User ID of the person resuming the ride
    * @returns {Promise<Object>} - Updated ride
    */
-  async resumeRide(rideId) {
-    return await this.storage.updateRide(rideId, { cancelled: false });
+  async resumeRide(rideId, userId = null) {
+    return await this.storage.updateRide(rideId, { cancelled: false, updatedBy: userId });
   }
 
   /**
@@ -241,9 +250,10 @@ export class RideService {
    * Update a ride from parameters
    * @param {string} rideId - Ride ID
    * @param {Object} params - Update parameters
+   * @param {number} [userId] - User ID of the person updating the ride
    * @returns {Promise<Object>} - Updated ride and any errors
    */
-  async updateRideFromParams(rideId, params) {
+  async updateRideFromParams(rideId, params, userId = null) {
     try {
       const updates = {};
       
@@ -337,6 +347,17 @@ export class RideService {
         } else {
           updates.additionalInfo = params.info;
         }
+      }
+      
+      // Only set updatedBy if there are other updates
+      if (Object.keys(updates).length > 0 && userId !== null) {
+        updates.updatedBy = userId;
+      }
+      
+      if (Object.keys(updates).length === 0) {
+        // No updates to make, return the current ride
+        const ride = await this.storage.getRide(rideId);
+        return { ride, error: null };
       }
       
       const ride = await this.storage.updateRide(rideId, updates);

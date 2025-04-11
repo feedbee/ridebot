@@ -78,10 +78,13 @@ describe('MemoryStorage', () => {
       const ride = await storage.createRide(testRide);
       
       // Add participant
-      await storage.addParticipant(ride.id, { userId: 123, username: 'test', firstName: 'Test', lastName: 'User' });
+      const result = await storage.addParticipant(ride.id, { userId: 123, username: 'test', firstName: 'Test', lastName: 'User' });
+      expect(result.success).toBe(true);
+      expect(result.ride.participants).toHaveLength(1);
       
       // Update ride
-      await storage.updateRide(ride.id, { title: 'Updated Ride' });
+      const updated = await storage.updateRide(ride.id, { title: 'Updated Ride' });
+      expect(updated.title).toBe('Updated Ride');
       
       // Verify all data is maintained
       const updatedRide = await storage.getRide(ride.id);
@@ -101,8 +104,13 @@ describe('MemoryStorage', () => {
       const ride1 = await storage.createRide(testRide);
       const ride2 = await storage.createRide({ ...testRide, title: 'Second Ride' });
 
-      await storage.addParticipant(ride1.id, { userId: 123, username: 'user1', firstName: 'First', lastName: 'User' });
-      await storage.addParticipant(ride2.id, { userId: 456, username: 'user2', firstName: 'Second', lastName: 'User' });
+      const result1 = await storage.addParticipant(ride1.id, { userId: 123, username: 'user1', firstName: 'First', lastName: 'User' });
+      expect(result1.success).toBe(true);
+      expect(result1.ride.participants).toHaveLength(1);
+
+      const result2 = await storage.addParticipant(ride2.id, { userId: 456, username: 'user2', firstName: 'Second', lastName: 'User' });
+      expect(result2.success).toBe(true);
+      expect(result2.ride.participants).toHaveLength(1);
 
       const updatedRide1 = await storage.getRide(ride1.id);
       const updatedRide2 = await storage.getRide(ride2.id);
