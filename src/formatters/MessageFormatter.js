@@ -54,6 +54,7 @@ export class MessageFormatter {
     
     const date = ride.date.toLocaleDateString(locale, dateOptions);
     const time = ride.date.toLocaleTimeString(locale, timeOptions);
+    const datetime = `${date} at ${time}`;
     
     const participantCount = participants.length;
     const participantsList = participants.length > 0
@@ -86,8 +87,7 @@ export class MessageFormatter {
       .replace(/\*([^*]+)\*/g, '<b>$1</b>') // Bold text
       .replace('{title}', escapeHtml(ride.title))
       .replace('{cancelledBadge}', ride.cancelled ? ` ${config.messageTemplates.cancelled}` : '')
-      .replace('{date}', date)
-      .replace('{time}', time)
+      .replace('{datetime}', datetime)
       .replace('{participantCount}', participantCount)
       .replace('{participants}', participantsList);
     
@@ -157,10 +157,11 @@ export class MessageFormatter {
     for (const ride of rides) {
       const date = ride.date.toLocaleDateString(locale, dateOptions);
       const time = ride.date.toLocaleTimeString(locale, timeOptions);
+      const datetime = `${date} at ${time}`;
       const status = ride.cancelled ? '❌ CANCELLED' : '';
       
       message += `<b>${escapeHtml(ride.title)}</b> ${status}\n`;
-      message += `📅 ${date} ⏰ ${time}\n`;
+      message += `📅 ${datetime}\n`;
       
       if (ride.meetingPoint) {
         message += `📍 ${escapeHtml(ride.meetingPoint)}\n`;

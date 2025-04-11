@@ -224,8 +224,7 @@ The ride will be posted to the current chat and all instances will be synchroniz
     ride: `
 🚲 <b>{title}</b>{cancelledBadge}
 
-📅 Date: {date}
-⏰ Time: {time}
+📅 When: {datetime}
 {categoryInfo}{meetingInfo}{routeInfo}{distanceInfo}{durationInfo}{speedInfo}{additionalInfo}
 
 👥 Participants ({participantCount}):

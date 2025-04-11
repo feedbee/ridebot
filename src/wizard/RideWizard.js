@@ -570,7 +570,7 @@ export class RideWizard {
         message = `<b>Please confirm the ${state.isUpdate ? 'update' : 'ride'} details:</b>\n\n`;
         message += `📝 Title: ${escapeHtml(title)}\n`;
         message += `🚲 Category: ${category || DEFAULT_CATEGORY}\n`;
-        message += `📅 Date: ${datetime.toLocaleDateString(config.dateFormat.locale)} ${datetime.toLocaleTimeString(config.dateFormat.locale, config.dateFormat.time)}\n`;
+        message += `📅 When: ${datetime.toLocaleDateString(config.dateFormat.locale)} at ${datetime.toLocaleTimeString(config.dateFormat.locale, config.dateFormat.time)}\n`;
         if (routeLink) message += `🔗 Route: ${escapeHtml(routeLink)}\n`;
         if (distance) message += `📏 Distance: ${distance} km\n`;
         if (duration) {
