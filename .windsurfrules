@@ -26,3 +26,41 @@ alwaysApply: true
 - Never add stubbing or fake data patterns to code that affects the dev or prod environments
 - Never overwrite my .env file without first asking and confirming
 - Cover new features with tests
+
+
+# Application structure
+
+Let's review our code and make sure it is structured according to the following logic:
+
+
+## Commands (aka Controllers)
+
+- Request handling: parsing parameters and preparing them to be used by services
+- Input validation
+- Access control, authorization
+- Calling the right service to do the job
+- Return a response (JSON, status code, etc.)
+- Handle errors and maybe send proper error messages
+
+
+## Services
+
+- Handle core logic: contain the main logic for features
+- Talk to the database (through models)
+- Work with external APIs
+- Keep controllers clean: The controller (that handles requests) should only get data from the request, call the right service, and return a response
+
+
+## Models
+
+- Define the data structure
+- Handle persistance (database) operations
+- Sometimes include basic logic close to the data (like validation or computed fields)
+
+## Helpers or Utils
+
+- Format data (e.g. format a date or time)
+- Do simple calculations
+- Generate random strings or IDs
+- Validate data (basic checks)
+- Work with strings, arrays, numbers, etc.
