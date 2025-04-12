@@ -120,7 +120,7 @@ export class RideService {
     'meet': 'Meeting point',
     'route': 'Route URL',
     'dist': 'Distance in kilometers',
-    'time': 'Duration in minutes',
+    'duration': 'Duration in minutes',
     'speed': 'Speed range (e.g. 25-28)',
     'info': 'Additional information',
     'category': 'Ride category',
@@ -241,7 +241,7 @@ export class RideService {
           rideData.distance = routeInfo.distance;
         }
         
-        if (routeInfo.duration && !params.time) {
+        if (routeInfo.duration && !params.duration) {
           rideData.duration = routeInfo.duration;
         }
       }
@@ -250,8 +250,8 @@ export class RideService {
         rideData.distance = parseFloat(params.dist);
       }
 
-      if (params.time) {
-        rideData.duration = parseInt(params.time);
+      if (params.duration) {
+        rideData.duration = parseInt(params.duration);
       }
 
       if (params.speed) {
@@ -330,7 +330,7 @@ export class RideService {
             updates.distance = routeInfo.distance;
           }
           
-          if (routeInfo.duration && !params.time) {
+          if (routeInfo.duration && !params.duration) {
             updates.duration = routeInfo.duration;
           }
         }
@@ -345,12 +345,12 @@ export class RideService {
         }
       }
       
-      if (params.time !== undefined) {
+      if (params.duration !== undefined) {
         // Use dash ('-') to remove the field value
-        if (params.time === '-') {
+        if (params.duration === '-') {
           updates.duration = null;
         } else {
-          updates.duration = parseInt(params.time);
+          updates.duration = parseInt(params.duration);
         }
       }
       

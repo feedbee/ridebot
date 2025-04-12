@@ -41,7 +41,7 @@ describe('NewRideCommandHandler', () => {
           'meet': 'Meeting point',
           'route': 'Route URL',
           'dist': 'Distance in kilometers',
-          'time': 'Duration in minutes',
+          'duration': 'Duration in minutes',
           'speed': 'Speed range (e.g. 25-28)',
           'info': 'Additional information',
           'category': 'Ride category',

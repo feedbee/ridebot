@@ -68,7 +68,7 @@ export class DuplicateRideCommandHandler extends BaseCommandHandler {
         meetingPoint: params.meet || originalRide.meetingPoint,
         routeLink: params.route || originalRide.routeLink,
         distance: params.dist ? parseFloat(params.dist) : originalRide.distance,
-        duration: params.time ? parseInt(params.time) : originalRide.duration
+        duration: params.duration ? parseInt(params.duration) : originalRide.duration
       };
 
       // Handle date - default to tomorrow if not provided

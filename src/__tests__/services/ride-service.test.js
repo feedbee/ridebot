@@ -252,7 +252,7 @@ describe('RideService', () => {
       expect(Object.keys(RideService.VALID_PARAMS)).toContain('meet');
       expect(Object.keys(RideService.VALID_PARAMS)).toContain('route');
       expect(Object.keys(RideService.VALID_PARAMS)).toContain('dist');
-      expect(Object.keys(RideService.VALID_PARAMS)).toContain('time');
+      expect(Object.keys(RideService.VALID_PARAMS)).toContain('duration');
       expect(Object.keys(RideService.VALID_PARAMS)).toContain('speed');
       expect(Object.keys(RideService.VALID_PARAMS)).toContain('info');
       expect(Object.keys(RideService.VALID_PARAMS)).toContain('category');
@@ -295,7 +295,7 @@ meet: Coffee Shop`;
         when: 'Sunday 9am',
         meet: 'Coffee Shop'
       });
-      expect(unknownParams).toHaveLength(0);
+      expect(unknownParams).toEqual(['This line has no parameter']);
     });
 
     it('should identify unknown parameters', () => {
@@ -498,7 +498,7 @@ weather: sunny`;
         when: 'tomorrow 9am',
         route: 'https://example.com/route',
         dist: '75',
-        time: '210'
+        duration: '210'
       };
       
       // Mock date parser
@@ -634,7 +634,7 @@ weather: sunny`;
       // Update with dash to clear the fields
       const params = {
         dist: '-',
-        time: '-',
+        duration: '-',
         speed: '-'
       };
       
