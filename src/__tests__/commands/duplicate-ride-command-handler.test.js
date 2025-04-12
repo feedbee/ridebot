@@ -153,9 +153,12 @@ describe('DuplicateRideCommandHandler', () => {
       });
       
       mockRideService.parseRideParams.mockReturnValue({
-        title: 'New Ride',
-        when: 'tomorrow 11:00',
-        meet: 'New Location'
+        params: {
+          title: 'New Ride',
+          when: 'tomorrow 11:00',
+          meet: 'New Location'
+        },
+        unknownParams: []
       });
       
       mockRideService.parseDateTimeInput.mockReturnValue({

@@ -67,4 +67,28 @@ export class BaseCommandHandler {
     
     return result;
   }
+
+  /**
+   * Parse ride parameters from text and handle any unknown parameters
+   * @param {import('grammy').Context} ctx - Grammy context
+   * @param {string} text - Text to parse
+   * @returns {Promise<{params: Object, hasUnknownParams: boolean}>} - Parsed parameters and unknown params status
+   */
+  async parseRideParams(ctx, text) {
+    const { params, unknownParams } = this.rideService.parseRideParams(text);
+    
+    if (unknownParams.length > 0) {
+      const validParamsList = Object.entries(this.rideService.constructor.VALID_PARAMS)
+        .map(([key, desc]) => `${key}: ${desc}`)
+        .join('\n');
+      
+      await ctx.reply(
+        `Unknown parameter(s): ${unknownParams.join(', ')}\n\n` +
+        'Valid parameters are:\n' +
+        validParamsList
+      );
+      return { params, hasUnknownParams: true };
+    }
+    return { params, hasUnknownParams: false };
+  }
 }

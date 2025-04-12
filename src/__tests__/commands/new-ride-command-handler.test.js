@@ -33,7 +33,21 @@ describe('NewRideCommandHandler', () => {
       createRideMessage: jest.fn().mockResolvedValue({
         sentMessage: { message_id: 13579 },
         updatedRide: { id: '123' }
-      })
+      }),
+      constructor: {
+        VALID_PARAMS: {
+          'title': 'Title of the ride',
+          'when': 'Date and time of the ride',
+          'meet': 'Meeting point',
+          'route': 'Route URL',
+          'dist': 'Distance in kilometers',
+          'time': 'Duration in minutes',
+          'speed': 'Speed range (e.g. 25-28)',
+          'info': 'Additional information',
+          'category': 'Ride category',
+          'id': 'Ride ID (for commands that need it)'
+        }
+      }
     };
     
     // Create mock MessageFormatter
@@ -98,9 +112,12 @@ describe('NewRideCommandHandler', () => {
       mockCtx.message.text = '/newride\ntitle: Test Ride\nwhen: tomorrow 11:00\nmeet: Test Location';
       
       mockRideService.parseRideParams.mockReturnValue({
-        title: 'Test Ride',
-        when: 'tomorrow 11:00',
-        meet: 'Test Location'
+        params: {
+          title: 'Test Ride',
+          when: 'tomorrow 11:00',
+          meet: 'Test Location'
+        },
+        unknownParams: []
       });
       
       // Setup the spy for handleWithParams
@@ -119,6 +136,31 @@ describe('NewRideCommandHandler', () => {
           meet: 'Test Location'
         }
       );
+      expect(mockWizard.startWizard).not.toHaveBeenCalled();
+    });
+
+    it('should handle unknown parameters', async () => {
+      // Setup
+      mockCtx.message.text = '/newride\ntitle: Test Ride\nwhen: tomorrow 11:00\nlocation: Test Location';
+      
+      mockRideService.parseRideParams.mockReturnValue({
+        params: {
+          title: 'Test Ride',
+          when: 'tomorrow 11:00'
+        },
+        unknownParams: ['location']
+      });
+      
+      // Setup spy for handleWithParams
+      jest.spyOn(newRideCommandHandler, 'handleWithParams');
+      
+      // Execute
+      await newRideCommandHandler.handle(mockCtx);
+      
+      // Verify
+      expect(mockRideService.parseRideParams).toHaveBeenCalledWith(mockCtx.message.text);
+      expect(mockCtx.reply).toHaveBeenCalled();
+      expect(newRideCommandHandler.handleWithParams).not.toHaveBeenCalled();
       expect(mockWizard.startWizard).not.toHaveBeenCalled();
     });
   });

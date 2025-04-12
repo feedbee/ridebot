@@ -153,8 +153,11 @@ describe('UpdateRideCommandHandler', () => {
       });
       
       mockRideService.parseRideParams.mockReturnValue({
-        title: 'Updated Ride',
-        when: 'tomorrow 11:00'
+        params: {
+          title: 'Updated Ride',
+          when: 'tomorrow 11:00'
+        },
+        unknownParams: []
       });
       
       // Setup the spy for handleWithParams

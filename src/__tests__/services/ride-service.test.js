@@ -245,6 +245,20 @@ describe('RideService', () => {
   });
 
   describe('Parameter Parsing', () => {
+    it('should have a list of valid parameters', () => {
+      expect(RideService.VALID_PARAMS).toBeDefined();
+      expect(Object.keys(RideService.VALID_PARAMS)).toContain('title');
+      expect(Object.keys(RideService.VALID_PARAMS)).toContain('when');
+      expect(Object.keys(RideService.VALID_PARAMS)).toContain('meet');
+      expect(Object.keys(RideService.VALID_PARAMS)).toContain('route');
+      expect(Object.keys(RideService.VALID_PARAMS)).toContain('dist');
+      expect(Object.keys(RideService.VALID_PARAMS)).toContain('time');
+      expect(Object.keys(RideService.VALID_PARAMS)).toContain('speed');
+      expect(Object.keys(RideService.VALID_PARAMS)).toContain('info');
+      expect(Object.keys(RideService.VALID_PARAMS)).toContain('category');
+      expect(Object.keys(RideService.VALID_PARAMS)).toContain('id');
+    });
+
     it('should parse ride parameters from text', () => {
       const text = `/newride
 title: Sunday Morning Ride
@@ -254,7 +268,7 @@ route: https://example.com/route
 speed: 25-28
 info: Bring water and snacks`;
       
-      const params = rideService.parseRideParams(text);
+      const { params, unknownParams } = rideService.parseRideParams(text);
       
       expect(params).toEqual({
         title: 'Sunday Morning Ride',
@@ -264,6 +278,7 @@ info: Bring water and snacks`;
         speed: '25-28',
         info: 'Bring water and snacks'
       });
+      expect(unknownParams).toHaveLength(0);
     });
 
     it('should handle malformed parameter lines', () => {
@@ -273,13 +288,40 @@ when: Sunday 9am
 This line has no parameter
 meet: Coffee Shop`;
       
-      const params = rideService.parseRideParams(text);
+      const { params, unknownParams } = rideService.parseRideParams(text);
       
       expect(params).toEqual({
         title: 'Sunday Morning Ride',
         when: 'Sunday 9am',
         meet: 'Coffee Shop'
       });
+      expect(unknownParams).toHaveLength(0);
+    });
+
+    it('should identify unknown parameters', () => {
+      const text = `/newride
+title: Sunday Morning Ride
+when: Sunday 9am
+location: Coffee Shop
+pace: fast
+weather: sunny`;
+      
+      const { params, unknownParams } = rideService.parseRideParams(text);
+      
+      expect(params).toEqual({
+        title: 'Sunday Morning Ride',
+        when: 'Sunday 9am'
+      });
+      expect(unknownParams).toEqual(['location', 'pace', 'weather']);
+    });
+
+    it('should handle empty input', () => {
+      const text = `/newride`;
+      
+      const { params, unknownParams } = rideService.parseRideParams(text);
+      
+      expect(params).toEqual({});
+      expect(unknownParams).toHaveLength(0);
     });
   });
 

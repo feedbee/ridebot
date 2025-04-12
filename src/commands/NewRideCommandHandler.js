@@ -22,7 +22,9 @@ export class NewRideCommandHandler extends BaseCommandHandler {
   async handle(ctx, prefillData = null) {
     // If parameters are provided, use the parameter-based approach
     if (ctx.message.text.includes('\n')) {
-      const params = this.rideService.parseRideParams(ctx.message.text);
+      const { params, hasUnknownParams } = await this.parseRideParams(ctx, ctx.message.text);
+      if (hasUnknownParams) return;
+      
       return this.handleWithParams(ctx, params);
     }
 
