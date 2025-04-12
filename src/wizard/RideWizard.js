@@ -121,6 +121,16 @@ export class RideWizard {
 
     try {
       switch (action) {
+        case 'category':
+          if (VALID_CATEGORIES.includes(param)) {
+            state.data.category = param;
+            state.step = 'date';
+            await this.sendWizardStep(ctx, true);
+          } else {
+            await ctx.answerCallbackQuery('Invalid category selected');
+          }
+          break;
+
         case 'back':
           switch (state.step) {
             case 'category': state.step = 'title'; break;
@@ -452,17 +462,25 @@ export class RideWizard {
         break;
         
       case 'category':
-        // Use the shared list of valid categories
-        const validCategories = VALID_CATEGORIES;
+        message = '🚲 Please select the ride category:' + getCurrentValue('category');
         
-        message = '🚲 Please select the ride category:' + getCurrentValue('category') + 
-          '\n\nOptions:\n' + validCategories.map(category => `• ${category}`).join('\n') + 
-          '\n\n<i>You can type the full name or just the category (e.g., "road" for "Road Ride")</i>';
+        keyboard
+          .text('Road Ride', 'wizard:category:Road Ride')
+          .text('Gravel Ride', 'wizard:category:Gravel Ride')
+          .row()
+          .text('Mountain/Enduro/Downhill Ride', 'wizard:category:Mountain/Enduro/Downhill Ride')
+          .text('MTB-XC Ride', 'wizard:category:MTB-XC Ride')
+          .row()
+          .text('E-Bike Ride', 'wizard:category:E-Bike Ride')
+          .text('Virtual/Indoor Ride', 'wizard:category:Virtual/Indoor Ride')
+          .row()
+          .text(config.buttons.back, 'wizard:back');
         
-        keyboard.text(config.buttons.back, 'wizard:back');
         addKeepButton('category');
-        keyboard.text(config.buttons.skip, 'wizard:skip');
-        keyboard.row().text(config.buttons.cancel, 'wizard:cancel');
+        keyboard
+          .text(config.buttons.skip, 'wizard:skip')
+          .row()
+          .text(config.buttons.cancel, 'wizard:cancel');
         break;
 
       case 'date':

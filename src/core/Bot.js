@@ -70,7 +70,7 @@ export class Bot {
     this.bot.callbackQuery(/^leave:(.+)$/, ctx => this.participationHandlers.handleLeaveRide(ctx));
     this.bot.callbackQuery(/^delete:(\w+):(\w+)$/, ctx => this.deleteRideHandler.handleConfirmation(ctx));
     this.bot.callbackQuery(/^list:(\d+)$/, ctx => this.listRidesHandler.handleCallback(ctx));
-    this.bot.callbackQuery(/^wizard:(\w+)(?::(\w+))?$/, ctx => this.wizard.handleWizardAction(ctx));
+    this.bot.callbackQuery(/^wizard:(\w+)(?::(.*))?$/, ctx => this.wizard.handleWizardAction(ctx));
     
     // Wizard input handler
     this.bot.on('message:text', ctx => this.wizard.handleWizardInput(ctx));

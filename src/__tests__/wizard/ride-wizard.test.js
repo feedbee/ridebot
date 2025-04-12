@@ -236,6 +236,96 @@ describe('RideWizard', () => {
     });
   });
 
+  describe('Category Selection', () => {
+    test('should handle valid category selection', async () => {
+      await wizard.startWizard(ctx);
+      
+      // Move to category step
+      ctx.message = { text: 'Test Ride', message_id: 2 };
+      await wizard.handleWizardInput(ctx);
+      
+      // Select a valid category
+      ctx.match = ['wizard:category:Road Ride', 'category', 'Road Ride'];
+      await wizard.handleWizardAction(ctx);
+      
+      // Verify category was set and moved to next step
+      const stateKey = wizard.getWizardStateKey(ctx.from.id, ctx.chat.id);
+      const state = wizard.wizardStates.get(stateKey);
+      expect(state.data.category).toBe('Road Ride');
+      expect(state.step).toBe('date');
+      
+      // Verify message was updated
+      const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
+      expect(lastMessage.text).toContain('When is the ride?');
+    });
+
+    test('should handle invalid category selection', async () => {
+      await wizard.startWizard(ctx);
+      
+      // Move to category step
+      ctx.message = { text: 'Test Ride', message_id: 2 };
+      await wizard.handleWizardInput(ctx);
+      
+      // Try to select an invalid category
+      ctx.match = ['wizard:category:Invalid Category', 'category', 'Invalid Category'];
+      await wizard.handleWizardAction(ctx);
+      
+      // Verify error message was shown
+      expect(ctx._test.callbackAnswers[0]).toBe('Invalid category selected');
+      
+      // Verify state remains unchanged
+      const stateKey = wizard.getWizardStateKey(ctx.from.id, ctx.chat.id);
+      const state = wizard.wizardStates.get(stateKey);
+      expect(state.data.category).toBeUndefined();
+      expect(state.step).toBe('category');
+    });
+
+    test('should handle category selection with keep button', async () => {
+      await wizard.startWizard(ctx);
+      
+      // Move to category step
+      ctx.message = { text: 'Test Ride', message_id: 2 };
+      await wizard.handleWizardInput(ctx);
+      
+      // Select a valid category
+      ctx.match = ['wizard:category:Road Ride', 'category', 'Road Ride'];
+      await wizard.handleWizardAction(ctx);
+      
+      // Go back to category step
+      ctx.match = ['wizard:back', 'back'];
+      await wizard.handleWizardAction(ctx);
+      
+      // Verify keep button is shown
+      const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
+      expect(lastMessage.text).toContain('Please select the ride category');
+      
+      // Verify keyboard layout
+      const keyboard = lastMessage.reply_markup.inline_keyboard;
+      expect(keyboard).toHaveLength(5); // 5 rows of buttons
+      expect(keyboard[3]).toContainEqual(
+        expect.objectContaining({ text: '↩️ Keep current', callback_data: 'wizard:keep' })
+      );
+    });
+
+    test('should handle category selection with skip button', async () => {
+      await wizard.startWizard(ctx);
+      
+      // Move to category step
+      ctx.message = { text: 'Test Ride', message_id: 2 };
+      await wizard.handleWizardInput(ctx);
+      
+      // Skip category selection
+      ctx.match = ['wizard:skip', 'skip'];
+      await wizard.handleWizardAction(ctx);
+      
+      // Verify moved to next step without category
+      const stateKey = wizard.getWizardStateKey(ctx.from.id, ctx.chat.id);
+      const state = wizard.wizardStates.get(stateKey);
+      expect(state.data.category).toBeUndefined();
+      expect(state.step).toBe('date');
+    });
+  });
+
   describe('Input Handling', () => {
     test('should handle additional info input', async () => {
       await wizard.startWizard(ctx);
