@@ -498,7 +498,7 @@ weather: sunny`;
         when: 'tomorrow 9am',
         route: 'https://example.com/route',
         dist: '75',
-        duration: '210'
+        duration: '3h 30m'
       };
       
       // Mock date parser
@@ -518,7 +518,7 @@ weather: sunny`;
       
       expect(result.error).toBeNull();
       expect(result.ride.distance).toBe(75); // From params, not from route parser
-      expect(result.ride.duration).toBe(210); // From params, not from route parser
+      expect(result.ride.duration).toBe(210); // From params (3h 30m = 210 minutes), not from route parser
     });
   });
 

@@ -2,6 +2,7 @@ import { RouteParser } from '../utils/route-parser.js';
 import { parseDateTimeInput } from '../utils/date-input-parser.js';
 import { MessageFormatter } from '../formatters/MessageFormatter.js';
 import { normalizeCategory, DEFAULT_CATEGORY } from '../utils/category-utils.js';
+import { parseDuration } from '../utils/duration-parser.js';
 
 /**
  * Service class for managing rides and their messages
@@ -251,7 +252,11 @@ export class RideService {
       }
 
       if (params.duration) {
-        rideData.duration = parseInt(params.duration);
+        const result = parseDuration(params.duration);
+        if (result.error) {
+          return { ride: null, error: result.error };
+        }
+        rideData.duration = result.duration;
       }
 
       if (params.speed) {
@@ -350,7 +355,11 @@ export class RideService {
         if (params.duration === '-') {
           updates.duration = null;
         } else {
-          updates.duration = parseInt(params.duration);
+          const result = parseDuration(params.duration);
+          if (result.error) {
+            return { ride: null, error: result.error };
+          }
+          updates.duration = result.duration;
         }
       }
       

@@ -7,6 +7,7 @@ import { escapeHtml } from '../utils/html-escape.js';
 import { MessageFormatter } from '../formatters/MessageFormatter.js';
 import { RideService } from '../services/RideService.js';
 import { checkBotAdminPermissions } from '../utils/permission-checker.js';
+import { parseDuration } from '../utils/duration-parser.js';
 
 export class RideWizard {
   constructor(storage) {
@@ -348,14 +349,14 @@ export class RideWizard {
             state.data.duration = null;
             state.step = 'speed';
           } else {
-            const duration = parseInt(ctx.message.text);
-            if (isNaN(duration)) {
+            const result = parseDuration(ctx.message.text);
+            if (result.error) {
               shouldProceed = false;
-              const errorMsg = await ctx.reply('Please enter a valid number for duration, or use a dash (-) to clear the field.');
+              const errorMsg = await ctx.reply(result.error);
               state.errorMessageIds.push(errorMsg.message_id);
               return;
             }
-            state.data.duration = duration;
+            state.data.duration = result.duration;
             state.step = 'speed';
           }
           break;
@@ -507,7 +508,7 @@ export class RideWizard {
           const minutes = mins % 60;
           return `${hours}h ${minutes}m`;
         };
-        message = '⏱ Please enter the duration in minutes (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>' + 
+        message = '⏱ Please enter the duration (e.g., "2h 30m", "90m", "1.5h"):\n<i>Enter a dash (-) to clear/skip this field</i>' + 
           getCurrentValue('duration', durationFormatter);
         keyboard
           .text(config.buttons.back, 'wizard:back');

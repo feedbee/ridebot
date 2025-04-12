@@ -112,7 +112,7 @@ category: One of: "Regular/Mixed Ride" (default), "Road Ride", "Gravel Ride", "M
 meet: Meeting point (optional)
 route: Route link (optional)
 dist: Distance in km (optional)
-duration: Duration in minutes (optional)
+duration: Duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
 speed: Speed range in km/h (optional)
 info: Additional information (optional)
 </pre>
@@ -126,7 +126,7 @@ category: Road Ride
 meet: Bike Shop on Main St
 route: https://www.strava.com/routes/123456
 dist: 35
-duration: 90
+duration: 2h 30m
 speed: 25-28
 info: Bring lights and a rain jacket
 </pre>
@@ -147,7 +147,7 @@ when: New date/time (optional)
 meet: New meeting point (optional)
 route: New route link (optional)
 dist: New distance (optional)
-duration: New duration (optional)
+duration: New duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
 speed: New speed range (optional)
 info: Additional information (optional)
 </pre>
@@ -198,7 +198,7 @@ category: One of: "Regular/Mixed Ride" (default), "Road Ride", "Gravel Ride", "M
 meet: New meeting point (optional)
 route: New route link (optional)
 dist: New distance (optional)
-duration: New duration (optional)
+duration: New duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
 speed: New speed range (optional)
 info: Additional information (optional)
 </pre>
