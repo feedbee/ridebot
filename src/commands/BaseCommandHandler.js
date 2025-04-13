@@ -20,12 +20,21 @@ export class BaseCommandHandler {
   }
 
   /**
+   * Validate if user is the creator of a ride
+   * @param {Object} ride - Ride object
+   * @param {number} userId - User ID
+   * @returns {boolean} - True if user is creator
+   */
+  isRideCreator(ride, userId) {
+    return ride.createdBy === userId;
+  }
+
+  /**
    * Extract and validate ride
    * @param {import('grammy').Context} ctx - Grammy context
-   * @param {boolean} requireCreator - Whether the command requires ride creator permissions
    * @returns {Promise<{ride: Object|null, error: string|null}>}
    */
-  async extractRide(ctx, requireCreator = false) {
+  async extractRide(ctx) {
     const { rideId, error } = this.rideService.extractRideId(ctx.message);
     
     if (error) {
@@ -36,10 +45,6 @@ export class BaseCommandHandler {
       const ride = await this.rideService.getRide(rideId);
       if (!ride) {
         return { ride: null, error: `Ride #${rideId} not found` };
-      }
-
-      if (requireCreator && !this.rideService.isRideCreator(ride, ctx.from.id)) {
-        return { ride: null, error: 'Only the ride creator can perform this action' };
       }
 
       return { ride, error: null };

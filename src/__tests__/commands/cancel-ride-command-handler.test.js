@@ -55,7 +55,7 @@ describe('CancelRideCommandHandler', () => {
       await cancelRideCommandHandler.handle(mockCtx);
       
       // Verify
-      expect(cancelRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx, true);
+      expect(cancelRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx);
       expect(mockCtx.reply).toHaveBeenCalledWith('No ride ID found');
       expect(mockRideService.cancelRide).not.toHaveBeenCalled();
     });
@@ -68,11 +68,15 @@ describe('CancelRideCommandHandler', () => {
         error: null 
       });
       
+      // Mock isRideCreator to return true
+      jest.spyOn(cancelRideCommandHandler, 'isRideCreator').mockReturnValue(true);
+      
       // Execute
       await cancelRideCommandHandler.handle(mockCtx);
       
       // Verify
-      expect(cancelRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx, true);
+      expect(cancelRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx);
+      expect(cancelRideCommandHandler.isRideCreator).toHaveBeenCalledWith(mockRide, mockCtx.from.id);
       expect(mockCtx.reply).toHaveBeenCalledWith('This ride is already cancelled.');
       expect(mockRideService.cancelRide).not.toHaveBeenCalled();
     });
@@ -87,7 +91,9 @@ describe('CancelRideCommandHandler', () => {
         error: null 
       });
       
-      mockRideService.isRideCreator.mockReturnValue(true);
+      // Mock isRideCreator
+      jest.spyOn(cancelRideCommandHandler, 'isRideCreator').mockReturnValue(true);
+      
       mockRideService.cancelRide.mockResolvedValue(updatedRide);
       
       // Mock the updateRideMessage method
@@ -101,10 +107,32 @@ describe('CancelRideCommandHandler', () => {
       await cancelRideCommandHandler.handle(mockCtx);
       
       // Verify
-      expect(cancelRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx, true);
+      expect(cancelRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx);
+      expect(cancelRideCommandHandler.isRideCreator).toHaveBeenCalledWith(mockRide, mockCtx.from.id);
       expect(mockRideService.cancelRide).toHaveBeenCalledWith('456', mockCtx.from.id);
       expect(cancelRideCommandHandler.updateRideMessage).toHaveBeenCalledWith(updatedRide, mockCtx);
       expect(mockCtx.reply).toHaveBeenCalledWith('Ride cancelled successfully. Updated 1 message(s).');
+    });
+
+    it('should handle unauthorized user', async () => {
+      // Setup
+      const mockRide = { id: '456', cancelled: false };
+      cancelRideCommandHandler.extractRide.mockResolvedValue({ 
+        ride: mockRide, 
+        error: null 
+      });
+      
+      // Mock isRideCreator to return false
+      jest.spyOn(cancelRideCommandHandler, 'isRideCreator').mockReturnValue(false);
+      
+      // Execute
+      await cancelRideCommandHandler.handle(mockCtx);
+      
+      // Verify
+      expect(cancelRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx);
+      expect(cancelRideCommandHandler.isRideCreator).toHaveBeenCalledWith(mockRide, mockCtx.from.id);
+      expect(mockCtx.reply).toHaveBeenCalledWith('Only the ride creator can cancel this ride.');
+      expect(mockRideService.cancelRide).not.toHaveBeenCalled();
     });
   });
   

@@ -14,8 +14,7 @@ describe('BaseCommandHandler', () => {
     // Create mock RideService
     mockRideService = {
       extractRideId: jest.fn(),
-      getRide: jest.fn(),
-      isRideCreator: jest.fn()
+      getRide: jest.fn()
     };
     
     // Create mock MessageFormatter
@@ -57,7 +56,7 @@ describe('BaseCommandHandler', () => {
     
     it('should return error when ride is not found', async () => {
       // Setup
-      const mockCtx = { message: { text: 'some text' } };
+      const mockCtx = { message: { text: 'some text' }, from: { id: 789 } };
       mockRideService.extractRideId.mockReturnValue({ rideId: '123', error: null });
       mockRideService.getRide.mockResolvedValue(null);
       
@@ -70,10 +69,10 @@ describe('BaseCommandHandler', () => {
       expect(mockRideService.getRide).toHaveBeenCalledWith('123');
     });
     
-    it('should return ride when found and creator check is not required', async () => {
+    it('should return ride when found', async () => {
       // Setup
-      const mockCtx = { message: { text: 'some text' } };
-      const mockRide = { id: '123', title: 'Test Ride' };
+      const mockCtx = { message: { text: 'some text' }, from: { id: 456 } };
+      const mockRide = { id: '123', title: 'Test Ride', createdBy: 456 };
       mockRideService.extractRideId.mockReturnValue({ rideId: '123', error: null });
       mockRideService.getRide.mockResolvedValue(mockRide);
       
@@ -84,43 +83,6 @@ describe('BaseCommandHandler', () => {
       expect(result).toEqual({ ride: mockRide, error: null });
       expect(mockRideService.extractRideId).toHaveBeenCalledWith(mockCtx.message);
       expect(mockRideService.getRide).toHaveBeenCalledWith('123');
-      expect(mockRideService.isRideCreator).not.toHaveBeenCalled();
-    });
-    
-    it('should return ride when found and user is the creator', async () => {
-      // Setup
-      const mockCtx = { message: { text: 'some text' }, from: { id: 456 } };
-      const mockRide = { id: '123', title: 'Test Ride', createdBy: 456 };
-      mockRideService.extractRideId.mockReturnValue({ rideId: '123', error: null });
-      mockRideService.getRide.mockResolvedValue(mockRide);
-      mockRideService.isRideCreator.mockReturnValue(true);
-      
-      // Execute
-      const result = await baseCommandHandler.extractRide(mockCtx, true);
-      
-      // Verify
-      expect(result).toEqual({ ride: mockRide, error: null });
-      expect(mockRideService.extractRideId).toHaveBeenCalledWith(mockCtx.message);
-      expect(mockRideService.getRide).toHaveBeenCalledWith('123');
-      expect(mockRideService.isRideCreator).toHaveBeenCalledWith(mockRide, 456);
-    });
-    
-    it('should return error when creator check is required but user is not the creator', async () => {
-      // Setup
-      const mockCtx = { message: { text: 'some text' }, from: { id: 789 } };
-      const mockRide = { id: '123', title: 'Test Ride', createdBy: 456 };
-      mockRideService.extractRideId.mockReturnValue({ rideId: '123', error: null });
-      mockRideService.getRide.mockResolvedValue(mockRide);
-      mockRideService.isRideCreator.mockReturnValue(false);
-      
-      // Execute
-      const result = await baseCommandHandler.extractRide(mockCtx, true);
-      
-      // Verify
-      expect(result).toEqual({ ride: null, error: 'Only the ride creator can perform this action' });
-      expect(mockRideService.extractRideId).toHaveBeenCalledWith(mockCtx.message);
-      expect(mockRideService.getRide).toHaveBeenCalledWith('123');
-      expect(mockRideService.isRideCreator).toHaveBeenCalledWith(mockRide, 789);
     });
     
     it('should handle errors during ride retrieval', async () => {
@@ -146,6 +108,18 @@ describe('BaseCommandHandler', () => {
         // Restore console.error
         console.error = originalConsoleError;
       }
+    });
+  });
+  
+  describe('isRideCreator', () => {
+    it('should return true when user is the creator of a ride', () => {
+      const ride = { id: 'abc123', createdBy: 456 };
+      expect(baseCommandHandler.isRideCreator(ride, 456)).toBe(true);
+    });
+    
+    it('should return false when user is not the creator of a ride', () => {
+      const ride = { id: 'abc123', createdBy: 456 };
+      expect(baseCommandHandler.isRideCreator(ride, 789)).toBe(false);
     });
   });
 });

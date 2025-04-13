@@ -85,49 +85,76 @@ describe('UpdateRideCommandHandler', () => {
       await updateRideCommandHandler.handle(mockCtx);
       
       // Verify
-      expect(updateRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx, true);
+      expect(updateRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx);
       expect(mockCtx.reply).toHaveBeenCalledWith('Ride #123 not found');
       expect(mockWizard.startWizard).not.toHaveBeenCalled();
     });
     
-    it('should start wizard with prefilled data when no parameters are provided', async () => {
+    it('should handle unauthorized user', async () => {
       // Setup
-      const mockRide = {
-        id: '123',
-        title: 'Test Ride',
-        category: 'Regular/Mixed Ride',
-        date: new Date('2025-03-30T10:00:00Z'),
-        meetingPoint: 'Test Location',
-        routeLink: 'https://example.com/route',
-        distance: 50,
-        duration: 180,
-        speedMin: 25,
-        speedMax: 30
-      };
-      
-      updateRideCommandHandler.extractRide.mockResolvedValue({
-        ride: mockRide,
-        error: null
+      const mockRide = { id: '456', cancelled: false };
+      updateRideCommandHandler.extractRide.mockResolvedValue({ 
+        ride: mockRide, 
+        error: null 
       });
+      
+      // Mock isRideCreator to return false
+      jest.spyOn(updateRideCommandHandler, 'isRideCreator').mockReturnValue(false);
       
       // Execute
       await updateRideCommandHandler.handle(mockCtx);
       
       // Verify
-      expect(updateRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx, true);
-      expect(mockWizard.startWizard).toHaveBeenCalledWith(mockCtx, {
-        isUpdate: true,
-        originalRideId: '123',
+      expect(updateRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx);
+      expect(updateRideCommandHandler.isRideCreator).toHaveBeenCalledWith(mockRide, mockCtx.from.id);
+      expect(mockCtx.reply).toHaveBeenCalledWith('Only the ride creator can update this ride.');
+      expect(mockWizard.startWizard).not.toHaveBeenCalled();
+    });
+    
+    it('should start wizard when no parameters are provided and user is authorized', async () => {
+      // Setup
+      const mockRide = { 
+        id: '456', 
         title: 'Test Ride',
-        category: 'Regular/Mixed Ride',
-        datetime: mockRide.date,
-        meetingPoint: 'Test Location',
-        routeLink: 'https://example.com/route',
+        category: 'Road',
+        date: new Date(),
+        meetingPoint: 'Test Point',
+        routeLink: 'http://test.com',
         distance: 50,
-        duration: 180,
+        duration: 120,
         speedMin: 25,
         speedMax: 30
+      };
+      updateRideCommandHandler.extractRide.mockResolvedValue({ 
+        ride: mockRide, 
+        error: null 
       });
+      
+      // Mock isRideCreator to return true
+      jest.spyOn(updateRideCommandHandler, 'isRideCreator').mockReturnValue(true);
+      
+      // Execute
+      await updateRideCommandHandler.handle(mockCtx);
+      
+      // Verify
+      expect(updateRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx);
+      expect(updateRideCommandHandler.isRideCreator).toHaveBeenCalledWith(mockRide, mockCtx.from.id);
+      expect(mockWizard.startWizard).toHaveBeenCalledWith(
+        mockCtx,
+        expect.objectContaining({
+          isUpdate: true,
+          originalRideId: mockRide.id,
+          title: mockRide.title,
+          category: mockRide.category,
+          datetime: mockRide.date,
+          meetingPoint: mockRide.meetingPoint,
+          routeLink: mockRide.routeLink,
+          distance: mockRide.distance,
+          duration: mockRide.duration,
+          speedMin: mockRide.speedMin,
+          speedMax: mockRide.speedMax
+        })
+      );
     });
     
     it('should handle update with parameters', async () => {
@@ -152,6 +179,9 @@ describe('UpdateRideCommandHandler', () => {
         error: null
       });
       
+      // Mock isRideCreator to return true
+      jest.spyOn(updateRideCommandHandler, 'isRideCreator').mockReturnValue(true);
+      
       mockRideService.parseRideParams.mockReturnValue({
         params: {
           title: 'Updated Ride',
@@ -167,7 +197,8 @@ describe('UpdateRideCommandHandler', () => {
       await updateRideCommandHandler.handle(mockCtx);
       
       // Verify
-      expect(updateRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx, true);
+      expect(updateRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx);
+      expect(updateRideCommandHandler.isRideCreator).toHaveBeenCalledWith(mockRide, mockCtx.from.id);
       expect(mockRideService.parseRideParams).toHaveBeenCalledWith(mockCtx.message.text);
       expect(updateRideCommandHandler.handleWithParams).toHaveBeenCalledWith(
         mockCtx,

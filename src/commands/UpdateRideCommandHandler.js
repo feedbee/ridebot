@@ -20,10 +20,15 @@ export class UpdateRideCommandHandler extends BaseCommandHandler {
    * @param {import('grammy').Context} ctx - Grammy context
    */
   async handle(ctx) {
-    // Extract ride and validate creator
-    const { ride, error } = await this.extractRide(ctx, true);
+    const { ride, error } = await this.extractRide(ctx);
     if (error) {
       await ctx.reply(error);
+      return;
+    }
+
+    // Check if user is the creator
+    if (!this.isRideCreator(ride, ctx.from.id)) {
+      await ctx.reply('Only the ride creator can update this ride.');
       return;
     }
 

@@ -449,16 +449,6 @@ export class RideService {
   }
 
   /**
-   * Validate if user is the creator of a ride
-   * @param {Object} ride - Ride object
-   * @param {number} userId - User ID
-   * @returns {boolean} - True if user is creator
-   */
-  isRideCreator(ride, userId) {
-    return ride.createdBy === userId;
-  }
-
-  /**
    * Create and store a ride message in a chat
    * @param {Object} ride - Ride object
    * @param {import('grammy').Context} ctx - Grammy context

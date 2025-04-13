@@ -11,10 +11,14 @@ export class DeleteRideCommandHandler extends BaseCommandHandler {
    * @param {import('grammy').Context} ctx - Grammy context
    */
   async handle(ctx) {
-    // Extract ride and validate creator
-    const { ride, error } = await this.extractRide(ctx, true);
+    const { ride, error } = await this.extractRide(ctx);
     if (error) {
       await ctx.reply(error);
+      return;
+    }
+    
+    if (!this.isRideCreator(ride, ctx.from.id)) {
+      await ctx.reply('Only the ride creator can delete this ride.');
       return;
     }
 
@@ -50,8 +54,8 @@ export class DeleteRideCommandHandler extends BaseCommandHandler {
       return;
     }
     
-    if (!this.rideService.isRideCreator(ride, ctx.from.id)) {
-      await ctx.answerCallbackQuery('Only the ride creator can delete this ride');
+    if (!this.isRideCreator(ride, ctx.from.id)) {
+      await ctx.answerCallbackQuery('Only the ride creator can delete this ride.');
       return;
     }
     

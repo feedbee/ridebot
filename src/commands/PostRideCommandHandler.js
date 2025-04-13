@@ -26,7 +26,7 @@ export class PostRideCommandHandler extends BaseCommandHandler {
       }
 
       // Only allow the ride creator to repost
-      if (!this.rideService.isRideCreator(ride, ctx.from.id)) {
+      if (!this.isRideCreator(ride, ctx.from.id)) {
         await ctx.reply('Only the ride creator can repost this ride.');
         return;
       }

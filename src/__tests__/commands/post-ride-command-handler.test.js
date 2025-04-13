@@ -27,7 +27,6 @@ describe('PostRideCommandHandler', () => {
     // Create mock RideService
     mockRideService = {
       getRide: jest.fn(),
-      isRideCreator: jest.fn(),
       updateRide: jest.fn(),
       extractRideId: jest.fn()
     };
@@ -96,22 +95,26 @@ describe('PostRideCommandHandler', () => {
     it('should handle unauthorized user', async () => {
       // Setup
       mockRideService.extractRideId.mockReturnValue({ rideId: '123', error: null });
-      mockRideService.getRide.mockResolvedValue({ id: '123' });
-      mockRideService.isRideCreator.mockReturnValue(false);
+      mockRideService.getRide.mockResolvedValue({ id: '123', createdBy: 456 });
+      
+      // Spy on isRideCreator - return false for unauthorized user
+      jest.spyOn(postRideCommandHandler, 'isRideCreator').mockReturnValue(false);
       
       // Execute
       await postRideCommandHandler.handle(mockCtx);
       
       // Verify
-      expect(mockRideService.isRideCreator).toHaveBeenCalledWith({ id: '123' }, 789);
+      expect(postRideCommandHandler.isRideCreator).toHaveBeenCalledWith({ id: '123', createdBy: 456 }, 789);
       expect(mockCtx.reply).toHaveBeenCalledWith('Only the ride creator can repost this ride.');
     });
     
     it('should handle cancelled ride', async () => {
       // Setup
       mockRideService.extractRideId.mockReturnValue({ rideId: '123', error: null });
-      mockRideService.getRide.mockResolvedValue({ id: '123', cancelled: true });
-      mockRideService.isRideCreator.mockReturnValue(true);
+      mockRideService.getRide.mockResolvedValue({ id: '123', cancelled: true, createdBy: 789 });
+      
+      // Spy on isRideCreator - return true for creator
+      jest.spyOn(postRideCommandHandler, 'isRideCreator').mockReturnValue(true);
       
       // Execute
       await postRideCommandHandler.handle(mockCtx);
@@ -126,9 +129,12 @@ describe('PostRideCommandHandler', () => {
       mockRideService.getRide.mockResolvedValue({ 
         id: '123', 
         cancelled: false,
+        createdBy: 789,
         messages: [{ chatId: 101112, messageId: 999 }]
       });
-      mockRideService.isRideCreator.mockReturnValue(true);
+      
+      // Spy on isRideCreator - return true for creator
+      jest.spyOn(postRideCommandHandler, 'isRideCreator').mockReturnValue(true);
       
       // Execute
       await postRideCommandHandler.handle(mockCtx);
@@ -145,9 +151,13 @@ describe('PostRideCommandHandler', () => {
       mockRideService.getRide.mockResolvedValue({ 
         id: '123', 
         cancelled: false,
+        createdBy: 789,
         messages: [{ chatId: 222222, messageId: 999 }]
       });
-      mockRideService.isRideCreator.mockReturnValue(true);
+      
+      // Spy on isRideCreator - return true for creator
+      jest.spyOn(postRideCommandHandler, 'isRideCreator').mockReturnValue(true);
+      
       postRideCommandHandler.postRideToChat.mockResolvedValue({ success: true, error: null });
       
       // Execute
@@ -155,7 +165,7 @@ describe('PostRideCommandHandler', () => {
       
       // Verify
       expect(postRideCommandHandler.postRideToChat).toHaveBeenCalledWith(
-        { id: '123', cancelled: false, messages: [{ chatId: 222222, messageId: 999 }] },
+        { id: '123', cancelled: false, createdBy: 789, messages: [{ chatId: 222222, messageId: 999 }] },
         101112,
         mockCtx
       );
@@ -169,9 +179,13 @@ describe('PostRideCommandHandler', () => {
       mockRideService.getRide.mockResolvedValue({ 
         id: '123', 
         cancelled: false,
+        createdBy: 789,
         messages: []
       });
-      mockRideService.isRideCreator.mockReturnValue(true);
+      
+      // Spy on isRideCreator - return true for creator
+      jest.spyOn(postRideCommandHandler, 'isRideCreator').mockReturnValue(true);
+      
       postRideCommandHandler.postRideToChat.mockResolvedValue({ 
         success: false, 
         error: 'The bot is not a member of this chat or was blocked.' 

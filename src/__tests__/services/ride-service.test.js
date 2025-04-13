@@ -866,16 +866,4 @@ weather: sunny`;
       expect(result.error).toContain('Could not find ride ID in the message');
     });
   });
-
-  describe('Ride Creator Validation', () => {
-    it('should validate if user is the creator of a ride', () => {
-      const ride = {
-        id: 'abc123',
-        createdBy: 789
-      };
-      
-      expect(rideService.isRideCreator(ride, 789)).toBe(true);
-      expect(rideService.isRideCreator(ride, 456)).toBe(false);
-    });
-  });
 });

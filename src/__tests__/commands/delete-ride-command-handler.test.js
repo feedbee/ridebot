@@ -27,7 +27,6 @@ describe('DeleteRideCommandHandler', () => {
     mockRideService = {
       extractRideId: jest.fn(),
       getRide: jest.fn(),
-      isRideCreator: jest.fn(),
       deleteRide: jest.fn()
     };
     
@@ -62,7 +61,7 @@ describe('DeleteRideCommandHandler', () => {
       await deleteRideCommandHandler.handle(mockCtx);
       
       // Verify
-      expect(deleteRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx, true);
+      expect(deleteRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx);
       expect(mockCtx.reply).toHaveBeenCalledWith('No ride ID found');
       expect(mockMessageFormatter.formatDeleteConfirmation).not.toHaveBeenCalled();
     });
@@ -75,11 +74,15 @@ describe('DeleteRideCommandHandler', () => {
         error: null 
       });
       
+      // Mock isRideCreator to return true
+      jest.spyOn(deleteRideCommandHandler, 'isRideCreator').mockReturnValue(true);
+      
       // Execute
       await deleteRideCommandHandler.handle(mockCtx);
       
       // Verify
-      expect(deleteRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx, true);
+      expect(deleteRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx);
+      expect(deleteRideCommandHandler.isRideCreator).toHaveBeenCalledWith(mockRide, mockCtx.from.id);
       expect(mockMessageFormatter.formatDeleteConfirmation).toHaveBeenCalled();
       expect(mockCtx.reply).toHaveBeenCalledWith(
         'Are you sure you want to delete this ride?',
@@ -136,15 +139,17 @@ describe('DeleteRideCommandHandler', () => {
       // Setup
       const mockRide = { id: '456' };
       mockRideService.getRide.mockResolvedValue(mockRide);
-      mockRideService.isRideCreator.mockReturnValue(false);
+      
+      // Mock isRideCreator to return false
+      jest.spyOn(deleteRideCommandHandler, 'isRideCreator').mockReturnValue(false);
       
       // Execute
       await deleteRideCommandHandler.handleConfirmation(mockCtx);
       
       // Verify
       expect(mockRideService.getRide).toHaveBeenCalledWith('456');
-      expect(mockRideService.isRideCreator).toHaveBeenCalledWith(mockRide, 123);
-      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('Only the ride creator can delete this ride');
+      expect(deleteRideCommandHandler.isRideCreator).toHaveBeenCalledWith(mockRide, mockCtx.from.id);
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('Only the ride creator can delete this ride.');
       expect(mockRideService.deleteRide).not.toHaveBeenCalled();
     });
     
@@ -152,7 +157,10 @@ describe('DeleteRideCommandHandler', () => {
       // Setup
       const mockRide = { id: '456' };
       mockRideService.getRide.mockResolvedValue(mockRide);
-      mockRideService.isRideCreator.mockReturnValue(true);
+      
+      // Mock isRideCreator
+      jest.spyOn(deleteRideCommandHandler, 'isRideCreator').mockReturnValue(true);
+      
       mockRideService.deleteRide.mockResolvedValue(true);
       
       // Execute
@@ -160,7 +168,7 @@ describe('DeleteRideCommandHandler', () => {
       
       // Verify
       expect(mockRideService.getRide).toHaveBeenCalledWith('456');
-      expect(mockRideService.isRideCreator).toHaveBeenCalledWith(mockRide, 123);
+      expect(deleteRideCommandHandler.isRideCreator).toHaveBeenCalledWith(mockRide, mockCtx.from.id);
       expect(mockRideService.deleteRide).toHaveBeenCalledWith('456');
       expect(mockCtx.editMessageText).toHaveBeenCalledWith('Ride deleted successfully.');
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('Ride deleted successfully');
@@ -171,7 +179,10 @@ describe('DeleteRideCommandHandler', () => {
       // Setup
       const mockRide = { id: '456', messages: [{ messageId: 789, chatId: 101112 }] };
       mockRideService.getRide.mockResolvedValue(mockRide);
-      mockRideService.isRideCreator.mockReturnValue(true);
+      
+      // Mock isRideCreator
+      jest.spyOn(deleteRideCommandHandler, 'isRideCreator').mockReturnValue(true);
+      
       mockRideService.deleteRide.mockResolvedValue(true);
       
       // Execute
@@ -179,7 +190,7 @@ describe('DeleteRideCommandHandler', () => {
       
       // Verify
       expect(mockRideService.getRide).toHaveBeenCalledWith('456');
-      expect(mockRideService.isRideCreator).toHaveBeenCalledWith(mockRide, 123);
+      expect(deleteRideCommandHandler.isRideCreator).toHaveBeenCalledWith(mockRide, mockCtx.from.id);
       expect(mockRideService.deleteRide).toHaveBeenCalledWith('456');
       expect(mockCtx.editMessageText).toHaveBeenCalledWith('Ride deleted successfully.');
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('Ride deleted successfully');
@@ -190,7 +201,10 @@ describe('DeleteRideCommandHandler', () => {
       // Setup
       const mockRide = { id: '456', messages: [{ messageId: 789, chatId: 101112 }] };
       mockRideService.getRide.mockResolvedValue(mockRide);
-      mockRideService.isRideCreator.mockReturnValue(true);
+      
+      // Mock isRideCreator
+      jest.spyOn(deleteRideCommandHandler, 'isRideCreator').mockReturnValue(true);
+      
       mockRideService.deleteRide.mockResolvedValue(true);
       mockCtx.api.deleteMessage.mockRejectedValue(new Error('API error'));
       
@@ -204,7 +218,7 @@ describe('DeleteRideCommandHandler', () => {
         
         // Verify
         expect(mockRideService.getRide).toHaveBeenCalledWith('456');
-        expect(mockRideService.isRideCreator).toHaveBeenCalledWith(mockRide, 123);
+        expect(deleteRideCommandHandler.isRideCreator).toHaveBeenCalledWith(mockRide, mockCtx.from.id);
         expect(mockRideService.deleteRide).toHaveBeenCalledWith('456');
         expect(mockCtx.editMessageText).toHaveBeenCalledWith('Ride deleted successfully.');
         expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('Ride deleted successfully');
@@ -220,7 +234,10 @@ describe('DeleteRideCommandHandler', () => {
       // Setup
       const mockRide = { id: '456' };
       mockRideService.getRide.mockResolvedValue(mockRide);
-      mockRideService.isRideCreator.mockReturnValue(true);
+      
+      // Mock isRideCreator
+      jest.spyOn(deleteRideCommandHandler, 'isRideCreator').mockReturnValue(true);
+      
       mockRideService.deleteRide.mockResolvedValue(false);
       
       // Execute
@@ -228,7 +245,7 @@ describe('DeleteRideCommandHandler', () => {
       
       // Verify
       expect(mockRideService.getRide).toHaveBeenCalledWith('456');
-      expect(mockRideService.isRideCreator).toHaveBeenCalledWith(mockRide, 123);
+      expect(deleteRideCommandHandler.isRideCreator).toHaveBeenCalledWith(mockRide, mockCtx.from.id);
       expect(mockRideService.deleteRide).toHaveBeenCalledWith('456');
       expect(mockCtx.editMessageText).toHaveBeenCalledWith('Failed to delete ride.');
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('Failed to delete ride');

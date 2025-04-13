@@ -9,20 +9,20 @@ export class ResumeRideCommandHandler extends BaseCommandHandler {
    * @param {import('grammy').Context} ctx - Grammy context
    */
   async handle(ctx) {
-    // Extract ride and validate creator
-    const { ride, error } = await this.extractRide(ctx, true);
+    const { ride, error } = await this.extractRide(ctx);
     if (error) {
       await ctx.reply(error);
       return;
     }
 
-    if (!ride.cancelled) {
-      await ctx.reply('This ride is not cancelled.');
+    // Check if user is the creator
+    if (!this.isRideCreator(ride, ctx.from.id)) {
+      await ctx.reply('Only the ride creator can resume this ride.');
       return;
     }
 
-    if (!this.rideService.isRideCreator(ride, ctx.from.id)) {
-      await ctx.reply('Only the ride creator can resume this ride');
+    if (!ride.cancelled) {
+      await ctx.reply('This ride is not cancelled.');
       return;
     }
 
