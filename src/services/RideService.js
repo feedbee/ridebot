@@ -187,15 +187,6 @@ export class RideService {
   }
 
   /**
-   * Parse date and time input
-   * @param {string} input - Date/time input
-   * @returns {Object} - Parsed date or error
-   */
-  parseDateTimeInput(input) {
-    return parseDateTimeInput(input);
-  }
-
-  /**
    * Create a ride from parameters
    * @param {Object} params - Ride parameters
    * @param {number} chatId - Chat ID
@@ -211,7 +202,7 @@ export class RideService {
     }
 
     try {
-      const result = this.parseDateTimeInput(params.when);
+      const result = parseDateTimeInput(params.when);
       if (!result.date) {
         return { ride: null, error: result.error };
       }
@@ -302,7 +293,7 @@ export class RideService {
       }
       
       if (params.when) {
-        const result = this.parseDateTimeInput(params.when);
+        const result = parseDateTimeInput(params.when);
         if (!result.date) {
           return { ride: null, error: result.error };
         }

@@ -1,4 +1,5 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
+import { parseDateTimeInput } from '../utils/date-input-parser.js';
 
 /**
  * Handler for the dupride command
@@ -75,7 +76,7 @@ export class DuplicateRideCommandHandler extends BaseCommandHandler {
 
       // Handle date - default to tomorrow if not provided
       if (params.when) {
-        const result = this.rideService.parseDateTimeInput(params.when);
+        const result = parseDateTimeInput(params.when);
         if (!result.date) {
           await ctx.reply(result.error);
           return;

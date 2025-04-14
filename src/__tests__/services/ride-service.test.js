@@ -453,15 +453,9 @@ weather: sunny`;
         when: 'not a valid date'
       };
       
-      // Mock the date parser to return an error
-      jest.spyOn(rideService, 'parseDateTimeInput').mockReturnValueOnce({
-        date: null,
-        error: 'Invalid date format'
-      });
-      
       const result = await rideService.createRideFromParams(params, 123456, 789);
       
-      expect(result.error).toBe('Invalid date format');
+      expect(result.error).toBe('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30');
       expect(result.ride).toBeNull();
     });
 
@@ -471,12 +465,6 @@ weather: sunny`;
         when: 'tomorrow 9am',
         route: 'https://example.com/route'
       };
-      
-      // Mock date parser
-      jest.spyOn(rideService, 'parseDateTimeInput').mockReturnValueOnce({
-        date: new Date('2024-03-15T09:00:00Z'),
-        error: null
-      });
       
       // Mock route parser
       jest.spyOn(rideService, 'processRouteInfo').mockResolvedValueOnce({
@@ -501,12 +489,6 @@ weather: sunny`;
         duration: '3h 30m'
       };
       
-      // Mock date parser
-      jest.spyOn(rideService, 'parseDateTimeInput').mockReturnValueOnce({
-        date: new Date('2024-03-15T09:00:00Z'),
-        error: null
-      });
-      
       // Mock route parser
       jest.spyOn(rideService, 'processRouteInfo').mockResolvedValueOnce({
         routeLink: 'https://example.com/route',
@@ -529,12 +511,6 @@ weather: sunny`;
         when: 'tomorrow 9am',
         info: 'Important safety information'
       };
-      
-      // Mock date parser
-      jest.spyOn(rideService, 'parseDateTimeInput').mockReturnValueOnce({
-        date: new Date('2024-03-15T09:00:00Z'),
-        error: null
-      });
       
       const result = await rideService.createRideFromParams(params, 123456, 789);
       
@@ -659,12 +635,6 @@ weather: sunny`;
         meet: 'New Meeting Point'
       };
       
-      // Mock date parser
-      jest.spyOn(rideService, 'parseDateTimeInput').mockReturnValueOnce({
-        date: new Date('2024-03-15T10:00:00Z'),
-        error: null
-      });
-      
       const result = await rideService.updateRideFromParams(ride.id, params);
       
       expect(result.error).toBeNull();
@@ -682,15 +652,9 @@ weather: sunny`;
         when: 'not a valid date'
       };
       
-      // Mock the date parser to return an error
-      jest.spyOn(rideService, 'parseDateTimeInput').mockReturnValueOnce({
-        date: null,
-        error: 'Invalid date format'
-      });
-      
       const result = await rideService.updateRideFromParams(ride.id, params);
       
-      expect(result.error).toBe('Invalid date format');
+      expect(result.error).toBe('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30');
       expect(result.ride).toBeNull();
     });
 

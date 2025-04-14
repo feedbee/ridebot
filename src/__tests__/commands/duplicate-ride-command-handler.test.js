@@ -4,6 +4,7 @@
 
 import { jest } from '@jest/globals';
 import { DuplicateRideCommandHandler } from '../../commands/DuplicateRideCommandHandler.js';
+import { parseDateTimeInput } from '../../utils/date-input-parser.js';
 
 // Mock the grammy module
 jest.mock('grammy', () => {
@@ -31,7 +32,6 @@ describe('DuplicateRideCommandHandler', () => {
       getRide: jest.fn(),
       isRideCreator: jest.fn(),
       parseRideParams: jest.fn(),
-      parseDateTimeInput: jest.fn(),
       createRide: jest.fn(),
       updateRide: jest.fn(),
       createRideMessage: jest.fn().mockResolvedValue({
@@ -161,11 +161,6 @@ describe('DuplicateRideCommandHandler', () => {
         unknownParams: []
       });
       
-      mockRideService.parseDateTimeInput.mockReturnValue({
-        date: new Date('2025-03-31T11:00:00Z'),
-        error: null
-      });
-      
       mockRideService.createRide.mockResolvedValue({
         id: '456',
         title: 'New Ride'
@@ -220,10 +215,7 @@ describe('DuplicateRideCommandHandler', () => {
         speed: '20-28'
       };
       
-      mockRideService.parseDateTimeInput.mockReturnValue({
-        date: new Date('2025-03-31T11:00:00Z'),
-        error: null
-      });
+      const parsedDate = parseDateTimeInput(params.when);
       
       mockRideService.createRide.mockResolvedValue({
         id: '456',
@@ -240,7 +232,6 @@ describe('DuplicateRideCommandHandler', () => {
       await duplicateRideCommandHandler.handleWithParams(mockCtx, originalRide, params);
       
       // Verify
-      expect(mockRideService.parseDateTimeInput).toHaveBeenCalledWith('tomorrow 11:00');
       expect(mockRideService.createRide).toHaveBeenCalledWith(expect.objectContaining({
         title: 'New Ride',
         messages: [],
@@ -250,7 +241,8 @@ describe('DuplicateRideCommandHandler', () => {
         distance: 50,
         duration: 180,
         speedMin: 20,
-        speedMax: 28
+        speedMax: 28,
+        date: parsedDate.date
       }));
       
       // Verify that createRideMessage was called with the correct parameters
@@ -283,10 +275,7 @@ describe('DuplicateRideCommandHandler', () => {
         speed: '20-28'
       };
       
-      mockRideService.parseDateTimeInput.mockReturnValue({
-        date: new Date('2025-03-31T11:00:00Z'),
-        error: null
-      });
+      const parsedDate = parseDateTimeInput(params.when);
       
       mockRideService.createRide.mockResolvedValue({
         id: '789',
@@ -313,7 +302,6 @@ describe('DuplicateRideCommandHandler', () => {
       await duplicateRideCommandHandler.handleWithParams(topicCtx, originalRide, params);
       
       // Verify
-      expect(mockRideService.parseDateTimeInput).toHaveBeenCalledWith('tomorrow 11:00');
       expect(mockRideService.createRide).toHaveBeenCalledWith(expect.objectContaining({
         title: 'Topic Ride',
         messages: [],
@@ -323,7 +311,8 @@ describe('DuplicateRideCommandHandler', () => {
         distance: 50,
         duration: 180,
         speedMin: 20,
-        speedMax: 28
+        speedMax: 28,
+        date: parsedDate.date
       }));
       
       // Verify that createRideMessage was called with the correct parameters
@@ -347,10 +336,7 @@ describe('DuplicateRideCommandHandler', () => {
         when: 'invalid date'
       };
       
-      mockRideService.parseDateTimeInput.mockReturnValue({
-        date: null,
-        error: 'Invalid date format'
-      });
+      const parsedDate = parseDateTimeInput(params.when);
       
       // Temporarily mock console.error
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -359,8 +345,7 @@ describe('DuplicateRideCommandHandler', () => {
       await duplicateRideCommandHandler.handleWithParams(mockCtx, originalRide, params);
       
       // Verify
-      expect(mockRideService.parseDateTimeInput).toHaveBeenCalledWith('invalid date');
-      expect(mockCtx.reply).toHaveBeenCalledWith('Invalid date format');
+      expect(mockCtx.reply).toHaveBeenCalledWith(parsedDate.error);
       expect(mockRideService.createRide).not.toHaveBeenCalled();
       
       // Restore console.error
