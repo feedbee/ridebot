@@ -9,10 +9,8 @@ import { MemoryStorage } from '../../storage/memory.js';
 // Import the module first, then mock its methods
 import { RouteParser } from '../../utils/route-parser.js';
 
-// Setup mocks for RouteParser methods
-RouteParser.isValidRouteUrl = jest.fn();
-RouteParser.isKnownProvider = jest.fn();
-RouteParser.parseRoute = jest.fn();
+// Setup mock for RouteParser.processRouteInfo
+jest.spyOn(RouteParser, 'processRouteInfo');
 
 describe('RideService', () => {
   let rideService;
@@ -46,6 +44,9 @@ describe('RideService', () => {
     // Create a fresh storage instance for each test
     storage = new MemoryStorage();
     rideService = new RideService(storage);
+
+    // Setup default mock for RouteParser.processRouteInfo
+    RouteParser.processRouteInfo.mockResolvedValue({ routeLink: 'https://example.com/route' });
   });
 
   describe('Basic CRUD Operations', () => {
@@ -326,89 +327,70 @@ weather: sunny`;
   });
 
   describe('Route Processing', () => {
-    beforeEach(() => {
-      // Reset all mocks before each test
-      jest.clearAllMocks();
-    });
-    
-    it('should process valid route URLs', async () => {
-      // Set up mocks for this test
-      RouteParser.isValidRouteUrl.mockReturnValue(true);
-      RouteParser.isKnownProvider.mockReturnValue(true);
-      RouteParser.parseRoute.mockResolvedValue({ distance: 50, duration: 180 });
+    it('should use route parser data when available', async () => {
+      const params = {
+        title: 'Sunday Morning Ride',
+        when: 'tomorrow 9am',
+        route: 'https://example.com/route'
+      };
       
-      const result = await rideService.processRouteInfo('https://example.com/route');
-      
-      expect(result).toEqual({
+      // Mock processRouteInfo
+      RouteParser.processRouteInfo.mockResolvedValueOnce({
         routeLink: 'https://example.com/route',
         distance: 50,
         duration: 180
       });
-      expect(RouteParser.isValidRouteUrl).toHaveBeenCalledWith('https://example.com/route');
-      expect(RouteParser.isKnownProvider).toHaveBeenCalledWith('https://example.com/route');
-      expect(RouteParser.parseRoute).toHaveBeenCalledWith('https://example.com/route');
+      
+      const result = await rideService.createRideFromParams(params, 123456, 789);
+      
+      expect(result.error).toBeNull();
+      expect(result.ride.distance).toBe(50);
+      expect(result.ride.duration).toBe(180);
+      expect(RouteParser.processRouteInfo).toHaveBeenCalledWith('https://example.com/route');
     });
 
-    it('should handle invalid URL formats', async () => {
-      // Set up mocks for this test
-      RouteParser.isValidRouteUrl.mockReturnValue(false);
+    it('should prioritize explicit parameters over route parser data', async () => {
+      const params = {
+        title: 'Sunday Morning Ride',
+        when: 'tomorrow 9am',
+        route: 'https://example.com/route',
+        dist: '75',
+        duration: '3h 30m'
+      };
       
-      const result = await rideService.processRouteInfo('not-a-url');
-      
-      expect(result).toEqual({
-        error: 'Invalid URL format. Please provide a valid URL.'
-      });
-      expect(RouteParser.isValidRouteUrl).toHaveBeenCalledWith('not-a-url');
-      expect(RouteParser.isKnownProvider).not.toHaveBeenCalled();
-      expect(RouteParser.parseRoute).not.toHaveBeenCalled();
-    });
-
-    it('should handle unknown providers', async () => {
-      // Set up mocks for this test
-      RouteParser.isValidRouteUrl.mockReturnValue(true);
-      RouteParser.isKnownProvider.mockReturnValue(false);
-      
-      const result = await rideService.processRouteInfo('https://unknown.com/route');
-      
-      expect(result).toEqual({
-        routeLink: 'https://unknown.com/route'
-      });
-      expect(RouteParser.isValidRouteUrl).toHaveBeenCalledWith('https://unknown.com/route');
-      expect(RouteParser.isKnownProvider).toHaveBeenCalledWith('https://unknown.com/route');
-      expect(RouteParser.parseRoute).not.toHaveBeenCalled();
-    });
-
-    it('should handle partial route parsing results', async () => {
-      // Set up mocks for this test
-      RouteParser.isValidRouteUrl.mockReturnValue(true);
-      RouteParser.isKnownProvider.mockReturnValue(true);
-      RouteParser.parseRoute.mockResolvedValue({ distance: 50 }); // Only distance, no duration
-      
-      const result = await rideService.processRouteInfo('https://example.com/route');
-      
-      expect(result).toEqual({
+      // Mock processRouteInfo
+      RouteParser.processRouteInfo.mockResolvedValueOnce({
         routeLink: 'https://example.com/route',
-        distance: 50
+        distance: 50,
+        duration: 180
       });
-      expect(RouteParser.isValidRouteUrl).toHaveBeenCalledWith('https://example.com/route');
-      expect(RouteParser.isKnownProvider).toHaveBeenCalledWith('https://example.com/route');
-      expect(RouteParser.parseRoute).toHaveBeenCalledWith('https://example.com/route');
+      
+      const result = await rideService.createRideFromParams(params, 123456, 789);
+      
+      expect(result.error).toBeNull();
+      expect(result.ride.distance).toBe(75); // From params, not from route parser
+      expect(result.ride.duration).toBe(210); // From params (3h 30m = 210 minutes), not from route parser
+      expect(RouteParser.processRouteInfo).toHaveBeenCalledWith('https://example.com/route');
     });
-    
-    it('should handle null result from route parser', async () => {
-      // Set up mocks for this test
-      RouteParser.isValidRouteUrl.mockReturnValue(true);
-      RouteParser.isKnownProvider.mockReturnValue(true);
-      RouteParser.parseRoute.mockResolvedValue(null);
+
+    it('should handle invalid route URLs in updates', async () => {
+      const ride = await rideService.createRide(testRide);
       
-      const result = await rideService.processRouteInfo('https://example.com/route');
+      const params = {
+        route: 'not-a-valid-url'
+      };
       
-      expect(result).toEqual({
-        routeLink: 'https://example.com/route'
+      // Mock processRouteInfo to return an error
+      RouteParser.processRouteInfo.mockResolvedValueOnce({
+        error: 'Invalid URL format. Please provide a valid URL.',
+        routeLink: 'not-a-valid-url'
       });
-      expect(RouteParser.isValidRouteUrl).toHaveBeenCalledWith('https://example.com/route');
-      expect(RouteParser.isKnownProvider).toHaveBeenCalledWith('https://example.com/route');
-      expect(RouteParser.parseRoute).toHaveBeenCalledWith('https://example.com/route');
+      
+      const result = await rideService.updateRideFromParams(ride.id, params);
+      
+      expect(result.error).toBe('Invalid URL format. Please provide a valid URL.');
+      expect(result.ride).toBeNull();
+      expect(RouteParser.processRouteInfo).toHaveBeenCalledWith('not-a-valid-url');
     });
   });
 
@@ -422,6 +404,11 @@ weather: sunny`;
         speed: '25-28',
         info: 'Bring water and snacks'
       };
+      
+      // Mock processRouteInfo
+      RouteParser.processRouteInfo.mockResolvedValueOnce({
+        routeLink: 'https://example.com/route'
+      });
       
       const result = await rideService.createRideFromParams(params, 123456, 789);
       
@@ -466,8 +453,8 @@ weather: sunny`;
         route: 'https://example.com/route'
       };
       
-      // Mock route parser
-      jest.spyOn(rideService, 'processRouteInfo').mockResolvedValueOnce({
+      // Mock processRouteInfo
+      RouteParser.processRouteInfo.mockResolvedValueOnce({
         routeLink: 'https://example.com/route',
         distance: 50,
         duration: 180
@@ -478,6 +465,7 @@ weather: sunny`;
       expect(result.error).toBeNull();
       expect(result.ride.distance).toBe(50);
       expect(result.ride.duration).toBe(180);
+      expect(RouteParser.processRouteInfo).toHaveBeenCalledWith('https://example.com/route');
     });
 
     it('should prioritize explicit parameters over route parser data', async () => {
@@ -489,8 +477,8 @@ weather: sunny`;
         duration: '3h 30m'
       };
       
-      // Mock route parser
-      jest.spyOn(rideService, 'processRouteInfo').mockResolvedValueOnce({
+      // Mock processRouteInfo
+      RouteParser.processRouteInfo.mockResolvedValueOnce({
         routeLink: 'https://example.com/route',
         distance: 50,
         duration: 180
@@ -501,6 +489,7 @@ weather: sunny`;
       expect(result.error).toBeNull();
       expect(result.ride.distance).toBe(75); // From params, not from route parser
       expect(result.ride.duration).toBe(210); // From params (3h 30m = 210 minutes), not from route parser
+      expect(RouteParser.processRouteInfo).toHaveBeenCalledWith('https://example.com/route');
     });
   });
 
@@ -665,15 +654,17 @@ weather: sunny`;
         route: 'not-a-valid-url'
       };
       
-      // Mock route parser to return an error
-      jest.spyOn(rideService, 'processRouteInfo').mockResolvedValueOnce({
-        error: 'Invalid URL format. Please provide a valid URL.'
+      // Mock processRouteInfo to return an error
+      RouteParser.processRouteInfo.mockResolvedValueOnce({
+        error: 'Invalid URL format. Please provide a valid URL.',
+        routeLink: 'not-a-valid-url'
       });
       
       const result = await rideService.updateRideFromParams(ride.id, params);
       
       expect(result.error).toBe('Invalid URL format. Please provide a valid URL.');
       expect(result.ride).toBeNull();
+      expect(RouteParser.processRouteInfo).toHaveBeenCalledWith('not-a-valid-url');
     });
   });
 

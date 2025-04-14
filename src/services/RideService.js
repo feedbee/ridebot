@@ -158,35 +158,6 @@ export class RideService {
   }
 
   /**
-   * Process route information
-   * @param {string} routeUrl - Route URL
-   * @returns {Promise<Object>} - Route information with optional error property
-   */
-  async processRouteInfo(routeUrl) {
-    if (!RouteParser.isValidRouteUrl(routeUrl)) {
-      return { error: 'Invalid URL format. Please provide a valid URL.' };
-    }
-
-    if (RouteParser.isKnownProvider(routeUrl)) {
-      const result = await RouteParser.parseRoute(routeUrl);
-      
-      // Create a response object with the route link
-      const response = { routeLink: routeUrl };
-      
-      // Add any available data from the parser
-      if (result) {
-        if (result.distance) response.distance = result.distance;
-        if (result.duration) response.duration = result.duration;
-      }
-      
-      return response;
-    }
-
-    // For non-supported providers, just return the URL without error
-    return { routeLink: routeUrl };
-  }
-
-  /**
    * Create a ride from parameters
    * @param {Object} params - Ride parameters
    * @param {number} chatId - Chat ID
@@ -221,12 +192,12 @@ export class RideService {
       }
 
       if (params.route) {
-        const routeInfo = await this.processRouteInfo(params.route);
+        const routeInfo = await RouteParser.processRouteInfo(params.route);
         if (routeInfo.error) {
           return { ride: null, error: routeInfo.error };
         }
         
-        rideData.routeLink = params.route;
+        rideData.routeLink = routeInfo.routeLink;
         
         // Only use parsed details if not explicitly provided
         if (routeInfo.distance && !params.dist) {
@@ -314,12 +285,12 @@ export class RideService {
         if (params.route === '-') {
           updates.routeLink = '';
         } else {
-          const routeInfo = await this.processRouteInfo(params.route);
+          const routeInfo = await RouteParser.processRouteInfo(params.route);
           if (routeInfo.error) {
             return { ride: null, error: routeInfo.error };
           }
           
-          updates.routeLink = params.route;
+          updates.routeLink = routeInfo.routeLink;
           
           // Use parsed details if available and not explicitly provided
           if (routeInfo.distance && !params.dist) {

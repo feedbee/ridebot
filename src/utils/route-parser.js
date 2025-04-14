@@ -111,6 +111,35 @@ export class RouteParser {
   }
 
   /**
+   * Process route information
+   * @param {string} url - Route URL
+   * @returns {{routeLink: string, distance?: number, duration?: number, error?: string}} - Route information
+   */
+  static async processRouteInfo(url) {
+    if (!this.isValidRouteUrl(url)) {
+      return { error: 'Invalid URL format. Please provide a valid URL.', routeLink: url };
+    }
+
+    if (this.isKnownProvider(url)) {
+      const result = await this.parseRoute(url);
+      
+      // Create a response object with the route link
+      const response = { routeLink: url };
+      
+      // Add any available data from the parser
+      if (result) {
+        if (result.distance) response.distance = result.distance;
+        if (result.duration) response.duration = result.duration;
+      }
+      
+      return response;
+    }
+
+    // For non-supported providers, just return the URL without error
+    return { routeLink: url };
+  }
+
+  /**
    * Parse Strava route/activity details
    * @param {cheerio.Root} $ 
    * @param {string} url
