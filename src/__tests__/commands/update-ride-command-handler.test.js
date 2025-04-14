@@ -4,6 +4,7 @@
 
 import { jest } from '@jest/globals';
 import { UpdateRideCommandHandler } from '../../commands/UpdateRideCommandHandler.js';
+import { RideParamsHelper } from '../../utils/RideParamsHelper.js';
 
 // Mock the grammy module
 jest.mock('grammy', () => {
@@ -17,6 +18,24 @@ jest.mock('grammy', () => {
   };
 });
 
+// Mock RideParamsHelper
+jest.mock('../../utils/RideParamsHelper.js');
+
+// Set up the mock implementation
+RideParamsHelper.parseRideParams = jest.fn();
+RideParamsHelper.VALID_PARAMS = {
+  'title': 'Title of the ride',
+  'when': 'Date and time of the ride',
+  'meet': 'Meeting point',
+  'route': 'Route URL',
+  'dist': 'Distance in kilometers',
+  'duration': 'Duration in minutes',
+  'speed': 'Speed range (e.g. 25-28)',
+  'info': 'Additional information',
+  'category': 'Ride category',
+  'id': 'Ride ID (for commands that need it)'
+};
+
 describe('UpdateRideCommandHandler', () => {
   let updateRideCommandHandler;
   let mockRideService;
@@ -25,12 +44,14 @@ describe('UpdateRideCommandHandler', () => {
   let mockCtx;
   
   beforeEach(() => {
+    // Reset all mocks
+    jest.clearAllMocks();
+    
     // Create mock RideService
     mockRideService = {
       extractRideId: jest.fn(),
       getRide: jest.fn(),
       isRideCreator: jest.fn(),
-      parseRideParams: jest.fn(),
       updateRideFromParams: jest.fn(),
       updateRideMessages: jest.fn().mockResolvedValue({ success: true, updatedCount: 1, removedCount: 0 })
     };
@@ -182,7 +203,7 @@ describe('UpdateRideCommandHandler', () => {
       // Mock isRideCreator to return true
       jest.spyOn(updateRideCommandHandler, 'isRideCreator').mockReturnValue(true);
       
-      mockRideService.parseRideParams.mockReturnValue({
+      RideParamsHelper.parseRideParams.mockReturnValue({
         params: {
           title: 'Updated Ride',
           when: 'tomorrow 11:00'
@@ -199,7 +220,7 @@ describe('UpdateRideCommandHandler', () => {
       // Verify
       expect(updateRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx);
       expect(updateRideCommandHandler.isRideCreator).toHaveBeenCalledWith(mockRide, mockCtx.from.id);
-      expect(mockRideService.parseRideParams).toHaveBeenCalledWith(mockCtx.message.text);
+      expect(RideParamsHelper.parseRideParams).toHaveBeenCalledWith(mockCtx.message.text);
       expect(updateRideCommandHandler.handleWithParams).toHaveBeenCalledWith(
         mockCtx,
         mockRide,

@@ -5,6 +5,7 @@
 import { jest } from '@jest/globals';
 import { DuplicateRideCommandHandler } from '../../commands/DuplicateRideCommandHandler.js';
 import { parseDateTimeInput } from '../../utils/date-input-parser.js';
+import { RideParamsHelper } from '../../utils/RideParamsHelper.js';
 
 // Mock the grammy module
 jest.mock('grammy', () => {
@@ -18,6 +19,24 @@ jest.mock('grammy', () => {
   };
 });
 
+// Mock RideParamsHelper
+jest.mock('../../utils/RideParamsHelper.js');
+
+// Set up the mock implementation
+RideParamsHelper.parseRideParams = jest.fn();
+RideParamsHelper.VALID_PARAMS = {
+  'title': 'Title of the ride',
+  'when': 'Date and time of the ride',
+  'meet': 'Meeting point',
+  'route': 'Route URL',
+  'dist': 'Distance in kilometers',
+  'duration': 'Duration in minutes',
+  'speed': 'Speed range (e.g. 25-28)',
+  'info': 'Additional information',
+  'category': 'Ride category',
+  'id': 'Ride ID (for commands that need it)'
+};
+
 describe('DuplicateRideCommandHandler', () => {
   let duplicateRideCommandHandler;
   let mockRideService;
@@ -26,12 +45,14 @@ describe('DuplicateRideCommandHandler', () => {
   let mockCtx;
   
   beforeEach(() => {
+    // Reset all mocks
+    jest.clearAllMocks();
+    
     // Create mock RideService
     mockRideService = {
       extractRideId: jest.fn(),
       getRide: jest.fn(),
       isRideCreator: jest.fn(),
-      parseRideParams: jest.fn(),
       createRide: jest.fn(),
       updateRide: jest.fn(),
       createRideMessage: jest.fn().mockResolvedValue({
@@ -152,7 +173,7 @@ describe('DuplicateRideCommandHandler', () => {
         error: null
       });
       
-      mockRideService.parseRideParams.mockReturnValue({
+      RideParamsHelper.parseRideParams.mockReturnValue({
         params: {
           title: 'New Ride',
           when: 'tomorrow 11:00',
@@ -180,7 +201,7 @@ describe('DuplicateRideCommandHandler', () => {
       
       // Verify
       expect(duplicateRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx);
-      expect(mockRideService.parseRideParams).toHaveBeenCalledWith(mockCtx.message.text);
+      expect(RideParamsHelper.parseRideParams).toHaveBeenCalledWith(mockCtx.message.text);
       expect(duplicateRideCommandHandler.handleWithParams).toHaveBeenCalledWith(
         mockCtx,
         mockRide,

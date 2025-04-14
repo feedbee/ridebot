@@ -1,6 +1,8 @@
 /**
  * Base class for command handlers
  */
+import { RideParamsHelper } from '../utils/RideParamsHelper.js';
+
 export class BaseCommandHandler {
   /**
    * @param {import('../services/RideService.js').RideService} rideService
@@ -80,10 +82,10 @@ export class BaseCommandHandler {
    * @returns {Promise<{params: Object, hasUnknownParams: boolean}>} - Parsed parameters and unknown params status
    */
   async parseRideParams(ctx, text) {
-    const { params, unknownParams } = this.rideService.parseRideParams(text);
+    const { params, unknownParams } = RideParamsHelper.parseRideParams(text);
     
     if (unknownParams.length > 0) {
-      const validParamsList = Object.entries(this.rideService.constructor.VALID_PARAMS)
+      const validParamsList = Object.entries(RideParamsHelper.VALID_PARAMS)
         .map(([key, desc]) => `${key}: ${desc}`)
         .join('\n');
       
