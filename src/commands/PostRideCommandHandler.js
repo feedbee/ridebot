@@ -51,7 +51,7 @@ export class PostRideCommandHandler extends BaseCommandHandler {
       }
 
       // Post the ride to the current chat
-      const result = await this.postRideToChat(ride, currentChatId, ctx);
+      const result = await this.postRideToChat(ride, ctx);
       
       if (!result.success) {
         await ctx.reply(`Failed to post ride: ${result.error}`);
@@ -65,51 +65,13 @@ export class PostRideCommandHandler extends BaseCommandHandler {
   /**
    * Post a ride to the current chat
    * @param {Object} ride - Ride object
-   * @param {number} chatId - Current chat ID
    * @param {import('grammy').Context} ctx - Grammy context
    * @returns {Promise<{success: boolean, error: string|null}>} - Result
    */
-  async postRideToChat(ride, chatId, ctx) {
+  async postRideToChat(ride, ctx) {
     try {
-      // Get participants directly from the ride object
-      const participants = ride.participants || [];
-      
-      // Format the ride message
-      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
-      
-      // Prepare reply options
-      const replyOptions = {
-        parse_mode: parseMode,
-        reply_markup: keyboard
-      };
-      
-      // If the message is in a topic, include the message_thread_id
-      if (ctx.message && ctx.message.message_thread_id) {
-        replyOptions.message_thread_id = ctx.message.message_thread_id;
-      }
-      
-      // Send the message to the current chat
-      const sentMessage = await ctx.reply(message, replyOptions);
-      
-      // Add the new message to the ride's messages array
-      const messageData = {
-        chatId: chatId,
-        messageId: sentMessage.message_id
-      };
-      
-      // Include message thread ID if present
-      if (ctx.message && ctx.message.message_thread_id) {
-        messageData.messageThreadId = ctx.message.message_thread_id;
-      }
-      
-      const updatedRide = await this.rideService.updateRide(ride.id, {
-        messages: [
-          ...(ride.messages || []),
-          messageData
-        ]
-      });
-      
-      return { success: true, error: null };
+      const result = await this.rideService.createRideMessage(ride, ctx, ctx.message?.message_thread_id);
+      return { success: true };
     } catch (error) {
       console.error('Error posting ride to chat:', error);
       
@@ -122,7 +84,7 @@ export class PostRideCommandHandler extends BaseCommandHandler {
         }
       }
       
-      return { success: false, error: 'An unexpected error occurred.' };
+      return { success: false, error: 'Failed to post ride' };
     }
   }
 }

@@ -20,7 +20,6 @@ jest.mock('grammy', () => {
 describe('PostRideCommandHandler', () => {
   let postRideCommandHandler;
   let mockRideService;
-  let mockMessageFormatter;
   let mockCtx;
   
   beforeEach(() => {
@@ -28,19 +27,16 @@ describe('PostRideCommandHandler', () => {
     mockRideService = {
       getRide: jest.fn(),
       updateRide: jest.fn(),
-      extractRideId: jest.fn()
-    };
-    
-    // Create mock MessageFormatter
-    mockMessageFormatter = {
-      formatRideWithKeyboard: jest.fn()
+      extractRideId: jest.fn(),
+      createRideMessage: jest.fn()
     };
     
     // Create mock Grammy context
     mockCtx = {
       message: {
         text: '/postride 123',
-        message_id: 456
+        message_id: 456,
+        message_thread_id: null
       },
       from: {
         id: 789,
@@ -56,7 +52,7 @@ describe('PostRideCommandHandler', () => {
     };
     
     // Create the handler
-    postRideCommandHandler = new PostRideCommandHandler(mockRideService, mockMessageFormatter);
+    postRideCommandHandler = new PostRideCommandHandler(mockRideService);
     
     // Mock the postRideToChat method
     jest.spyOn(postRideCommandHandler, 'postRideToChat');
@@ -166,7 +162,6 @@ describe('PostRideCommandHandler', () => {
       // Verify
       expect(postRideCommandHandler.postRideToChat).toHaveBeenCalledWith(
         { id: '123', cancelled: false, createdBy: 789, messages: [{ chatId: 222222, messageId: 999 }] },
-        101112,
         mockCtx
       );
       // No confirmation message is expected now
@@ -226,43 +221,27 @@ describe('PostRideCommandHandler', () => {
         participants: participants
       };
       
-
-      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
-        message: 'Formatted ride message',
-        keyboard: { inline_keyboard: [] },
-        parseMode: 'HTML'
+      mockRideService.createRideMessage.mockResolvedValue({
+        sentMessage: { message_id: 131415 },
+        updatedRide: {
+          ...ride,
+          messages: [
+            ...ride.messages,
+            { chatId: 101112, messageId: 131415 }
+          ]
+        }
       });
-      
-      mockRideService.updateRide.mockResolvedValue({
-        ...ride,
-        messages: [
-          ...ride.messages,
-          { chatId: 101112, messageId: 131415 }
-        ]
-      });
-      
-      // Mock the message object to not have a thread ID
-      mockCtx.message = { ...mockCtx.message, message_thread_id: undefined };
       
       // Execute
-      const result = await postRideCommandHandler.postRideToChat(ride, 101112, mockCtx);
+      const result = await postRideCommandHandler.postRideToChat(ride, mockCtx);
       
       // Verify
-      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(ride, participants);
-      expect(mockCtx.reply).toHaveBeenCalledWith('Formatted ride message', {
-        parse_mode: 'HTML',
-        reply_markup: { inline_keyboard: [] }
-      });
-      expect(mockRideService.updateRide).toHaveBeenCalledWith('123', {
-        messages: [
-          { chatId: 222222, messageId: 999 },
-          { 
-            chatId: 101112, 
-            messageId: 131415
-          }
-        ]
-      });
-      expect(result).toEqual({ success: true, error: null });
+      expect(mockRideService.createRideMessage).toHaveBeenCalledWith(
+        ride,
+        mockCtx,
+        null // messageThreadId
+      );
+      expect(result).toEqual({ success: true });
     });
     
     it('should respect message_thread_id when posting in a topic', async () => {
@@ -288,47 +267,31 @@ describe('PostRideCommandHandler', () => {
         }
       };
       
-      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
-        message: 'Formatted ride message',
-        keyboard: { inline_keyboard: [] },
-        parseMode: 'HTML'
-      });
-      
-      mockRideService.updateRide.mockResolvedValue({
-        ...ride,
-        messages: [
-          ...ride.messages,
-          { 
-            chatId: 101112, 
-            messageId: 131415, 
-            messageThreadId: 5678 
-          }
-        ]
+      mockRideService.createRideMessage.mockResolvedValue({
+        sentMessage: { message_id: 131415 },
+        updatedRide: {
+          ...ride,
+          messages: [
+            ...ride.messages,
+            { 
+              chatId: 101112, 
+              messageId: 131415, 
+              messageThreadId: 5678 
+            }
+          ]
+        }
       });
       
       // Execute
-      const result = await postRideCommandHandler.postRideToChat(ride, 101112, topicCtx);
+      const result = await postRideCommandHandler.postRideToChat(ride, topicCtx);
       
       // Verify
-
-      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(ride, participants);
-      // The key test: verify that message_thread_id is passed to the reply options
-      expect(topicCtx.reply).toHaveBeenCalledWith('Formatted ride message', {
-        parse_mode: 'HTML',
-        reply_markup: { inline_keyboard: [] },
-        message_thread_id: 5678
-      });
-      expect(mockRideService.updateRide).toHaveBeenCalledWith('123', {
-        messages: [
-          { chatId: 222222, messageId: 999 },
-          { 
-            chatId: 101112, 
-            messageId: 131415,
-            messageThreadId: 5678
-          }
-        ]
-      });
-      expect(result).toEqual({ success: true, error: null });
+      expect(mockRideService.createRideMessage).toHaveBeenCalledWith(
+        ride,
+        topicCtx,
+        5678 // messageThreadId
+      );
+      expect(result).toEqual({ success: true });
     });
     
     it('should allow posting the same ride in different topics of the same chat', async () => {
@@ -364,38 +327,31 @@ describe('PostRideCommandHandler', () => {
         }
       };
       
-      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
-        message: 'Formatted ride message',
-        keyboard: { inline_keyboard: [] },
-        parseMode: 'HTML'
-      });
-      
-      // Mock the reply function
-      differentTopicCtx.reply = jest.fn().mockResolvedValue({ message_id: 222 });
-      
-      mockRideService.updateRide.mockResolvedValue({
-        ...ride,
-        messages: [
-          ...ride.messages,
-          { 
-            chatId: chatId, 
-            messageId: 222, 
-            messageThreadId: 9999 
-          }
-        ]
+      mockRideService.createRideMessage.mockResolvedValue({
+        sentMessage: { message_id: 222 },
+        updatedRide: {
+          ...ride,
+          messages: [
+            ...ride.messages,
+            { 
+              chatId: chatId, 
+              messageId: 222, 
+              messageThreadId: 9999 
+            }
+          ]
+        }
       });
       
       // Execute
-      const result = await postRideCommandHandler.postRideToChat(ride, chatId, differentTopicCtx);
+      const result = await postRideCommandHandler.postRideToChat(ride, differentTopicCtx);
       
       // Verify
-      expect(differentTopicCtx.reply).toHaveBeenCalledWith('Formatted ride message', {
-        parse_mode: 'HTML',
-        reply_markup: { inline_keyboard: [] },
-        message_thread_id: 9999
-      });
-      expect(mockRideService.updateRide).toHaveBeenCalled();
-      expect(result).toEqual({ success: true, error: null });
+      expect(mockRideService.createRideMessage).toHaveBeenCalledWith(
+        ride,
+        differentTopicCtx,
+        9999 // messageThreadId
+      );
+      expect(result).toEqual({ success: true });
     });
     
     it('should handle bot blocked error', async () => {
@@ -403,18 +359,13 @@ describe('PostRideCommandHandler', () => {
       const ride = { id: '123', messages: [] };
       const participants = [];
       
-      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
-        message: 'Formatted ride message',
-        keyboard: { inline_keyboard: [] },
-        parseMode: 'HTML'
-      });
-      
       const botBlockedError = new Error('Bot error');
       botBlockedError.description = 'Forbidden: bot was blocked by the user';
-      mockCtx.reply.mockRejectedValue(botBlockedError);
+      
+      mockRideService.createRideMessage.mockRejectedValue(botBlockedError);
       
       // Execute
-      const result = await postRideCommandHandler.postRideToChat(ride, 101112, mockCtx);
+      const result = await postRideCommandHandler.postRideToChat(ride, mockCtx);
       
       // Verify
       expect(result).toEqual({ 
@@ -428,18 +379,13 @@ describe('PostRideCommandHandler', () => {
       const ride = { id: '123', messages: [] };
       const participants = [];
       
-      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
-        message: 'Formatted ride message',
-        keyboard: { inline_keyboard: [] },
-        parseMode: 'HTML'
-      });
-      
       const permissionsError = new Error('Bot error');
       permissionsError.description = 'Bad Request: not enough rights to send text messages to the chat';
-      mockCtx.reply.mockRejectedValue(permissionsError);
+      
+      mockRideService.createRideMessage.mockRejectedValue(permissionsError);
       
       // Execute
-      const result = await postRideCommandHandler.postRideToChat(ride, 101112, mockCtx);
+      const result = await postRideCommandHandler.postRideToChat(ride, mockCtx);
       
       // Verify
       expect(result).toEqual({ 
@@ -453,21 +399,15 @@ describe('PostRideCommandHandler', () => {
       const ride = { id: '123', messages: [] };
       const participants = [];
       
-      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
-        message: 'Formatted ride message',
-        keyboard: { inline_keyboard: [] },
-        parseMode: 'HTML'
-      });
-      
-      mockCtx.reply.mockRejectedValue(new Error('Unexpected error'));
+      mockRideService.createRideMessage.mockRejectedValue(new Error('Unexpected error'));
       
       // Execute
-      const result = await postRideCommandHandler.postRideToChat(ride, 101112, mockCtx);
+      const result = await postRideCommandHandler.postRideToChat(ride, mockCtx);
       
       // Verify
       expect(result).toEqual({ 
         success: false, 
-        error: 'An unexpected error occurred.' 
+        error: 'Failed to post ride'
       });
     });
   });
