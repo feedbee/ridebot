@@ -65,8 +65,8 @@ export class BaseCommandHandler {
    * @returns {Promise<{success: boolean, updatedCount: number, removedCount: number, error: string|null}>}
    */
   async updateRideMessage(ride, ctx) {
-    // Use the centralized method in RideService
-    const result = await this.rideService.updateRideMessages(ride, ctx);
+    // Use the centralized method in RideMessagesService
+    const result = await this.rideMessagesService.updateRideMessages(ride, ctx);
     
     if (!result.success) {
       console.error('Error updating ride messages:', result.error);

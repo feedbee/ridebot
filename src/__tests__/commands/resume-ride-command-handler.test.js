@@ -9,19 +9,20 @@ describe('ResumeRideCommandHandler', () => {
   let resumeRideCommandHandler;
   let mockRideService;
   let mockMessageFormatter;
+  let mockRideMessagesService;
   let mockCtx;
   
   beforeEach(() => {
     // Create mock RideService
     mockRideService = {
       getRide: jest.fn(),
-      resumeRide: jest.fn(),
-      updateRideMessages: jest.fn()
+      resumeRide: jest.fn()
     };
 
     // Create mock RideMessagesService
-    const mockRideMessagesService = {
-      extractRideId: jest.fn()
+    mockRideMessagesService = {
+      extractRideId: jest.fn(),
+      updateRideMessages: jest.fn()
     };
 
     // Add RideMessagesService to RideService
@@ -134,7 +135,7 @@ describe('ResumeRideCommandHandler', () => {
       jest.spyOn(resumeRideCommandHandler, 'isRideCreator').mockReturnValue(true);
       
       mockRideService.resumeRide.mockResolvedValue(updatedRide);
-      mockRideService.updateRideMessages.mockResolvedValue({ success: true, updatedCount: 0, removedCount: 0 });
+      mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: true, updatedCount: 0, removedCount: 0 });
       
       // Mock the updateRideMessage method to return no updates
       resumeRideCommandHandler.updateRideMessage = jest.fn().mockResolvedValue({

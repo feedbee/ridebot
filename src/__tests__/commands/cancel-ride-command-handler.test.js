@@ -16,15 +16,18 @@ describe('CancelRideCommandHandler', () => {
     // Create mock RideService
     mockRideService = {
       getRide: jest.fn(),
-      cancelRide: jest.fn(),
-      updateRideMessages: jest.fn()
+      cancelRide: jest.fn()
     };
 
     // Create mock RideMessagesService
     mockRideMessagesService = {
-      extractRideId: jest.fn()
+      extractRideId: jest.fn(),
+      updateRideMessages: jest.fn()
     };
-    
+
+    // Add RideMessagesService to RideService
+    mockRideService.rideMessagesService = mockRideMessagesService;
+
     // Create mock MessageFormatter
     mockMessageFormatter = {
       formatRideDetails: jest.fn()
@@ -143,69 +146,49 @@ describe('CancelRideCommandHandler', () => {
   
   describe('updateRideMessage', () => {
     it('should not attempt to update message when messageId or chatId is missing', async () => {
-      // Setup
-      const mockRide = { id: '456', cancelled: true };
-      
-      mockRideService.updateRideMessages.mockResolvedValue({ success: true, updatedCount: 0, removedCount: 0 });
-      
-      // Execute
-      await cancelRideCommandHandler.updateRideMessage(mockRide, mockCtx);
-      
-      // Verify
-      expect(mockRideService.updateRideMessages).toHaveBeenCalledWith(mockRide, mockCtx);
+      const ride = {
+        id: '123',
+        title: 'Test Ride'
+      };
+
+      mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: true, updatedCount: 0, removedCount: 0 });
+
+      await cancelRideCommandHandler.updateRideMessage(ride, mockCtx);
+
+      expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalledWith(ride, mockCtx);
     });
-    
+
     it('should update message when messageId and chatId are present', async () => {
-      // Setup
-      const mockRide = { 
-        id: '456', 
-        cancelled: true,
-        messages: [
-          { messageId: 789, chatId: 101112 }
-        ]
+      const ride = {
+        id: '123',
+        title: 'Test Ride',
+        messages: [{ messageId: 456, chatId: 789 }]
       };
-      
-      mockRideService.updateRideMessages.mockResolvedValue({ success: true, updatedCount: 1, removedCount: 0 });
-      
-      mockMessageFormatter.formatRideDetails.mockReturnValue({
-        message: 'Updated ride message',
-        keyboard: { inline_keyboard: [] },
-        parseMode: 'HTML'
-      });
-      
-      // Execute
-      await cancelRideCommandHandler.updateRideMessage(mockRide, mockCtx);
-      
-      // Verify
-      expect(mockRideService.updateRideMessages).toHaveBeenCalledWith(mockRide, mockCtx);
+
+      mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: true, updatedCount: 1, removedCount: 0 });
+
+      await cancelRideCommandHandler.updateRideMessage(ride, mockCtx);
+
+      expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalledWith(ride, mockCtx);
     });
-    
+
     it('should handle errors when updating message', async () => {
-      // Setup
-      const mockRide = { 
-        id: '456', 
-        cancelled: true,
-        messages: [
-          { messageId: 789, chatId: 101112 }
-        ]
+      const ride = {
+        id: '123',
+        title: 'Test Ride',
+        messages: [{ messageId: 456, chatId: 789 }]
       };
-      
-      mockRideService.updateRideMessages.mockResolvedValue({ success: false, error: 'API error' });
-      
-      // Mock console.error to prevent test output pollution
+
+      mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: false, error: 'Failed to update' });
+
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       
-      try {
-        // Execute
-        await cancelRideCommandHandler.updateRideMessage(mockRide, mockCtx);
-        
-        // Verify
-        expect(mockRideService.updateRideMessages).toHaveBeenCalledWith(mockRide, mockCtx);
-        expect(consoleErrorSpy).toHaveBeenCalled();
-      } finally {
-        // Restore console.error
-        consoleErrorSpy.mockRestore();
-      }
+      await cancelRideCommandHandler.updateRideMessage(ride, mockCtx);
+
+      expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalledWith(ride, mockCtx);
+      expect(consoleErrorSpy).toHaveBeenCalled();
+      
+      consoleErrorSpy.mockRestore();
     });
   });
 });

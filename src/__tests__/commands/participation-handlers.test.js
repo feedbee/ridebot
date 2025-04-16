@@ -21,20 +21,33 @@ describe('ParticipationHandlers', () => {
   let participationHandlers;
   let mockRideService;
   let mockMessageFormatter;
+  let mockRideMessagesService;
   let mockCtx;
   
   beforeEach(() => {
     // Create mock RideService
     mockRideService = {
       getRide: jest.fn(),
+      addParticipant: jest.fn(),
+      removeParticipant: jest.fn(),
+      addMaybe: jest.fn(),
+      removeMaybe: jest.fn(),
       joinRide: jest.fn(),
-      leaveRide: jest.fn(),
-      updateRideMessages: jest.fn().mockResolvedValue({ success: true, updatedCount: 1, removedCount: 0 })
+      leaveRide: jest.fn()
     };
-    
+
+    // Create mock RideMessagesService
+    mockRideMessagesService = {
+      extractRideId: jest.fn(),
+      updateRideMessages: jest.fn()
+    };
+
+    // Add RideMessagesService to RideService
+    mockRideService.rideMessagesService = mockRideMessagesService;
+
     // Create mock MessageFormatter
     mockMessageFormatter = {
-      formatRideWithKeyboard: jest.fn()
+      formatRideDetails: jest.fn()
     };
     
     // Create mock Grammy context
@@ -53,7 +66,7 @@ describe('ParticipationHandlers', () => {
     };
     
     // Create ParticipationHandlers instance with mocks
-    participationHandlers = new ParticipationHandlers(mockRideService, mockMessageFormatter);
+    participationHandlers = new ParticipationHandlers(mockRideService, mockMessageFormatter, mockRideMessagesService);
   });
   
   describe('handleJoinRide', () => {
@@ -254,70 +267,66 @@ describe('ParticipationHandlers', () => {
   
   describe('updateRideMessage', () => {
     it('should not update if messages array is missing', async () => {
-      // Setup
-      const mockRide = {
-        id: '123'
-        // No messages array
+      const ride = {
+        id: '123',
+        title: 'Test Ride'
       };
+
+      mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: true, updatedCount: 0, removedCount: 0 });
       
-      // Execute
-      await participationHandlers.updateRideMessage(mockRide, mockCtx);
+      await participationHandlers.updateRideMessage(ride, mockCtx);
       
-      // Verify
-      expect(mockCtx.api.editMessageText).not.toHaveBeenCalled();
+      expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalledWith(ride, mockCtx);
     });
     
     it('should not update if messages array is empty', async () => {
-      // Setup
-      const mockRide = {
+      const ride = {
         id: '123',
+        title: 'Test Ride',
         messages: []
       };
+
+      mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: true, updatedCount: 0, removedCount: 0 });
       
-      // Execute
-      await participationHandlers.updateRideMessage(mockRide, mockCtx);
+      await participationHandlers.updateRideMessage(ride, mockCtx);
       
-      // Verify
-      expect(mockCtx.api.editMessageText).not.toHaveBeenCalled();
+      expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalledWith(ride, mockCtx);
     });
     
     it('should update ride message successfully', async () => {
-      // Setup
-      const mockRide = {
+      const ride = {
         id: '123',
+        title: 'Test Ride',
         messages: [
           { messageId: 789, chatId: 101112 }
         ]
       };
+
+      mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: true, updatedCount: 1, removedCount: 0 });
       
-      // Execute
-      await participationHandlers.updateRideMessage(mockRide, mockCtx);
+      await participationHandlers.updateRideMessage(ride, mockCtx);
       
-      // Verify
-      expect(mockRideService.updateRideMessages).toHaveBeenCalledWith(mockRide, mockCtx);
+      expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalledWith(ride, mockCtx);
     });
     
     it('should handle error during message update', async () => {
-      // Setup
-      const mockRide = {
+      const ride = {
         id: '123',
+        title: 'Test Ride',
         messages: [
           { messageId: 789, chatId: 101112 }
         ]
       };
-      mockRideService.updateRideMessages.mockResolvedValue({ success: false, error: 'Database error' });
       
-      // Spy on console.error
+      mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: false, error: 'Database error' });
+      
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       
-      // Execute
-      await participationHandlers.updateRideMessage(mockRide, mockCtx);
+      await participationHandlers.updateRideMessage(ride, mockCtx);
       
-      // Verify
-      expect(mockRideService.updateRideMessages).toHaveBeenCalledWith(mockRide, mockCtx);
+      expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalledWith(ride, mockCtx);
       expect(consoleErrorSpy).toHaveBeenCalled();
       
-      // Restore console.error
       consoleErrorSpy.mockRestore();
     });
   });
