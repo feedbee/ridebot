@@ -79,7 +79,7 @@ export class PostRideCommandHandler extends BaseCommandHandler {
    */
   async postRideToChat(ride, ctx) {
     try {
-      const result = await this.rideService.createRideMessage(ride, ctx, ctx.message?.message_thread_id);
+      const result = await this.rideMessagesService.createRideMessage(ride, ctx, ctx.message?.message_thread_id);
       return { success: true };
     } catch (error) {
       console.error('Error posting ride to chat:', error);

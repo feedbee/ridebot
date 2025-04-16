@@ -7,7 +7,7 @@ export class BaseCommandHandler {
   /**
    * @param {import('../services/RideService.js').RideService} rideService
    * @param {import('../formatters/MessageFormatter.js').MessageFormatter} messageFormatter
-   * @param {import('../services/RideMessagesService.js').RideMessagesService} [rideMessagesService]
+   * @param {import('../services/RideMessagesService.js').RideMessagesService} rideMessagesService
    */
   constructor(rideService, messageFormatter, rideMessagesService) {
     this.rideService = rideService;

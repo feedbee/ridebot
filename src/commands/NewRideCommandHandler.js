@@ -8,9 +8,10 @@ export class NewRideCommandHandler extends BaseCommandHandler {
    * @param {import('../services/RideService.js').RideService} rideService
    * @param {import('../formatters/MessageFormatter.js').MessageFormatter} messageFormatter
    * @param {import('../wizard/RideWizard.js').RideWizard} wizard
+   * @param {import('../services/RideMessagesService.js').RideMessagesService} rideMessagesService
    */
-  constructor(rideService, messageFormatter, wizard) {
-    super(rideService, messageFormatter);
+  constructor(rideService, messageFormatter, wizard, rideMessagesService) {
+    super(rideService, messageFormatter, rideMessagesService);
     this.wizard = wizard;
   }
 
@@ -50,6 +51,6 @@ export class NewRideCommandHandler extends BaseCommandHandler {
     }
     
     // Create the ride message using the centralized method
-    await this.rideService.createRideMessage(ride, ctx);
+    await this.rideMessagesService.createRideMessage(ride, ctx);
   }
 }

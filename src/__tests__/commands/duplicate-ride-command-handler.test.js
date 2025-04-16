@@ -40,6 +40,7 @@ RideParamsHelper.VALID_PARAMS = {
 describe('DuplicateRideCommandHandler', () => {
   let duplicateRideCommandHandler;
   let mockRideService;
+  let mockRideMessagesService;
   let mockMessageFormatter;
   let mockWizard;
   let mockCtx;
@@ -51,17 +52,14 @@ describe('DuplicateRideCommandHandler', () => {
     // Create mock RideService
     mockRideService = {
       getRide: jest.fn(),
-      createRide: jest.fn(),
-      createRideMessage: jest.fn()
+      createRide: jest.fn()
     };
 
     // Create mock RideMessagesService
-    const mockRideMessagesService = {
-      extractRideId: jest.fn()
+    mockRideMessagesService = {
+      extractRideId: jest.fn(),
+      createRideMessage: jest.fn().mockResolvedValue({})
     };
-
-    // Add RideMessagesService to RideService
-    mockRideService.rideMessagesService = mockRideMessagesService;
     
     // Create mock MessageFormatter
     mockMessageFormatter = {
@@ -88,11 +86,11 @@ describe('DuplicateRideCommandHandler', () => {
         first_name: 'Test',
         last_name: 'User'
       },
-      reply: jest.fn().mockResolvedValue({ message_id: 13579 })
+      reply: jest.fn().mockResolvedValue({})
     };
     
     // Create DuplicateRideCommandHandler instance with mocks
-    duplicateRideCommandHandler = new DuplicateRideCommandHandler(mockRideService, mockMessageFormatter, mockWizard);
+    duplicateRideCommandHandler = new DuplicateRideCommandHandler(mockRideService, mockMessageFormatter, mockWizard, mockRideMessagesService);
     
     // Mock the extractRide method
     duplicateRideCommandHandler.extractRide = jest.fn();
@@ -269,7 +267,7 @@ describe('DuplicateRideCommandHandler', () => {
       }));
       
       // Verify that createRideMessage was called with the correct parameters
-      expect(mockRideService.createRideMessage).toHaveBeenCalledWith(
+      expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(
         { id: '456', title: 'New Ride' },
         mockCtx
       );
@@ -339,7 +337,7 @@ describe('DuplicateRideCommandHandler', () => {
       }));
       
       // Verify that createRideMessage was called with the correct parameters
-      expect(mockRideService.createRideMessage).toHaveBeenCalledWith(
+      expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(
         { id: '789', title: 'Topic Ride' },
         topicCtx
       );

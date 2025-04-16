@@ -28,7 +28,7 @@ export class Bot {
     // Initialize services
     this.storage = storage;
     this.rideService = new RideService(storage);
-    this.rideMessagesService = new RideMessagesService();
+    this.rideMessagesService = new RideMessagesService(this.rideService);
     this.messageFormatter = new MessageFormatter();
     this.wizard = new RideWizard(storage);
     
@@ -38,7 +38,7 @@ export class Bot {
     // Initialize command handlers
     this.helpHandler = new HelpCommandHandler(this.rideService, this.messageFormatter);
     this.startHandler = new StartCommandHandler(this.rideService, this.messageFormatter);
-    this.newRideHandler = new NewRideCommandHandler(this.rideService, this.messageFormatter, this.wizard);
+    this.newRideHandler = new NewRideCommandHandler(this.rideService, this.messageFormatter, this.wizard, this.rideMessagesService);
     this.updateRideHandler = new UpdateRideCommandHandler(this.rideService, this.messageFormatter, this.wizard, this.rideMessagesService);
     this.cancelRideHandler = new CancelRideCommandHandler(this.rideService, this.messageFormatter, this.rideMessagesService);
     this.deleteRideHandler = new DeleteRideCommandHandler(this.rideService, this.messageFormatter, this.rideMessagesService);

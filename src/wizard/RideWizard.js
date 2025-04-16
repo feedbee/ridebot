@@ -8,12 +8,14 @@ import { MessageFormatter } from '../formatters/MessageFormatter.js';
 import { RideService } from '../services/RideService.js';
 import { checkBotAdminPermissions } from '../utils/permission-checker.js';
 import { parseDuration } from '../utils/duration-parser.js';
+import { RideMessagesService } from '../services/RideMessagesService.js';
 
 export class RideWizard {
   constructor(storage) {
     this.storage = storage;
     this.rideService = new RideService(storage);
     this.messageFormatter = new MessageFormatter();
+    this.rideMessagesService = new RideMessagesService(this.rideService);
     this.wizardStates = new Map();
   }
   
@@ -233,8 +235,8 @@ export class RideWizard {
             // Delete the wizard message before creating the ride message
             await ctx.deleteMessage();
             
-            // Create the ride message using the centralized method
-            await this.rideService.createRideMessage(ride, ctx, state.data.messageThreadId);
+            // Create the ride message
+            await this.rideMessagesService.createRideMessage(ride, ctx, state.data.messageThreadId);
 
             this.wizardStates.delete(stateKey);
             await ctx.answerCallbackQuery(state.data.originalRideId ? 'Ride duplicated successfully!' : 'Ride created successfully!');

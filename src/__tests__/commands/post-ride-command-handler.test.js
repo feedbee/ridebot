@@ -27,13 +27,13 @@ describe('PostRideCommandHandler', () => {
   beforeEach(() => {
     // Create mock RideService
     mockRideService = {
-      getRide: jest.fn(),
-      createRideMessage: jest.fn()
+      getRide: jest.fn()
     };
 
     // Create mock RideMessagesService
     mockRideMessagesService = {
-      extractRideId: jest.fn()
+      extractRideId: jest.fn(),
+      createRideMessage: jest.fn()
     };
     
     // Create mock MessageFormatter
@@ -229,7 +229,7 @@ describe('PostRideCommandHandler', () => {
         participants: participants
       };
       
-      mockRideService.createRideMessage.mockResolvedValue({
+      mockRideMessagesService.createRideMessage.mockResolvedValue({
         sentMessage: { message_id: 131415 },
         updatedRide: {
           ...ride,
@@ -244,7 +244,7 @@ describe('PostRideCommandHandler', () => {
       const result = await postRideCommandHandler.postRideToChat(ride, mockCtx);
       
       // Verify
-      expect(mockRideService.createRideMessage).toHaveBeenCalledWith(
+      expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(
         ride,
         mockCtx,
         null // messageThreadId
@@ -275,7 +275,7 @@ describe('PostRideCommandHandler', () => {
         }
       };
       
-      mockRideService.createRideMessage.mockResolvedValue({
+      mockRideMessagesService.createRideMessage.mockResolvedValue({
         sentMessage: { message_id: 131415 },
         updatedRide: {
           ...ride,
@@ -294,7 +294,7 @@ describe('PostRideCommandHandler', () => {
       const result = await postRideCommandHandler.postRideToChat(ride, topicCtx);
       
       // Verify
-      expect(mockRideService.createRideMessage).toHaveBeenCalledWith(
+      expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(
         ride,
         topicCtx,
         5678 // messageThreadId
@@ -335,7 +335,7 @@ describe('PostRideCommandHandler', () => {
         }
       };
       
-      mockRideService.createRideMessage.mockResolvedValue({
+      mockRideMessagesService.createRideMessage.mockResolvedValue({
         sentMessage: { message_id: 222 },
         updatedRide: {
           ...ride,
@@ -354,7 +354,7 @@ describe('PostRideCommandHandler', () => {
       const result = await postRideCommandHandler.postRideToChat(ride, differentTopicCtx);
       
       // Verify
-      expect(mockRideService.createRideMessage).toHaveBeenCalledWith(
+      expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(
         ride,
         differentTopicCtx,
         9999 // messageThreadId
@@ -370,7 +370,7 @@ describe('PostRideCommandHandler', () => {
       const botBlockedError = new Error('Bot error');
       botBlockedError.description = 'Forbidden: bot was blocked by the user';
       
-      mockRideService.createRideMessage.mockRejectedValue(botBlockedError);
+      mockRideMessagesService.createRideMessage.mockRejectedValue(botBlockedError);
       
       // Execute
       const result = await postRideCommandHandler.postRideToChat(ride, mockCtx);
@@ -390,7 +390,7 @@ describe('PostRideCommandHandler', () => {
       const permissionsError = new Error('Bot error');
       permissionsError.description = 'Bad Request: not enough rights to send text messages to the chat';
       
-      mockRideService.createRideMessage.mockRejectedValue(permissionsError);
+      mockRideMessagesService.createRideMessage.mockRejectedValue(permissionsError);
       
       // Execute
       const result = await postRideCommandHandler.postRideToChat(ride, mockCtx);
@@ -407,7 +407,7 @@ describe('PostRideCommandHandler', () => {
       const ride = { id: '123', messages: [] };
       const participants = [];
       
-      mockRideService.createRideMessage.mockRejectedValue(new Error('Unexpected error'));
+      mockRideMessagesService.createRideMessage.mockRejectedValue(new Error('Unexpected error'));
       
       // Execute
       const result = await postRideCommandHandler.postRideToChat(ride, mockCtx);

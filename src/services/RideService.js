@@ -320,62 +320,6 @@ export class RideService {
   }
 
   /**
-   * Create and store a ride message in a chat
-   * @param {Object} ride - Ride object
-   * @param {import('grammy').Context} ctx - Grammy context
-   * @param {number} messageThreadId - Message thread ID
-   * @returns {Promise<Object>} - Object containing the sent message and updated ride
-   */
-  async createRideMessage(ride, ctx, messageThreadId) {
-    try {
-      // Message thread id
-      const threadId = messageThreadId || ctx.message?.message_thread_id;
-
-      // Get participants from the ride object and format the message
-      const participants = ride.participants || [];
-      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
-      
-      // Prepare reply options
-      const replyOptions = {
-        parse_mode: parseMode,
-        reply_markup: keyboard
-      };
-      
-      // If the message is in a topic, include the message_thread_id
-      if (threadId) {
-        replyOptions.message_thread_id = threadId;
-      }
-      
-      // Send the message
-      const sentMessage = await ctx.reply(message, replyOptions);
-
-      // Prepare the message data for storage
-      const messageData = {
-        chatId: ctx.chat.id,
-        messageId: sentMessage.message_id
-      };
-      
-      // Include message thread ID if present
-      if (threadId) {
-        messageData.messageThreadId = threadId;
-      }
-
-      // Update the ride with the message info in the messages array
-      const updatedRide = await this.updateRide(ride.id, {
-        messages: [...(ride.messages || []), messageData]
-      });
-
-      return {
-        sentMessage,
-        updatedRide
-      };
-    } catch (error) {
-      console.error('Error creating ride message:', error);
-      throw error;
-    }
-  }
-
-  /**
    * Update all messages for a ride across all chats
    * @param {Object} ride - Ride object
    * @param {import('grammy').Context} ctx - Grammy context

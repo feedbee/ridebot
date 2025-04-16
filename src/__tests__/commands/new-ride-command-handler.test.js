@@ -40,6 +40,7 @@ describe('NewRideCommandHandler', () => {
   let newRideCommandHandler;
   let mockRideService;
   let mockMessageFormatter;
+  let mockRideMessagesService;
   let mockWizard;
   let mockCtx;
   
@@ -49,17 +50,21 @@ describe('NewRideCommandHandler', () => {
 
     // Create mock RideService
     mockRideService = {
+      createRide: jest.fn(),
       createRideFromParams: jest.fn(),
       updateRide: jest.fn(),
-      createRideMessage: jest.fn().mockResolvedValue({
-        sentMessage: { message_id: 13579 },
-        updatedRide: { id: '123' }
-      })
+      getRide: jest.fn()
     };
     
     // Create mock MessageFormatter
     mockMessageFormatter = {
-      formatRideWithKeyboard: jest.fn()
+      formatRideDetails: jest.fn()
+    };
+    
+    // Create mock RideMessagesService
+    mockRideMessagesService = {
+      createRideMessage: jest.fn().mockResolvedValue({}),
+      extractRideId: jest.fn()
     };
     
     // Create mock Wizard
@@ -82,11 +87,11 @@ describe('NewRideCommandHandler', () => {
         first_name: 'Test',
         last_name: 'User'
       },
-      reply: jest.fn().mockResolvedValue({ message_id: 13579 })
+      reply: jest.fn().mockResolvedValue({})
     };
     
     // Create NewRideCommandHandler instance with mocks
-    newRideCommandHandler = new NewRideCommandHandler(mockRideService, mockMessageFormatter, mockWizard);
+    newRideCommandHandler = new NewRideCommandHandler(mockRideService, mockMessageFormatter, mockWizard, mockRideMessagesService);
   });
   
   describe('handle', () => {
@@ -173,19 +178,14 @@ describe('NewRideCommandHandler', () => {
   });
   
   describe('handleWithParams', () => {
-    it('should create a ride with parameters and send message', async () => {
+    it('should create a ride with parameters', async () => {
       // Setup
-      const params = {
-        title: 'Test Ride',
-        when: 'tomorrow 11:00',
-        meet: 'Test Location'
-      };
+      mockCtx.message.text = '/newride\ntitle: Test Ride\nwhen: tomorrow 10:00';
       
       const createdRide = {
         id: '123',
         title: 'Test Ride',
-        date: new Date('2025-03-31T11:00:00Z'),
-        meetingPoint: 'Test Location'
+        date: new Date('2025-03-30T10:00:00Z')
       };
       
       mockRideService.createRideFromParams.mockResolvedValue({
@@ -193,24 +193,24 @@ describe('NewRideCommandHandler', () => {
         error: null
       });
       
-      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
-        message: 'New ride message',
-        keyboard: { inline_keyboard: [] },
-        parseMode: 'HTML'
-      });
-      
       // Execute
-      await newRideCommandHandler.handleWithParams(mockCtx, params);
+      await newRideCommandHandler.handleWithParams(mockCtx, {
+        title: 'Test Ride',
+        when: 'tomorrow 10:00'
+      });
       
       // Verify
       expect(mockRideService.createRideFromParams).toHaveBeenCalledWith(
-        params,
-        789, // chat.id
-        101112 // from.id
+        expect.objectContaining({
+          title: 'Test Ride',
+          when: 'tomorrow 10:00'
+        }),
+        789,
+        101112
       );
       
       // Verify that createRideMessage was called with the correct parameters
-      expect(mockRideService.createRideMessage).toHaveBeenCalledWith(createdRide, mockCtx);
+      expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(createdRide, mockCtx);
     });
 
     it('should create a ride with parameters and include message thread ID in topic', async () => {
@@ -233,7 +233,7 @@ describe('NewRideCommandHandler', () => {
         error: null
       });
       
-      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
+      mockMessageFormatter.formatRideDetails.mockReturnValue({
         message: 'New topic ride message',
         keyboard: { inline_keyboard: [] },
         parseMode: 'HTML'
@@ -259,10 +259,8 @@ describe('NewRideCommandHandler', () => {
         101112 // from.id
       );
       
-      // These expectations are no longer needed since they're handled by createRideMessage
-      
       // Verify that createRideMessage was called with the correct parameters
-      expect(mockRideService.createRideMessage).toHaveBeenCalledWith(createdRide, topicCtx);
+      expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(createdRide, topicCtx);
     });
     
     it('should handle error during ride creation', async () => {
@@ -288,7 +286,46 @@ describe('NewRideCommandHandler', () => {
       );
       
       expect(mockCtx.reply).toHaveBeenCalledWith('Invalid date format');
-      expect(mockRideService.updateRide).not.toHaveBeenCalled();
+      expect(mockRideMessagesService.createRideMessage).not.toHaveBeenCalled();
+    });
+
+    it('should create ride message with thread ID when in a topic', async () => {
+      // Setup
+      const params = {
+        title: 'Test Ride',
+        when: 'tomorrow 10:00'
+      };
+      
+      const createdRide = {
+        id: '123',
+        title: 'Test Ride',
+        date: new Date('2025-03-30T10:00:00Z')
+      };
+      
+      mockRideService.createRideFromParams.mockResolvedValue({
+        ride: createdRide,
+        error: null
+      });
+      
+      const threadCtx = {
+        ...mockCtx,
+        message: {
+          ...mockCtx.message,
+          message_thread_id: 999
+        }
+      };
+      
+      // Execute
+      await newRideCommandHandler.handleWithParams(threadCtx, params);
+      
+      // Verify
+      expect(mockRideService.createRideFromParams).toHaveBeenCalledWith(
+        params,
+        789,
+        101112
+      );
+      
+      expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(createdRide, threadCtx);
     });
   });
 });

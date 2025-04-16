@@ -104,7 +104,7 @@ export class DuplicateRideCommandHandler extends BaseCommandHandler {
       const ride = await this.rideService.createRide(rideData);
       
       // Create the ride message using the centralized method
-      await this.rideService.createRideMessage(ride, ctx);
+      await this.rideMessagesService.createRideMessage(ride, ctx);
 
       await ctx.reply('Ride duplicated successfully!');
     } catch (error) {
