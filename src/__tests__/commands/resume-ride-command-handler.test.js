@@ -14,16 +14,22 @@ describe('ResumeRideCommandHandler', () => {
   beforeEach(() => {
     // Create mock RideService
     mockRideService = {
-      extractRideId: jest.fn(),
       getRide: jest.fn(),
-      isRideCreator: jest.fn(),
       resumeRide: jest.fn(),
-      updateRideMessages: jest.fn().mockResolvedValue({ success: true, updatedCount: 1, removedCount: 0 })
+      updateRideMessages: jest.fn()
     };
+
+    // Create mock RideMessagesService
+    const mockRideMessagesService = {
+      extractRideId: jest.fn()
+    };
+
+    // Add RideMessagesService to RideService
+    mockRideService.rideMessagesService = mockRideMessagesService;
     
     // Create mock MessageFormatter
     mockMessageFormatter = {
-      formatRideWithKeyboard: jest.fn()
+      formatRideDetails: jest.fn()
     };
     
     // Create mock Grammy context

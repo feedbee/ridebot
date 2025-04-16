@@ -7,10 +7,12 @@ export class BaseCommandHandler {
   /**
    * @param {import('../services/RideService.js').RideService} rideService
    * @param {import('../formatters/MessageFormatter.js').MessageFormatter} messageFormatter
+   * @param {import('../services/RideMessagesService.js').RideMessagesService} [rideMessagesService]
    */
-  constructor(rideService, messageFormatter) {
+  constructor(rideService, messageFormatter, rideMessagesService) {
     this.rideService = rideService;
     this.messageFormatter = messageFormatter;
+    this.rideMessagesService = rideMessagesService;
   }
 
   /**
@@ -37,7 +39,7 @@ export class BaseCommandHandler {
    * @returns {Promise<{ride: Object|null, error: string|null}>}
    */
   async extractRide(ctx) {
-    const { rideId, error } = this.rideService.extractRideId(ctx.message);
+    const { rideId, error } = this.rideMessagesService.extractRideId(ctx.message);
     
     if (error) {
       return { ride: null, error };

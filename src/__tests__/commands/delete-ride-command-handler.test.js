@@ -20,30 +20,39 @@ describe('DeleteRideCommandHandler', () => {
   let deleteRideCommandHandler;
   let mockRideService;
   let mockMessageFormatter;
+  let mockRideMessagesService;
   let mockCtx;
   
   beforeEach(() => {
     // Create mock RideService
     mockRideService = {
-      extractRideId: jest.fn(),
       getRide: jest.fn(),
       deleteRide: jest.fn()
+    };
+
+    // Create mock RideMessagesService
+    mockRideMessagesService = {
+      extractRideId: jest.fn()
     };
     
     // Create mock MessageFormatter
     mockMessageFormatter = {
+      formatRideDetails: jest.fn(),
       formatDeleteConfirmation: jest.fn().mockReturnValue('Are you sure you want to delete this ride?')
     };
     
-    // Create mock Grammy context for handle method
+    // Create mock Grammy context
     mockCtx = {
       reply: jest.fn().mockResolvedValue({}),
+      api: {
+        deleteMessage: jest.fn().mockResolvedValue({})
+      },
       from: { id: 123 },
       message: { text: '/deleteride 456' }
     };
     
     // Create DeleteRideCommandHandler instance with mocks
-    deleteRideCommandHandler = new DeleteRideCommandHandler(mockRideService, mockMessageFormatter);
+    deleteRideCommandHandler = new DeleteRideCommandHandler(mockRideService, mockMessageFormatter, mockRideMessagesService);
     
     // Mock the extractRide method to isolate tests
     deleteRideCommandHandler.extractRide = jest.fn();
@@ -63,7 +72,7 @@ describe('DeleteRideCommandHandler', () => {
       // Verify
       expect(deleteRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx);
       expect(mockCtx.reply).toHaveBeenCalledWith('No ride ID found');
-      expect(mockMessageFormatter.formatDeleteConfirmation).not.toHaveBeenCalled();
+      expect(mockMessageFormatter.formatRideDetails).not.toHaveBeenCalled();
     });
     
     it('should show confirmation dialog when ride is found', async () => {
@@ -209,8 +218,7 @@ describe('DeleteRideCommandHandler', () => {
       mockCtx.api.deleteMessage.mockRejectedValue(new Error('API error'));
       
       // Mock console.error to prevent test output pollution
-      const originalConsoleError = console.error;
-      console.error = jest.fn();
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       
       try {
         // Execute
@@ -223,10 +231,10 @@ describe('DeleteRideCommandHandler', () => {
         expect(mockCtx.editMessageText).toHaveBeenCalledWith('Ride deleted successfully.');
         expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('Ride deleted successfully');
         expect(mockCtx.api.deleteMessage).toHaveBeenCalledWith(101112, 789);
-        expect(console.error).toHaveBeenCalled();
+        expect(consoleErrorSpy).toHaveBeenCalled();
       } finally {
         // Restore console.error
-        console.error = originalConsoleError;
+        consoleErrorSpy.mockRestore();
       }
     });
     

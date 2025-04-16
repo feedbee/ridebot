@@ -9,9 +9,10 @@ export class UpdateRideCommandHandler extends BaseCommandHandler {
    * @param {import('../services/RideService.js').RideService} rideService
    * @param {import('../formatters/MessageFormatter.js').MessageFormatter} messageFormatter
    * @param {import('../wizard/RideWizard.js').RideWizard} wizard
+   * @param {import('../services/RideMessagesService.js').RideMessagesService} rideMessagesService
    */
-  constructor(rideService, messageFormatter, wizard) {
-    super(rideService, messageFormatter);
+  constructor(rideService, messageFormatter, wizard, rideMessagesService) {
+    super(rideService, messageFormatter, rideMessagesService);
     this.wizard = wizard;
   }
 

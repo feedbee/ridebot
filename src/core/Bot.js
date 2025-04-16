@@ -2,6 +2,7 @@ import { Bot as GrammyBot } from 'grammy';
 import { config } from '../config.js';
 import { RideWizard } from '../wizard/RideWizard.js';
 import { RideService } from '../services/RideService.js';
+import { RideMessagesService } from '../services/RideMessagesService.js';
 import { MessageFormatter } from '../formatters/MessageFormatter.js';
 import { threadMiddleware } from '../middleware/threadMiddleware.js';
 import { HelpCommandHandler } from '../commands/HelpCommandHandler.js';
@@ -27,6 +28,7 @@ export class Bot {
     // Initialize services
     this.storage = storage;
     this.rideService = new RideService(storage);
+    this.rideMessagesService = new RideMessagesService();
     this.messageFormatter = new MessageFormatter();
     this.wizard = new RideWizard(storage);
     
@@ -37,13 +39,13 @@ export class Bot {
     this.helpHandler = new HelpCommandHandler(this.rideService, this.messageFormatter);
     this.startHandler = new StartCommandHandler(this.rideService, this.messageFormatter);
     this.newRideHandler = new NewRideCommandHandler(this.rideService, this.messageFormatter, this.wizard);
-    this.updateRideHandler = new UpdateRideCommandHandler(this.rideService, this.messageFormatter, this.wizard);
-    this.cancelRideHandler = new CancelRideCommandHandler(this.rideService, this.messageFormatter);
-    this.deleteRideHandler = new DeleteRideCommandHandler(this.rideService, this.messageFormatter);
+    this.updateRideHandler = new UpdateRideCommandHandler(this.rideService, this.messageFormatter, this.wizard, this.rideMessagesService);
+    this.cancelRideHandler = new CancelRideCommandHandler(this.rideService, this.messageFormatter, this.rideMessagesService);
+    this.deleteRideHandler = new DeleteRideCommandHandler(this.rideService, this.messageFormatter, this.rideMessagesService);
     this.listRidesHandler = new ListRidesCommandHandler(this.rideService, this.messageFormatter);
-    this.duplicateRideHandler = new DuplicateRideCommandHandler(this.rideService, this.messageFormatter, this.wizard);
-    this.postRideHandler = new PostRideCommandHandler(this.rideService, this.messageFormatter);
-    this.resumeRideHandler = new ResumeRideCommandHandler(this.rideService, this.messageFormatter);
+    this.duplicateRideHandler = new DuplicateRideCommandHandler(this.rideService, this.messageFormatter, this.wizard, this.rideMessagesService);
+    this.postRideHandler = new PostRideCommandHandler(this.rideService, this.messageFormatter, this.rideMessagesService);
+    this.resumeRideHandler = new ResumeRideCommandHandler(this.rideService, this.messageFormatter, this.rideMessagesService);
     this.participationHandlers = new ParticipationHandlers(this.rideService, this.messageFormatter);
     
     this.setupHandlers();

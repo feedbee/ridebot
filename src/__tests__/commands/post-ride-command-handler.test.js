@@ -21,14 +21,24 @@ describe('PostRideCommandHandler', () => {
   let postRideCommandHandler;
   let mockRideService;
   let mockCtx;
+  let mockMessageFormatter;
+  let mockRideMessagesService;
   
   beforeEach(() => {
     // Create mock RideService
     mockRideService = {
       getRide: jest.fn(),
-      updateRide: jest.fn(),
-      extractRideId: jest.fn(),
       createRideMessage: jest.fn()
+    };
+
+    // Create mock RideMessagesService
+    mockRideMessagesService = {
+      extractRideId: jest.fn()
+    };
+    
+    // Create mock MessageFormatter
+    mockMessageFormatter = {
+      formatRideDetails: jest.fn()
     };
     
     // Create mock Grammy context
@@ -52,45 +62,43 @@ describe('PostRideCommandHandler', () => {
     };
     
     // Create the handler
-    postRideCommandHandler = new PostRideCommandHandler(mockRideService);
+    postRideCommandHandler = new PostRideCommandHandler(mockRideService, mockMessageFormatter, mockRideMessagesService);
     
     // Mock the postRideToChat method
     jest.spyOn(postRideCommandHandler, 'postRideToChat');
   });
   
-
-  
   describe('handle', () => {
     it('should handle missing ride ID', async () => {
       // Setup
-      mockRideService.extractRideId.mockReturnValue({ rideId: null, error: 'Error message' });
+      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: null, error: 'Error message' });
       
       // Execute
       await postRideCommandHandler.handle(mockCtx);
       
       // Verify
-      expect(mockRideService.extractRideId).toHaveBeenCalledWith(mockCtx.message);
+      expect(mockRideMessagesService.extractRideId).toHaveBeenCalledWith(mockCtx.message);
       expect(mockCtx.reply).toHaveBeenCalledWith('Error message');
       expect(mockRideService.getRide).not.toHaveBeenCalled();
     });
     
     it('should handle ride not found', async () => {
       // Setup
-      mockRideService.extractRideId.mockReturnValue({ rideId: '123', error: null });
+      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '123', error: null });
       mockRideService.getRide.mockResolvedValue(null);
       
       // Execute
       await postRideCommandHandler.handle(mockCtx);
       
       // Verify
-      expect(mockRideService.extractRideId).toHaveBeenCalledWith(mockCtx.message);
+      expect(mockRideMessagesService.extractRideId).toHaveBeenCalledWith(mockCtx.message);
       expect(mockRideService.getRide).toHaveBeenCalledWith('123');
       expect(mockCtx.reply).toHaveBeenCalledWith('Ride #123 not found.');
     });
     
     it('should handle unauthorized user', async () => {
       // Setup
-      mockRideService.extractRideId.mockReturnValue({ rideId: '123', error: null });
+      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '123', error: null });
       mockRideService.getRide.mockResolvedValue({ id: '123', createdBy: 456 });
       
       // Spy on isRideCreator - return false for unauthorized user
@@ -106,7 +114,7 @@ describe('PostRideCommandHandler', () => {
     
     it('should handle cancelled ride', async () => {
       // Setup
-      mockRideService.extractRideId.mockReturnValue({ rideId: '123', error: null });
+      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '123', error: null });
       mockRideService.getRide.mockResolvedValue({ id: '123', cancelled: true, createdBy: 789 });
       
       // Spy on isRideCreator - return true for creator
@@ -121,7 +129,7 @@ describe('PostRideCommandHandler', () => {
     
     it('should handle ride already posted in chat', async () => {
       // Setup
-      mockRideService.extractRideId.mockReturnValue({ rideId: '123', error: null });
+      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '123', error: null });
       mockRideService.getRide.mockResolvedValue({ 
         id: '123', 
         cancelled: false,
@@ -143,7 +151,7 @@ describe('PostRideCommandHandler', () => {
     
     it('should successfully post ride to chat', async () => {
       // Setup
-      mockRideService.extractRideId.mockReturnValue({ rideId: '123', error: null });
+      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '123', error: null });
       mockRideService.getRide.mockResolvedValue({ 
         id: '123', 
         cancelled: false,
@@ -170,7 +178,7 @@ describe('PostRideCommandHandler', () => {
     
     it('should handle error when posting ride', async () => {
       // Setup
-      mockRideService.extractRideId.mockReturnValue({ rideId: '123', error: null });
+      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '123', error: null });
       mockRideService.getRide.mockResolvedValue({ 
         id: '123', 
         cancelled: false,
@@ -195,7 +203,7 @@ describe('PostRideCommandHandler', () => {
     
     it('should handle unexpected error', async () => {
       // Setup
-      mockRideService.extractRideId.mockReturnValue({ rideId: '123', error: null });
+      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '123', error: null });
       mockRideService.getRide.mockRejectedValue(new Error('Database error'));
       
       // Execute

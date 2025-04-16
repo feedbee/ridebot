@@ -41,6 +41,7 @@ describe('UpdateRideCommandHandler', () => {
   let mockRideService;
   let mockMessageFormatter;
   let mockWizard;
+  let mockRideMessagesService;
   let mockCtx;
   
   beforeEach(() => {
@@ -49,16 +50,19 @@ describe('UpdateRideCommandHandler', () => {
     
     // Create mock RideService
     mockRideService = {
-      extractRideId: jest.fn(),
       getRide: jest.fn(),
-      isRideCreator: jest.fn(),
       updateRideFromParams: jest.fn(),
-      updateRideMessages: jest.fn().mockResolvedValue({ success: true, updatedCount: 1, removedCount: 0 })
+      updateRideMessages: jest.fn()
+    };
+
+    // Create mock RideMessagesService
+    mockRideMessagesService = {
+      extractRideId: jest.fn()
     };
     
     // Create mock MessageFormatter
     mockMessageFormatter = {
-      formatRideWithKeyboard: jest.fn()
+      formatRideDetails: jest.fn()
     };
     
     // Create mock Wizard
@@ -88,7 +92,7 @@ describe('UpdateRideCommandHandler', () => {
     };
     
     // Create UpdateRideCommandHandler instance with mocks
-    updateRideCommandHandler = new UpdateRideCommandHandler(mockRideService, mockMessageFormatter, mockWizard);
+    updateRideCommandHandler = new UpdateRideCommandHandler(mockRideService, mockMessageFormatter, mockWizard, mockRideMessagesService);
     
     // Mock the extractRide method
     updateRideCommandHandler.extractRide = jest.fn();
@@ -313,12 +317,14 @@ describe('UpdateRideCommandHandler', () => {
         title: 'Test Ride'
         // No messages array
       };
+
+      mockRideService.updateRideMessages.mockResolvedValue({ success: true, updatedCount: 0, removedCount: 0 });
       
       // Execute
       await updateRideCommandHandler.updateRideMessage(ride, mockCtx);
       
       // Verify
-      expect(mockCtx.api.editMessageText).not.toHaveBeenCalled();
+      expect(mockRideService.updateRideMessages).toHaveBeenCalledWith(ride, mockCtx);
     });
     
     it('should not update if messages array is empty', async () => {
@@ -328,12 +334,14 @@ describe('UpdateRideCommandHandler', () => {
         title: 'Test Ride',
         messages: []
       };
+
+      mockRideService.updateRideMessages.mockResolvedValue({ success: true, updatedCount: 0, removedCount: 0 });
       
       // Execute
       await updateRideCommandHandler.updateRideMessage(ride, mockCtx);
       
       // Verify
-      expect(mockCtx.api.editMessageText).not.toHaveBeenCalled();
+      expect(mockRideService.updateRideMessages).toHaveBeenCalledWith(ride, mockCtx);
     });
     
     it('should update ride message successfully', async () => {
@@ -345,12 +353,10 @@ describe('UpdateRideCommandHandler', () => {
           { messageId: 789, chatId: 101112 }
         ]
       };
+
+      mockRideService.updateRideMessages.mockResolvedValue({ success: true, updatedCount: 1, removedCount: 0 });
       
-      const participants = [
-        { userId: 456, firstName: 'Test', lastName: 'User' }
-      ];
-      
-      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
+      mockMessageFormatter.formatRideDetails.mockReturnValue({
         message: 'Updated ride message',
         keyboard: { inline_keyboard: [] },
         parseMode: 'HTML'

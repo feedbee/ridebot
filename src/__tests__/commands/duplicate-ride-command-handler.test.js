@@ -50,20 +50,22 @@ describe('DuplicateRideCommandHandler', () => {
     
     // Create mock RideService
     mockRideService = {
-      extractRideId: jest.fn(),
       getRide: jest.fn(),
-      isRideCreator: jest.fn(),
       createRide: jest.fn(),
-      updateRide: jest.fn(),
-      createRideMessage: jest.fn().mockResolvedValue({
-        sentMessage: { message_id: 13579 },
-        updatedRide: { id: '456' }
-      })
+      createRideMessage: jest.fn()
     };
+
+    // Create mock RideMessagesService
+    const mockRideMessagesService = {
+      extractRideId: jest.fn()
+    };
+
+    // Add RideMessagesService to RideService
+    mockRideService.rideMessagesService = mockRideMessagesService;
     
     // Create mock MessageFormatter
     mockMessageFormatter = {
-      formatRideWithKeyboard: jest.fn()
+      formatRideDetails: jest.fn()
     };
     
     // Create mock Wizard
@@ -187,7 +189,7 @@ describe('DuplicateRideCommandHandler', () => {
         title: 'New Ride'
       });
       
-      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
+      mockMessageFormatter.formatRideDetails.mockReturnValue({
         message: 'New ride message',
         keyboard: { inline_keyboard: [] },
         parseMode: 'HTML'
@@ -243,7 +245,7 @@ describe('DuplicateRideCommandHandler', () => {
         title: 'New Ride'
       });
       
-      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
+      mockMessageFormatter.formatRideDetails.mockReturnValue({
         message: 'New ride message',
         keyboard: { inline_keyboard: [] },
         parseMode: 'HTML'
@@ -303,7 +305,7 @@ describe('DuplicateRideCommandHandler', () => {
         title: 'Topic Ride'
       });
       
-      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
+      mockMessageFormatter.formatRideDetails.mockReturnValue({
         message: 'New topic ride message',
         keyboard: { inline_keyboard: [] },
         parseMode: 'HTML'
@@ -397,7 +399,7 @@ describe('DuplicateRideCommandHandler', () => {
         title: 'Test Ride'
       });
       
-      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
+      mockMessageFormatter.formatRideDetails.mockReturnValue({
         message: 'New ride message',
         keyboard: { inline_keyboard: [] },
         parseMode: 'HTML'

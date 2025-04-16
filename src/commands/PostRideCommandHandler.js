@@ -6,12 +6,21 @@ import { BaseCommandHandler } from './BaseCommandHandler.js';
  */
 export class PostRideCommandHandler extends BaseCommandHandler {
   /**
+   * @param {import('../services/RideService.js').RideService} rideService
+   * @param {import('../formatters/MessageFormatter.js').MessageFormatter} messageFormatter
+   * @param {import('../services/RideMessagesService.js').RideMessagesService} rideMessagesService
+   */
+  constructor(rideService, messageFormatter, rideMessagesService) {
+    super(rideService, messageFormatter, rideMessagesService);
+  }
+
+  /**
    * Handle the postride command
    * @param {import('grammy').Context} ctx - Grammy context
    */
   async handle(ctx) {
     // Extract the ride ID from the command
-    const { rideId, error } = this.rideService.extractRideId(ctx.message);
+    const { rideId, error } = this.rideMessagesService.extractRideId(ctx.message);
     if (!rideId) {
       await ctx.reply(error || 'Please provide a valid ride ID. Usage: /postride rideID');
       return;

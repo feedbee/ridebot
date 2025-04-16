@@ -9,11 +9,11 @@ describe('BaseCommandHandler', () => {
   let baseCommandHandler;
   let mockRideService;
   let mockMessageFormatter;
+  let mockRideMessagesService;
   
   beforeEach(() => {
     // Create mock RideService
     mockRideService = {
-      extractRideId: jest.fn(),
       getRide: jest.fn()
     };
     
@@ -21,15 +21,21 @@ describe('BaseCommandHandler', () => {
     mockMessageFormatter = {
       formatRideDetails: jest.fn()
     };
+
+    // Create mock RideMessagesService
+    mockRideMessagesService = {
+      extractRideId: jest.fn()
+    };
     
     // Create BaseCommandHandler instance with mocks
-    baseCommandHandler = new BaseCommandHandler(mockRideService, mockMessageFormatter);
+    baseCommandHandler = new BaseCommandHandler(mockRideService, mockMessageFormatter, mockRideMessagesService);
   });
   
   describe('constructor', () => {
     it('should initialize with the provided services', () => {
       expect(baseCommandHandler.rideService).toBe(mockRideService);
       expect(baseCommandHandler.messageFormatter).toBe(mockMessageFormatter);
+      expect(baseCommandHandler.rideMessagesService).toBe(mockRideMessagesService);
     });
   });
   
@@ -43,21 +49,21 @@ describe('BaseCommandHandler', () => {
     it('should return error when ride ID extraction fails', async () => {
       // Setup
       const mockCtx = { message: { text: 'some text' } };
-      mockRideService.extractRideId.mockReturnValue({ rideId: null, error: 'No ride ID found' });
+      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: null, error: 'No ride ID found' });
       
       // Execute
       const result = await baseCommandHandler.extractRide(mockCtx);
       
       // Verify
       expect(result).toEqual({ ride: null, error: 'No ride ID found' });
-      expect(mockRideService.extractRideId).toHaveBeenCalledWith(mockCtx.message);
+      expect(mockRideMessagesService.extractRideId).toHaveBeenCalledWith(mockCtx.message);
       expect(mockRideService.getRide).not.toHaveBeenCalled();
     });
     
     it('should return error when ride is not found', async () => {
       // Setup
       const mockCtx = { message: { text: 'some text' }, from: { id: 789 } };
-      mockRideService.extractRideId.mockReturnValue({ rideId: '123', error: null });
+      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '123', error: null });
       mockRideService.getRide.mockResolvedValue(null);
       
       // Execute
@@ -65,7 +71,7 @@ describe('BaseCommandHandler', () => {
       
       // Verify
       expect(result).toEqual({ ride: null, error: 'Ride #123 not found' });
-      expect(mockRideService.extractRideId).toHaveBeenCalledWith(mockCtx.message);
+      expect(mockRideMessagesService.extractRideId).toHaveBeenCalledWith(mockCtx.message);
       expect(mockRideService.getRide).toHaveBeenCalledWith('123');
     });
     
@@ -73,7 +79,7 @@ describe('BaseCommandHandler', () => {
       // Setup
       const mockCtx = { message: { text: 'some text' }, from: { id: 456 } };
       const mockRide = { id: '123', title: 'Test Ride', createdBy: 456 };
-      mockRideService.extractRideId.mockReturnValue({ rideId: '123', error: null });
+      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '123', error: null });
       mockRideService.getRide.mockResolvedValue(mockRide);
       
       // Execute
@@ -81,14 +87,14 @@ describe('BaseCommandHandler', () => {
       
       // Verify
       expect(result).toEqual({ ride: mockRide, error: null });
-      expect(mockRideService.extractRideId).toHaveBeenCalledWith(mockCtx.message);
+      expect(mockRideMessagesService.extractRideId).toHaveBeenCalledWith(mockCtx.message);
       expect(mockRideService.getRide).toHaveBeenCalledWith('123');
     });
     
     it('should handle errors during ride retrieval', async () => {
       // Setup
       const mockCtx = { message: { text: 'some text' } };
-      mockRideService.extractRideId.mockReturnValue({ rideId: '123', error: null });
+      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '123', error: null });
       mockRideService.getRide.mockRejectedValue(new Error('Database error'));
       
       // Mock console.error to prevent test output pollution
@@ -101,7 +107,7 @@ describe('BaseCommandHandler', () => {
         
         // Verify
         expect(result).toEqual({ ride: null, error: 'Error accessing ride data' });
-        expect(mockRideService.extractRideId).toHaveBeenCalledWith(mockCtx.message);
+        expect(mockRideMessagesService.extractRideId).toHaveBeenCalledWith(mockCtx.message);
         expect(mockRideService.getRide).toHaveBeenCalledWith('123');
         expect(console.error).toHaveBeenCalled();
       } finally {
