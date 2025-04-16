@@ -1,5 +1,6 @@
 import { RideWizard } from '../../wizard/RideWizard.js';
 import { config } from '../../config.js';
+import { jest } from '@jest/globals';
 
 // Create a backup of the original config for tests
 const originalConfig = { ...config };
@@ -46,7 +47,7 @@ const createMockContext = (userId = 123, chatId = 456, chatType = 'private') => 
   const callbackAnswers = [];
   let lastCallbackAnswer = null;
 
-  return {
+  const ctx = {
     from: { id: userId },
     chat: { id: chatId, type: chatType },
     message: { message_id: 1 },
@@ -82,32 +83,47 @@ const createMockContext = (userId = 123, chatId = 456, chatType = 'private') => 
       lastCallbackAnswer = text;
       callbackAnswers.push(text);
       return true;
-    },
-    _test: {
-      messages,
-      deletedMessages,
-      editedMessages,
-      callbackAnswers,
-      getLastCallbackAnswer: () => lastCallbackAnswer,
-      reset: () => {
-        messages.length = 0;
-        deletedMessages.length = 0;
-        editedMessages.length = 0;
-        callbackAnswers.length = 0;
-        lastCallbackAnswer = null;
-      }
     }
   };
+
+  ctx._test = {
+    messages,
+    deletedMessages,
+    editedMessages,
+    callbackAnswers,
+    getLastCallbackAnswer: () => lastCallbackAnswer,
+    reset: () => {
+      messages.length = 0;
+      deletedMessages.length = 0;
+      editedMessages.length = 0;
+      callbackAnswers.length = 0;
+      lastCallbackAnswer = null;
+    }
+  };
+
+  return ctx;
 };
 
 describe('RideWizard', () => {
   let wizard;
   let storage;
   let ctx;
+  let mockRideService;
+  let mockMessageFormatter;
+  let mockRideMessagesService;
 
   beforeEach(() => {
     storage = new MockStorage();
-    wizard = new RideWizard(storage);
+    mockRideService = {
+    };
+    mockMessageFormatter = {
+      formatRideMessage: jest.fn()
+    };
+    mockRideMessagesService = {
+      createRideMessage: jest.fn().mockResolvedValue(true),
+      updateRideMessages: jest.fn().mockResolvedValue(true)
+    };
+    wizard = new RideWizard(storage, mockRideService, mockMessageFormatter, mockRideMessagesService);
     ctx = createMockContext();
     
     // Reset config to original values before each test
@@ -119,7 +135,9 @@ describe('RideWizard', () => {
     config.bot.wizardOnlyInPrivateChats = originalBotConfig.wizardOnlyInPrivateChats;
     
     // Reset test context
-    ctx._test.reset();
+    if (ctx && ctx._test) {
+      ctx._test.reset();
+    }
   });
 
   describe('Wizard State Management', () => {
@@ -507,6 +525,9 @@ describe('RideWizard', () => {
       expect(createdRide.speedMin).toBe(25);
       expect(createdRide.speedMax).toBe(28);
       expect(createdRide.additionalInfo).toBe('Bring lights and a jacket');
+
+      // Verify RideMessagesService was called
+      expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(createdRide, ctx, undefined);
     });
 
     test('should create a ride with minimal required fields', async () => {
@@ -540,6 +561,49 @@ describe('RideWizard', () => {
       expect(createdRide.title).toBe('Quick Ride');
       expect(createdRide.routeLink).toBeUndefined();
       expect(createdRide.distance).toBeUndefined();
+
+      // Verify RideMessagesService was called
+      expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(createdRide, ctx, undefined);
+    });
+
+    test('should update an existing ride', async () => {
+      // Create an existing ride
+      const existingRide = await storage.createRide({
+        title: 'Original Ride',
+        category: 'Road Ride',
+        date: new Date(),
+        createdBy: ctx.from.id
+      });
+
+      // Start wizard with prefill data
+      await wizard.startWizard(ctx, {
+        isUpdate: true,
+        originalRideId: existingRide.id,
+        title: existingRide.title,
+        category: existingRide.category,
+        datetime: existingRide.date
+      });
+
+      // Update title
+      ctx.message = { text: 'Updated Ride', message_id: 2 };
+      await wizard.handleWizardInput(ctx);
+
+      // Skip through remaining steps
+      for (let i = 0; i < 8; i++) {
+        ctx.match = ['wizard:skip', 'skip'];
+        await wizard.handleWizardAction(ctx);
+      }
+
+      // Confirm update
+      ctx.match = ['wizard:confirm', 'confirm'];
+      await wizard.handleWizardAction(ctx);
+
+      // Verify ride was updated
+      const updatedRide = storage.rides.get(existingRide.id);
+      expect(updatedRide.title).toBe('Updated Ride');
+
+      // Verify RideMessagesService.updateRideMessages was called
+      expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalledWith(updatedRide, ctx);
     });
   });
 }); 

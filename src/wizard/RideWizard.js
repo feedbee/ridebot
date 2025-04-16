@@ -11,11 +11,17 @@ import { parseDuration } from '../utils/duration-parser.js';
 import { RideMessagesService } from '../services/RideMessagesService.js';
 
 export class RideWizard {
-  constructor(storage) {
+  /**
+   * @param {import('../storage/interface.js').StorageInterface} storage
+   * @param {import('../services/RideService.js').RideService} rideService
+   * @param {import('../formatters/MessageFormatter.js').MessageFormatter} messageFormatter
+   * @param {import('../services/RideMessagesService.js').RideMessagesService} rideMessagesService
+   */
+  constructor(storage, rideService, messageFormatter, rideMessagesService) {
     this.storage = storage;
-    this.rideService = new RideService(storage);
-    this.messageFormatter = new MessageFormatter();
-    this.rideMessagesService = new RideMessagesService(this.rideService);
+    this.rideService = rideService;
+    this.messageFormatter = messageFormatter;
+    this.rideMessagesService = rideMessagesService;
     this.wizardStates = new Map();
   }
   
@@ -668,7 +674,7 @@ export class RideWizard {
 
   async updateRideMessage(ride, ctx) {
     // Use the centralized method in RideService
-    const result = await this.rideService.updateRideMessages(ride, ctx);
+    const result = await this.rideMessagesService.updateRideMessages(ride, ctx);
     
     if (!result.success) {
       console.error('Error updating ride messages:', result.error);

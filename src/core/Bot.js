@@ -30,7 +30,7 @@ export class Bot {
     this.rideService = new RideService(storage);
     this.rideMessagesService = new RideMessagesService(this.rideService);
     this.messageFormatter = new MessageFormatter();
-    this.wizard = new RideWizard(storage);
+    this.wizard = new RideWizard(storage, this.rideService, this.messageFormatter, this.rideMessagesService);
     
     // Initialize bot
     this.bot = new GrammyBot(config.bot.token);
