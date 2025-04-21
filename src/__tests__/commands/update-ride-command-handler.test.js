@@ -240,7 +240,7 @@ describe('UpdateRideCommandHandler', () => {
   });
   
   describe('handleWithParams', () => {
-    it('should update a ride with parameters and update message', async () => {
+    it('should update a ride with parameters and update message (multi-chat propagation, updatedCount > 0)', async () => {
       // Setup
       const originalRide = {
         id: '123',
@@ -285,7 +285,49 @@ describe('UpdateRideCommandHandler', () => {
       expect(updateRideCommandHandler.updateRideMessage).toHaveBeenCalledWith(updatedRide, mockCtx);
       expect(mockCtx.reply).toHaveBeenCalledWith('Ride updated successfully. Updated 1 message(s).');
     });
-    
+
+    it('should report when no messages were updated (multi-chat propagation, updatedCount = 0)', async () => {
+      // Setup
+      const originalRide = {
+        id: '123',
+        title: 'Test Ride',
+        date: new Date('2025-03-30T10:00:00Z'),
+        meetingPoint: 'Test Location',
+        messageId: 789,
+        chatId: 101112
+      };
+      const params = { title: 'Updated Ride', when: 'tomorrow 11:00' };
+      const updatedRide = { ...originalRide, title: 'Updated Ride', date: new Date('2025-03-31T11:00:00Z') };
+      mockRideService.updateRideFromParams.mockResolvedValue({ ride: updatedRide, error: null });
+      updateRideCommandHandler.updateRideMessage = jest.fn().mockResolvedValue({ success: true, updatedCount: 0, removedCount: 0 });
+      // Execute
+      await updateRideCommandHandler.handleWithParams(mockCtx, originalRide, params);
+      // Verify
+      expect(mockCtx.reply).toHaveBeenCalledWith('Ride has been updated, but no messages were updated. You may want to /postride the ride in the chats of your choice again, they could have been removed.');
+    });
+
+    it('should append removed message info if removedCount > 0 (multi-chat propagation)', async () => {
+      // Setup
+      const originalRide = {
+        id: '123',
+        title: 'Test Ride',
+        date: new Date('2025-03-30T10:00:00Z'),
+        meetingPoint: 'Test Location',
+        messageId: 789,
+        chatId: 101112
+      };
+      const params = { title: 'Updated Ride', when: 'tomorrow 11:00' };
+      const updatedRide = { ...originalRide, title: 'Updated Ride', date: new Date('2025-03-31T11:00:00Z') };
+      mockRideService.updateRideFromParams.mockResolvedValue({ ride: updatedRide, error: null });
+      updateRideCommandHandler.updateRideMessage = jest.fn().mockResolvedValue({ success: true, updatedCount: 2, removedCount: 1 });
+      // Execute
+      await updateRideCommandHandler.handleWithParams(mockCtx, originalRide, params);
+      // Verify
+      const replyText = mockCtx.reply.mock.calls[0][0];
+      expect(replyText).toContain('Ride updated successfully. Updated 2 message(s).');
+      expect(replyText).toContain('Removed 1 unavailable message(s)');
+    });
+
     it('should handle error during ride update', async () => {
       // Setup
       const originalRide = {

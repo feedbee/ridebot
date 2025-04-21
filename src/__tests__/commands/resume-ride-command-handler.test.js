@@ -118,7 +118,10 @@ describe('ResumeRideCommandHandler', () => {
       expect(resumeRideCommandHandler.isRideCreator).toHaveBeenCalledWith(mockRide, mockCtx.from.id);
       expect(mockRideService.resumeRide).toHaveBeenCalledWith('456', mockCtx.from.id);
       expect(resumeRideCommandHandler.updateRideMessage).toHaveBeenCalledWith(updatedRide, mockCtx);
-      expect(mockCtx.reply).toHaveBeenCalledWith('Ride resumed successfully. Updated 1 message(s).');
+      expect(mockCtx.reply).toHaveBeenCalled();
+      const replyText = mockCtx.reply.mock.calls[0][0];
+      expect(replyText).toContain('Ride resumed successfully.');
+      expect(replyText).toContain('Updated 1 message(s)');
     });
     
     it('should handle case when no messages were updated', async () => {
@@ -175,6 +178,31 @@ describe('ResumeRideCommandHandler', () => {
       expect(resumeRideCommandHandler.isRideCreator).toHaveBeenCalledWith(mockRide, mockCtx.from.id);
       expect(mockCtx.reply).toHaveBeenCalledWith('Only the ride creator can resume this ride.');
       expect(mockRideService.resumeRide).not.toHaveBeenCalled();
+    });
+    it('should report updated and unavailable messages after multi-chat resume (multi-chat propagation)', async () => {
+      // Setup
+      const mockRide = { id: '456', cancelled: true };
+      const updatedRide = { id: '456', cancelled: false };
+      resumeRideCommandHandler.extractRide.mockResolvedValue({ ride: mockRide, error: null });
+      jest.spyOn(resumeRideCommandHandler, 'isRideCreator').mockReturnValue(true);
+      mockRideService.resumeRide.mockResolvedValue(updatedRide);
+      resumeRideCommandHandler.updateRideMessage = jest.fn().mockResolvedValue({
+        success: true,
+        updatedCount: 2,
+        removedCount: 1
+      });
+      // Execute
+      await resumeRideCommandHandler.handle(mockCtx);
+      // Verify
+      expect(resumeRideCommandHandler.extractRide).toHaveBeenCalledWith(mockCtx);
+      expect(resumeRideCommandHandler.isRideCreator).toHaveBeenCalledWith(mockRide, mockCtx.from.id);
+      expect(mockRideService.resumeRide).toHaveBeenCalledWith('456', mockCtx.from.id);
+      expect(resumeRideCommandHandler.updateRideMessage).toHaveBeenCalledWith(updatedRide, mockCtx);
+      expect(mockCtx.reply).toHaveBeenCalled();
+      const replyText = mockCtx.reply.mock.calls[0][0];
+      expect(replyText).toContain('Ride resumed successfully.');
+      expect(replyText).toContain('Updated 2 message(s)');
+      expect(replyText).toContain('Removed 1 unavailable message(s)');
     });
   });
 });

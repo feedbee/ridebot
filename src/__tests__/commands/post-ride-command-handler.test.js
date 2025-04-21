@@ -381,6 +381,45 @@ describe('PostRideCommandHandler', () => {
         error: 'The bot is not a member of this chat or was blocked.' 
       });
     });
+
+    it('should handle permission denied error', async () => {
+      // Setup
+      const ride = { id: '123', messages: [] };
+      const permissionError = new Error('Permission error');
+      permissionError.description = 'Forbidden: not enough rights to send messages to the chat';
+      
+      mockRideMessagesService.createRideMessage.mockRejectedValue(permissionError);
+      
+      // Execute
+      const result = await postRideCommandHandler.postRideToChat(ride, mockCtx);
+      
+      // Verify
+      expect(result).toEqual({
+        success: false,
+        error: 'The bot does not have permission to send messages in this chat.'
+      });
+    });
+
+    it('should handle posting when ride.messages property is missing', async () => {
+      // Setup
+      const ride = { id: '123', title: 'Test Ride' };
+      mockRideMessagesService.createRideMessage.mockResolvedValue({
+        sentMessage: { message_id: 131415 },
+        updatedRide: {
+          ...ride,
+          messages: [{ chatId: 101112, messageId: 131415 }]
+        }
+      });
+      // Execute
+      const result = await postRideCommandHandler.postRideToChat(ride, mockCtx);
+      // Verify
+      expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(
+        ride,
+        mockCtx,
+        null
+      );
+      expect(result).toEqual({ success: true });
+    });
     
     it('should handle permissions error', async () => {
       // Setup

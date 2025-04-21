@@ -132,6 +132,34 @@ describe('ParticipationHandlers', () => {
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('You have joined the ride!');
     });
     
+    // Multi-chat propagation: just expect the simple reply
+    it('should report join with simple reply even after multi-chat propagation', async () => {
+      // Setup
+      const mockRide = {
+        id: '123',
+        cancelled: false
+      };
+      mockRideService.getRide.mockResolvedValue(mockRide);
+      mockRideService.joinRide.mockResolvedValue({ success: true, ride: mockRide });
+      participationHandlers.updateRideMessage = jest.fn().mockResolvedValue({
+        success: true,
+        updatedCount: 2,
+        removedCount: 1
+      });
+      // Execute
+      await participationHandlers.handleJoinRide(mockCtx);
+      // Verify
+      expect(mockRideService.getRide).toHaveBeenCalledWith('123');
+      expect(mockRideService.joinRide).toHaveBeenCalledWith('123', {
+        userId: 456,
+        username: 'testuser',
+        firstName: 'Test',
+        lastName: 'User'
+      });
+      expect(participationHandlers.updateRideMessage).toHaveBeenCalledWith(mockRide, mockCtx);
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('You have joined the ride!');
+    });
+
     it('should handle already joined ride', async () => {
       // Setup
       mockRideService.getRide.mockResolvedValue({

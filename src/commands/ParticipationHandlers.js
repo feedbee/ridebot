@@ -36,7 +36,7 @@ export class ParticipationHandlers extends BaseCommandHandler {
         const result2 = await this.updateRideMessage(result.ride, ctx);
         
         if (result2.success) {
-          await ctx.answerCallbackQuery('You have joined the ride!');  
+          await ctx.answerCallbackQuery('You have joined the ride!');
         } else {
           await ctx.answerCallbackQuery('You joined the ride, but message updates failed');
         }

@@ -63,19 +63,27 @@ export class DeleteRideCommandHandler extends BaseCommandHandler {
     const success = await this.rideService.deleteRide(rideId);
     
     if (success) {
-      await ctx.editMessageText('Ride deleted successfully.');
-      
-      // Try to delete all ride messages
+      let deletedCount = 0;
+      let removedCount = 0;
       if (ride.messages && ride.messages.length > 0) {
         for (const message of ride.messages) {
           try {
             await ctx.api.deleteMessage(message.chatId, message.messageId);
+            deletedCount++;
           } catch (error) {
+            removedCount++;
             console.error(`Error deleting ride message in chat ${message.chatId}:`, error);
           }
         }
       }
-      
+      let reply = `Ride deleted successfully.`;
+      if (deletedCount > 0) {
+        reply += ` Deleted ${deletedCount} message(s).`;
+      }
+      if (removedCount > 0) {
+        reply += ` Removed ${removedCount} unavailable message(s).`;
+      }
+      await ctx.editMessageText(reply);
       await ctx.answerCallbackQuery('Ride deleted successfully');
     } else {
       await ctx.editMessageText('Failed to delete ride.');

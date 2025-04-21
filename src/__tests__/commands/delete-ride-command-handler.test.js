@@ -201,11 +201,47 @@ describe('DeleteRideCommandHandler', () => {
       expect(mockRideService.getRide).toHaveBeenCalledWith('456');
       expect(deleteRideCommandHandler.isRideCreator).toHaveBeenCalledWith(mockRide, mockCtx.from.id);
       expect(mockRideService.deleteRide).toHaveBeenCalledWith('456');
-      expect(mockCtx.editMessageText).toHaveBeenCalledWith('Ride deleted successfully.');
+      expect(mockCtx.editMessageText).toHaveBeenCalled();
+      const replyText = mockCtx.editMessageText.mock.calls[0][0];
+      expect(replyText).toContain('Ride deleted successfully.');
+      expect(replyText).toMatch(/Deleted 1 message\(s\)|Removed 1 unavailable message\(s\)/);
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('Ride deleted successfully');
       expect(mockCtx.api.deleteMessage).toHaveBeenCalledWith(101112, 789);
     });
     
+    it('should report deleted and unavailable messages after multi-chat deletion (multi-chat propagation)', async () => {
+      // Setup
+      const mockRide = {
+        id: '456',
+        messages: [
+          { chatId: 1001, messageId: 2001 },
+          { chatId: 1002, messageId: 2002 },
+          { chatId: 1003, messageId: 2003 }
+        ]
+      };
+      mockRideService.getRide.mockResolvedValue(mockRide);
+      mockRideService.deleteRide.mockResolvedValue(true);
+      jest.spyOn(deleteRideCommandHandler, 'isRideCreator').mockReturnValue(true);
+      // Simulate deleteMessage: first and third succeed, second throws
+      mockCtx.api.deleteMessage
+        .mockResolvedValueOnce({})
+        .mockRejectedValueOnce(new Error('Message not found'))
+        .mockResolvedValueOnce({});
+      mockCtx.match = ['delete:confirm:456', 'confirm', '456'];
+      // Execute
+      await deleteRideCommandHandler.handleConfirmation(mockCtx);
+      // Verify
+      expect(mockRideService.getRide).toHaveBeenCalledWith('456');
+      expect(mockRideService.deleteRide).toHaveBeenCalledWith('456');
+      expect(mockCtx.api.deleteMessage).toHaveBeenCalledTimes(3);
+      // The reply should mention both deleted and removed counts
+      expect(mockCtx.editMessageText).toHaveBeenCalled();
+      const replyText = mockCtx.editMessageText.mock.calls[0][0];
+      expect(replyText).toContain('Deleted 2 message(s)');
+      expect(replyText).toContain('Removed 1 unavailable message(s)');
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('Ride deleted successfully');
+    });
+
     it('should handle error when deleting original message', async () => {
       // Setup
       const mockRide = { id: '456', messages: [{ messageId: 789, chatId: 101112 }] };
@@ -228,7 +264,10 @@ describe('DeleteRideCommandHandler', () => {
         expect(mockRideService.getRide).toHaveBeenCalledWith('456');
         expect(deleteRideCommandHandler.isRideCreator).toHaveBeenCalledWith(mockRide, mockCtx.from.id);
         expect(mockRideService.deleteRide).toHaveBeenCalledWith('456');
-        expect(mockCtx.editMessageText).toHaveBeenCalledWith('Ride deleted successfully.');
+        expect(mockCtx.editMessageText).toHaveBeenCalled();
+        const replyText = mockCtx.editMessageText.mock.calls[0][0];
+        expect(replyText).toContain('Ride deleted successfully.');
+        expect(replyText).toMatch(/Deleted \d+ message\(s\)|Removed \d+ unavailable message\(s\)/);
         expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('Ride deleted successfully');
         expect(mockCtx.api.deleteMessage).toHaveBeenCalledWith(101112, 789);
         expect(consoleErrorSpy).toHaveBeenCalled();
