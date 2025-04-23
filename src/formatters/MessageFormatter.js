@@ -1,6 +1,7 @@
 import { config } from '../config.js';
 import { escapeHtml } from '../utils/html-escape.js';
 import { InlineKeyboard } from 'grammy';
+import { DateParser } from '../utils/date-parser.js';
 
 /**
  * Handles formatting messages for display
@@ -48,13 +49,9 @@ export class MessageFormatter {
    * @returns {string} - Formatted message
    */
   formatRideMessage(ride, participants) {
-    const dateOptions = config.dateFormat.date;
-    const timeOptions = config.dateFormat.time;
-    const locale = config.dateFormat.locale;
-    
-    const date = ride.date.toLocaleDateString(locale, dateOptions);
-    const time = ride.date.toLocaleTimeString(locale, timeOptions);
-    const datetime = `${date} at ${time}`;
+    // Use DateParser for consistent timezone handling
+    const formattedDateTime = DateParser.formatDateTime(ride.date);
+    const datetime = `${formattedDateTime.date} at ${formattedDateTime.time}`;
     
     const participantCount = participants.length;
     const participantsList = participants.length > 0
@@ -148,16 +145,12 @@ export class MessageFormatter {
       return 'You have not created any rides yet.';
     }
     
-    const dateOptions = config.dateFormat.date;
-    const timeOptions = config.dateFormat.time;
-    const locale = config.dateFormat.locale;
-    
     let message = '🚲 <b>Your Rides</b>\n\n';
     
     for (const ride of rides) {
-      const date = ride.date.toLocaleDateString(locale, dateOptions);
-      const time = ride.date.toLocaleTimeString(locale, timeOptions);
-      const datetime = `${date} at ${time}`;
+      // Use DateParser for consistent timezone handling
+      const formattedDateTime = DateParser.formatDateTime(ride.date);
+      const datetime = `${formattedDateTime.date} at ${formattedDateTime.time}`;
       const status = ride.cancelled ? '❌ CANCELLED' : '';
       
       message += `<b>${escapeHtml(ride.title)}</b> ${status}\n`;

@@ -26,7 +26,10 @@ export const config = {
     time: {
       hour: '2-digit',
       minute: '2-digit'
-    }
+    },
+    // Default timezone for date/time conversions (e.g., 'Europe/London', 'America/New_York')
+    // If not set, the server's local timezone will be used
+    defaultTimezone: process.env.DEFAULT_TIMEZONE || null
   },
   routeProviders: {
     strava: {

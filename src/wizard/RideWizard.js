@@ -9,6 +9,7 @@ import { RideService } from '../services/RideService.js';
 import { checkBotAdminPermissions } from '../utils/permission-checker.js';
 import { parseDuration } from '../utils/duration-parser.js';
 import { RideMessagesService } from '../services/RideMessagesService.js';
+import { DateParser } from '../utils/date-parser.js';
 
 export class RideWizard {
   /**
@@ -494,7 +495,8 @@ export class RideWizard {
       case 'date':
         const dateFormatter = (date) => {
           if (!(date instanceof Date) || isNaN(date)) return '';
-          return date.toLocaleString(config.dateFormat.locale);
+          const formattedDateTime = DateParser.formatDateTime(date);
+          return `${formattedDateTime.date} at ${formattedDateTime.time}`;
         };
         message = '📅 When is the ride?\nYou can use natural language like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30' + 
           getCurrentValue('datetime', dateFormatter);
@@ -596,7 +598,9 @@ export class RideWizard {
         message = `<b>Please confirm the ${state.isUpdate ? 'update' : 'ride'} details:</b>\n\n`;
         message += `📝 Title: ${escapeHtml(title)}\n`;
         message += `🚲 Category: ${category || DEFAULT_CATEGORY}\n`;
-        message += `📅 When: ${datetime.toLocaleDateString(config.dateFormat.locale)} at ${datetime.toLocaleTimeString(config.dateFormat.locale, config.dateFormat.time)}\n`;
+        // Use DateParser for consistent timezone handling
+        const formattedDateTime = DateParser.formatDateTime(datetime);
+        message += `📅 When: ${formattedDateTime.date} at ${formattedDateTime.time}\n`;
         if (routeLink) message += `🔗 Route: ${escapeHtml(routeLink)}\n`;
         if (distance) message += `📏 Distance: ${distance} km\n`;
         if (duration) {

@@ -5,6 +5,7 @@
 import { jest } from '@jest/globals';
 import { RideService } from '../../services/RideService.js';
 import { MemoryStorage } from '../../storage/memory.js';
+import { config } from '../../config.js';
 
 // Import the module first, then mock its methods
 import { RouteParser } from '../../utils/route-parser.js';
@@ -15,6 +16,9 @@ jest.spyOn(RouteParser, 'processRouteInfo');
 describe('RideService', () => {
   let rideService;
   let storage;
+  
+  // Save original timezone config
+  const originalTimezone = config.dateFormat.defaultTimezone;
   
   const testRide = {
     title: 'Test Ride',
@@ -38,15 +42,15 @@ describe('RideService', () => {
   };
 
   beforeEach(() => {
-    // Reset mocks
+    // Reset mocks before each test
     jest.clearAllMocks();
     
     // Create a fresh storage instance for each test
     storage = new MemoryStorage();
     rideService = new RideService(storage);
-
-    // Setup default mock for RouteParser.processRouteInfo
-    RouteParser.processRouteInfo.mockResolvedValue({ routeLink: 'https://example.com/route' });
+    
+    // Ensure no timezone is set for tests by default
+    config.dateFormat.defaultTimezone = null;
   });
 
   describe('Basic CRUD Operations', () => {
@@ -361,7 +365,32 @@ describe('RideService', () => {
       
       const result = await rideService.createRideFromParams(params, 123456, 789);
       
-      expect(result.error).toBe('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30');
+      // Check that the error message contains the base error text
+      expect(result.error).toContain('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30');
+      
+      // The timezone note should not be present when no timezone is configured
+      expect(result.error).not.toContain('Note: Times are interpreted in the');
+      
+      expect(result.ride).toBeNull();
+    });
+    
+    it('should include timezone info in error message when timezone is configured', async () => {
+      // Set a timezone for this specific test
+      config.dateFormat.defaultTimezone = 'Europe/London';
+      
+      const params = {
+        title: 'Sunday Morning Ride',
+        when: 'not a valid date'
+      };
+      
+      const result = await rideService.createRideFromParams(params, 123456, 789);
+      
+      // Check that the error message contains the base error text
+      expect(result.error).toContain('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30');
+      
+      // The timezone note should be present when a timezone is configured
+      expect(result.error).toContain('Note: Times are interpreted in the Europe/London timezone.');
+      
       expect(result.ride).toBeNull();
     });
 
@@ -553,21 +582,58 @@ describe('RideService', () => {
     });
 
     it('should handle invalid date formats in updates', async () => {
-      const ride = await rideService.createRide(testRide);
+      const ride = await storage.createRide({
+        title: 'Original Ride',
+        date: new Date('2024-03-15T15:00:00Z'),
+        createdBy: 123456
+      });
       
       const params = {
-        title: 'Updated Ride Title',
         when: 'not a valid date'
       };
       
       const result = await rideService.updateRideFromParams(ride.id, params);
       
-      expect(result.error).toBe('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30');
+      // Check that the error message contains the base error text
+      expect(result.error).toContain('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30');
+      
+      // The timezone note should not be present when no timezone is configured
+      expect(result.error).not.toContain('Note: Times are interpreted in the');
+      
       expect(result.ride).toBeNull();
     });
-
+    
+    it('should include timezone info in update error message when timezone is configured', async () => {
+      // Set a timezone for this specific test
+      config.dateFormat.defaultTimezone = 'Europe/London';
+      
+      const ride = await storage.createRide({
+        title: 'Original Ride',
+        date: new Date('2024-03-15T15:00:00Z'),
+        createdBy: 123456
+      });
+      
+      const params = {
+        when: 'not a valid date'
+      };
+      
+      const result = await rideService.updateRideFromParams(ride.id, params);
+      
+      // Check that the error message contains the base error text
+      expect(result.error).toContain('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30');
+      
+      // The timezone note should be present when a timezone is configured
+      expect(result.error).toContain('Note: Times are interpreted in the Europe/London timezone.');
+      
+      expect(result.ride).toBeNull();
+    });
+    
     it('should handle invalid route URLs in updates', async () => {
-      const ride = await rideService.createRide(testRide);
+      const ride = await storage.createRide({
+        title: 'Original Ride',
+        date: new Date('2024-03-15T15:00:00Z'),
+        createdBy: 123456
+      });
       
       const params = {
         route: 'not-a-valid-url'
