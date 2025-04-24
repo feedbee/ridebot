@@ -174,19 +174,41 @@ export class RideWizard {
           break;
 
         case 'skip':
+          // Clear the current field value when skipped
           switch (state.step) {
-            case 'category': state.step = 'organizer'; break;
+            case 'category': 
+              state.data.category = undefined;
+              state.step = 'organizer'; 
+              break;
             case 'organizer': 
-              // Clear organizer value when skipped
               state.data.organizer = '';
               state.step = 'date'; 
               break;
-            case 'route': state.step = 'distance'; break;
-            case 'distance': state.step = 'duration'; break;
-            case 'duration': state.step = 'speed'; break;
-            case 'speed': state.step = 'meet'; break;
-            case 'meet': state.step = 'info'; break;
-            case 'info': state.step = 'confirm'; break;
+            case 'route': 
+              state.data.routeLink = undefined;
+              state.step = 'distance'; 
+              break;
+            case 'distance': 
+              state.data.distance = undefined;
+              state.step = 'duration'; 
+              break;
+            case 'duration': 
+              state.data.duration = undefined;
+              state.step = 'speed'; 
+              break;
+            case 'speed': 
+              state.data.speedMin = undefined;
+              state.data.speedMax = undefined;
+              state.step = 'meet'; 
+              break;
+            case 'meet': 
+              state.data.meetingPoint = undefined;
+              state.step = 'info'; 
+              break;
+            case 'info': 
+              state.data.additionalInfo = undefined;
+              state.step = 'confirm'; 
+              break;
           }
           // Update the current message with new step
           await this.sendWizardStep(ctx, true);
