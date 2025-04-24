@@ -486,7 +486,9 @@ export class RideWizard {
       case 'title':
         message = '📝 Please enter the ride title:' + getCurrentValue('title');
         addKeepButton('title');
-        keyboard.text(config.buttons.cancel, 'wizard:cancel');
+        keyboard
+          .row()
+          .text(config.buttons.cancel, 'wizard:cancel');
         break;
         
       case 'category':
@@ -531,9 +533,11 @@ export class RideWizard {
         };
         message = '📅 When is the ride?\nYou can use natural language like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30' + 
           getCurrentValue('datetime', dateFormatter);
+        keyboard
+          .text(config.buttons.back, 'wizard:back');
         addKeepButton('datetime');
         keyboard
-          .text(config.buttons.back, 'wizard:back')
+          .row()
           .text(config.buttons.cancel, 'wizard:cancel');
         break;
 
