@@ -224,12 +224,10 @@ id: abc123
 </pre>
 The ride will be posted to the current chat and all instances will be synchronized when details change or participants join/leave.
     `.trim(),
-    ride: `
+  ride: `
 🚲 <b>{title}</b>{cancelledBadge}
 
-📅 When: {datetime}
-{categoryInfo}{organizerInfo}{meetingInfo}{routeInfo}{distanceInfo}{durationInfo}{speedInfo}{additionalInfo}
-
+{rideDetails}
 👥 Participants ({participantCount}):
 {participants}
 

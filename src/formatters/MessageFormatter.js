@@ -79,55 +79,61 @@ export class MessageFormatter {
           .join('\n')
       : 'No participants yet';
     
+    // Build ride details with proper grouping
+    let rideDetails = '';
+    
+    // Group 1: Title is already handled in the template
+    
+    // Group 2: When and Category
+    let group2 = `📅 When: ${datetime}\n`;
+    if (ride.category) {
+      group2 += `🚵 Category: ${escapeHtml(ride.category)}\n`;
+    }
+    rideDetails += group2;
+    
+    // Group 3: Organizer, Meeting point, Route
+    let group3 = '';
+    if (ride.organizer) {
+      group3 += `👤 Organizer: ${escapeHtml(ride.organizer)}\n`;
+    }
+    if (ride.meetingPoint) {
+      group3 += `📍 Meeting point: ${escapeHtml(ride.meetingPoint)}\n`;
+    }
+    if (ride.routeLink) {
+      group3 += `🔄 Route: <a href="${ride.routeLink}">Link</a>\n`;
+    }
+    if (group3) {
+      rideDetails += `\n${group3}`;
+    }
+    
+    // Group 4: Distance, Duration, Speed
+    let group4 = '';
+    if (ride.distance) {
+      group4 += `📏 Distance: ${ride.distance} km\n`;
+    }
+    if (ride.duration) {
+      group4 += `⏱ Duration: ${this.formatDuration(ride.duration)}\n`;
+    }
+    if (ride.speedMin || ride.speedMax) {
+      group4 += `⚡ Speed: ${this.formatSpeedRange(ride.speedMin, ride.speedMax)}\n`;
+    }
+    if (group4) {
+      rideDetails += `\n${group4}`;
+    }
+    
+    // Group 5: Additional info
+    if (ride.additionalInfo) {
+      rideDetails += `\nℹ️ Additional info: ${escapeHtml(ride.additionalInfo)}\n`;
+    }
+    
     // Convert Markdown template to HTML
     let message = config.messageTemplates.ride
       .replace(/\*([^*]+)\*/g, '<b>$1</b>') // Bold text
       .replace('{title}', escapeHtml(ride.title))
       .replace('{cancelledBadge}', ride.cancelled ? ` ${config.messageTemplates.cancelled}` : '')
-      .replace('{datetime}', datetime)
+      .replace('{rideDetails}', rideDetails)
       .replace('{participantCount}', participantCount)
       .replace('{participants}', participantsList);
-    
-    // Optional fields
-    const categoryInfo = ride.category
-      ? `🚵 Category: ${escapeHtml(ride.category)}\n`
-      : '';    
-    message = message.replace('{categoryInfo}', categoryInfo);
-    
-    const organizerInfo = ride.organizer
-      ? `👤 Organizer: ${escapeHtml(ride.organizer)}\n`
-      : '';
-    message = message.replace('{organizerInfo}', organizerInfo);
-    
-    const meetingInfo = ride.meetingPoint
-      ? `📍 Meeting point: ${escapeHtml(ride.meetingPoint)}\n`
-      : '';
-    message = message.replace('{meetingInfo}', meetingInfo);
-    
-    const routeInfo = ride.routeLink
-      ? `🔄 Route: <a href="${ride.routeLink}">Link</a>\n`
-      : '';
-    message = message.replace('{routeInfo}', routeInfo);
-    
-    const distanceInfo = ride.distance
-      ? `📏 Distance: ${ride.distance} km\n`
-      : '';
-    message = message.replace('{distanceInfo}', distanceInfo);
-    
-    const durationInfo = ride.duration
-      ? `⏱ Duration: ${this.formatDuration(ride.duration)}\n`
-      : '';
-    message = message.replace('{durationInfo}', durationInfo);
-    
-    const speedInfo = (ride.speedMin || ride.speedMax)
-      ? `⚡ Speed: ${this.formatSpeedRange(ride.speedMin, ride.speedMax)}\n`
-      : '';
-    message = message.replace('{speedInfo}', speedInfo);
-    
-    const additionalInfo = ride.additionalInfo
-      ? `ℹ️ Additional info: ${escapeHtml(ride.additionalInfo)}\n`
-      : '';
-    message = message.replace('{additionalInfo}', additionalInfo);
     
     // Add cancellation instructions if the ride is cancelled
     const cancelledInstructions = ride.cancelled ? '\n\n' + config.messageTemplates.cancelledMessage : '';
