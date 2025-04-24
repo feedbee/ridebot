@@ -47,13 +47,15 @@ export class UpdateRideCommandHandler extends BaseCommandHandler {
       originalRideId: ride.id,
       title: ride.title,
       category: ride.category || DEFAULT_CATEGORY,
+      organizer: ride.organizer,
       datetime: ride.date,
       meetingPoint: ride.meetingPoint,
       routeLink: ride.routeLink,
       distance: ride.distance,
       duration: ride.duration,
       speedMin: ride.speedMin,
-      speedMax: ride.speedMax
+      speedMax: ride.speedMax,
+      additionalInfo: ride.additionalInfo
     };
 
     await this.wizard.startWizard(ctx, prefillData);

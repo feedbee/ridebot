@@ -41,8 +41,8 @@ export class NewRideCommandHandler extends BaseCommandHandler {
   async handleWithParams(ctx, params) {
     const { ride, error } = await this.rideService.createRideFromParams(
       params, 
-      ctx.chat.id, 
-      ctx.from.id
+      ctx.chat.id,
+      ctx.from
     );
 
     if (error) {

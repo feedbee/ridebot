@@ -206,7 +206,12 @@ describe('NewRideCommandHandler', () => {
           when: 'tomorrow 10:00'
         }),
         789,
-        101112
+        expect.objectContaining({
+          id: 101112,
+          first_name: 'Test',
+          last_name: 'User',
+          username: 'testuser'
+        })
       );
       
       // Verify that createRideMessage was called with the correct parameters
@@ -256,7 +261,12 @@ describe('NewRideCommandHandler', () => {
       expect(mockRideService.createRideFromParams).toHaveBeenCalledWith(
         params,
         789, // chat.id
-        101112 // from.id
+        expect.objectContaining({
+          id: 101112,
+          first_name: 'Test',
+          last_name: 'User',
+          username: 'testuser'
+        }) // user object
       );
       
       // Verify that createRideMessage was called with the correct parameters
@@ -282,7 +292,12 @@ describe('NewRideCommandHandler', () => {
       expect(mockRideService.createRideFromParams).toHaveBeenCalledWith(
         params,
         789, // chat.id
-        101112 // from.id
+        expect.objectContaining({
+          id: 101112,
+          first_name: 'Test',
+          last_name: 'User',
+          username: 'testuser'
+        }) // user object
       );
       
       expect(mockCtx.reply).toHaveBeenCalledWith('Invalid date format');
@@ -322,7 +337,12 @@ describe('NewRideCommandHandler', () => {
       expect(mockRideService.createRideFromParams).toHaveBeenCalledWith(
         params,
         789,
-        101112
+        expect.objectContaining({
+          id: 101112,
+          first_name: 'Test',
+          last_name: 'User',
+          username: 'testuser'
+        })
       );
       
       expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(createdRide, threadCtx);

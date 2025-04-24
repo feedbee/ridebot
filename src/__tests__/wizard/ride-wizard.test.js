@@ -242,7 +242,11 @@ describe('RideWizard', () => {
       ctx.message = { text: 'Road Ride', message_id: 3 };
       await wizard.handleWizardInput(ctx);
       
-      ctx.message = { text: 'tomorrow at 2pm', message_id: 4 };
+      // Set organizer
+      ctx.message = { text: 'Test Organizer', message_id: 4 };
+      await wizard.handleWizardInput(ctx);
+      
+      ctx.message = { text: 'tomorrow at 2pm', message_id: 5 };
       await wizard.handleWizardInput(ctx);
       
       // Skip route
@@ -270,11 +274,11 @@ describe('RideWizard', () => {
       const stateKey = wizard.getWizardStateKey(ctx.from.id, ctx.chat.id);
       const state = wizard.wizardStates.get(stateKey);
       expect(state.data.category).toBe('Road Ride');
-      expect(state.step).toBe('date');
+      expect(state.step).toBe('organizer');
       
       // Verify message was updated
       const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
-      expect(lastMessage.text).toContain('When is the ride?');
+      expect(lastMessage.text).toContain('Who is organizing this ride?');
     });
 
     test('should handle invalid category selection', async () => {
@@ -340,7 +344,7 @@ describe('RideWizard', () => {
       const stateKey = wizard.getWizardStateKey(ctx.from.id, ctx.chat.id);
       const state = wizard.wizardStates.get(stateKey);
       expect(state.data.category).toBeUndefined();
-      expect(state.step).toBe('date');
+      expect(state.step).toBe('organizer');
     });
   });
 
@@ -355,7 +359,12 @@ describe('RideWizard', () => {
       ctx.message = { text: 'Road Ride', message_id: 3 };
       await wizard.handleWizardInput(ctx);
       
-      ctx.message = { text: 'tomorrow at 2pm', message_id: 4 };
+      // Set organizer
+      ctx.message = { text: 'Test Organizer', message_id: 4 };
+      await wizard.handleWizardInput(ctx);
+      
+      // Set date
+      ctx.message = { text: 'tomorrow at 2pm', message_id: 5 };
       await wizard.handleWizardInput(ctx);
       
       // Skip to the additional info step
@@ -365,7 +374,7 @@ describe('RideWizard', () => {
       }
       
       // Set additional info
-      ctx.message = { text: 'Bring lights and a jacket', message_id: 4 };
+      ctx.message = { text: 'Bring lights and a jacket', message_id: 6 };
       await wizard.handleWizardInput(ctx);
       
       // Verify we're now at the confirmation step
@@ -393,7 +402,12 @@ describe('RideWizard', () => {
       ctx.message = { text: 'Road Ride', message_id: 3 };
       await wizard.handleWizardInput(ctx);
       
-      ctx.message = { text: 'tomorrow at 2pm', message_id: 4 };
+      // Set organizer
+      ctx.message = { text: 'Test Organizer', message_id: 4 };
+      await wizard.handleWizardInput(ctx);
+      
+      // Set date
+      ctx.message = { text: 'tomorrow at 2pm', message_id: 5 };
       await wizard.handleWizardInput(ctx);
       
       // Skip to the additional info step
@@ -441,8 +455,12 @@ describe('RideWizard', () => {
       ctx.message = { text: 'Road Ride', message_id: 3 };
       await wizard.handleWizardInput(ctx);
       
+      // Set organizer
+      ctx.message = { text: 'Test Organizer', message_id: 4 };
+      await wizard.handleWizardInput(ctx);
+      
       // Set date
-      ctx.message = { text: 'tomorrow at 2pm', message_id: 4 };
+      ctx.message = { text: 'tomorrow at 2pm', message_id: 5 };
       await wizard.handleWizardInput(ctx);
       
       const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
@@ -460,8 +478,12 @@ describe('RideWizard', () => {
       ctx.message = { text: 'Road Ride', message_id: 3 };
       await wizard.handleWizardInput(ctx);
       
+      // Set organizer
+      ctx.message = { text: 'Test Organizer', message_id: 4 };
+      await wizard.handleWizardInput(ctx);
+      
       // Set invalid date
-      ctx.message = { text: 'not a date', message_id: 4 };
+      ctx.message = { text: 'not a date', message_id: 5 };
       await wizard.handleWizardInput(ctx);
       
       expect(ctx._test.messages).toHaveLength(2); // Initial message + error message
@@ -478,11 +500,15 @@ describe('RideWizard', () => {
       ctx.message = { text: 'Road Ride', message_id: 3 };
       await wizard.handleWizardInput(ctx);
       
-      ctx.message = { text: 'tomorrow at 2pm', message_id: 4 };
+      // Set organizer
+      ctx.message = { text: 'Test Organizer', message_id: 4 };
+      await wizard.handleWizardInput(ctx);
+      
+      ctx.message = { text: 'tomorrow at 2pm', message_id: 5 };
       await wizard.handleWizardInput(ctx);
       
       // Set route
-      ctx.message = { text: 'https://example.com/route', message_id: 5 };
+      ctx.message = { text: 'https://example.com/route', message_id: 6 };
       await wizard.handleWizardInput(ctx);
       
       const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
@@ -498,6 +524,7 @@ describe('RideWizard', () => {
       const inputs = [
         { text: 'Evening Ride', step: 'title' },
         { text: 'Road Ride', step: 'category' },
+        { text: 'John Doe', step: 'organizer' },
         { text: 'tomorrow at 6pm', step: 'date' },
         { text: 'https://example.com/route', step: 'route' },
         { text: '50', step: 'distance' },
@@ -521,6 +548,7 @@ describe('RideWizard', () => {
       expect(createdRide).toBeDefined();
       expect(createdRide.title).toBe('Evening Ride');
       expect(createdRide.category).toBe('Road Ride');
+      expect(createdRide.organizer).toBe('John Doe');
       expect(createdRide.meetingPoint).toBe('City Center');
       expect(createdRide.speedMin).toBe(25);
       expect(createdRide.speedMax).toBe(28);
@@ -546,7 +574,7 @@ describe('RideWizard', () => {
       }
       
       // Skip optional fields
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < 7; i++) {
         ctx.match = ['wizard:skip', 'skip'];
         await wizard.handleWizardAction(ctx);
       }

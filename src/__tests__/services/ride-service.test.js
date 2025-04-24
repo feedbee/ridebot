@@ -441,6 +441,80 @@ describe('RideService', () => {
     });
   });
 
+  describe('Organizer Field', () => {
+    it('should set organizer field when creating a ride with organizer parameter', async () => {
+      const params = {
+        title: 'Organizer Test Ride',
+        when: 'tomorrow 9am',
+        organizer: 'Jane Doe'
+      };
+      
+      const user = {
+        userId: 789,
+        first_name: 'Test',
+        last_name: 'User',
+        username: 'testuser'
+      };
+      
+      const result = await rideService.createRideFromParams(params, 123456, user);
+      
+      expect(result.error).toBeNull();
+      expect(result.ride.organizer).toBe('Jane Doe');
+    });
+
+    it('should use creator name as default organizer when no organizer parameter is provided', async () => {
+      const params = {
+        title: 'Default Organizer Test Ride',
+        when: 'tomorrow 9am'
+      };
+      
+      const user = {
+        userId: 789,
+        first_name: 'Test',
+        last_name: 'User',
+        username: 'testuser'
+      };
+      
+      const result = await rideService.createRideFromParams(params, 123456, user);
+      
+      expect(result.error).toBeNull();
+      expect(result.ride.organizer).toBe('Test User (@testuser)');
+    });
+
+    it('should handle organizer field when updating a ride', async () => {
+      // First create a ride
+      const ride = await rideService.createRide(testRide);
+      
+      // Then update it with organizer
+      const params = {
+        organizer: 'Updated Organizer'
+      };
+      
+      const result = await rideService.updateRideFromParams(ride.id, params);
+      
+      expect(result.error).toBeNull();
+      expect(result.ride.organizer).toBe('Updated Organizer');
+    });
+    
+    it('should clear organizer field when updating with dash', async () => {
+      // First create a ride with organizer
+      const ride = await rideService.createRide({
+        ...testRide,
+        organizer: 'Original Organizer'
+      });
+      
+      // Then update it with dash to clear the field
+      const params = {
+        organizer: '-'
+      };
+      
+      const result = await rideService.updateRideFromParams(ride.id, params);
+      
+      expect(result.error).toBeNull();
+      expect(result.ride.organizer).toBe('');
+    });
+  });
+
   describe('Additional Information Field', () => {
     it('should handle additionalInfo field when creating a ride', async () => {
       const params = {

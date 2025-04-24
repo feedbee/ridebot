@@ -32,6 +32,7 @@ const rideSchema = new mongoose.Schema({
   cancelled: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   createdBy: { type: Number, required: true },
+  organizer: { type: String },
   updatedAt: { type: Date },
   updatedBy: { type: Number },
   participants: [participantSchema]
@@ -196,6 +197,7 @@ export class MongoDBStorage extends StorageInterface {
       cancelled: rideObj.cancelled,
       createdAt: rideObj.createdAt,
       createdBy: rideObj.createdBy,
+      organizer: rideObj.organizer,
       updatedAt: rideObj.updatedAt,
       updatedBy: rideObj.updatedBy,
       participants: rideObj.participants?.map(p => ({

@@ -42,13 +42,16 @@ export class DuplicateRideCommandHandler extends BaseCommandHandler {
 
     const prefillData = {
       title: ride.title,
+      category: ride.category,
+      organizer: ride.organizer,
       datetime: tomorrow,
       meetingPoint: ride.meetingPoint,
       routeLink: ride.routeLink,
       distance: ride.distance,
       duration: ride.duration,
       speedMin: ride.speedMin,
-      speedMax: ride.speedMax
+      speedMax: ride.speedMax,
+      additionalInfo: ride.additionalInfo
     };
 
     await this.wizard.startWizard(ctx, prefillData);
@@ -72,6 +75,7 @@ export class DuplicateRideCommandHandler extends BaseCommandHandler {
         distance: params.dist ? parseFloat(params.dist) : originalRide.distance,
         duration: params.duration ? parseInt(params.duration) : originalRide.duration,
         category: params.category || originalRide.category,
+        organizer: params.organizer || originalRide.organizer,
         additionalInfo: params.info || originalRide.additionalInfo
       };
 

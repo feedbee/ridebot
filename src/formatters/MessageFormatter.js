@@ -94,6 +94,11 @@ export class MessageFormatter {
       : '';    
     message = message.replace('{categoryInfo}', categoryInfo);
     
+    const organizerInfo = ride.organizer
+      ? `👤 Organizer: ${escapeHtml(ride.organizer)}\n`
+      : '';
+    message = message.replace('{organizerInfo}', organizerInfo);
+    
     const meetingInfo = ride.meetingPoint
       ? `📍 Meeting point: ${escapeHtml(ride.meetingPoint)}\n`
       : '';

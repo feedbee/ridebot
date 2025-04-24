@@ -133,7 +133,7 @@ export class RideWizard {
         case 'category':
           if (VALID_CATEGORIES.includes(param)) {
             state.data.category = param;
-            state.step = 'date';
+            state.step = 'organizer';
             await this.sendWizardStep(ctx, true);
           } else {
             await ctx.answerCallbackQuery('Invalid category selected');
@@ -143,7 +143,8 @@ export class RideWizard {
         case 'back':
           switch (state.step) {
             case 'category': state.step = 'title'; break;
-            case 'date': state.step = 'category'; break;
+            case 'organizer': state.step = 'category'; break;
+            case 'date': state.step = 'organizer'; break;
             case 'route': state.step = 'date'; break;
             case 'distance': state.step = 'route'; break;
             case 'duration': state.step = 'distance'; break;
@@ -159,7 +160,8 @@ export class RideWizard {
           // Move to the next step based on current step
           switch (state.step) {
             case 'title': state.step = 'category'; break;
-            case 'category': state.step = 'date'; break;
+            case 'category': state.step = 'organizer'; break;
+            case 'organizer': state.step = 'date'; break;
             case 'date': state.step = 'route'; break;
             case 'route': state.step = 'distance'; break;
             case 'distance': state.step = 'duration'; break;
@@ -173,7 +175,12 @@ export class RideWizard {
 
         case 'skip':
           switch (state.step) {
-            case 'category': state.step = 'date'; break;
+            case 'category': state.step = 'organizer'; break;
+            case 'organizer': 
+              // Clear organizer value when skipped
+              state.data.organizer = '';
+              state.step = 'date'; 
+              break;
             case 'route': state.step = 'distance'; break;
             case 'distance': state.step = 'duration'; break;
             case 'duration': state.step = 'speed'; break;
@@ -207,6 +214,7 @@ export class RideWizard {
               title: state.data.title,
               category: state.data.category || DEFAULT_CATEGORY,
               date: state.data.datetime,
+              organizer: state.data.organizer,
               meetingPoint: state.data.meetingPoint,
               routeLink: state.data.routeLink,
               distance: state.data.distance,
@@ -230,6 +238,7 @@ export class RideWizard {
               date: state.data.datetime,
               messages: [], // Initialize with empty array instead of null messageId
               createdBy: state.data.currentUser,
+              organizer: state.data.organizer,
               meetingPoint: state.data.meetingPoint,
               routeLink: state.data.routeLink,
               distance: state.data.distance,
@@ -291,6 +300,16 @@ export class RideWizard {
         case 'category':
           // Validate and normalize the ride category
           state.data.category = normalizeCategory(ctx.message.text);
+          state.step = 'organizer';
+          break;
+          
+        case 'organizer':
+          // Check if user wants to clear the field with a dash
+          if (ctx.message.text === '-') {
+            state.data.organizer = '';
+          } else {
+            state.data.organizer = ctx.message.text;
+          }
           state.step = 'date';
           break;
 
@@ -491,6 +510,18 @@ export class RideWizard {
           .row()
           .text(config.buttons.cancel, 'wizard:cancel');
         break;
+        
+      case 'organizer':
+        message = '👤 Who is organizing this ride?\n<i>Enter a dash (-) to clear/skip this field</i>' + 
+          getCurrentValue('organizer');
+        keyboard
+          .text(config.buttons.back, 'wizard:back');
+        addKeepButton('organizer');
+        keyboard
+          .text(config.buttons.skip, 'wizard:skip')
+          .row()
+          .text(config.buttons.cancel, 'wizard:cancel');
+        break;
 
       case 'date':
         const dateFormatter = (date) => {
@@ -594,10 +625,28 @@ export class RideWizard {
         break;
 
       case 'confirm':
-        const { title, category, datetime, routeLink, distance, duration, speedMin, speedMax, meetingPoint, additionalInfo } = state.data;
+        // Set default organizer name if not provided
+        if (!state.data.organizer) {
+          // Format organizer name in the same format as participant names but without the link
+          let organizerName = '';
+          if (ctx.from.first_name || ctx.from.last_name) {
+            const fullName = `${ctx.from.first_name || ''} ${ctx.from.last_name || ''}`.trim();
+            if (ctx.from.username) {
+              organizerName = `${fullName} (@${ctx.from.username})`;
+            } else {
+              organizerName = fullName;
+            }
+          } else if (ctx.from.username) {
+            organizerName = ctx.from.username.includes(' ') ? ctx.from.username : `@${ctx.from.username}`;
+          }
+          state.data.organizer = organizerName;
+        }
+        
+        const { title, category, datetime, routeLink, distance, duration, speedMin, speedMax, meetingPoint, additionalInfo, organizer } = state.data;
         message = `<b>Please confirm the ${state.isUpdate ? 'update' : 'ride'} details:</b>\n\n`;
         message += `📝 Title: ${escapeHtml(title)}\n`;
         message += `🚲 Category: ${category || DEFAULT_CATEGORY}\n`;
+        message += `👤 Organizer: ${escapeHtml(organizer)}\n`;
         // Use DateParser for consistent timezone handling
         const formattedDateTime = DateParser.formatDateTime(datetime);
         message += `📅 When: ${formattedDateTime.date} at ${formattedDateTime.time}\n`;

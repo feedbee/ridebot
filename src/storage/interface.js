@@ -10,6 +10,7 @@
  * @property {RideMessage[]} messages
  * @property {string} title
  * @property {string} [category]
+ * @property {string} [organizer]
  * @property {Date} date
  * @property {string} [routeLink]
  * @property {string} [meetingPoint]

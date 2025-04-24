@@ -130,11 +130,11 @@ export class RideService {
   /**
    * Create a ride from parameters
    * @param {Object} params - Ride parameters
-   * @param {number} chatId - Chat ID
-   * @param {number} userId - User ID
+   * @param {number} chatId - Chat ID where the command was issued
+   * @param {Object} user - User object with id, first_name, last_name, username fields
    * @returns {Promise<Object>} - Created ride and any errors
    */
-  async createRideFromParams(params, chatId, userId) {
+  async createRideFromParams(params, chatId, user) {
     if (!params.title || !params.when) {
       return { 
         ride: null, 
@@ -154,8 +154,27 @@ export class RideService {
         category: params.category ? normalizeCategory(params.category) : DEFAULT_CATEGORY,
         date: result.date,
         messages: [], // Initialize with empty array instead of null messageId
-        createdBy: userId
+        createdBy: user.id
       };
+      
+      // Set organizer name - use provided value or default to creator's name
+      if (params.organizer) {
+        rideData.organizer = params.organizer;
+      } else if (user) {
+        // Format organizer name in the same format as participant names but without the link
+        let organizerName = '';
+        if (user.first_name || user.last_name) {
+          const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+          if (user.username) {
+            organizerName = `${fullName} (@${user.username})`;
+          } else {
+            organizerName = fullName;
+          }
+        } else if (user.username) {
+          organizerName = user.username.includes(' ') ? user.username : `@${user.username}`;
+        }
+        rideData.organizer = organizerName;
+      }
 
       if (params.meet) {
         rideData.meetingPoint = params.meet;
@@ -230,6 +249,15 @@ export class RideService {
           updates.category = DEFAULT_CATEGORY; // Reset to default
         } else {
           updates.category = normalizeCategory(params.category);
+        }
+      }
+      
+      if (params.organizer !== undefined) {
+        // Use dash ('-') to remove the field value
+        if (params.organizer === '-') {
+          updates.organizer = '';
+        } else {
+          updates.organizer = params.organizer;
         }
       }
       

@@ -5,6 +5,8 @@ export class RideParamsHelper {
    */
   static VALID_PARAMS = {
     'title': 'Title of the ride',
+    'category': 'Ride category',
+    'organizer': 'Ride organizer name',
     'when': 'Date and time of the ride',
     'meet': 'Meeting point',
     'route': 'Route URL',
@@ -12,7 +14,6 @@ export class RideParamsHelper {
     'duration': 'Duration in minutes',
     'speed': 'Speed range (e.g. 25-28)',
     'info': 'Additional information',
-    'category': 'Ride category',
     'id': 'Ride ID (for commands that need it)'
   };
 
