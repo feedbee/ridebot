@@ -1,4 +1,5 @@
-import { Bot as GrammyBot } from 'grammy';
+import { Bot as GrammyBot, webhookCallback } from 'grammy';
+import express from 'express';
 import { config } from '../config.js';
 import { RideWizard } from '../wizard/RideWizard.js';
 import { RideService } from '../services/RideService.js';
@@ -177,9 +178,18 @@ export class Bot {
     await this.setupBotCommands();
     
     if (config.bot.useWebhook) {
-      const webhookUrl = `${config.bot.webhookDomain}${config.bot.webhookPath}`;
-      await this.bot.api.setWebhook(webhookUrl);
-      console.log(`Bot webhook set to ${webhookUrl}`);
+      const app = express();
+      app.use(express.json());
+
+      const webhookPath = config.bot.webhookPath || '/';
+      app.use(webhookPath, webhookCallback(this.bot, 'express'));
+
+      app.listen(config.bot.webhookPort, async () => {
+        console.log(`Webhook server listening on port ${config.bot.webhookPort}`);
+        const webhookUrl = `${config.bot.webhookDomain}${webhookPath}`;
+        await this.bot.api.setWebhook(webhookUrl);
+        console.log(`Bot webhook set to ${webhookUrl}`);
+      });
     } else {
       await this.bot.api.deleteWebhook();
       this.bot.start();
