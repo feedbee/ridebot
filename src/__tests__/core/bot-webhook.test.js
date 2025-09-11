@@ -1,10 +1,8 @@
 import request from 'supertest';
-import { Bot as GrammyBot } from 'grammy';
-import { Bot } from '../../core/Bot.js';
-import { config as appConfig } from '../../config.js';
-import { MemoryStorage } from '../../storage/MemoryStorage.js';
+import { jest } from '@jest/globals';
+import express from 'express';
 
-// Mock GrammyBot methods
+// ESM-aware mocking: mock 'grammy' BEFORE importing modules that depend on it
 const mockApi = {
   setWebhook: jest.fn().mockResolvedValue(true),
   deleteWebhook: jest.fn().mockResolvedValue(true),
@@ -14,21 +12,51 @@ const mockApi = {
 const mockGrammyBotStart = jest.fn();
 const mockGrammyBotHandleUpdate = jest.fn();
 
-jest.mock('grammy', () => {
-  const actualGrammy = jest.requireActual('grammy');
-  return {
-    ...actualGrammy,
-    Bot: jest.fn().mockImplementation((token) => ({
-      api: mockApi,
-      start: mockGrammyBotStart,
-      handleUpdate: mockGrammyBotHandleUpdate,
-      use: jest.fn(),
-      command: jest.fn(),
-      callbackQuery: jest.fn(),
-      on: jest.fn(),
-    })),
-  };
-});
+await jest.unstable_mockModule('grammy', async () => ({
+  // Minimal stubs required by our codebase
+  Bot: jest.fn().mockImplementation(() => ({
+    api: mockApi,
+    start: mockGrammyBotStart,
+    handleUpdate: mockGrammyBotHandleUpdate,
+    use: jest.fn(),
+    command: jest.fn(),
+    callbackQuery: jest.fn(),
+    on: jest.fn(),
+  })),
+  webhookCallback: jest.fn().mockImplementation(() => {
+    return (req, res) => {
+      try {
+        mockGrammyBotHandleUpdate(req.body);
+        res.sendStatus(200);
+      } catch (e) {
+        res.sendStatus(500);
+      }
+    };
+  }),
+  InlineKeyboard: class InlineKeyboard {},
+}));
+
+const { Bot } = await import('../../core/Bot.js');
+const { config: appConfig } = await import('../../config.js');
+const { MemoryStorage } = await import('../../storage/memory.js');
+
+const waitForCondition = async (conditionFn, { timeoutMs = 1000, intervalMs = 25 } = {}) => {
+  const start = Date.now();
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    try {
+      if (conditionFn()) return;
+    } catch (_) {
+      // ignore until condition becomes true
+    }
+    if (Date.now() - start > timeoutMs) {
+      throw new Error('Condition not met within timeout');
+    }
+    await new Promise(r => setTimeout(r, intervalMs));
+  }
+};
+
+// Note: mocks are defined above using unstable_mockModule
 
 describe('Bot Webhook Functionality', () => {
   let botInstance;
@@ -50,7 +78,6 @@ describe('Bot Webhook Functionality', () => {
     // The Bot's start method now internally creates and starts the Express server.
     // We need to get a reference to this server.
     // Temporarily spy on app.listen to capture the server instance
-    const express = require('express');
     const actualListen = express.application.listen;
     const listenSpy = jest.spyOn(express.application, 'listen');
     listenSpy.mockImplementation(function (...args) {
@@ -90,11 +117,10 @@ describe('Bot Webhook Functionality', () => {
     // Reset mocks
     mockApi.setWebhook.mockClear();
     mockGrammyBotHandleUpdate.mockClear();
-    GrammyBot.mockClear();
   });
 
   test('should start the webhook server when useWebhook is true', async () => {
-    expect(mockApi.setWebhook).toHaveBeenCalled();
+    await waitForCondition(() => mockApi.setWebhook.mock.calls.length > 0);
     // The webhook URL should be constructed with the test config
     const expectedWebhookUrl = `${appConfig.bot.webhookDomain}${appConfig.bot.webhookPath}`;
     expect(mockApi.setWebhook).toHaveBeenCalledWith(expectedWebhookUrl);
@@ -132,7 +158,6 @@ describe('Bot Webhook Functionality', () => {
     const tempBot = new Bot(storage);
 
     let tempServer;
-    const express = require('express');
     const actualListen = express.application.listen;
     const listenSpy = jest.spyOn(express.application, 'listen');
     listenSpy.mockImplementation(function (...args) {
