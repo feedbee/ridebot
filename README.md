@@ -208,3 +208,65 @@ The bot supports multiple ways to reference a ride:
 - `WEBHOOK_DOMAIN`: Domain for webhook in production
 - `MONGODB_URI`: MongoDB connection string
 - `NODE_ENV`: Set to 'development' for dev mode
+- `USE_WEBHOOK`: Set to `true` to enable webhook mode (defaults to `false` for polling)
+- `WEBHOOK_PATH`: Path for the webhook (e.g., `/webhook`, defaults to `/`)
+- `WEBHOOK_PORT`: Port for the webhook server to listen on (defaults to `8080`)
+
+## Webhook Setup
+
+When running the bot in production or any environment where you want to use webhooks instead of polling, follow these steps:
+
+1.  **Environment Configuration:**
+    *   Set `USE_WEBHOOK=true` in your `.env` file or environment variables.
+    *   Ensure `WEBHOOK_DOMAIN` is set to your publicly accessible domain name (e.g., `yourbot.example.com`).
+    *   Optionally, set `WEBHOOK_PATH` if you want the webhook to be served on a specific path (e.g., `/your-secret-webhook-path`). If not set, it defaults to `/`.
+    *   Optionally, set `WEBHOOK_PORT` if your bot needs to listen on a specific port for webhook requests (defaults to `8080`). This is the port your application server (Node.js) will bind to.
+
+2.  **Server Setup (Reverse Proxy Recommended):**
+    *   Your bot needs to be accessible from the internet via HTTPS. Telegram requires HTTPS for webhooks.
+    *   It's highly recommended to use a reverse proxy like Nginx or Caddy in front of your Node.js application.
+    *   The reverse proxy will handle SSL termination (HTTPS) and forward requests to your bot's HTTP server running on `WEBHOOK_PORT`.
+    *   **Example Nginx Configuration Snippet:**
+        ```nginx
+        server {
+            listen 443 ssl;
+            server_name yourbot.example.com;
+
+            ssl_certificate /path/to/your/fullchain.pem;
+            ssl_certificate_key /path/to/your/privkey.pem;
+
+            location /your-secret-webhook-path { # Or just / if WEBHOOK_PATH is not set
+                proxy_pass http://localhost:8080; # Assuming WEBHOOK_PORT is 8080
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto https;
+            }
+        }
+        ```
+    *   Ensure your firewall allows traffic to the port your reverse proxy is listening on (usually 443 for HTTPS).
+
+3.  **Set the Webhook with Telegram:**
+    *   Once your bot is running and accessible via the HTTPS URL, you need to tell Telegram where to send updates.
+    *   The bot attempts to set the webhook automatically on startup if `USE_WEBHOOK=true`. The URL it registers is `https://<WEBHOOK_DOMAIN><WEBHOOK_PATH>`.
+    *   You can also manually set or check the webhook URL using a `curl` command or by visiting the URL in your browser:
+        ```bash
+        curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook?url=https://<WEBHOOK_DOMAIN><WEBHOOK_PATH>"
+        ```
+        Replace `<YOUR_BOT_TOKEN>`, `<WEBHOOK_DOMAIN>`, and `<WEBHOOK_PATH>` (if you configured a custom one) with your actual values.
+    *   You should receive a JSON response like `{"ok":true,"result":true,"description":"Webhook was set"}`.
+    *   To check current webhook info:
+        ```bash
+        curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getWebhookInfo"
+        ```
+
+4.  **Testing:**
+    *   Send a command to your bot in a chat.
+    *   Check your bot's logs and your reverse proxy logs to see if the request is being received and processed.
+
+**Important Considerations:**
+
+*   **Polling vs. Webhook:** The bot can run in either polling mode (default, good for development) or webhook mode. It cannot use both simultaneously. If `USE_WEBHOOK` is `true`, polling is disabled.
+*   **Webhook Path:** Using a non-obvious `WEBHOOK_PATH` can add a small layer of security.
+*   **Self-signed certificates:** Telegram does not support self-signed certificates for webhooks. You need a valid SSL certificate (e.g., from Let's Encrypt).
+*   **Docker:** If using Docker, ensure `WEBHOOK_PORT` is exposed and mapped correctly in your `docker-compose.yml` or Docker run command. The reverse proxy would typically run on the host or as another container.

@@ -9,6 +9,8 @@ export const config = {
     webhookDomain: process.env.WEBHOOK_DOMAIN,
     webhookPath: '/webhook',
     useWebhook: process.env.USE_WEBHOOK === 'true' || false,
+    // Port for the webhook server to listen on
+    webhookPort: parseInt(process.env.WEBHOOK_PORT, 10) || 8080,
     wizardOnlyInPrivateChats: process.env.WIZARD_ONLY_IN_PRIVATE === 'true' || false,
     privateChatCommandsMode: process.env.PRIVATE_CHAT_COMMANDS_MODE === 'true' || false
   },
