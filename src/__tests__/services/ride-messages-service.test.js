@@ -8,8 +8,48 @@ describe('RideMessagesService', () => {
   });
 
   describe('extractRideId', () => {
-    // Test for extracting ride ID from command line
-    it('should extract ride ID from command line', () => {
+    // Test for extracting ride ID from command line with optional # symbol
+    it('should extract ride ID from command line with optional # symbol', () => {
+      // Test without #
+      const message1 = {
+        text: '/updateride abc123'
+      };
+      
+      const result1 = rideMessagesService.extractRideId(message1);
+      expect(result1.rideId).toBe('abc123');
+      expect(result1.error).toBeNull();
+      
+      // Test with #
+      const message2 = {
+        text: '/updateride #abc123'
+      };
+      
+      const result2 = rideMessagesService.extractRideId(message2);
+      expect(result2.rideId).toBe('abc123');
+      expect(result2.error).toBeNull();
+    });
+    
+    it('should extract ride ID from command line with bot username', () => {
+      // Test with bot username and without #
+      const message1 = {
+        text: '/updateride@MyRideBot abc123'
+      };
+      
+      const result1 = rideMessagesService.extractRideId(message1);
+      expect(result1.rideId).toBe('abc123');
+      expect(result1.error).toBeNull();
+      
+      // Test with bot username and with #
+      const message2 = {
+        text: '/updateride@MyRideBot #abc123'
+      };
+      
+      const result2 = rideMessagesService.extractRideId(message2);
+      expect(result2.rideId).toBe('abc123');
+      expect(result2.error).toBeNull();
+    });
+    
+    it('should handle various command formats', () => {
       const message = {
         text: '/updateride abc123'
       };
@@ -20,18 +60,7 @@ describe('RideMessagesService', () => {
       expect(result.error).toBeNull();
     });
     
-    it('should extract ride ID from command line with leading # symbol', () => {
-      const message = {
-        text: '/updateride #abc123'
-      };
-      
-      const result = rideMessagesService.extractRideId(message);
-      
-      expect(result.rideId).toBe('abc123');
-      expect(result.error).toBeNull();
-    });
-    
-    it('should accept both #id and id formats in command line', () => {
+    it('should handle various command formats', () => {
       // Test with plain ID
       const message1 = {
         text: '/updateride abc123'

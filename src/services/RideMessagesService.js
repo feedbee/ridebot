@@ -23,10 +23,10 @@ export class RideMessagesService {
     // Extract just the first line to ensure we don't match across newlines
     const firstLine = message.text.split('\n')[0];
     // Updated regex to match IDs with optional leading # symbol
-    const commandMatch = firstLine.match(/^\/(\w+)(\s+#?(\w+))?/i);
+    const commandMatch = firstLine.match(/^\/(\w+)(@\w+)?(\s+#?(\w+))?/i);
     const commandName = commandMatch && commandMatch[1] ? commandMatch[1] : 'command';
-    if (commandMatch && commandMatch[3]) {
-      return { rideId: commandMatch[3], error: null };
+    if (commandMatch && commandMatch[4]) {
+      return { rideId: commandMatch[4], error: null };
     }
     
     // Then check if ID is provided in parameters
