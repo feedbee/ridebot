@@ -54,7 +54,7 @@ jobs:
           tags: |
             # from Git tags
             type=semver,pattern={{version}}
-            type=semver,patterntern={{major}}.{{minor}}
+            type=semver,pattern={{major}}.{{minor}}
             # from manual input, if provided
             type=raw,value=v${{ github.event.inputs.version }},enable=${{ github.event.inputs.version != '' }}
 
