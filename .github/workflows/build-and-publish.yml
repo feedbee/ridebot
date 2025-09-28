@@ -52,11 +52,18 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            # from Git tags
+            # From Git tags (e.g., refs/tags/v1.2.3)
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            # from manual input, if provided
-            type=raw,value=v${{ github.event.inputs.version }},enable=${{ github.event.inputs.version != '' }}
+            
+            # From manual input, if provided (expects 1.2.3)
+            # Full version (unprefixed): 1.2.3
+            type=semver,pattern={{version}},value=${{ github.event.inputs.version }},enable=${{ github.event.inputs.version != '' }}
+            # Also derive major.minor: 1.2
+            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.inputs.version }},enable=${{ github.event.inputs.version != '' }}
+
+            # Conditionally add 'latest'
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.latest == 'true') }}
 
       # Build and push Docker image with Buildx
       - name: Build and push Docker image
