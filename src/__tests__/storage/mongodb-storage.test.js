@@ -41,20 +41,28 @@ const testParticipant = {
 };
 
 beforeAll(async () => {
-  // Set specific version for mongodb-memory-server
+  // For ARM64 Debian 12, we need to use Ubuntu binaries as a workaround
+  // MongoDB doesn't provide native Debian 12 ARM64 binaries for most versions
   mongoServer = await MongoMemoryServer.create({
     binary: {
-      version: '7.0.3',
+      version: '8.2.0',
+      os: {
+        os: 'linux',
+        dist: 'ubuntu',
+        release: '22.04'
+      }
     }
   });
   const mongoUri = mongoServer.getUri();
   config.mongodb.uri = mongoUri;
   storage = new MongoDBStorage();
-});
+}, 60000); // Increase timeout for MongoDB download
 
 afterAll(async () => {
   await mongoose.disconnect();
-  await mongoServer.stop();
+  if (mongoServer) {
+    await mongoServer.stop();
+  }
 });
 
 afterEach(async () => {
