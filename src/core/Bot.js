@@ -59,16 +59,10 @@ export class Bot {
     // Apply middleware for handling message thread IDs in topics
     this.bot.use(threadMiddleware);
     
-    // Command handlers
-    if (config.bot.privateChatCommandsMode) {
-      // In restricted mode, handle commands differently based on chat type
-      this.setupRestrictedCommandHandlers();
-    } else {
-      // Standard command handling
-      this.setupStandardCommandHandlers();
-    }
+    // Command handlers (private chat only, except /postride)
+    this.setupCommandHandlers();
     
-    // Callback query handlers (same for both modes)
+    // Callback query handlers
     this.bot.callbackQuery(/^join:(.+)$/, ctx => this.participationHandlers.handleJoinRide(ctx));
     this.bot.callbackQuery(/^leave:(.+)$/, ctx => this.participationHandlers.handleLeaveRide(ctx));
     this.bot.callbackQuery(/^delete:(\w+):(\w+)$/, ctx => this.deleteRideHandler.handleConfirmation(ctx));
@@ -79,24 +73,10 @@ export class Bot {
     this.bot.on('message:text', ctx => this.wizard.handleWizardInput(ctx));
   }
 
-  setupStandardCommandHandlers() {
-    // Command handlers
-    this.bot.command('start', ctx => this.startHandler.handle(ctx));
-    this.bot.command('help', ctx => this.helpHandler.handle(ctx));
-    this.bot.command('newride', ctx => this.newRideHandler.handle(ctx));
-    this.bot.command('updateride', ctx => this.updateRideHandler.handle(ctx));
-    this.bot.command('cancelride', ctx => this.cancelRideHandler.handle(ctx));
-    this.bot.command('resumeride', ctx => this.resumeRideHandler.handle(ctx));
-    this.bot.command('deleteride', ctx => this.deleteRideHandler.handle(ctx));
-    this.bot.command('listrides', ctx => this.listRidesHandler.handle(ctx));
-    this.bot.command('dupride', ctx => this.duplicateRideHandler.handle(ctx));
-    this.bot.command('postride', ctx => this.postRideHandler.handle(ctx));
-  }
-
   /**
-   * Set up command handlers for restricted mode (most commands only in private chats)
+   * Set up command handlers (most commands only in private chats)
    */
-  setupRestrictedCommandHandlers() {
+  setupCommandHandlers() {
     // Helper function to check if chat is private
     const isPrivateChat = (ctx) => ctx.chat?.type === 'private';
 
@@ -149,22 +129,16 @@ export class Bot {
         { command: 'postride', description: 'Post a ride in a chat' }
       ];
 
-      if (config.bot.privateChatCommandsMode) {
-        // For private chats - all commands
-        await this.bot.api.setMyCommands(commands, { scope: { type: 'all_private_chats' } });
-        
-        // For group chats - only postride command
-        const groupCommands = [
-          { command: 'postride', description: 'Post a ride in this chat' }
-        ];
-        await this.bot.api.setMyCommands(groupCommands, { scope: { type: 'all_group_chats' } });
-        
-        console.log('Bot commands have been set up in private chat commands mode');
-      } else {
-        // Set all commands for both private chats and group chats
-        await this.bot.api.setMyCommands(commands, { scope: { type: 'default' } });
-        console.log('Bot commands have been set up in standard mode');
-      }
+      // For private chats - all commands
+      await this.bot.api.setMyCommands(commands, { scope: { type: 'all_private_chats' } });
+      
+      // For group chats - only postride command
+      const groupCommands = [
+        { command: 'postride', description: 'Post a ride in this chat' }
+      ];
+      await this.bot.api.setMyCommands(groupCommands, { scope: { type: 'all_group_chats' } });
+      
+      console.log('Bot commands have been set up (private chat mode)');
     } catch (error) {
       console.error('Error setting up bot commands:', error);
     }

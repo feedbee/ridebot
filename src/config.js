@@ -11,8 +11,7 @@ export const config = {
     webhookPath: '/webhook',
     useWebhook: process.env.USE_WEBHOOK === 'true' || false,
     // Port for the webhook server to listen on
-    webhookPort: parseInt(process.env.WEBHOOK_PORT, 10) || 8080,
-    privateChatCommandsMode: process.env.PRIVATE_CHAT_COMMANDS_MODE === 'true' || false
+    webhookPort: parseInt(process.env.WEBHOOK_PORT, 10) || 8080
   },
   mongodb: {
     uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/bikebot'

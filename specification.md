@@ -315,6 +315,14 @@ docker-compose up -d  # Uses webhooks + MongoDB
   - Also refactored DeleteRideCommandHandler and UpdateRideCommandHandler  
   - Better code reuse and consistency across handlers  
 
+✅ **Private Chat Mode Enforcement**: Removed configuration complexity  
+  - Removed `PRIVATE_CHAT_COMMANDS_MODE` config option (always enforced now)  
+  - Removed `setupStandardCommandHandlers()` method (13 lines)  
+  - Reduced Bot.js from 200 to 173 lines (27 lines, 13.5% reduction)  
+  - Simplified command setup logic (single path instead of dual)  
+  - Commands now only work in private chats (except `/postride` in groups)  
+  - Aligns with wizard-only-in-private philosophy  
+
 ✅ **MongoDB Tests**: Fixed ARM64/Debian 12 compatibility  
   - Using Ubuntu 22.04 binaries as workaround  
   - All 272 tests passing  
