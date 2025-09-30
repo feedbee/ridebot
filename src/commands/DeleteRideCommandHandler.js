@@ -11,14 +11,13 @@ export class DeleteRideCommandHandler extends BaseCommandHandler {
    * @param {import('grammy').Context} ctx - Grammy context
    */
   async handle(ctx) {
-    const { ride, error } = await this.extractRide(ctx);
+    const { ride, error } = await this.extractRideWithCreatorCheck(
+      ctx,
+      'Only the ride creator can delete this ride.'
+    );
+    
     if (error) {
       await ctx.reply(error);
-      return;
-    }
-    
-    if (!this.isRideCreator(ride, ctx.from.id)) {
-      await ctx.reply('Only the ride creator can delete this ride.');
       return;
     }
 

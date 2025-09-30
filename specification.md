@@ -293,8 +293,7 @@ docker-compose up -d  # Uses webhooks + MongoDB
 
 ### **Potential Refactoring Areas:**
 ⚠️ [RideWizard.js](cci:7://file:///workspace/src/wizard/RideWizard.js:0:0-0:0) is quite large (~700 lines) - could be split into smaller modules  
-⚠️ Some duplication in wizard step handling  
-⚠️ Some command handlers have similar patterns that could be abstracted
+⚠️ Some duplication in wizard step handling
 
 ### **Recent Changes:**
 ✅ **Wizard Refactoring**: Restricted to private chats only (removed group support)  
@@ -306,6 +305,15 @@ docker-compose up -d  # Uses webhooks + MongoDB
   - Reduced config.js from 257 to 59 lines (77% reduction)  
   - Created `/src/config/messageTemplates.js` (209 lines)  
   - Better separation of concerns and easier maintenance  
+
+✅ **Command Handler Refactoring**: Abstracted common patterns  
+  - Added `extractRideWithCreatorCheck()` helper to BaseCommandHandler  
+  - Added `formatUpdateResultMessage()` helper to BaseCommandHandler  
+  - Created abstract `RideStateChangeHandler` for cancel/resume operations  
+  - Reduced CancelRideCommandHandler from 52 to 20 lines (62% reduction)  
+  - Reduced ResumeRideCommandHandler from 52 to 20 lines (62% reduction)  
+  - Also refactored DeleteRideCommandHandler and UpdateRideCommandHandler  
+  - Better code reuse and consistency across handlers  
 
 ✅ **MongoDB Tests**: Fixed ARM64/Debian 12 compatibility  
   - Using Ubuntu 22.04 binaries as workaround  

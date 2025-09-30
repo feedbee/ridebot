@@ -100,4 +100,43 @@ export class BaseCommandHandler {
     }
     return { params, hasUnknownParams: false };
   }
+
+  /**
+   * Extract ride and validate that the user is the creator
+   * @param {import('grammy').Context} ctx - Grammy context
+   * @param {string} [creatorOnlyMessage] - Custom message for non-creator users
+   * @returns {Promise<{ride: Object|null, error: string|null}>}
+   */
+  async extractRideWithCreatorCheck(ctx, creatorOnlyMessage = 'Only the ride creator can perform this action.') {
+    const { ride, error } = await this.extractRide(ctx);
+    
+    if (error) {
+      return { ride: null, error };
+    }
+    
+    if (!this.isRideCreator(ride, ctx.from.id)) {
+      return { ride: null, error: creatorOnlyMessage };
+    }
+    
+    return { ride, error: null };
+  }
+
+  /**
+   * Format update result message
+   * @param {Object} result - Update result from updateRideMessages
+   * @param {string} successAction - Action performed (e.g., "cancelled", "resumed", "updated")
+   * @returns {string} - Formatted message
+   */
+  formatUpdateResultMessage(result, successAction) {
+    let reply = '';
+    if (result.updatedCount > 0) {
+      reply = `Ride ${successAction} successfully. Updated ${result.updatedCount} message(s).`;
+    } else {
+      reply = `Ride has been ${successAction}, but no messages were updated. You may want to /postride the ride in the chats of your choice again, they could have been removed.`;
+    }
+    if (result.removedCount > 0) {
+      reply += ` Removed ${result.removedCount} unavailable message(s).`;
+    }
+    return reply;
+  }
 }
