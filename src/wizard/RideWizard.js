@@ -6,7 +6,6 @@ import { normalizeCategory, DEFAULT_CATEGORY, VALID_CATEGORIES } from '../utils/
 import { escapeHtml } from '../utils/html-escape.js';
 import { MessageFormatter } from '../formatters/MessageFormatter.js';
 import { RideService } from '../services/RideService.js';
-import { checkBotAdminPermissions } from '../utils/permission-checker.js';
 import { parseDuration } from '../utils/duration-parser.js';
 import { RideMessagesService } from '../services/RideMessagesService.js';
 import { DateParser } from '../utils/date-parser.js';
@@ -26,30 +25,6 @@ export class RideWizard {
     this.wizardStates = new Map();
   }
   
-  /**
-   * Check if the bot has admin permissions and notify the user if not
-   * @param {import('grammy').Context} ctx - Grammy context
-   * @param {boolean} cleanupState - Whether to clean up the wizard state if permissions are missing
-   * @returns {Promise<boolean>} - True if the bot has admin permissions, false otherwise
-   */
-  async checkAdminPermissions(ctx, cleanupState = false) {
-    // Skip permission check for private chats (type 'private')
-    if (ctx.chat.type === 'private') {
-      return true;
-    }
-    
-    const hasAdminPermissions = await checkBotAdminPermissions(ctx);
-    if (!hasAdminPermissions) {
-      if (cleanupState) {
-        const stateKey = this.getWizardStateKey(ctx.from.id, ctx.chat.id);
-        this.wizardStates.delete(stateKey);
-      }
-      
-      await ctx.reply('⚠️ I need administrator permissions in group chats to use the wizard mode. Please add me as an administrator or use the non-wizard commands instead.');
-      return false;
-    }
-    return true;
-  }
 
   /**
    * Generate a unique key for wizard state based on user ID and chat ID
@@ -69,14 +44,9 @@ export class RideWizard {
       return;
     }
 
-    // Check if wizards are only allowed in private chats
-    if (config.bot.wizardOnlyInPrivateChats && ctx.chat.type !== 'private') {
+    // Wizards are only allowed in private chats
+    if (ctx.chat.type !== 'private') {
       await ctx.reply('⚠️ Wizard commands are only available in private chats with the bot. Please use the command with parameters instead.');
-      return;
-    }
-
-    // Check if the bot has admin permissions in the chat
-    if (!await this.checkAdminPermissions(ctx)) {
       return;
     }
 
@@ -114,17 +84,10 @@ export class RideWizard {
       return;
     }
     
-    // Check if wizards are only allowed in private chats
-    if (config.bot.wizardOnlyInPrivateChats && ctx.chat.type !== 'private') {
+    // Wizards are only allowed in private chats
+    if (ctx.chat.type !== 'private') {
       await ctx.answerCallbackQuery('⚠️ Wizard commands are only available in private chats with the bot');
       this.wizardStates.delete(stateKey);
-      return;
-    }
-    
-    // Check if the bot has admin permissions in the chat
-    // This will automatically pass for private chats
-    if (!await this.checkAdminPermissions(ctx, true)) {
-      await ctx.answerCallbackQuery('⚠️ I need administrator permissions in group chats to use the wizard mode');
       return;
     }
 
@@ -297,15 +260,10 @@ export class RideWizard {
     const state = this.wizardStates.get(stateKey);
     if (!state) return;
     
-    // Check if wizards are only allowed in private chats
-    if (config.bot.wizardOnlyInPrivateChats && ctx.chat.type !== 'private') {
+    // Wizards are only allowed in private chats
+    if (ctx.chat.type !== 'private') {
       await ctx.reply('⚠️ Wizard commands are only available in private chats with the bot. Please use the command with parameters instead.');
       this.wizardStates.delete(stateKey);
-      return;
-    }
-    
-    // Check if the bot has admin permissions in the chat
-    if (!await this.checkAdminPermissions(ctx, true)) {
       return;
     }
 
@@ -712,16 +670,7 @@ export class RideWizard {
         } catch (error) {
           console.error('Error updating wizard message:', error);
           
-          // Check if this is a permission error
-          if (error.description && (error.description.includes('not enough rights') || 
-              error.description.includes('bot was kicked') || 
-              error.description.includes('bot is not a member'))) {
-            // Use our utility method to handle the permission error
-            await this.checkAdminPermissions(ctx, true);
-            return null;
-          }
-          
-          // If update fails for other reasons (e.g., message too old), send a new message
+          // If update fails (e.g., message too old), send a new message
           sentMessage = await ctx.reply(message, {
             parse_mode: 'HTML',
             reply_markup: keyboard
@@ -739,14 +688,6 @@ export class RideWizard {
       return sentMessage;
     } catch (error) {
       console.error('Error sending wizard step:', error);
-      
-      // Check if this is a permission error
-      if (error.description && (error.description.includes('not enough rights') || 
-          error.description.includes('bot was kicked') || 
-          error.description.includes('bot is not a member'))) {
-        // Use our utility method to handle the permission error
-        await this.checkAdminPermissions(ctx, true);
-      }
       return null;
     }
   }

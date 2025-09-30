@@ -125,15 +125,9 @@ describe('RideWizard', () => {
     };
     wizard = new RideWizard(storage, mockRideService, mockMessageFormatter, mockRideMessagesService);
     ctx = createMockContext();
-    
-    // Reset config to original values before each test
-    config.bot.wizardOnlyInPrivateChats = originalBotConfig.wizardOnlyInPrivateChats;
   });
   
   afterEach(() => {
-    // Ensure config is reset after each test
-    config.bot.wizardOnlyInPrivateChats = originalBotConfig.wizardOnlyInPrivateChats;
-    
     // Reset test context
     if (ctx && ctx._test) {
       ctx._test.reset();
@@ -146,18 +140,12 @@ describe('RideWizard', () => {
       expect(ctx._test.messages[0].text).toContain('Please enter the ride title');
     });
 
-    test('should prevent starting wizard in public chat if wizardOnlyInPrivateChats is true', async () => {
-      // Temporarily modify the config for this test
-      config.bot.wizardOnlyInPrivateChats = true;
-      
+    test('should prevent starting wizard in public chat', async () => {
       // Create a public chat context
       const publicCtx = createMockContext(123, 456, 'group');
       
       await wizard.startWizard(publicCtx);
       expect(publicCtx._test.messages[0].text).toContain('Wizard commands are only available in private chats');
-      
-      // Restore original value
-      config.bot.wizardOnlyInPrivateChats = originalBotConfig.wizardOnlyInPrivateChats;
     });
 
     test('should prevent starting multiple wizards', async () => {
@@ -190,10 +178,7 @@ describe('RideWizard', () => {
       expect(lastMessage.text).toContain('Please enter the ride title');
     });
     
-    test('should prevent wizard actions in public chat if wizardOnlyInPrivateChats is true', async () => {
-      // Temporarily modify the config for this test
-      config.bot.wizardOnlyInPrivateChats = true;
-      
+    test('should prevent wizard actions in public chat', async () => {
       // Create a public chat context
       const publicCtx = createMockContext(123, 456, 'group');
       
@@ -206,15 +191,9 @@ describe('RideWizard', () => {
       await wizard.handleWizardAction(publicCtx);
       
       expect(publicCtx._test.callbackAnswers[0]).toContain('Wizard commands are only available in private chats');
-      
-      // Restore original value
-      config.bot.wizardOnlyInPrivateChats = originalBotConfig.wizardOnlyInPrivateChats;
     });
     
-    test('should prevent wizard input in public chat if wizardOnlyInPrivateChats is true', async () => {
-      // Temporarily modify the config for this test
-      config.bot.wizardOnlyInPrivateChats = true;
-      
+    test('should prevent wizard input in public chat', async () => {
       // Create a public chat context
       const publicCtx = createMockContext(123, 456, 'group');
       
@@ -227,9 +206,6 @@ describe('RideWizard', () => {
       await wizard.handleWizardInput(publicCtx);
       
       expect(publicCtx._test.messages[0].text).toContain('Wizard commands are only available in private chats');
-      
-      // Restore original value
-      config.bot.wizardOnlyInPrivateChats = originalBotConfig.wizardOnlyInPrivateChats;
     });
 
     test('should handle skip button for optional fields', async () => {

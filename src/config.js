@@ -11,7 +11,6 @@ export const config = {
     useWebhook: process.env.USE_WEBHOOK === 'true' || false,
     // Port for the webhook server to listen on
     webhookPort: parseInt(process.env.WEBHOOK_PORT, 10) || 8080,
-    wizardOnlyInPrivateChats: process.env.WIZARD_ONLY_IN_PRIVATE === 'true' || false,
     privateChatCommandsMode: process.env.PRIVATE_CHAT_COMMANDS_MODE === 'true' || false
   },
   mongodb: {
@@ -78,7 +77,7 @@ I help you organize bike rides with your friends and community.
 
 <b>Command Modes:</b>
 All main commands (/newride, /updateride, /dupride, /cancelride, /deleteride) work in two modes:
-• Step-by-step wizard - interactive and beginner-friendly${process.env.WIZARD_ONLY_IN_PRIVATE === 'true' ? ' <b>available in private chats with the bot only.</b>' : ''}
+• Step-by-step wizard - interactive and beginner-friendly <b>available in private chats with the bot only.</b>
 • Parametrized mode - faster for experienced users
 See /help for detailed examples of both modes.
 To create less noise for others, it is recommended to create the rides in private chat with the bot and repost them in other chats after.
@@ -105,7 +104,7 @@ Happy cycling! 🚴‍♀️💨
 <b>➕ Creating a New Ride</b>
 Create a new ride:
 1. Using the wizard (recommended):
-Simply send /newride command without any parameters to start an interactive wizard that will guide you through each step.${process.env.WIZARD_ONLY_IN_PRIVATE === 'true' ? ' <i>(Note: Wizard mode is only available in private chats with the bot)</i>' : ''}
+Simply send /newride command without any parameters to start an interactive wizard that will guide you through each step. <i>(Note: Wizard mode is only available in private chats with the bot)</i>
 
 2. Using command with parameters:
 Use /newride command followed by parameters (one per line):
@@ -140,7 +139,7 @@ info: Bring lights and a rain jacket
 
 <b>🔄 Updating a Ride</b>
 Only the ride creator can update. Four ways:
-1. Reply to the ride message with /updateride without any parameters to start an interactive wizard.${process.env.WIZARD_ONLY_IN_PRIVATE === 'true' ? ' <i>(Note: Wizard mode is only available in private chats with the bot)</i>' : ''}
+1. Reply to the ride message with /updateride without any parameters to start an interactive wizard. <i>(Note: Wizard mode is only available in private chats with the bot)</i>
 2. Reply to the ride message with /updateride and new parameters
 3. Use /updateride with ride ID directly after the command: <code>/updateride abc123</code>
 4. Use /updateride with ride ID as a parameter:
@@ -190,7 +189,7 @@ id: abc123
 
 <b>🔄 Duplicating a Ride</b>
 Only the ride creator can duplicate. Four ways:
-1. Reply to the ride message with /dupride without any parameters to start an interactive wizard.${process.env.WIZARD_ONLY_IN_PRIVATE === 'true' ? ' <i>(Note: Wizard mode is only available in private chats with the bot)</i>' : ''}
+1. Reply to the ride message with /dupride without any parameters to start an interactive wizard. <i>(Note: Wizard mode is only available in private chats with the bot)</i>
 2. Reply to the ride message with /dupride and new parameters
 3. Use /dupride with ride ID directly after the command: <code>/dupride abc123</code>
 4. Use /dupride with ride ID and optional parameters:
