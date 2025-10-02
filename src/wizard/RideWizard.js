@@ -1,14 +1,9 @@
 import { InlineKeyboard } from 'grammy';
 import { config } from '../config.js';
-import { RouteParser } from '../utils/route-parser.js';
-import { parseDateTimeInput } from '../utils/date-input-parser.js';
-import { normalizeCategory, DEFAULT_CATEGORY, VALID_CATEGORIES } from '../utils/category-utils.js';
+import { DEFAULT_CATEGORY, VALID_CATEGORIES } from '../utils/category-utils.js';
 import { escapeHtml } from '../utils/html-escape.js';
-import { MessageFormatter } from '../formatters/MessageFormatter.js';
-import { RideService } from '../services/RideService.js';
-import { parseDuration } from '../utils/duration-parser.js';
-import { RideMessagesService } from '../services/RideMessagesService.js';
 import { DateParser } from '../utils/date-parser.js';
+import { getFieldConfig, FieldType, buildRideDataFromWizard, buildConfirmationMessage } from './wizardFieldConfig.js';
 
 export class RideWizard {
   /**
@@ -90,13 +85,13 @@ export class RideWizard {
       this.wizardStates.delete(stateKey);
       return;
     }
-
     try {
       switch (action) {
         case 'category':
           if (VALID_CATEGORIES.includes(param)) {
             state.data.category = param;
-            state.step = 'organizer';
+            const categoryConfig = getFieldConfig('category');
+            state.step = categoryConfig.nextStep;
             await this.sendWizardStep(ctx, true);
           } else {
             await ctx.answerCallbackQuery('Invalid category selected');
@@ -104,77 +99,39 @@ export class RideWizard {
           break;
 
         case 'back':
-          switch (state.step) {
-            case 'category': state.step = 'title'; break;
-            case 'organizer': state.step = 'category'; break;
-            case 'date': state.step = 'organizer'; break;
-            case 'route': state.step = 'date'; break;
-            case 'distance': state.step = 'route'; break;
-            case 'duration': state.step = 'distance'; break;
-            case 'speed': state.step = 'duration'; break;
-            case 'meet': state.step = 'speed'; break;
-            case 'info': state.step = 'meet'; break;
-            case 'confirm': state.step = 'info'; break;
+          // Navigate to previous step using field configuration
+          const currentFieldConfig = getFieldConfig(state.step);
+          if (currentFieldConfig && currentFieldConfig.previousStep) {
+            state.step = currentFieldConfig.previousStep;
+            await this.sendWizardStep(ctx, true);
+          } else if (state.step === 'confirm') {
+            // Special case: confirm step goes back to info
+            state.step = 'info';
+            await this.sendWizardStep(ctx, true);
           }
-          await this.sendWizardStep(ctx, true);
           break;
 
         case 'keep':
-          // Move to the next step based on current step
-          switch (state.step) {
-            case 'title': state.step = 'category'; break;
-            case 'category': state.step = 'organizer'; break;
-            case 'organizer': state.step = 'date'; break;
-            case 'date': state.step = 'route'; break;
-            case 'route': state.step = 'distance'; break;
-            case 'distance': state.step = 'duration'; break;
-            case 'duration': state.step = 'speed'; break;
-            case 'speed': state.step = 'meet'; break;
-            case 'meet': state.step = 'info'; break;
-            case 'info': state.step = 'confirm'; break;
+          // Move to the next step using field configuration
+          const keepFieldConfig = getFieldConfig(state.step);
+          if (keepFieldConfig && keepFieldConfig.nextStep) {
+            state.step = keepFieldConfig.nextStep;
+            await this.sendWizardStep(ctx, true);
           }
-          await this.sendWizardStep(ctx, true);
           break;
 
         case 'skip':
-          // Clear the current field value when skipped
-          switch (state.step) {
-            case 'category': 
-              state.data.category = undefined;
-              state.step = 'organizer'; 
-              break;
-            case 'organizer': 
-              state.data.organizer = '';
-              state.step = 'date'; 
-              break;
-            case 'route': 
-              state.data.routeLink = undefined;
-              state.step = 'distance'; 
-              break;
-            case 'distance': 
-              state.data.distance = undefined;
-              state.step = 'duration'; 
-              break;
-            case 'duration': 
-              state.data.duration = undefined;
-              state.step = 'speed'; 
-              break;
-            case 'speed': 
-              state.data.speedMin = undefined;
-              state.data.speedMax = undefined;
-              state.step = 'meet'; 
-              break;
-            case 'meet': 
-              state.data.meetingPoint = undefined;
-              state.step = 'info'; 
-              break;
-            case 'info': 
-              state.data.additionalInfo = undefined;
-              state.step = 'confirm'; 
-              break;
+          // Clear the current field value and move to next step using configuration
+          const skipFieldConfig = getFieldConfig(state.step);
+          if (skipFieldConfig) {
+            // Clear the field value(s)
+            this.clearFieldValue(state, skipFieldConfig);
+            // Move to next step
+            if (skipFieldConfig.nextStep) {
+              state.step = skipFieldConfig.nextStep;
+              await this.sendWizardStep(ctx, true);
+            }
           }
-          // Update the current message with new step
-          await this.sendWizardStep(ctx, true);
           break;
 
         case 'cancel':
@@ -193,45 +150,28 @@ export class RideWizard {
           return;
 
         case 'confirm':
+          // Build ride data from wizard state using configuration helper
+          const rideData = buildRideDataFromWizard(state.data, {
+            currentUser: state.data.currentUser,
+            originalRideId: state.data.originalRideId,
+            isUpdate: state.isUpdate
+          });
+          
+          // Apply default category if not set
+          if (!rideData.category) {
+            rideData.category = DEFAULT_CATEGORY;
+          }
+          
           if (state.isUpdate) {
             // Update existing ride
-            const updates = {
-              title: state.data.title,
-              category: state.data.category || DEFAULT_CATEGORY,
-              date: state.data.datetime,
-              organizer: state.data.organizer,
-              meetingPoint: state.data.meetingPoint,
-              routeLink: state.data.routeLink,
-              distance: state.data.distance,
-              duration: state.data.duration,
-              speedMin: state.data.speedMin,
-              speedMax: state.data.speedMax,
-              additionalInfo: state.data.additionalInfo,
-              updatedBy: state.data.currentUser // Set updatedBy to the current user
-            };
-
-            const updatedRide = await this.storage.updateRide(state.data.originalRideId, updates);
+            const updatedRide = await this.storage.updateRide(state.data.originalRideId, rideData);
             await this.updateRideMessage(updatedRide, ctx);
             await ctx.deleteMessage();
             this.wizardStates.delete(stateKey);
             await ctx.answerCallbackQuery('Ride updated successfully!');
           } else {
             // Create new ride
-            const ride = await this.storage.createRide({
-              title: state.data.title,
-              category: state.data.category || DEFAULT_CATEGORY,
-              date: state.data.datetime,
-              messages: [], // Initialize with empty array instead of null messageId
-              createdBy: state.data.currentUser,
-              organizer: state.data.organizer,
-              meetingPoint: state.data.meetingPoint,
-              routeLink: state.data.routeLink,
-              distance: state.data.distance,
-              duration: state.data.duration,
-              speedMin: state.data.speedMin,
-              speedMax: state.data.speedMax,
-              additionalInfo: state.data.additionalInfo
-            });
+            const ride = await this.storage.createRide(rideData);
 
             // Delete the wizard message before creating the ride message
             await ctx.deleteMessage();
@@ -271,147 +211,38 @@ export class RideWizard {
       let shouldProceed = true;
       state.errorMessageIds.push(ctx.message.message_id); // Always delete user's input
 
-      switch (state.step) {
-        case 'title':
-          state.data.title = ctx.message.text;
-          state.step = 'category';
-          break;
+      // Get field configuration for current step
+      const fieldConfig = getFieldConfig(state.step);
+      
+      if (!fieldConfig) {
+        console.error(`No field configuration found for step: ${state.step}`);
+        return;
+      }
 
-        case 'category':
-          // Validate and normalize the ride category
-          state.data.category = normalizeCategory(ctx.message.text);
-          state.step = 'organizer';
-          break;
-          
-        case 'organizer':
-          // Check if user wants to clear the field with a dash
-          if (ctx.message.text === '-') {
-            state.data.organizer = '';
-          } else {
-            state.data.organizer = ctx.message.text;
-          }
-          state.step = 'date';
-          break;
-
-        case 'date':
-          const result = parseDateTimeInput(ctx.message.text);
-          if (!result.date) {
-            shouldProceed = false;
-            const errorMsg = await ctx.reply(result.error);
-            state.errorMessageIds.push(errorMsg.message_id);
-            return;
-          }
-          state.data.datetime = result.date;
-          state.step = 'route';
-          break;
-
-        case 'route':
-          // Check if user wants to clear the field with a dash
-          if (ctx.message.text === '-') {
-            state.data.routeLink = '';
-            state.step = 'distance';
-          } else if (RouteParser.isValidRouteUrl(ctx.message.text)) {
-            state.data.routeLink = ctx.message.text;
-            if (RouteParser.isKnownProvider(ctx.message.text)) {
-              const routeInfo = await RouteParser.parseRoute(ctx.message.text);
-              
-              // Set any data that was successfully parsed
-              if (routeInfo) {
-                if (routeInfo.distance) state.data.distance = routeInfo.distance;
-                if (routeInfo.duration) state.data.duration = routeInfo.duration;
-              }
-              
-              // Determine next step based on what data we have
-              if (state.data.distance && state.data.duration) {
-                // If we have both distance and duration, skip to speed
-                state.step = 'speed';
-              } else if (state.data.distance) {
-                // If we only have distance, go to duration
-                state.step = 'duration';
-              } else {
-                // If we have neither, start with distance
-                state.step = 'distance';
-              }
-            } else {
-              state.step = 'distance';
-            }
-          } else {
-            shouldProceed = false;
-            const errorMsg = await ctx.reply('Invalid route URL format. Please provide a valid URL, use a dash (-) to clear the field, or click Skip.');
-            state.errorMessageIds.push(errorMsg.message_id);
-            return;
-          }
-          break;
-
-        case 'distance':
-          // Check if user wants to clear the field with a dash
-          if (ctx.message.text === '-') {
-            state.data.distance = null;
-            state.step = 'duration';
-          } else {
-            const distance = parseFloat(ctx.message.text);
-            if (isNaN(distance)) {
-              shouldProceed = false;
-              const errorMsg = await ctx.reply('Please enter a valid number for distance, or use a dash (-) to clear the field.');
-              state.errorMessageIds.push(errorMsg.message_id);
-              return;
-            }
-            state.data.distance = distance;
-            state.step = 'duration';
-          }
-          break;
-
-        case 'duration':
-          // Check if user wants to clear the field with a dash
-          if (ctx.message.text === '-') {
-            state.data.duration = null;
-            state.step = 'speed';
-          } else {
-            const result = parseDuration(ctx.message.text);
-            if (result.error) {
-              shouldProceed = false;
-              const errorMsg = await ctx.reply(result.error);
-              state.errorMessageIds.push(errorMsg.message_id);
-              return;
-            }
-            state.data.duration = result.duration;
-            state.step = 'speed';
-          }
-          break;
-
-        case 'speed':
-          // Check if user wants to clear the field with a dash
-          if (ctx.message.text === '-') {
-            state.data.speedMin = null;
-            state.data.speedMax = null;
-            state.step = 'meet';
-          } else {
-            const [min, max] = ctx.message.text.split('-').map(s => parseFloat(s.trim()));
-            if (!isNaN(min)) state.data.speedMin = min;
-            if (!isNaN(max)) state.data.speedMax = max;
-            state.step = 'meet';
-          }
-          break;
-
-        case 'meet':
-          // Check if user wants to clear the field with a dash
-          if (ctx.message.text === '-') {
-            state.data.meetingPoint = '';
-          } else {
-            state.data.meetingPoint = ctx.message.text;
-          }
-          state.step = 'info';
-          break;
-
-        case 'info':
-          // Check if user wants to clear the field with a dash
-          if (ctx.message.text === '-') {
-            state.data.additionalInfo = '';
-          } else {
-            state.data.additionalInfo = ctx.message.text;
-          }
-          state.step = 'confirm';
-          break;
+      // Handle dash (-) for clearable fields
+      if (fieldConfig.clearable && ctx.message.text === '-') {
+        this.clearFieldValue(state, fieldConfig);
+        state.step = fieldConfig.nextStep;
+      } else {
+        // Validate input
+        const validationResult = fieldConfig.validator(ctx.message.text);
+        
+        if (!validationResult.valid) {
+          shouldProceed = false;
+          const errorMsg = await ctx.reply(validationResult.error);
+          state.errorMessageIds.push(errorMsg.message_id);
+          return;
+        }
+        
+        // Set the value(s)
+        this.setFieldValue(state, fieldConfig, validationResult.value);
+        
+        // Handle post-processing (e.g., route parsing)
+        if (fieldConfig.postProcess) {
+          state.step = await fieldConfig.postProcess(ctx.message.text, state);
+        } else {
+          state.step = fieldConfig.nextStep;
+        }
       }
 
       // Delete error messages and user inputs in reverse order (newest first)
@@ -433,231 +264,216 @@ export class RideWizard {
     }
   }
 
+  /**
+   * Clear field value(s) based on configuration
+   * @param {Object} state - Wizard state
+   * @param {Object} fieldConfig - Field configuration
+   */
+  clearFieldValue(state, fieldConfig) {
+    if (Array.isArray(fieldConfig.dataKey)) {
+      // Multiple keys (e.g., speedMin, speedMax)
+      fieldConfig.dataKey.forEach(key => {
+        state.data[key] = undefined;
+      });
+    } else {
+      // Single key - always use undefined for consistency
+      state.data[fieldConfig.dataKey] = undefined;
+    }
+  }
+
+  /**
+   * Set field value(s) based on configuration
+   * @param {Object} state - Wizard state
+   * @param {Object} fieldConfig - Field configuration
+   * @param {*} value - Value to set
+   */
+  setFieldValue(state, fieldConfig, value) {
+    if (Array.isArray(fieldConfig.dataKey)) {
+      // Multiple keys (e.g., speedMin, speedMax)
+      Object.keys(value).forEach(key => {
+        state.data[key] = value[key];
+      });
+    } else {
+      // Single key
+      state.data[fieldConfig.dataKey] = value;
+    }
+  }
+
   async sendWizardStep(ctx, edit = false) {
     const stateKey = this.getWizardStateKey(ctx.from.id, ctx.chat.id);
     const state = this.wizardStates.get(stateKey);
     if (!state) return;
 
-    const keyboard = new InlineKeyboard();
     let message = '';
+    let keyboard = new InlineKeyboard();
 
-    // Helper to get current value display
-    const getCurrentValue = (field, formatter = null) => {
-      const value = state.data[field];
-      if (value === undefined || value === null) return '';
-      const formattedValue = formatter ? formatter(value) : value;
-      return `\n\nCurrent value: ${escapeHtml(formattedValue.toString())}`;
-    };
-
-    // Helper to check if there's a current value
-    const hasCurrentValue = (field) => {
-      const value = state.data[field];
-      return value !== undefined && value !== null;
-    };
-
-    // Helper to add keep button if there's a current value
-    const addKeepButton = (field) => {
-      if (hasCurrentValue(field)) {
-        keyboard.text(config.buttons.keep, 'wizard:keep');
+    // Get field configuration
+    const fieldConfig = getFieldConfig(state.step);
+    
+    if (fieldConfig) {
+      // Build message with current value
+      message = fieldConfig.prompt;
+      
+      // Add current value if exists
+      const currentValue = this.getCurrentValueDisplay(state, fieldConfig);
+      if (currentValue) {
+        message += `\n\nCurrent value: ${currentValue}`;
       }
-    };
-
-    switch (state.step) {
-      case 'title':
-        message = '📝 Please enter the ride title:' + getCurrentValue('title');
-        addKeepButton('title');
-        keyboard
-          .row()
-          .text(config.buttons.cancel, 'wizard:cancel');
-        break;
-        
-      case 'category':
-        message = '🚲 Please select the ride category:' + getCurrentValue('category');
-        
-        keyboard
-          .text('Road Ride', 'wizard:category:Road Ride')
-          .text('Gravel Ride', 'wizard:category:Gravel Ride')
-          .row()
-          .text('Mountain/Enduro/Downhill Ride', 'wizard:category:Mountain/Enduro/Downhill Ride')
-          .text('MTB-XC Ride', 'wizard:category:MTB-XC Ride')
-          .row()
-          .text('E-Bike Ride', 'wizard:category:E-Bike Ride')
-          .text('Virtual/Indoor Ride', 'wizard:category:Virtual/Indoor Ride')
-          .row()
-          .text(config.buttons.back, 'wizard:back');
-        
-        addKeepButton('category');
-        keyboard
-          .text(config.buttons.skip, 'wizard:skip')
-          .row()
-          .text(config.buttons.cancel, 'wizard:cancel');
-        break;
-        
-      case 'organizer':
-        message = '👤 Who is organizing this ride?\n<i>Enter a dash (-) to clear/skip this field</i>' + 
-          getCurrentValue('organizer');
-        keyboard
-          .text(config.buttons.back, 'wizard:back');
-        addKeepButton('organizer');
-        keyboard
-          .text(config.buttons.skip, 'wizard:skip')
-          .row()
-          .text(config.buttons.cancel, 'wizard:cancel');
-        break;
-
-      case 'date':
-        const dateFormatter = (date) => {
-          if (!(date instanceof Date) || isNaN(date)) return '';
-          const formattedDateTime = DateParser.formatDateTime(date);
-          return `${formattedDateTime.date} at ${formattedDateTime.time}`;
-        };
-        message = '📅 When is the ride?\nYou can use natural language like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30' + 
-          getCurrentValue('datetime', dateFormatter);
-        keyboard
-          .text(config.buttons.back, 'wizard:back');
-        addKeepButton('datetime');
-        keyboard
-          .row()
-          .text(config.buttons.cancel, 'wizard:cancel');
-        break;
-
-      case 'route':
-        message = '🔗 Please enter the route link (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>' + getCurrentValue('routeLink');
-        keyboard
-          .text(config.buttons.back, 'wizard:back');
-        addKeepButton('routeLink');
-        keyboard
-          .text(config.buttons.skip, 'wizard:skip')
-          .row()
-          .text(config.buttons.cancel, 'wizard:cancel');
-        break;
-
-      case 'distance':
-        message = '📏 Please enter the distance in kilometers (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>' + 
-          getCurrentValue('distance', v => `${v} km`);
-        keyboard
-          .text(config.buttons.back, 'wizard:back');
-        addKeepButton('distance');
-        keyboard
-          .text(config.buttons.skip, 'wizard:skip')
-          .row()
-          .text(config.buttons.cancel, 'wizard:cancel');
-        break;
-
-      case 'duration':
-        const durationFormatter = (mins) => {
-          if (!mins && mins !== 0) return '';
-          const hours = Math.floor(mins / 60);
-          const minutes = mins % 60;
-          return `${hours}h ${minutes}m`;
-        };
-        message = '⏱ Please enter the duration (e.g., "2h 30m", "90m", "1.5h"):\n<i>Enter a dash (-) to clear/skip this field</i>' + 
-          getCurrentValue('duration', durationFormatter);
-        keyboard
-          .text(config.buttons.back, 'wizard:back');
-        addKeepButton('duration');
-        keyboard
-          .text(config.buttons.skip, 'wizard:skip')
-          .row()
-          .text(config.buttons.cancel, 'wizard:cancel');
-        break;
-
-      case 'speed':
-        const speedFormatter = (speed) => {
-          if (state.data.speedMin && state.data.speedMax) {
-            return `${state.data.speedMin}-${state.data.speedMax} km/h`;
-          } else if (state.data.speedMin) {
-            return `min ${state.data.speedMin} km/h`;
-          } else if (state.data.speedMax) {
-            return `max ${state.data.speedMax} km/h`;
-          }
-          return speed || '';
-        };
-        message = '🚴 Please enter the speed range in km/h (e.g., 25-28) or skip:\n<i>Enter a dash (-) to clear/skip this field</i>' + 
-          getCurrentValue('speedMin', speedFormatter);
-        keyboard
-          .text(config.buttons.back, 'wizard:back');
-        if (state.data.speedMin || state.data.speedMax) {
-          keyboard.text(config.buttons.keep, 'wizard:keep');
-        }
-        keyboard
-          .text(config.buttons.skip, 'wizard:skip')
-          .row()
-          .text(config.buttons.cancel, 'wizard:cancel');
-        break;
-
-      case 'meet':
-        message = '📍 Please enter the meeting point (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>' + getCurrentValue('meetingPoint');
-        keyboard
-          .text(config.buttons.back, 'wizard:back');
-        addKeepButton('meetingPoint');
-        keyboard
-          .text(config.buttons.skip, 'wizard:skip')
-          .row()
-          .text(config.buttons.cancel, 'wizard:cancel');
-        break;
-
-      case 'info':
-        message = 'ℹ️ Please enter any additional information (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>' + getCurrentValue('additionalInfo');
-        keyboard
-          .text(config.buttons.back, 'wizard:back');
-        addKeepButton('additionalInfo');
-        keyboard
-          .text(config.buttons.skip, 'wizard:skip')
-          .row()
-          .text(config.buttons.cancel, 'wizard:cancel');
-        break;
-
-      case 'confirm':
-        // Set default organizer name if not provided
-        if (!state.data.organizer) {
-          // Format organizer name in the same format as participant names but without the link
-          let organizerName = '';
-          if (ctx.from.first_name || ctx.from.last_name) {
-            const fullName = `${ctx.from.first_name || ''} ${ctx.from.last_name || ''}`.trim();
-            if (ctx.from.username) {
-              organizerName = `${fullName} (@${ctx.from.username})`;
-            } else {
-              organizerName = fullName;
-            }
-          } else if (ctx.from.username) {
-            organizerName = ctx.from.username.includes(' ') ? ctx.from.username : `@${ctx.from.username}`;
-          }
-          state.data.organizer = organizerName;
-        }
-        
-        const { title, category, datetime, routeLink, distance, duration, speedMin, speedMax, meetingPoint, additionalInfo, organizer } = state.data;
-        message = `<b>Please confirm the ${state.isUpdate ? 'update' : 'ride'} details:</b>\n\n`;
-        message += `📝 Title: ${escapeHtml(title)}\n`;
-        message += `🚲 Category: ${category || DEFAULT_CATEGORY}\n`;
-        message += `👤 Organizer: ${escapeHtml(organizer)}\n`;
-        // Use DateParser for consistent timezone handling
-        const formattedDateTime = DateParser.formatDateTime(datetime);
-        message += `📅 When: ${formattedDateTime.date} at ${formattedDateTime.time}\n`;
-        if (routeLink) message += `🔗 Route: ${escapeHtml(routeLink)}\n`;
-        if (distance) message += `📏 Distance: ${distance} km\n`;
-        if (duration) {
-          const hours = Math.floor(duration / 60);
-          const minutes = duration % 60;
-          message += `⏱ Duration: ${hours}h ${minutes}m\n`;
-        }
-        if (speedMin || speedMax) {
-          message += '🚴 Speed: ';
-          if (speedMin && speedMax) message += `${speedMin}-${speedMax} km/h\n`;
-          else if (speedMin) message += `min ${speedMin} km/h\n`;
-          else message += `max ${speedMax} km/h\n`;
-        }
-        if (meetingPoint) message += `📍 Meeting Point: ${escapeHtml(meetingPoint)}\n`;
-        if (additionalInfo) message += `ℹ️ Additional Info: ${escapeHtml(additionalInfo)}\n`;
-
-        keyboard
-          .text(config.buttons.back, 'wizard:back')
-          .text(state.isUpdate ? config.buttons.update : config.buttons.create, 'wizard:confirm')
-          .row()
-          .text(config.buttons.cancel, 'wizard:cancel');
-        break;
+      
+      // Build keyboard based on field type
+      keyboard = this.buildFieldKeyboard(state, fieldConfig);
+    } else if (state.step === 'confirm') {
+      // Handle confirm step separately (special case)
+      return this.sendConfirmStep(ctx, state, edit);
+    } else {
+      console.error(`Unknown wizard step: ${state.step}`);
+      return;
     }
 
+    // Send or edit the message
+    await this.sendOrEditMessage(ctx, state, message, keyboard, edit);
+  }
+
+  /**
+   * Get current value display for a field
+   * @param {Object} state - Wizard state
+   * @param {Object} fieldConfig - Field configuration
+   * @returns {string} Formatted current value or empty string
+   */
+  getCurrentValueDisplay(state, fieldConfig) {
+    // Use custom hasValue function if provided (e.g., for speed)
+    const hasValue = fieldConfig.hasValue 
+      ? fieldConfig.hasValue(state)
+      : this.hasFieldValue(state, fieldConfig);
+    
+    if (!hasValue) return '';
+    
+    // Use custom formatter if provided
+    if (fieldConfig.formatter) {
+      const formatted = fieldConfig.formatter(state.data[fieldConfig.dataKey], state);
+      return escapeHtml(formatted.toString());
+    }
+    
+    // Default formatting
+    const value = state.data[fieldConfig.dataKey];
+    return escapeHtml(value.toString());
+  }
+
+  /**
+   * Check if field has a value
+   * @param {Object} state - Wizard state
+   * @param {Object} fieldConfig - Field configuration
+   * @returns {boolean} True if field has a value
+   */
+  hasFieldValue(state, fieldConfig) {
+    if (Array.isArray(fieldConfig.dataKey)) {
+      return fieldConfig.dataKey.some(key => {
+        const value = state.data[key];
+        return value !== undefined && value !== null;
+      });
+    }
+    const value = state.data[fieldConfig.dataKey];
+    return value !== undefined && value !== null;
+  }
+
+  /**
+   * Build keyboard for a field
+   * @param {Object} state - Wizard state
+   * @param {Object} fieldConfig - Field configuration
+   * @returns {InlineKeyboard} Keyboard for the field
+   */
+  buildFieldKeyboard(state, fieldConfig) {
+    const keyboard = new InlineKeyboard();
+    
+    // Add field-specific buttons (e.g., category options)
+    if (fieldConfig.type === FieldType.CATEGORY && fieldConfig.options) {
+      fieldConfig.options.forEach((option, index) => {
+        keyboard.text(option.label, `wizard:category:${option.value}`);
+        // Add row break after every 2 options
+        if (index % 2 === 1) keyboard.row();
+      });
+      // Add back button on a new row
+      keyboard.text(config.buttons.back, 'wizard:back');
+      
+      // Add keep button if field has current value
+      if (this.hasFieldValue(state, fieldConfig)) {
+        keyboard.text(config.buttons.keep, 'wizard:keep');
+      }
+      
+      // Add skip button if field is skippable
+      if (fieldConfig.skippable) {
+        keyboard.text(config.buttons.skip, 'wizard:skip');
+      }
+    } else {
+      // Standard back button for text input fields
+      if (state.step !== 'title') { // No back button on first step
+        keyboard.text(config.buttons.back, 'wizard:back');
+      }
+      
+      // Add keep button if field has current value
+      if (this.hasFieldValue(state, fieldConfig)) {
+        keyboard.text(config.buttons.keep, 'wizard:keep');
+      }
+      
+      // Add skip button if field is skippable
+      if (fieldConfig.skippable) {
+        keyboard.text(config.buttons.skip, 'wizard:skip');
+      }
+    }
+    
+    // Add cancel button (always present)
+    keyboard.row().text(config.buttons.cancel, 'wizard:cancel');
+    
+    return keyboard;
+  }
+
+  /**
+   * Send confirm step
+   * @param {Object} ctx - Grammy context
+   * @param {Object} state - Wizard state
+   * @param {boolean} edit - Whether to edit existing message
+   */
+  async sendConfirmStep(ctx, state, edit) {
+    // Set default organizer name if not provided
+    if (!state.data.organizer) {
+      // Format organizer name in the same format as participant names but without the link
+      let organizerName = '';
+      if (ctx.from.first_name || ctx.from.last_name) {
+        const fullName = `${ctx.from.first_name || ''} ${ctx.from.last_name || ''}`.trim();
+        if (ctx.from.username) {
+          organizerName = `${fullName} (@${ctx.from.username})`;
+        } else {
+          organizerName = fullName;
+        }
+      } else if (ctx.from.username) {
+        organizerName = ctx.from.username.includes(' ') ? ctx.from.username : `@${ctx.from.username}`;
+      }
+      state.data.organizer = organizerName;
+    }
+    
+    // Build confirmation message using configuration
+    const message = buildConfirmationMessage(state.data, state.isUpdate, escapeHtml, DateParser);
+    
+    // Build keyboard
+    const keyboard = new InlineKeyboard()
+      .text(config.buttons.back, 'wizard:back')
+      .text(state.isUpdate ? config.buttons.update : config.buttons.create, 'wizard:confirm')
+      .row()
+      .text(config.buttons.cancel, 'wizard:cancel');
+    
+    // Send or edit the message
+    await this.sendOrEditMessage(ctx, state, message, keyboard, edit);
+  }
+
+  /**
+   * Send or edit wizard message
+   * @param {Object} ctx - Grammy context
+   * @param {Object} state - Wizard state
+   * @param {string} message - Message text
+   * @param {InlineKeyboard} keyboard - Keyboard
+   * @param {boolean} edit - Whether to edit existing message
+   */
+  async sendOrEditMessage(ctx, state, message, keyboard, edit) {
     try {
       let sentMessage;
       if (edit && state.primaryMessageId) {
@@ -702,6 +518,4 @@ export class RideWizard {
       console.info(`Removed ${result.removedCount} unavailable messages from tracking for ride ${ride.id}`);
     }
   }
-  
-
-} 
+}
