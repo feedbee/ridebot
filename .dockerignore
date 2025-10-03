@@ -9,9 +9,11 @@
 # Development files
 node_modules
 npm-debug.log
-.cursor
 .devcontainer
+.cursor
+.vscode
 .windsurfrules
+coverage/
 
 # Test files
 src/__tests__
