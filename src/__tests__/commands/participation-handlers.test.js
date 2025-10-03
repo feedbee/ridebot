@@ -110,8 +110,8 @@ describe('ParticipationHandlers', () => {
       mockRideService.getRide.mockResolvedValue(mockRide);
       mockRideService.joinRide.mockResolvedValue({ success: true, ride: mockRide });
       
-      // Mock the updateRideMessage method
-      participationHandlers.updateRideMessage = jest.fn().mockResolvedValue({
+      // Mock the dependency, not the method under test
+      mockRideMessagesService.updateRideMessages.mockResolvedValue({
         success: true,
         updatedCount: 1,
         removedCount: 0
@@ -128,7 +128,7 @@ describe('ParticipationHandlers', () => {
         firstName: 'Test',
         lastName: 'User'
       });
-      expect(participationHandlers.updateRideMessage).toHaveBeenCalledWith(mockRide, mockCtx);
+      expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalledWith(mockRide, mockCtx);
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('You have joined the ride!');
     });
     
@@ -141,7 +141,8 @@ describe('ParticipationHandlers', () => {
       };
       mockRideService.getRide.mockResolvedValue(mockRide);
       mockRideService.joinRide.mockResolvedValue({ success: true, ride: mockRide });
-      participationHandlers.updateRideMessage = jest.fn().mockResolvedValue({
+      // Mock the dependency, not the method under test
+      mockRideMessagesService.updateRideMessages.mockResolvedValue({
         success: true,
         updatedCount: 2,
         removedCount: 1
@@ -156,7 +157,7 @@ describe('ParticipationHandlers', () => {
         firstName: 'Test',
         lastName: 'User'
       });
-      expect(participationHandlers.updateRideMessage).toHaveBeenCalledWith(mockRide, mockCtx);
+      expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalledWith(mockRide, mockCtx);
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('You have joined the ride!');
     });
 
@@ -241,8 +242,8 @@ describe('ParticipationHandlers', () => {
       mockRideService.getRide.mockResolvedValue(mockRide);
       mockRideService.leaveRide.mockResolvedValue({ success: true, ride: mockRide });
       
-      // Mock the updateRideMessage method
-      participationHandlers.updateRideMessage = jest.fn().mockResolvedValue({
+      // Mock the dependency, not the method under test
+      mockRideMessagesService.updateRideMessages.mockResolvedValue({
         success: true,
         updatedCount: 1,
         removedCount: 0
@@ -254,7 +255,7 @@ describe('ParticipationHandlers', () => {
       // Verify
       expect(mockRideService.getRide).toHaveBeenCalledWith('123');
       expect(mockRideService.leaveRide).toHaveBeenCalledWith('123', 456);
-      expect(participationHandlers.updateRideMessage).toHaveBeenCalledWith(mockRide, mockCtx);
+      expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalledWith(mockRide, mockCtx);
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('You have left the ride');
     });
     

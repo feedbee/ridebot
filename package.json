@@ -32,6 +32,10 @@
     "testEnvironment": "node",
     "moduleNameMapper": {
       "^(\\.{1,2}/.*)\\.js$": "$1"
-    }
+    },
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/storage/interface.js"
+    ]
   }
 }
