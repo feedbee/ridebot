@@ -180,16 +180,26 @@ describe('ParticipationHandlers', () => {
     
     it('should handle error during join', async () => {
       // Setup
-      mockRideService.getRide.mockRejectedValue(new Error('Database error'));
+      const dbError = new Error('Database error');
+      mockRideService.getRide.mockRejectedValue(dbError);
       
-      // Temporarily mock console.error
+      // Mock console.error to verify it's called with the right error
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       
       // Execute
       await participationHandlers.handleJoinRide(mockCtx);
       
-      // Verify
+      // Verify error was logged with proper context
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Error joining ride:',
+        dbError
+      );
+      
+      // Verify user-facing error message
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('An error occurred');
+      
+      // Verify no partial state - joinRide should not have been called
+      expect(mockRideService.joinRide).not.toHaveBeenCalled();
       
       // Restore console.error
       consoleErrorSpy.mockRestore();
@@ -278,16 +288,26 @@ describe('ParticipationHandlers', () => {
     
     it('should handle error during leave', async () => {
       // Setup
-      mockRideService.getRide.mockRejectedValue(new Error('Database error'));
+      const dbError = new Error('Database error');
+      mockRideService.getRide.mockRejectedValue(dbError);
       
-      // Temporarily mock console.error
+      // Mock console.error to verify it's called with the right error
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       
       // Execute
       await participationHandlers.handleLeaveRide(mockCtx);
       
-      // Verify
+      // Verify error was logged with proper context
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Error leaving ride:',
+        dbError
+      );
+      
+      // Verify user-facing error message
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('An error occurred');
+      
+      // Verify no partial state - leaveRide should not have been called
+      expect(mockRideService.leaveRide).not.toHaveBeenCalled();
       
       // Restore console.error
       consoleErrorSpy.mockRestore();
@@ -347,14 +367,24 @@ describe('ParticipationHandlers', () => {
         ]
       };
       
-      mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: false, error: 'Database error' });
+      const errorMessage = 'Database error';
+      mockRideMessagesService.updateRideMessages.mockResolvedValue({ 
+        success: false, 
+        error: errorMessage 
+      });
       
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       
       await participationHandlers.updateRideMessage(ride, mockCtx);
       
+      // Verify updateRideMessages was called
       expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalledWith(ride, mockCtx);
-      expect(consoleErrorSpy).toHaveBeenCalled();
+      
+      // Verify error was logged with the specific error message
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Error updating ride messages'),
+        errorMessage
+      );
       
       consoleErrorSpy.mockRestore();
     });

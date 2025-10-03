@@ -192,8 +192,14 @@ describe('index.js', () => {
       // Wait a bit for async execution
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Verify
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to start bot:', startError);
+      // Verify error was logged with proper context
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Failed to start bot:',
+        startError
+      );
+      
+      // Verify the error message contains expected details
+      expect(consoleErrorSpy.mock.calls[0][1].message).toBe('Failed to connect to Telegram');
     });
 
     it('should call process.exit(1) on bot.start() failure', async () => {
@@ -210,8 +216,15 @@ describe('index.js', () => {
       // Wait a bit for async execution
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Verify
+      // Verify error was logged
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Failed to start bot:',
+        expect.objectContaining({ message: 'Failed to connect to Telegram' })
+      );
+      
+      // Verify process exited with error code
       expect(processExitSpy).toHaveBeenCalledWith(1);
+      expect(processExitSpy).toHaveBeenCalledTimes(1);
     });
   });
 

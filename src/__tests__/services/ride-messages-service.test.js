@@ -402,10 +402,13 @@ describe('RideMessagesService', () => {
       await expect(rideMessagesService.createRideMessage(mockRide, mockCtx))
         .rejects.toThrow('Network error');
 
+      // Verify error was logged with proper context
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         'Error creating ride message:',
-        expect.any(Error)
+        expect.objectContaining({ message: 'Network error' })
       );
+      
+      // Verify no partial state - updateRide should not have been called
       expect(mockRideService.updateRide).not.toHaveBeenCalled();
 
       consoleErrorSpy.mockRestore();
@@ -431,7 +434,8 @@ describe('RideMessagesService', () => {
         parseMode: 'HTML'
       });
 
-      mockRideService.updateRide.mockRejectedValue(new Error('Database error'));
+      const dbError = new Error('Database error');
+      mockRideService.updateRide.mockRejectedValue(dbError);
 
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -439,10 +443,14 @@ describe('RideMessagesService', () => {
       await expect(rideMessagesService.createRideMessage(mockRide, mockCtx))
         .rejects.toThrow('Database error');
 
+      // Verify error was logged with proper context
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         'Error creating ride message:',
-        expect.any(Error)
+        dbError
       );
+      
+      // Verify message was sent (operation got far enough)
+      expect(mockCtx.reply).toHaveBeenCalled();
 
       consoleErrorSpy.mockRestore();
     });

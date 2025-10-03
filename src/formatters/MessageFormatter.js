@@ -8,13 +8,26 @@ import { DateParser } from '../utils/date-parser.js';
  */
 export class MessageFormatter {
   /**
+   * Telegram's message length limit
+   */
+  static MAX_MESSAGE_LENGTH = 4096;
+
+  /**
    * Format a ride message with keyboard
    * @param {Object} ride - Ride object
    * @param {Array} participants - List of participants
    * @returns {Object} - Object containing message text and keyboard
    */
   formatRideWithKeyboard(ride, participants) {
-    const message = this.formatRideMessage(ride, participants);
+    let message = this.formatRideMessage(ride, participants);
+    
+    // Truncate if message exceeds Telegram's limit
+    if (message.length > MessageFormatter.MAX_MESSAGE_LENGTH) {
+      const truncateMarker = '\n\n... (message truncated due to length)';
+      const maxLength = MessageFormatter.MAX_MESSAGE_LENGTH - truncateMarker.length;
+      message = message.substring(0, maxLength) + truncateMarker;
+    }
+    
     const keyboard = this.getRideKeyboard(ride);
     
     return {
