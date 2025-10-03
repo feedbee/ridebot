@@ -1,8 +1,4 @@
 import { RouteParser } from '../utils/route-parser.js';
-import { parseDateTimeInput } from '../utils/date-input-parser.js';
-import { MessageFormatter } from '../formatters/MessageFormatter.js';
-import { normalizeCategory, DEFAULT_CATEGORY } from '../utils/category-utils.js';
-import { parseDuration } from '../utils/duration-parser.js';
 import { FieldProcessor } from '../utils/FieldProcessor.js';
 
 /**
@@ -14,7 +10,6 @@ export class RideService {
    */
   constructor(storage) {
     this.storage = storage;
-    this.messageFormatter = new MessageFormatter();
   }
 
   /**

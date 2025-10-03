@@ -1,5 +1,4 @@
 import { RideParamsHelper } from '../utils/RideParamsHelper.js';
-import { MessageFormatter } from '../formatters/MessageFormatter.js';
 
 /**
  * Service class for handling ride message operations
@@ -7,10 +6,11 @@ import { MessageFormatter } from '../formatters/MessageFormatter.js';
 export class RideMessagesService {
   /**
    * @param {import('../services/RideService.js').RideService} rideService
+   * @param {import('../formatters/MessageFormatter.js').MessageFormatter} messageFormatter
    */
-  constructor(rideService) {
+  constructor(rideService, messageFormatter) {
     this.rideService = rideService;
-    this.messageFormatter = new MessageFormatter();
+    this.messageFormatter = messageFormatter;
   }
 
   /**

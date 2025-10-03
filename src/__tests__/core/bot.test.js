@@ -49,17 +49,8 @@ describe('Bot', () => {
     it('should initialize all services and handlers', () => {
       bot = new Bot(storage);
 
-      expect(bot.storage).toBe(storage);
-      expect(bot.rideService).toBeDefined();
-      expect(bot.rideMessagesService).toBeDefined();
-      expect(bot.messageFormatter).toBeDefined();
       expect(bot.wizard).toBeDefined();
       expect(bot.bot).toBeDefined();
-    });
-
-    it('should initialize all command handlers', () => {
-      bot = new Bot(storage);
-
       expect(bot.helpHandler).toBeDefined();
       expect(bot.startHandler).toBeDefined();
       expect(bot.newRideHandler).toBeDefined();
