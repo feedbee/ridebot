@@ -49,22 +49,25 @@ describe('Bot', () => {
     it('should initialize all services and handlers', () => {
       bot = new Bot(storage);
 
+      // Check core components
       expect(bot.wizard).toBeDefined();
       expect(bot.bot).toBeDefined();
-      expect(bot.helpHandler).toBeDefined();
-      expect(bot.startHandler).toBeDefined();
-      expect(bot.newRideHandler).toBeDefined();
-      expect(bot.updateRideHandler).toBeDefined();
-      expect(bot.cancelRideHandler).toBeDefined();
-      expect(bot.deleteRideHandler).toBeDefined();
-      expect(bot.listRidesHandler).toBeDefined();
-      expect(bot.duplicateRideHandler).toBeDefined();
-      expect(bot.postRideHandler).toBeDefined();
-      expect(bot.resumeRideHandler).toBeDefined();
-      expect(bot.participationHandlers).toBeDefined();
+      expect(bot.botConfig).toBeDefined();
+      
+      // Check botConfig structure
+      expect(bot.botConfig.commands).toBeDefined();
+      expect(bot.botConfig.commands.privateOnly).toBeInstanceOf(Array);
+      expect(bot.botConfig.commands.publicOnly).toBeInstanceOf(Array);
+      expect(bot.botConfig.commands.mixed).toBeInstanceOf(Array);
+      expect(bot.botConfig.callbacks).toBeInstanceOf(Array);
+      
+      // Check that commands are properly configured
+      expect(bot.botConfig.commands.privateOnly.length).toBe(9); // 9 private commands
+      expect(bot.botConfig.commands.mixed.length).toBe(1); // 1 mixed command (postride)
+      expect(bot.botConfig.callbacks.length).toBe(5); // 5 callback handlers
     });
 
-    it('should call setupHandlers during construction', () => {
+    it('should call configureBot during construction', () => {
       bot = new Bot(storage);
 
       // Verify middleware was registered
@@ -72,7 +75,7 @@ describe('Bot', () => {
     });
   });
 
-  describe('setupHandlers', () => {
+  describe('configureBot', () => {
     beforeEach(() => {
       bot = new Bot(storage);
     });
