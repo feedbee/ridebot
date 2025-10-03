@@ -3,6 +3,7 @@ import { parseDateTimeInput } from '../utils/date-input-parser.js';
 import { MessageFormatter } from '../formatters/MessageFormatter.js';
 import { normalizeCategory, DEFAULT_CATEGORY } from '../utils/category-utils.js';
 import { parseDuration } from '../utils/duration-parser.js';
+import { FieldProcessor } from '../utils/FieldProcessor.js';
 
 /**
  * Service class for managing rides and their messages
@@ -143,81 +144,40 @@ export class RideService {
     }
 
     try {
-      const result = parseDateTimeInput(params.when);
-      if (!result.date) {
-        return { ride: null, error: result.error };
+      // Use FieldProcessor to handle all field processing
+      const { data, error } = FieldProcessor.processRideFields(params, false);
+      if (error) return { ride: null, error };
+      
+      // Handle route processing (async)
+      if (data._requiresRouteProcessing) {
+        const routeInfo = await RouteParser.processRouteInfo(data._routeParam);
+        if (routeInfo.error) return { ride: null, error: routeInfo.error };
+        
+        data.routeLink = routeInfo.routeLink;
+        
+        // Only use parsed details if not explicitly provided
+        if (routeInfo.distance && !params.dist) {
+          data.distance = routeInfo.distance;
+        }
+        
+        if (routeInfo.duration && !params.duration) {
+          data.duration = routeInfo.duration;
+        }
+        
+        delete data._routeParam;
+        delete data._requiresRouteProcessing;
       }
       
-      // Create ride data object
+      // Set defaults and create ride data
       const rideData = {
-        title: params.title,
-        category: params.category ? normalizeCategory(params.category) : DEFAULT_CATEGORY,
-        date: result.date,
-        messages: [], // Initialize with empty array instead of null messageId
+        ...data,
+        messages: [], // Initialize with empty array
         createdBy: user.id
       };
       
       // Set organizer name - use provided value or default to creator's name
-      if (params.organizer) {
-        rideData.organizer = params.organizer;
-      } else if (user) {
-        // Format organizer name in the same format as participant names but without the link
-        let organizerName = '';
-        if (user.first_name || user.last_name) {
-          const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
-          if (user.username) {
-            organizerName = `${fullName} (@${user.username})`;
-          } else {
-            organizerName = fullName;
-          }
-        } else if (user.username) {
-          organizerName = user.username.includes(' ') ? user.username : `@${user.username}`;
-        }
-        rideData.organizer = organizerName;
-      }
-
-      if (params.meet) {
-        rideData.meetingPoint = params.meet;
-      }
-
-      if (params.route) {
-        const routeInfo = await RouteParser.processRouteInfo(params.route);
-        if (routeInfo.error) {
-          return { ride: null, error: routeInfo.error };
-        }
-        
-        rideData.routeLink = routeInfo.routeLink;
-        
-        // Only use parsed details if not explicitly provided
-        if (routeInfo.distance && !params.dist) {
-          rideData.distance = routeInfo.distance;
-        }
-        
-        if (routeInfo.duration && !params.duration) {
-          rideData.duration = routeInfo.duration;
-        }
-      }
-
-      if (params.dist) {
-        rideData.distance = parseFloat(params.dist);
-      }
-
-      if (params.duration) {
-        const result = parseDuration(params.duration);
-        if (result.error) {
-          return { ride: null, error: result.error };
-        }
-        rideData.duration = result.duration;
-      }
-
-      if (params.speed) {
-        const [min, max] = params.speed.split('-').map(s => parseFloat(s.trim()));
-        if (!isNaN(min)) rideData.speedMin = min;
-        if (!isNaN(max)) rideData.speedMax = max;
-      }
-
-      if (params.info !== undefined) {
-        rideData.additionalInfo = params.info;
+      if (!rideData.organizer && user) {
+        rideData.organizer = this.getDefaultOrganizer(user);
       }
 
       const ride = await this.storage.createRide(rideData);
@@ -229,6 +189,28 @@ export class RideService {
   }
 
   /**
+   * Get default organizer name from user object
+   * @param {Object} user - User object with id, first_name, last_name, username fields
+   * @returns {string} - Formatted organizer name
+   */
+  getDefaultOrganizer(user) {
+    if (!user) return '';
+    
+    let organizerName = '';
+    if (user.first_name || user.last_name) {
+      const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+      if (user.username) {
+        organizerName = `${fullName} (@${user.username})`;
+      } else {
+        organizerName = fullName;
+      }
+    } else if (user.username) {
+      organizerName = user.username.includes(' ') ? user.username : `@${user.username}`;
+    }
+    return organizerName;
+  }
+
+  /**
    * Update a ride from parameters
    * @param {string} rideId - Ride ID
    * @param {Object} params - Update parameters
@@ -237,112 +219,33 @@ export class RideService {
    */
   async updateRideFromParams(rideId, params, userId = null) {
     try {
-      const updates = {};
+      // Use FieldProcessor to handle all field processing for updates
+      const { data, error } = FieldProcessor.processRideFields(params, true);
+      if (error) return { ride: null, error };
       
-      if (params.title) {
-        updates.title = params.title;
-      }
+      const updates = { ...data };
       
-      if (params.category !== undefined) {
-        // Use dash ('-') to remove the field value and set to default
-        if (params.category === '-') {
-          updates.category = DEFAULT_CATEGORY; // Reset to default
-        } else {
-          updates.category = normalizeCategory(params.category);
+      // Handle route processing (async)
+      if (data._requiresRouteProcessing) {
+        const routeInfo = await RouteParser.processRouteInfo(data._routeParam);
+        if (routeInfo.error) return { ride: null, error: routeInfo.error };
+        
+        updates.routeLink = routeInfo.routeLink;
+        
+        // Use parsed details if available and not explicitly provided
+        if (routeInfo.distance && !params.dist) {
+          updates.distance = routeInfo.distance;
         }
+        
+        if (routeInfo.duration && !params.duration) {
+          updates.duration = routeInfo.duration;
+        }
+        
+        delete updates._routeParam;
+        delete updates._requiresRouteProcessing;
       }
       
-      if (params.organizer !== undefined) {
-        // Use dash ('-') to remove the field value
-        if (params.organizer === '-') {
-          updates.organizer = '';
-        } else {
-          updates.organizer = params.organizer;
-        }
-      }
-      
-      if (params.when) {
-        const result = parseDateTimeInput(params.when);
-        if (!result.date) {
-          return { ride: null, error: result.error };
-        }
-        updates.date = result.date;
-      }
-      
-      if (params.meet !== undefined) {
-        // Use dash ('-') to remove the field value
-        if (params.meet === '-') {
-          updates.meetingPoint = '';
-        } else {
-          updates.meetingPoint = params.meet;
-        }
-      }
-      
-      if (params.route !== undefined) {
-        // Use dash ('-') to remove the field value
-        if (params.route === '-') {
-          updates.routeLink = '';
-        } else {
-          const routeInfo = await RouteParser.processRouteInfo(params.route);
-          if (routeInfo.error) {
-            return { ride: null, error: routeInfo.error };
-          }
-          
-          updates.routeLink = routeInfo.routeLink;
-          
-          // Use parsed details if available and not explicitly provided
-          if (routeInfo.distance && !params.dist) {
-            updates.distance = routeInfo.distance;
-          }
-          
-          if (routeInfo.duration && !params.duration) {
-            updates.duration = routeInfo.duration;
-          }
-        }
-      }
-      
-      if (params.dist !== undefined) {
-        // Use dash ('-') to remove the field value
-        if (params.dist === '-') {
-          updates.distance = null;
-        } else {
-          updates.distance = parseFloat(params.dist);
-        }
-      }
-      
-      if (params.duration !== undefined) {
-        // Use dash ('-') to remove the field value
-        if (params.duration === '-') {
-          updates.duration = null;
-        } else {
-          const result = parseDuration(params.duration);
-          if (result.error) {
-            return { ride: null, error: result.error };
-          }
-          updates.duration = result.duration;
-        }
-      }
-      
-      if (params.speed !== undefined) {
-        // Use dash ('-') to remove the field value
-        if (params.speed === '-') {
-          updates.speedMin = null;
-          updates.speedMax = null;
-        } else {
-          const [min, max] = params.speed.split('-').map(s => parseFloat(s.trim()));
-          if (!isNaN(min)) updates.speedMin = min;
-          if (!isNaN(max)) updates.speedMax = max;
-        }
-      }
-      
-      if (params.info !== undefined) {
-        // Use dash ('-') to remove the field value
-        if (params.info === '-') {
-          updates.additionalInfo = '';
-        } else {
-          updates.additionalInfo = params.info;
-        }
-      }
+      // Field mapping is now handled by FieldProcessor
       
       // Only set updatedBy if there are other updates
       if (Object.keys(updates).length > 0 && userId !== null) {
