@@ -1,5 +1,4 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
-import { parseDateTimeInput } from '../utils/date-input-parser.js';
 
 /**
  * Handler for the dupride command
@@ -64,56 +63,21 @@ export class DuplicateRideCommandHandler extends BaseCommandHandler {
    * @param {Object} params - Command parameters
    */
   async handleWithParams(ctx, originalRide, params) {
-    try {
-      // Create a new ride data object based on the original ride
-      const rideData = {
-        title: params.title || originalRide.title,
-        messages: [],
-        createdBy: ctx.from.id,
-        meetingPoint: params.meet || originalRide.meetingPoint,
-        routeLink: params.route || originalRide.routeLink,
-        distance: params.dist ? parseFloat(params.dist) : originalRide.distance,
-        duration: params.duration ? parseInt(params.duration) : originalRide.duration,
-        category: params.category || originalRide.category,
-        organizer: params.organizer || originalRide.organizer,
-        additionalInfo: params.info || originalRide.additionalInfo
-      };
+    // Use the RideService duplicateRide method which handles all the logic
+    const { ride, error } = await this.rideService.duplicateRide(
+      originalRide.id,
+      params,
+      ctx.from
+    );
 
-      // Handle date - default to tomorrow if not provided
-      if (params.when) {
-        const result = parseDateTimeInput(params.when);
-        if (!result.date) {
-          await ctx.reply(result.error);
-          return;
-        }
-        rideData.date = result.date;
-      } else {
-        // Default to tomorrow at the same time
-        const tomorrow = new Date(originalRide.date);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        rideData.date = tomorrow;
-      }
-
-      // Handle speed
-      if (params.speed) {
-        const [min, max] = params.speed.split('-').map(s => parseFloat(s.trim()));
-        if (!isNaN(min)) rideData.speedMin = min;
-        if (!isNaN(max)) rideData.speedMax = max;
-      } else {
-        rideData.speedMin = originalRide.speedMin;
-        rideData.speedMax = originalRide.speedMax;
-      }
-
-      // Create the new ride
-      const ride = await this.rideService.createRide(rideData);
-      
-      // Create the ride message using the centralized method
-      await this.rideMessagesService.createRideMessage(ride, ctx);
-
-      await ctx.reply('Ride duplicated successfully!');
-    } catch (error) {
-      console.error('Error duplicating ride:', error);
-      await ctx.reply('An error occurred while duplicating the ride.');
+    if (error) {
+      await ctx.reply(error);
+      return;
     }
+    
+    // Create the ride message using the centralized method
+    await this.rideMessagesService.createRideMessage(ride, ctx);
+
+    await ctx.reply('Ride duplicated successfully!');
   }
 }

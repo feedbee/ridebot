@@ -52,7 +52,8 @@ describe('DuplicateRideCommandHandler', () => {
     // Create mock RideService
     mockRideService = {
       getRide: jest.fn(),
-      createRide: jest.fn()
+      createRide: jest.fn(),
+      duplicateRide: jest.fn()
     };
 
     // Create mock RideMessagesService
@@ -238,9 +239,9 @@ describe('DuplicateRideCommandHandler', () => {
       
       const parsedDate = parseDateTimeInput(params.when);
       
-      mockRideService.createRide.mockResolvedValue({
-        id: '456',
-        title: 'New Ride'
+      mockRideService.duplicateRide.mockResolvedValue({
+        ride: { id: '456', title: 'New Ride' },
+        error: null
       });
       
       mockMessageFormatter.formatRideDetails.mockReturnValue({
@@ -252,19 +253,12 @@ describe('DuplicateRideCommandHandler', () => {
       // Execute
       await duplicateRideCommandHandler.handleWithParams(mockCtx, originalRide, params);
       
-      // Verify
-      expect(mockRideService.createRide).toHaveBeenCalledWith(expect.objectContaining({
-        title: 'New Ride',
-        messages: [],
-        createdBy: 101112,
-        meetingPoint: 'New Location',
-        routeLink: 'https://example.com/route',
-        distance: 50,
-        duration: 180,
-        speedMin: 20,
-        speedMax: 28,
-        date: parsedDate.date
-      }));
+      // Verify duplicateRide was called with correct parameters
+      expect(mockRideService.duplicateRide).toHaveBeenCalledWith(
+        originalRide.id,
+        params,
+        mockCtx.from
+      );
       
       // Verify that createRideMessage was called with the correct parameters
       expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(
@@ -298,9 +292,9 @@ describe('DuplicateRideCommandHandler', () => {
       
       const parsedDate = parseDateTimeInput(params.when);
       
-      mockRideService.createRide.mockResolvedValue({
-        id: '789',
-        title: 'Topic Ride'
+      mockRideService.duplicateRide.mockResolvedValue({
+        ride: { id: '789', title: 'Topic Ride' },
+        error: null
       });
       
       mockMessageFormatter.formatRideDetails.mockReturnValue({
@@ -322,19 +316,12 @@ describe('DuplicateRideCommandHandler', () => {
       // Execute
       await duplicateRideCommandHandler.handleWithParams(topicCtx, originalRide, params);
       
-      // Verify
-      expect(mockRideService.createRide).toHaveBeenCalledWith(expect.objectContaining({
-        title: 'Topic Ride',
-        messages: [],
-        createdBy: 101112,
-        meetingPoint: 'Topic Location',
-        routeLink: 'https://example.com/route',
-        distance: 50,
-        duration: 180,
-        speedMin: 20,
-        speedMax: 28,
-        date: parsedDate.date
-      }));
+      // Verify duplicateRide was called with correct parameters
+      expect(mockRideService.duplicateRide).toHaveBeenCalledWith(
+        originalRide.id,
+        params,
+        topicCtx.from
+      );
       
       // Verify that createRideMessage was called with the correct parameters
       expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(
@@ -357,20 +344,22 @@ describe('DuplicateRideCommandHandler', () => {
         when: 'invalid date'
       };
       
-      const parsedDate = parseDateTimeInput(params.when);
-      
-      // Temporarily mock console.error
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockRideService.duplicateRide.mockResolvedValue({
+        ride: null,
+        error: 'Invalid date format. Please use format: DD.MM.YYYY HH:MM or natural language like "tomorrow 18:00"'
+      });
       
       // Execute
       await duplicateRideCommandHandler.handleWithParams(mockCtx, originalRide, params);
       
       // Verify
-      expect(mockCtx.reply).toHaveBeenCalledWith(parsedDate.error);
-      expect(mockRideService.createRide).not.toHaveBeenCalled();
-      
-      // Restore console.error
-      consoleErrorSpy.mockRestore();
+      expect(mockRideService.duplicateRide).toHaveBeenCalledWith(
+        originalRide.id,
+        params,
+        mockCtx.from
+      );
+      expect(mockCtx.reply).toHaveBeenCalledWith(expect.stringContaining('Invalid date format'));
+      expect(mockRideMessagesService.createRideMessage).not.toHaveBeenCalled();
     });
     
     it('should use default values when parameters are not provided', async () => {
@@ -392,9 +381,9 @@ describe('DuplicateRideCommandHandler', () => {
       
       const params = {}; // Empty params
       
-      mockRideService.createRide.mockResolvedValue({
-        id: '456',
-        title: 'Test Ride'
+      mockRideService.duplicateRide.mockResolvedValue({
+        ride: { id: '456', title: 'Test Ride' },
+        error: null
       });
       
       mockMessageFormatter.formatRideDetails.mockReturnValue({
@@ -406,19 +395,12 @@ describe('DuplicateRideCommandHandler', () => {
       // Execute
       await duplicateRideCommandHandler.handleWithParams(mockCtx, originalRide, params);
       
-      // Verify
-      expect(mockRideService.createRide).toHaveBeenCalledWith(expect.objectContaining({
-        title: 'Test Ride',
-        messages: [],
-        createdBy: 101112,
-        meetingPoint: 'Test Location',
-        routeLink: 'https://example.com/route',
-        distance: 50,
-        duration: 180,
-        date: expectedTomorrow,
-        speedMin: 25,
-        speedMax: 30
-      }));
+      // Verify duplicateRide was called with correct parameters
+      expect(mockRideService.duplicateRide).toHaveBeenCalledWith(
+        originalRide.id,
+        params,
+        mockCtx.from
+      );
     });
     
     it('should handle error during ride creation', async () => {
@@ -431,19 +413,22 @@ describe('DuplicateRideCommandHandler', () => {
       
       const params = {};
       
-      mockRideService.createRide.mockRejectedValue(new Error('Database error'));
-      
-      // Temporarily mock console.error
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockRideService.duplicateRide.mockResolvedValue({
+        ride: null,
+        error: 'An error occurred while creating the ride.'
+      });
       
       // Execute
       await duplicateRideCommandHandler.handleWithParams(mockCtx, originalRide, params);
       
       // Verify
-      expect(mockCtx.reply).toHaveBeenCalledWith('An error occurred while duplicating the ride.');
-      
-      // Restore console.error
-      consoleErrorSpy.mockRestore();
+      expect(mockRideService.duplicateRide).toHaveBeenCalledWith(
+        originalRide.id,
+        params,
+        mockCtx.from
+      );
+      expect(mockCtx.reply).toHaveBeenCalledWith('An error occurred while creating the ride.');
+      expect(mockRideMessagesService.createRideMessage).not.toHaveBeenCalled();
     });
   });
 });

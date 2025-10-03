@@ -362,4 +362,60 @@ export class RideService {
       return { ride: null, error: 'An error occurred while updating the ride.' };
     }
   }
+
+  /**
+   * Duplicate an existing ride with optional parameter overrides
+   * @param {string} originalRideId - ID of the ride to duplicate
+   * @param {Object} params - Optional parameters to override
+   * @param {Object} user - User object with id, first_name, last_name, username fields
+   * @returns {Promise<Object>} - Created ride and any errors
+   */
+  async duplicateRide(originalRideId, params, user) {
+    const originalRide = await this.getRide(originalRideId);
+    if (!originalRide) {
+      return { ride: null, error: 'Original ride not found' };
+    }
+    
+    // Calculate tomorrow's date as default
+    const tomorrow = new Date(originalRide.date);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    // Merge params with original ride data
+    // For fields that can be cleared with '-', use 'undefined' check to distinguish between not provided and explicitly set
+    const mergedParams = {
+      title: params.title !== undefined ? params.title : originalRide.title,
+      category: params.category !== undefined ? params.category : originalRide.category,
+      organizer: params.organizer !== undefined ? params.organizer : originalRide.organizer,
+      meet: params.meet !== undefined ? params.meet : originalRide.meetingPoint,
+      route: params.route !== undefined ? params.route : originalRide.routeLink,
+      dist: params.dist !== undefined ? params.dist : originalRide.distance?.toString(),
+      duration: params.duration !== undefined ? params.duration : originalRide.duration?.toString(),
+      info: params.info !== undefined ? params.info : originalRide.additionalInfo
+    };
+    
+    // Handle date with default to tomorrow
+    if (params.when) {
+      mergedParams.when = params.when;
+    } else {
+      // Format tomorrow's date for parsing
+      mergedParams.when = tomorrow.toISOString();
+    }
+    
+    // Handle speed range
+    if (params.speed !== undefined) {
+      mergedParams.speed = params.speed;
+    } else if (originalRide.speedMin || originalRide.speedMax) {
+      // Reconstruct speed range from original ride
+      if (originalRide.speedMin && originalRide.speedMax) {
+        mergedParams.speed = `${originalRide.speedMin}-${originalRide.speedMax}`;
+      } else if (originalRide.speedMin) {
+        mergedParams.speed = `${originalRide.speedMin}`;
+      } else if (originalRide.speedMax) {
+        mergedParams.speed = `${originalRide.speedMax}`;
+      }
+    }
+    
+    // Use existing createRideFromParams to handle all the validation and processing
+    return await this.createRideFromParams(mergedParams, null, user);
+  }
 }
