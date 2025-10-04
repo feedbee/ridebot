@@ -159,6 +159,10 @@ To post an existing ride to another chat:
 
 Use `/listrides` to see all rides you've created with pagination support.
 
+### Listing Ride Participants
+
+Use `/listparticipants rideID` to see all participants for a specific ride. This command shows all participants without the truncation limit applied to regular ride messages.
+
 ## Route Support
 
 The bot supports route links from:
@@ -211,6 +215,7 @@ The bot supports multiple ways to reference a ride:
 - `USE_WEBHOOK`: Set to `true` to enable webhook mode (defaults to `false` for polling)
 - `WEBHOOK_PATH`: Path for the webhook (e.g., `/webhook`, defaults to `/`)
 - `WEBHOOK_PORT`: Port for the webhook server to listen on (defaults to `8080`)
+- `MAX_PARTICIPANTS_DISPLAY`: Maximum number of participants to show before displaying "and X more" (defaults to `20`)
 
 ## Webhook Setup
 

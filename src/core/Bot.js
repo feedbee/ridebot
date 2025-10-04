@@ -13,6 +13,7 @@ import { UpdateRideCommandHandler } from '../commands/UpdateRideCommandHandler.j
 import { CancelRideCommandHandler } from '../commands/CancelRideCommandHandler.js';
 import { DeleteRideCommandHandler } from '../commands/DeleteRideCommandHandler.js';
 import { ListRidesCommandHandler } from '../commands/ListRidesCommandHandler.js';
+import { ListParticipantsCommandHandler } from '../commands/ListParticipantsCommandHandler.js';
 import { DuplicateRideCommandHandler } from '../commands/DuplicateRideCommandHandler.js';
 import { ShareRideCommandHandler } from '../commands/ShareRideCommandHandler.js';
 import { ResumeRideCommandHandler } from '../commands/ResumeRideCommandHandler.js';
@@ -49,6 +50,7 @@ export class Bot {
     const cancelRideHandler = new CancelRideCommandHandler(rideService, messageFormatter, rideMessagesService);
     const deleteRideHandler = new DeleteRideCommandHandler(rideService, messageFormatter, rideMessagesService);
     const listRidesHandler = new ListRidesCommandHandler(rideService, messageFormatter, rideMessagesService);
+    const listParticipantsHandler = new ListParticipantsCommandHandler(rideService, messageFormatter, rideMessagesService);
     const duplicateRideHandler = new DuplicateRideCommandHandler(rideService, messageFormatter, this.wizard, rideMessagesService);
     const resumeRideHandler = new ResumeRideCommandHandler(rideService, messageFormatter, rideMessagesService);
     const participationHandler = new ParticipationHandlers(rideService, messageFormatter, rideMessagesService);
@@ -65,6 +67,7 @@ export class Bot {
           { command: 'cancelride', description: 'Cancel a ride', handler: (ctx) => cancelRideHandler.handle(ctx) },
           { command: 'deleteride', description: 'Delete a ride', handler: (ctx) => deleteRideHandler.handle(ctx) },
           { command: 'listrides', description: 'List all your rides', handler: (ctx) => listRidesHandler.handle(ctx) },
+          { command: 'listparticipants', description: 'List all participants for a ride', handler: (ctx) => listParticipantsHandler.handle(ctx) },
           { command: 'dupride', description: 'Duplicate an existing ride', handler: (ctx) => duplicateRideHandler.handle(ctx) },
           { command: 'resumeride', description: 'Resume a cancelled ride', handler: (ctx) => resumeRideHandler.handle(ctx) },  
         ],

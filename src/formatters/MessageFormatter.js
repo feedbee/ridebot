@@ -68,28 +68,7 @@ export class MessageFormatter {
     
     const participantCount = participants.length;
     const participantsList = participants.length > 0
-      ? participants
-          .map(p => {
-            // Format the display name based on available information
-            let displayName;
-            
-            // If we have first name or last name (new format)
-            if (p.firstName || p.lastName) {
-              const fullName = `${p.firstName} ${p.lastName}`.trim();
-              // If we also have a username, show both
-              if (p.username) {
-                displayName = `${escapeHtml(fullName)} (@${escapeHtml(p.username)})`;
-              } else {
-                displayName = escapeHtml(fullName);
-              }
-            } else {
-              // Legacy format or username-only
-              displayName = p.username.includes(' ') ? escapeHtml(p.username) : `@${escapeHtml(p.username)}`;
-            }
-            
-            return `<a href="tg://user?id=${p.userId}">${displayName}</a>`;
-          })
-          .join(', ')
+      ? this.formatParticipantsList(participants)
       : 'No participants yet';
     
     // Build ride details with proper grouping
@@ -250,5 +229,56 @@ export class MessageFormatter {
    */
   formatDeleteConfirmation() {
     return config.messageTemplates.deleteConfirmation;
+  }
+
+  /**
+   * Format participants list with truncation for large numbers
+   * @param {Array} participants - List of participants
+   * @returns {string} - Formatted participants list
+   */
+  formatParticipantsList(participants) {
+    const maxDisplay = config.maxParticipantsDisplay;
+    
+    if (participants.length <= maxDisplay) {
+      // Show all participants if within limit
+      return participants
+        .map(p => this.formatParticipant(p))
+        .join(', ');
+    } else {
+      // Show first N participants and "and X more"
+      const displayedParticipants = participants.slice(0, maxDisplay);
+      const remainingCount = participants.length - maxDisplay;
+      
+      const displayedList = displayedParticipants
+        .map(p => this.formatParticipant(p))
+        .join(', ');
+      
+      return `${displayedList} and ${remainingCount} more`;
+    }
+  }
+
+  /**
+   * Format a single participant
+   * @param {Object} participant - Participant object
+   * @returns {string} - Formatted participant name
+   */
+  formatParticipant(participant) {
+    let displayName;
+    
+    // If we have first name or last name (new format)
+    if (participant.firstName || participant.lastName) {
+      const fullName = `${participant.firstName} ${participant.lastName}`.trim();
+      // If we also have a username, show both
+      if (participant.username) {
+        displayName = `${escapeHtml(fullName)} (@${escapeHtml(participant.username)})`;
+      } else {
+        displayName = escapeHtml(fullName);
+      }
+    } else {
+      // Legacy format or username-only
+      displayName = participant.username.includes(' ') ? escapeHtml(participant.username) : `@${escapeHtml(participant.username)}`;
+    }
+    
+    return `<a href="tg://user?id=${participant.userId}">${displayName}</a>`;
   }
 }

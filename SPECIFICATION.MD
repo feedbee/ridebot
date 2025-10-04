@@ -111,6 +111,7 @@ All handlers extend **[BaseCommandHandler](cci:2://file:///workspace/src/command
 - **DuplicateRideCommandHandler**: Duplicate rides with modifications
 - **ShareRideCommandHandler**: Share rides to other chats
 - **ListRidesCommandHandler**: Paginated list of user's rides
+- **ListParticipantsCommandHandler**: List all participants for a specific ride (shows all without truncation)
 - **ParticipationHandlers**: Join/leave ride functionality
 - **StartCommandHandler**: Welcome message
 - **HelpCommandHandler**: Multi-page help system
@@ -212,6 +213,7 @@ info: Bring lights
 - `WEBHOOK_PORT`: Port for webhook server (default: 8080)
 - `MONGODB_URI`: MongoDB connection string
 - `DEFAULT_TIMEZONE`: Timezone for date/time display
+- `MAX_PARTICIPANTS_DISPLAY`: Maximum number of participants to show before displaying "and X more" (default: 20)
 
 **Message Templates:**
 - Start message
@@ -302,10 +304,10 @@ _No major refactoring areas identified at this time. The codebase is well-organi
 - [x] Commands: Rename /postride to /shareride.
 - [x] Documentation: Improve /start message to simplify onboarding
 - [ ] Translations: Add Russian language support and set the bot's default language through environment variables.
-- [ ] Ride participation: List participants on the same line after the label, separated by commas.
+- [x] Ride participation: List participants on the same line after the label, separated by commas.
 - [ ] Ride participation: Add an "I am thinking" option to indicate who might join the chat.
 - [ ] Ride participation: Add an "Not interested" option to gather responses from those who will not join the ride.
-- [ ] Ride participation: Limit the ride message to display only the first 15 registered participants/thinking/rejected, and if there are more, show a label like ", and other XX" for each category separately.
+- [x] Ride participation: Limit the ride message to display only the first N registered participants (configurable via MAX_PARTICIPANTS_DISPLAY), and if there are more, show a label like "and X more".
 
 ### Medium Priority
 - [ ] Rides management: Add management buttons below the ride button in private chat with the bot for ride creator

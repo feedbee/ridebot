@@ -53,6 +53,7 @@ export const config = {
       ]
     }
   },
+  maxParticipantsDisplay: parseInt(process.env.MAX_PARTICIPANTS_DISPLAY, 10) || 20,
   messageTemplates,
   buttons
 }; 

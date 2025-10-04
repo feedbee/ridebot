@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-01-27 - Participant display improvements and configuration
+
+### Added
+- **Environment variable**: `MAX_PARTICIPANTS_DISPLAY` to configure the maximum number of participants shown before displaying "and X more" (defaults to 20)
+- **Participant truncation**: When there are more participants than the configured limit, only the first N participants are shown followed by "and X more"
+- **New command**: `/listparticipants rideID` to list all participants for a specific ride without truncation (available to all users, not just ride creators)
+
+### Changed
+- **Participant display**: Participants are now displayed on the same line after the "Participants" label, separated by commas instead of bullet points on separate lines
+- **Message formatting**: Improved readability of ride messages with more compact participant lists
+
 ## [2.0.1] - 2025-01-27 - Start message simplification and test fixes
 
 ### Changed

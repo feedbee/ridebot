@@ -20,9 +20,17 @@ jest.mock('grammy', () => {
 
 describe('MessageFormatter', () => {
   let messageFormatter;
-  
+  let originalMaxParticipantsDisplay;
+
   beforeEach(() => {
     messageFormatter = new MessageFormatter();
+    // Save original config value
+    originalMaxParticipantsDisplay = config.maxParticipantsDisplay;
+  });
+
+  afterEach(() => {
+    // Restore original config value
+    config.maxParticipantsDisplay = originalMaxParticipantsDisplay;
   });
   
   describe('formatRideWithKeyboard', () => {
@@ -192,6 +200,95 @@ describe('MessageFormatter', () => {
       expect(result).toContain('<a href="tg://user?id=456">Test1 User1 (@testuser1)</a>');
       expect(result).toContain('<a href="tg://user?id=789">Test2 User2</a>');
       expect(result).toContain('<a href="tg://user?id=101112">@testuser3</a>');
+    });
+
+    it('should truncate participants when there are more than MAX_PARTICIPANTS_DISPLAY', () => {
+      // Setup
+      config.maxParticipantsDisplay = 3; // Set a specific limit for this test
+      
+      const ride = {
+        id: '123',
+        title: 'Test Ride',
+        date: new Date('2025-03-30T10:00:00Z')
+      };
+      
+      const participants = [
+        { userId: 1, firstName: 'User1', lastName: 'One', username: 'user1' },
+        { userId: 2, firstName: 'User2', lastName: 'Two', username: 'user2' },
+        { userId: 3, firstName: 'User3', lastName: 'Three', username: 'user3' },
+        { userId: 4, firstName: 'User4', lastName: 'Four', username: 'user4' },
+        { userId: 5, firstName: 'User5', lastName: 'Five', username: 'user5' }
+      ];
+      
+      // Execute
+      const result = messageFormatter.formatRideMessage(ride, participants);
+      
+      // Verify - should show first 3 participants and "and 2 more"
+      expect(result).toContain('<a href="tg://user?id=1">User1 One (@user1)</a>');
+      expect(result).toContain('<a href="tg://user?id=2">User2 Two (@user2)</a>');
+      expect(result).toContain('<a href="tg://user?id=3">User3 Three (@user3)</a>');
+      expect(result).toContain('and 2 more');
+      
+      // Should not contain the 4th and 5th participants
+      expect(result).not.toContain('User4 Four');
+      expect(result).not.toContain('User5 Five');
+    });
+
+    it('should show all participants when count is exactly MAX_PARTICIPANTS_DISPLAY', () => {
+      // Setup
+      config.maxParticipantsDisplay = 3; // Set a specific limit for this test
+      
+      const ride = {
+        id: '123',
+        title: 'Test Ride',
+        date: new Date('2025-03-30T10:00:00Z')
+      };
+      
+      const participants = [
+        { userId: 1, firstName: 'User1', lastName: 'One', username: 'user1' },
+        { userId: 2, firstName: 'User2', lastName: 'Two', username: 'user2' },
+        { userId: 3, firstName: 'User3', lastName: 'Three', username: 'user3' }
+      ];
+      
+      // Execute
+      const result = messageFormatter.formatRideMessage(ride, participants);
+      
+      // Verify - should show all 3 participants without truncation
+      expect(result).toContain('<a href="tg://user?id=1">User1 One (@user1)</a>');
+      expect(result).toContain('<a href="tg://user?id=2">User2 Two (@user2)</a>');
+      expect(result).toContain('<a href="tg://user?id=3">User3 Three (@user3)</a>');
+      expect(result).not.toContain('and');
+      expect(result).not.toContain('more');
+    });
+
+    it('should respect the configured maxParticipantsDisplay value', () => {
+      // Setup - test with different limit values
+      config.maxParticipantsDisplay = 2;
+      
+      const ride = {
+        id: '123',
+        title: 'Test Ride',
+        date: new Date('2025-03-30T10:00:00Z')
+      };
+      
+      const participants = [
+        { userId: 1, firstName: 'User1', lastName: 'One', username: 'user1' },
+        { userId: 2, firstName: 'User2', lastName: 'Two', username: 'user2' },
+        { userId: 3, firstName: 'User3', lastName: 'Three', username: 'user3' },
+        { userId: 4, firstName: 'User4', lastName: 'Four', username: 'user4' }
+      ];
+      
+      // Execute
+      const result = messageFormatter.formatRideMessage(ride, participants);
+      
+      // Verify - should show first 2 participants and "and 2 more"
+      expect(result).toContain('<a href="tg://user?id=1">User1 One (@user1)</a>');
+      expect(result).toContain('<a href="tg://user?id=2">User2 Two (@user2)</a>');
+      expect(result).toContain('and 2 more');
+      
+      // Should not contain the 3rd and 4th participants
+      expect(result).not.toContain('User3 Three');
+      expect(result).not.toContain('User4 Four');
     });
   });
   
