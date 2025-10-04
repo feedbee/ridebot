@@ -152,8 +152,8 @@ Four ways to duplicate a ride:
 
 To post an existing ride to another chat:
 1. Go to the target chat
-2. Use `/postride` with ride ID directly: `/postride abc123`
-3. Or use `/postride` with ride ID as a parameter
+2. Use `/shareride` with ride ID directly: `/shareride abc123`
+3. Or use `/shareride` with ride ID as a parameter
 
 ### Listing Your Rides
 

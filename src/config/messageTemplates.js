@@ -18,7 +18,7 @@ I help you organize bike rides with your friends and community.
 
 <b>Create Rides and Sync Them Across Chats:</b>
 1. Create a ride with /newride in private chat
-2. Share to other chats with /postride
+2. Share to other chats with /shareride
 3. All instances stay synchronized
 4. Join/leave updates appear everywhere
 5. Changes and cancellations sync automatically
@@ -33,7 +33,7 @@ See /help for detailed examples of both modes.
 To create less noise for others, it is recommended to create the rides in private chat with the bot and repost them in other chats after.
 
 <b>Easy Ride Reference:</b>
-• When working with existing ride, reply to the ride message with /updateride, /cancelride, /deleteride, /dupride, /postride to identify the ride to modify
+• When working with existing ride, reply to the ride message with /updateride, /cancelride, /deleteride, /dupride, /shareride to identify the ride to modify
 • Alternatively, pass the ride ID directly after the command (e.g., /updateride abc123)
 • You can also use the id: parameter in multi-line commands
 
@@ -169,10 +169,10 @@ Use /listrides to see all rides you've created:
 <b>📢 Reposting a Ride</b>
 Only the ride creator can repost a ride to another chat:
 1. Go to the target chat where you want to post the ride
-2. Use /postride with the ride ID directly after the command: <code>/postride abc123</code>
-3. Or use /postride with ride ID as a parameter:
+2. Use /shareride with the ride ID directly after the command: <code>/shareride abc123</code>
+3. Or use /shareride with ride ID as a parameter:
 <pre>
-/postride
+/shareride
 id: abc123
 </pre>
 The ride will be posted to the current chat and all instances will be synchronized when details change or participants join/leave.

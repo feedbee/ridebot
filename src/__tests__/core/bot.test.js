@@ -63,7 +63,7 @@ describe('Bot', () => {
       
       // Check that commands are properly configured
       expect(bot.botConfig.commands.privateOnly.length).toBe(9); // 9 private commands
-      expect(bot.botConfig.commands.mixed.length).toBe(1); // 1 mixed command (postride)
+      expect(bot.botConfig.commands.mixed.length).toBe(1); // 1 mixed command (shareride)
       expect(bot.botConfig.callbacks.length).toBe(5); // 5 callback handlers
     });
 
@@ -126,15 +126,15 @@ describe('Bot', () => {
       expect(mockBotCommand).toHaveBeenCalledWith('deleteride', expect.any(Function));
       expect(mockBotCommand).toHaveBeenCalledWith('listrides', expect.any(Function));
       expect(mockBotCommand).toHaveBeenCalledWith('dupride', expect.any(Function));
-      expect(mockBotCommand).toHaveBeenCalledWith('postride', expect.any(Function));
+      expect(mockBotCommand).toHaveBeenCalledWith('shareride', expect.any(Function));
     });
 
-    it('should handle postride in group chat without parameters', async () => {
+    it('should handle shareride in group chat without parameters', async () => {
       bot = new Bot(storage);
 
-      // Find the postride command handler
-      const postrideCall = mockBotCommand.mock.calls.find(call => call[0] === 'postride');
-      const postrideHandler = postrideCall[1];
+      // Find the shareride command handler
+      const sharerideCall = mockBotCommand.mock.calls.find(call => call[0] === 'shareride');
+      const sharerideHandler = sharerideCall[1];
 
       // Create mock context for group chat without match
       const mockCtx = {
@@ -146,10 +146,10 @@ describe('Bot', () => {
         }
       };
 
-      await postrideHandler(mockCtx);
+      await sharerideHandler(mockCtx);
 
       expect(mockCtx.reply).toHaveBeenCalledWith(
-        expect.stringContaining('How to post a ride in this chat'),
+        expect.stringContaining('How to share a ride in this chat'),
         { parse_mode: 'HTML' }
       );
       expect(mockCtx.reply).toHaveBeenCalledWith(
@@ -158,21 +158,21 @@ describe('Bot', () => {
       );
     });
 
-    it('should process postride normally in private chat', async () => {
+    it('should process shareride normally in private chat', async () => {
       bot = new Bot(storage);
 
-      // Verify the post ride handler is registered for all chats
-      const postrideCall = mockBotCommand.mock.calls.find(call => call[0] === 'postride');
-      expect(postrideCall).toBeDefined();
+      // Verify the share ride handler is registered for all chats
+      const sharerideCall = mockBotCommand.mock.calls.find(call => call[0] === 'shareride');
+      expect(sharerideCall).toBeDefined();
     });
 
-    it('should process postride normally in group chat with parameters', async () => {
+    it('should process shareride normally in group chat with parameters', async () => {
       bot = new Bot(storage);
 
-      // Verify postride command is registered (will work in any chat type)
-      const postrideCall = mockBotCommand.mock.calls.find(call => call[0] === 'postride');
-      expect(postrideCall).toBeDefined();
-      expect(postrideCall[0]).toBe('postride');
+      // Verify shareride command is registered (will work in any chat type)
+      const sharerideCall = mockBotCommand.mock.calls.find(call => call[0] === 'shareride');
+      expect(sharerideCall).toBeDefined();
+      expect(sharerideCall[0]).toBe('shareride');
     });
 
     it('should only allow private chat commands in private chats', async () => {
@@ -212,7 +212,7 @@ describe('Bot', () => {
           { command: 'start', description: expect.any(String) },
           { command: 'help', description: expect.any(String) },
           { command: 'newride', description: expect.any(String) },
-          { command: 'postride', description: expect.any(String) }
+          { command: 'shareride', description: expect.any(String) }
         ]),
         { scope: { type: 'all_private_chats' } }
       );
@@ -222,7 +222,7 @@ describe('Bot', () => {
       await bot.setupBotCommands();
 
       expect(mockApiSetMyCommands).toHaveBeenCalledWith(
-        [{ command: 'postride', description: expect.any(String) }],
+        [{ command: 'shareride', description: expect.any(String) }],
         { scope: { type: 'all_group_chats' } }
       );
     });

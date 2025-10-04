@@ -5,7 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.0] - 2025-01-27 - Disabling public rides creation, major refactorings, tests quality improvements, some fixes
+## [2.0.0] - 2025-10-04 - Breaking change: `/postriode` command renamed to `/shareride`
+
+### Changed
+- **Command rename**: `/postride` command has been renamed to `/shareride` for clarity and consistency.
+
+### Breaking
+- **Command deprecation**: The old `/postride` command is no longer available. All ride sharing must now use `/shareride`.
+
+---
+
+## [1.2.1] - 2025-10-04 - Test fixed
+
+## Fixed
+- **Test failures**: Fixed a few tests in `index.test.js`
+
+---
+
+## [1.2.0] - 2025-10-04 - Disabling public rides creation, major refactorings, tests quality improvements, some fixes
 
 ### Added
 - **FieldProcessor utility**: Centralized field processing and validation for ride parameters
@@ -27,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **RideService methods**: Added `duplicateRide` method for centralized ride duplication logic
 
 ### Removed
-- **Public group commands**: Removed support for most commands in public groups (except `/postride`)
+- **Public group commands**: Removed support for most commands in public groups (except `/postride`, that would be later renamed to `/shareride`)
 - **WIZARD_ONLY_IN_PRIVATE config**: Wizard is now always restricted to private chats
 - **PRIVATE_CHAT_COMMANDS_MODE config**: Private chat mode is now always enforced
 - **Permission checker utility**: No longer needed after wizard restriction to private chats

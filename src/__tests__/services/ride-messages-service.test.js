@@ -101,7 +101,7 @@ describe('RideMessagesService', () => {
       expect(result2.error).toBeNull();
       
       // Test with different commands
-      const commands = ['cancelride', 'deleteride', 'dupride', 'postride'];
+      const commands = ['cancelride', 'deleteride', 'dupride', 'shareride'];
       
       for (const cmd of commands) {
         // Without #
@@ -148,7 +148,7 @@ describe('RideMessagesService', () => {
     
     it('should accept both #id and id formats in parameters', () => {
       // Test with different commands and both formats
-      const commands = ['updateride', 'cancelride', 'deleteride', 'dupride', 'postride'];
+      const commands = ['updateride', 'cancelride', 'deleteride', 'dupride', 'shareride'];
       
       for (const cmd of commands) {
         // Without #

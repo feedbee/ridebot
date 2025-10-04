@@ -14,7 +14,7 @@ import { CancelRideCommandHandler } from '../commands/CancelRideCommandHandler.j
 import { DeleteRideCommandHandler } from '../commands/DeleteRideCommandHandler.js';
 import { ListRidesCommandHandler } from '../commands/ListRidesCommandHandler.js';
 import { DuplicateRideCommandHandler } from '../commands/DuplicateRideCommandHandler.js';
-import { PostRideCommandHandler } from '../commands/PostRideCommandHandler.js';
+import { ShareRideCommandHandler } from '../commands/ShareRideCommandHandler.js';
 import { ResumeRideCommandHandler } from '../commands/ResumeRideCommandHandler.js';
 import { ParticipationHandlers } from '../commands/ParticipationHandlers.js';
 
@@ -50,7 +50,7 @@ export class Bot {
     const duplicateRideHandler = new DuplicateRideCommandHandler(rideService, messageFormatter, this.wizard, rideMessagesService);
     const resumeRideHandler = new ResumeRideCommandHandler(rideService, messageFormatter, rideMessagesService);
     const participationHandler = new ParticipationHandlers(rideService, messageFormatter, rideMessagesService);
-    const postRideHandler = new PostRideCommandHandler(rideService, messageFormatter, rideMessagesService);
+    const shareRideHandler = new ShareRideCommandHandler(rideService, messageFormatter, rideMessagesService);
     
     
     return {
@@ -68,22 +68,22 @@ export class Bot {
         ],
         publicOnly: [],
         mixed: [
-          { command: 'postride', description: 'Post a ride in a chat', handler: async (ctx) => {
+          { command: 'shareride', description: 'Share a ride in a chat', handler: async (ctx) => {
             // If no parameters provided in group chat, show a helpful message
             if (ctx.chat?.type !== 'private' && !ctx.match) {
               await ctx.reply(
-                '<b>ℹ️ How to post a ride in this chat:</b>\n\n' +
+                '<b>ℹ️ How to share a ride in this chat:</b>\n\n' +
                 '1. Create a ride in private chat with the bot\n' +
                 '2. Get the ride ID from the confirmation message or /listrides\n' +
-                '3. Use <code>/postride RIDE_ID</code> in this chat\n\n' +
+                '3. Use <code>/shareride RIDE_ID</code> in this chat\n\n' +
                 'Click here to start a private chat: @' + (await ctx.api.getMe()).username,
                 { parse_mode: 'HTML' }
               );
               return;
             }
             
-            // Process the postride command normally
-            postRideHandler.handle(ctx);
+            // Process the shareride command normally
+            shareRideHandler.handle(ctx);
           }},
         ],
       },
@@ -104,7 +104,7 @@ export class Bot {
     // Apply middleware for handling message thread IDs in topics
     this.bot.use(threadMiddleware);
     
-    // Command handlers (private chat only, except /postride)
+    // Command handlers (private chat only, except /shareride)
     this.setupCommandHandlers();
     
     // Callback query handlers

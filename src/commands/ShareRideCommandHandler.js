@@ -1,10 +1,10 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
 
 /**
- * Handler for the postride command
+ * Handler for the shareride command
  * Allows reposting a ride to the current chat
  */
-export class PostRideCommandHandler extends BaseCommandHandler {
+export class ShareRideCommandHandler extends BaseCommandHandler {
   /**
    * @param {import('../services/RideService.js').RideService} rideService
    * @param {import('../formatters/MessageFormatter.js').MessageFormatter} messageFormatter
@@ -15,14 +15,14 @@ export class PostRideCommandHandler extends BaseCommandHandler {
   }
 
   /**
-   * Handle the postride command
+   * Handle the shareride command
    * @param {import('grammy').Context} ctx - Grammy context
    */
   async handle(ctx) {
     // Extract the ride ID from the command
     const { rideId, error } = this.rideMessagesService.extractRideId(ctx.message);
     if (!rideId) {
-      await ctx.reply(error || 'Please provide a valid ride ID. Usage: /postride rideID');
+      await ctx.reply(error || 'Please provide a valid ride ID. Usage: /shareride rideID');
       return;
     }
 
@@ -60,7 +60,7 @@ export class PostRideCommandHandler extends BaseCommandHandler {
       }
 
       // Post the ride to the current chat
-      const result = await this.postRideToChat(ride, ctx);
+      const result = await this.shareRideToChat(ride, ctx);
       
       if (!result.success) {
         await ctx.reply(`Failed to post ride: ${result.error}`);
@@ -77,7 +77,7 @@ export class PostRideCommandHandler extends BaseCommandHandler {
    * @param {import('grammy').Context} ctx - Grammy context
    * @returns {Promise<{success: boolean, error: string|null}>} - Result
    */
-  async postRideToChat(ride, ctx) {
+  async shareRideToChat(ride, ctx) {
     try {
       const result = await this.rideMessagesService.createRideMessage(ride, ctx, ctx.message?.message_thread_id);
       return { success: true };

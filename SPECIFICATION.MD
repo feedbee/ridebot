@@ -62,7 +62,7 @@ The codebase follows a clean, layered architecture:
   - **Declarative callback setup**: Callback handlers configured with pattern matching
   - Webhook support for production deployment
   - Thread/topic support via middleware
-  - Private chat mode enforcement (except `/postride` in groups)
+  - Private chat mode enforcement (except `/shareride` in groups)
 
 ### **3. Storage Layer ([/src/storage/](cci:7://file:///workspace/src/storage:0:0-0:0))**
 
@@ -109,7 +109,7 @@ All handlers extend **[BaseCommandHandler](cci:2://file:///workspace/src/command
 - **ResumeRideCommandHandler**: Resume cancelled rides
 - **DeleteRideCommandHandler**: Delete rides with confirmation
 - **DuplicateRideCommandHandler**: Duplicate rides with modifications
-- **PostRideCommandHandler**: Post rides to other chats
+- **ShareRideCommandHandler**: Share rides to other chats
 - **ListRidesCommandHandler**: Paginated list of user's rides
 - **ParticipationHandlers**: Join/leave ride functionality
 - **StartCommandHandler**: Welcome message
@@ -299,7 +299,7 @@ _No major refactoring areas identified at this time. The codebase is well-organi
 ## Future Enhancements
 
 ### High Priority
-- [ ] Commands: Rename /postride to /shareride.
+- [x] Commands: Rename /postride to /shareride.
 - [ ] Translations: Add Russian language support and set the bot's default language through environment variables.
 - [ ] Ride participation: List participants on the same line after the label, separated by commas.
 - [ ] Ride participation: Add an "I am thinking" option to indicate who might join the chat.

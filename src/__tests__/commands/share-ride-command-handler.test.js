@@ -3,7 +3,7 @@
  */
 
 import { jest } from '@jest/globals';
-import { PostRideCommandHandler } from '../../commands/PostRideCommandHandler.js';
+import { ShareRideCommandHandler } from '../../commands/ShareRideCommandHandler.js';
 
 // Mock the grammy module
 jest.mock('grammy', () => {
@@ -17,8 +17,8 @@ jest.mock('grammy', () => {
   };
 });
 
-describe('PostRideCommandHandler', () => {
-  let postRideCommandHandler;
+describe('ShareRideCommandHandler', () => {
+  let shareRideCommandHandler;
   let mockRideService;
   let mockCtx;
   let mockMessageFormatter;
@@ -44,7 +44,7 @@ describe('PostRideCommandHandler', () => {
     // Create mock Grammy context
     mockCtx = {
       message: {
-        text: '/postride 123',
+        text: '/shareride 123',
         message_id: 456,
         message_thread_id: null
       },
@@ -62,10 +62,10 @@ describe('PostRideCommandHandler', () => {
     };
     
     // Create the handler
-    postRideCommandHandler = new PostRideCommandHandler(mockRideService, mockMessageFormatter, mockRideMessagesService);
+    shareRideCommandHandler = new ShareRideCommandHandler(mockRideService, mockMessageFormatter, mockRideMessagesService);
     
-    // Mock the postRideToChat method
-    jest.spyOn(postRideCommandHandler, 'postRideToChat');
+    // Mock the shareRideToChat method
+    jest.spyOn(shareRideCommandHandler, 'shareRideToChat');
   });
   
   describe('handle', () => {
@@ -74,7 +74,7 @@ describe('PostRideCommandHandler', () => {
       mockRideMessagesService.extractRideId.mockReturnValue({ rideId: null, error: 'Error message' });
       
       // Execute
-      await postRideCommandHandler.handle(mockCtx);
+      await shareRideCommandHandler.handle(mockCtx);
       
       // Verify
       expect(mockRideMessagesService.extractRideId).toHaveBeenCalledWith(mockCtx.message);
@@ -88,7 +88,7 @@ describe('PostRideCommandHandler', () => {
       mockRideService.getRide.mockResolvedValue(null);
       
       // Execute
-      await postRideCommandHandler.handle(mockCtx);
+      await shareRideCommandHandler.handle(mockCtx);
       
       // Verify
       expect(mockRideMessagesService.extractRideId).toHaveBeenCalledWith(mockCtx.message);
@@ -102,13 +102,13 @@ describe('PostRideCommandHandler', () => {
       mockRideService.getRide.mockResolvedValue({ id: '123', createdBy: 456 });
       
       // Spy on isRideCreator - return false for unauthorized user
-      jest.spyOn(postRideCommandHandler, 'isRideCreator').mockReturnValue(false);
+      jest.spyOn(shareRideCommandHandler, 'isRideCreator').mockReturnValue(false);
       
       // Execute
-      await postRideCommandHandler.handle(mockCtx);
+      await shareRideCommandHandler.handle(mockCtx);
       
       // Verify
-      expect(postRideCommandHandler.isRideCreator).toHaveBeenCalledWith({ id: '123', createdBy: 456 }, 789);
+      expect(shareRideCommandHandler.isRideCreator).toHaveBeenCalledWith({ id: '123', createdBy: 456 }, 789);
       expect(mockCtx.reply).toHaveBeenCalledWith('Only the ride creator can repost this ride.');
     });
     
@@ -118,10 +118,10 @@ describe('PostRideCommandHandler', () => {
       mockRideService.getRide.mockResolvedValue({ id: '123', cancelled: true, createdBy: 789 });
       
       // Spy on isRideCreator - return true for creator
-      jest.spyOn(postRideCommandHandler, 'isRideCreator').mockReturnValue(true);
+      jest.spyOn(shareRideCommandHandler, 'isRideCreator').mockReturnValue(true);
       
       // Execute
-      await postRideCommandHandler.handle(mockCtx);
+      await shareRideCommandHandler.handle(mockCtx);
       
       // Verify
       expect(mockCtx.reply).toHaveBeenCalledWith('Cannot repost a cancelled ride.');
@@ -138,10 +138,10 @@ describe('PostRideCommandHandler', () => {
       });
       
       // Spy on isRideCreator - return true for creator
-      jest.spyOn(postRideCommandHandler, 'isRideCreator').mockReturnValue(true);
+      jest.spyOn(shareRideCommandHandler, 'isRideCreator').mockReturnValue(true);
       
       // Execute
-      await postRideCommandHandler.handle(mockCtx);
+      await shareRideCommandHandler.handle(mockCtx);
       
       // Verify
       expect(mockCtx.reply).toHaveBeenCalledWith('This ride is already posted in this chat.', {
@@ -160,15 +160,15 @@ describe('PostRideCommandHandler', () => {
       });
       
       // Spy on isRideCreator - return true for creator
-      jest.spyOn(postRideCommandHandler, 'isRideCreator').mockReturnValue(true);
+      jest.spyOn(shareRideCommandHandler, 'isRideCreator').mockReturnValue(true);
       
-      postRideCommandHandler.postRideToChat.mockResolvedValue({ success: true, error: null });
+      shareRideCommandHandler.shareRideToChat.mockResolvedValue({ success: true, error: null });
       
       // Execute
-      await postRideCommandHandler.handle(mockCtx);
+      await shareRideCommandHandler.handle(mockCtx);
       
       // Verify
-      expect(postRideCommandHandler.postRideToChat).toHaveBeenCalledWith(
+      expect(shareRideCommandHandler.shareRideToChat).toHaveBeenCalledWith(
         { id: '123', cancelled: false, createdBy: 789, messages: [{ chatId: 222222, messageId: 999 }] },
         mockCtx
       );
@@ -187,15 +187,15 @@ describe('PostRideCommandHandler', () => {
       });
       
       // Spy on isRideCreator - return true for creator
-      jest.spyOn(postRideCommandHandler, 'isRideCreator').mockReturnValue(true);
+      jest.spyOn(shareRideCommandHandler, 'isRideCreator').mockReturnValue(true);
       
-      postRideCommandHandler.postRideToChat.mockResolvedValue({ 
+      shareRideCommandHandler.shareRideToChat.mockResolvedValue({ 
         success: false, 
         error: 'The bot is not a member of this chat or was blocked.' 
       });
       
       // Execute
-      await postRideCommandHandler.handle(mockCtx);
+      await shareRideCommandHandler.handle(mockCtx);
       
       // Verify
       expect(mockCtx.reply).toHaveBeenCalledWith('Failed to post ride: The bot is not a member of this chat or was blocked.');
@@ -207,14 +207,14 @@ describe('PostRideCommandHandler', () => {
       mockRideService.getRide.mockRejectedValue(new Error('Database error'));
       
       // Execute
-      await postRideCommandHandler.handle(mockCtx);
+      await shareRideCommandHandler.handle(mockCtx);
       
       // Verify
       expect(mockCtx.reply).toHaveBeenCalledWith('An error occurred while posting the ride.');
     });
   });
   
-  describe('postRideToChat', () => {
+  describe('shareRideToChat', () => {
     it('should successfully post ride to chat', async () => {
       // Setup
       const participants = [
@@ -241,7 +241,7 @@ describe('PostRideCommandHandler', () => {
       });
       
       // Execute
-      const result = await postRideCommandHandler.postRideToChat(ride, mockCtx);
+      const result = await shareRideCommandHandler.shareRideToChat(ride, mockCtx);
       
       // Verify
       expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(
@@ -291,7 +291,7 @@ describe('PostRideCommandHandler', () => {
       });
       
       // Execute
-      const result = await postRideCommandHandler.postRideToChat(ride, topicCtx);
+      const result = await shareRideCommandHandler.shareRideToChat(ride, topicCtx);
       
       // Verify
       expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(
@@ -351,7 +351,7 @@ describe('PostRideCommandHandler', () => {
       });
       
       // Execute
-      const result = await postRideCommandHandler.postRideToChat(ride, differentTopicCtx);
+      const result = await shareRideCommandHandler.shareRideToChat(ride, differentTopicCtx);
       
       // Verify
       expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(
@@ -373,7 +373,7 @@ describe('PostRideCommandHandler', () => {
       mockRideMessagesService.createRideMessage.mockRejectedValue(botBlockedError);
       
       // Execute
-      const result = await postRideCommandHandler.postRideToChat(ride, mockCtx);
+      const result = await shareRideCommandHandler.shareRideToChat(ride, mockCtx);
       
       // Verify
       expect(result).toEqual({ 
@@ -391,7 +391,7 @@ describe('PostRideCommandHandler', () => {
       mockRideMessagesService.createRideMessage.mockRejectedValue(permissionError);
       
       // Execute
-      const result = await postRideCommandHandler.postRideToChat(ride, mockCtx);
+      const result = await shareRideCommandHandler.shareRideToChat(ride, mockCtx);
       
       // Verify
       expect(result).toEqual({
@@ -411,7 +411,7 @@ describe('PostRideCommandHandler', () => {
         }
       });
       // Execute
-      const result = await postRideCommandHandler.postRideToChat(ride, mockCtx);
+      const result = await shareRideCommandHandler.shareRideToChat(ride, mockCtx);
       // Verify
       expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(
         ride,
@@ -432,7 +432,7 @@ describe('PostRideCommandHandler', () => {
       mockRideMessagesService.createRideMessage.mockRejectedValue(permissionsError);
       
       // Execute
-      const result = await postRideCommandHandler.postRideToChat(ride, mockCtx);
+      const result = await shareRideCommandHandler.shareRideToChat(ride, mockCtx);
       
       // Verify
       expect(result).toEqual({ 
@@ -449,7 +449,7 @@ describe('PostRideCommandHandler', () => {
       mockRideMessagesService.createRideMessage.mockRejectedValue(new Error('Unexpected error'));
       
       // Execute
-      const result = await postRideCommandHandler.postRideToChat(ride, mockCtx);
+      const result = await shareRideCommandHandler.shareRideToChat(ride, mockCtx);
       
       // Verify
       expect(result).toEqual({ 

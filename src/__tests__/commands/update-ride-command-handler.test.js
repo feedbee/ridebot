@@ -303,7 +303,7 @@ describe('UpdateRideCommandHandler', () => {
       // Execute
       await updateRideCommandHandler.handleWithParams(mockCtx, originalRide, params);
       // Verify
-      expect(mockCtx.reply).toHaveBeenCalledWith('Ride has been updated, but no messages were updated. You may want to /postride the ride in the chats of your choice again, they could have been removed.');
+      expect(mockCtx.reply).toHaveBeenCalledWith('Ride has been updated, but no messages were updated. You may want to /shareride the ride in the chats of your choice again, they could have been removed.');
     });
 
     it('should append removed message info if removedCount > 0 (multi-chat propagation)', async () => {

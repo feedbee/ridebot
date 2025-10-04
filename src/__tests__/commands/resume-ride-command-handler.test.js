@@ -155,7 +155,7 @@ describe('ResumeRideCommandHandler', () => {
       expect(resumeRideCommandHandler.isRideCreator).toHaveBeenCalledWith(mockRide, mockCtx.from.id);
       expect(mockRideService.resumeRide).toHaveBeenCalledWith('456', mockCtx.from.id);
       expect(resumeRideCommandHandler.updateRideMessage).toHaveBeenCalledWith(updatedRide, mockCtx);
-      expect(mockCtx.reply).toHaveBeenCalledWith('Ride has been resumed, but no messages were updated. You may want to /postride the ride in the chats of your choice again, they could have been removed.');
+      expect(mockCtx.reply).toHaveBeenCalledWith('Ride has been resumed, but no messages were updated. You may want to /shareride the ride in the chats of your choice again, they could have been removed.');
     });
 
     it('should handle unauthorized user', async () => {

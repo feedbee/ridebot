@@ -132,7 +132,7 @@ export class BaseCommandHandler {
     if (result.updatedCount > 0) {
       reply = `Ride ${successAction} successfully. Updated ${result.updatedCount} message(s).`;
     } else {
-      reply = `Ride has been ${successAction}, but no messages were updated. You may want to /postride the ride in the chats of your choice again, they could have been removed.`;
+      reply = `Ride has been ${successAction}, but no messages were updated. You may want to /shareride the ride in the chats of your choice again, they could have been removed.`;
     }
     if (result.removedCount > 0) {
       reply += ` Removed ${result.removedCount} unavailable message(s).`;
