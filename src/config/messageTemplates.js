@@ -175,7 +175,17 @@ The ride will be posted to the current chat and all instances will be synchroniz
 
   cancelled: '❌ CANCELLED',
   cancelledMessage: 'This ride has been cancelled.',
-  deleteConfirmation: '⚠️ Are you sure you want to delete this ride? This action cannot be undone.'
+  deleteConfirmation: '⚠️ Are you sure you want to delete this ride? This action cannot be undone.',
+  
+  shareRideHelp: `
+<b>ℹ️ How to share a ride in this chat:</b>
+
+1. Create a ride in private chat with the bot
+2. Get the ride ID from the confirmation message or /listrides
+3. Use <code>/shareride@botname RIDE_ID</code> in this chat
+
+Click here to start a private chat: @botname
+  `.trim()
 };
 
 export const buttons = {

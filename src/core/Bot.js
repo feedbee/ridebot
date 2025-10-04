@@ -17,6 +17,8 @@ import { DuplicateRideCommandHandler } from '../commands/DuplicateRideCommandHan
 import { ShareRideCommandHandler } from '../commands/ShareRideCommandHandler.js';
 import { ResumeRideCommandHandler } from '../commands/ResumeRideCommandHandler.js';
 import { ParticipationHandlers } from '../commands/ParticipationHandlers.js';
+import { messageTemplates } from '../config/messageTemplates.js';
+import { replaceBotUsername } from '../utils/botUtils.js';
 
 /**
  * Core Bot class that coordinates all components
@@ -71,14 +73,8 @@ export class Bot {
           { command: 'shareride', description: 'Share a ride in a chat', handler: async (ctx) => {
             // If no parameters provided in group chat, show a helpful message
             if (ctx.chat?.type !== 'private' && !ctx.match) {
-              await ctx.reply(
-                '<b>ℹ️ How to share a ride in this chat:</b>\n\n' +
-                '1. Create a ride in private chat with the bot\n' +
-                '2. Get the ride ID from the confirmation message or /listrides\n' +
-                '3. Use <code>/shareride RIDE_ID</code> in this chat\n\n' +
-                'Click here to start a private chat: @' + (await ctx.api.getMe()).username,
-                { parse_mode: 'HTML' }
-              );
+              const message = await replaceBotUsername(messageTemplates.shareRideHelp, ctx);
+              await ctx.reply(message, { parse_mode: 'HTML' });
               return;
             }
             
