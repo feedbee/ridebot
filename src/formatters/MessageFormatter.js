@@ -87,9 +87,9 @@ export class MessageFormatter {
               displayName = p.username.includes(' ') ? escapeHtml(p.username) : `@${escapeHtml(p.username)}`;
             }
             
-            return `• <a href="tg://user?id=${p.userId}">${displayName}</a>`;
+            return `<a href="tg://user?id=${p.userId}">${displayName}</a>`;
           })
-          .join('\n')
+          .join(', ')
       : 'No participants yet';
     
     // Build ride details with proper grouping

@@ -167,8 +167,7 @@ The ride will be posted to the current chat and all instances will be synchroniz
 🚲 <b>{title}</b>{cancelledBadge}
 
 {rideDetails}
-👥 Participants ({participantCount}):
-{participants}
+👥 Participants ({participantCount}): {participants}
 
 🎫 #Ride #{id}{cancelledInstructions}
   `.trim(),
