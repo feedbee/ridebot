@@ -1,6 +1,6 @@
 {
   "name": "bike-ride-bot",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Telegram bot for organizing bike rides",
   "main": "src/index.js",
   "scripts": {

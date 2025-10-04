@@ -158,7 +158,7 @@ describe('index.js', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
 
       // Verify
-      expect(consoleLogSpy).toHaveBeenCalledWith('Bot started in development mode');
+      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringMatching(/🚀 Bike Ride Bot v[\d.]+(-[^\s]+)? started in development mode/));
     });
 
     it('should log success message with "production" in production mode', async () => {
@@ -173,7 +173,7 @@ describe('index.js', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
 
       // Verify
-      expect(consoleLogSpy).toHaveBeenCalledWith('Bot started in production mode');
+      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringMatching(/🚀 Bike Ride Bot v[\d.]+(-[^\s]+)? started in production mode/));
     });
   });
 
@@ -194,7 +194,7 @@ describe('index.js', () => {
 
       // Verify error was logged with proper context
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Failed to start bot:',
+        'Failed to start the bot:',
         startError
       );
       
@@ -218,7 +218,7 @@ describe('index.js', () => {
 
       // Verify error was logged
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Failed to start bot:',
+        'Failed to start the bot:',
         expect.objectContaining({ message: 'Failed to connect to Telegram' })
       );
       
