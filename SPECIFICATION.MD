@@ -20,10 +20,10 @@ The codebase follows a clean, layered architecture:
                │
        ┌───────┴────────┐
        │                │
-┌──────▼──────┐  ┌─────▼──────┐
-│  Commands   │  │   Wizard   │
-│  Handlers   │  │  (UI Flow) │
-└──────┬──────┘  └─────┬──────┘
+┌──────▼──────┐  ┌──────▼──────┐
+│  Commands   │  │   Wizard    │
+│  Handlers   │  │  (UI Flow)  │
+└──────┬──────┘  └──────┬──────┘
        │                │
        └───────┬────────┘
                │
@@ -52,14 +52,17 @@ The codebase follows a clean, layered architecture:
 ### **2. Bot Core ([/src/core/Bot.js](cci:7://file:///workspace/src/core/Bot.js:0:0-0:0))**
 - **Responsibilities:**
   - Initializes Grammy bot with token
-  - Sets up all command handlers and middleware
+  - Sets up all command handlers and middleware using centralized configuration
   - Manages webhook vs polling modes
   - Coordinates all components (services, handlers, wizard)
   
 - **Key Features:**
-  - Two command modes: standard (all chats) and restricted (private chats only)
+  - **Configuration-driven architecture**: Commands and handlers defined declaratively in `botConfig`
+  - **Command categorization**: Commands organized into `privateOnly`, `publicOnly`, and `mixed` categories
+  - **Declarative callback setup**: Callback handlers configured with pattern matching
   - Webhook support for production deployment
   - Thread/topic support via middleware
+  - Private chat mode enforcement (except `/postride` in groups)
 
 ### **3. Storage Layer ([/src/storage/](cci:7://file:///workspace/src/storage:0:0-0:0))**
 
@@ -135,6 +138,7 @@ All handlers extend **[BaseCommandHandler](cci:2://file:///workspace/src/command
 
 ### **8. Utilities ([/src/utils/](cci:7://file:///workspace/src/utils:0:0-0:0))**
 
+- **[FieldProcessor.js](cci:7://file:///workspace/src/utils/FieldProcessor.js:0:0-0:0)**: Centralized field processing and validation for ride parameters
 - **[RideParamsHelper.js](cci:7://file:///workspace/src/utils/RideParamsHelper.js:0:0-0:0)**: Parse multi-line command parameters
 - **[route-parser.js](cci:7://file:///workspace/src/utils/workspace/src/utils/route-parser.js:0:0-0:0)**: Parse routes from Strava, RideWithGPS, Komoot
 - **[date-input-parser.js](cci:7://file:///workspace/src/utils/workspace/src/utils/date-input-parser.js:0:0-0:0)**: Natural language date parsing (chrono-node)
@@ -142,7 +146,6 @@ All handlers extend **[BaseCommandHandler](cci:2://file:///workspace/src/command
 - **[duration-parser.js](cci:7://file:///workspace/src/utils/workspace/src/utils/duration-parser.js:0:0-0:0)**: Parse human-readable durations (2h 30m, 90m, 1.5h)
 - **[category-utils.js](cci:7://file:///workspace/src/utils/workspace/src/utils/category-utils.js:0:0-0:0)**: Normalize ride categories
 - **[html-escape.js](cci:7://file:///workspace/src/utils/workspace/src/utils/html-escape.js:0:0-0:0)**: Escape HTML for Telegram messages
-- **[permission-checker.js](cci:7://file:///workspace/src/utils/workspace/src/utils/permission-checker.js:0:0-0:0)**: Check bot admin permissions
 
 ---
 
@@ -209,7 +212,6 @@ info: Bring lights
 - `WEBHOOK_PORT`: Port for webhook server (default: 8080)
 - `MONGODB_URI`: MongoDB connection string
 - `DEFAULT_TIMEZONE`: Timezone for date/time display
-- `PRIVATE_CHAT_COMMANDS_MODE`: Restrict most commands to private chats
 
 **Message Templates:**
 - Start message
@@ -269,7 +271,7 @@ npm run dev  # Uses polling + in-memory storage
 
 ### **Production**
 ```bash
-docker-compose up -d  # Uses webhooks + MongoDB
+docker-compose up -d -e USE_WEBHOOK='true'  # Uses webhooks + MongoDB
 ```
 
 **Requirements:**
@@ -294,48 +296,23 @@ docker-compose up -d  # Uses webhooks + MongoDB
 ### **Potential Refactoring Areas:**
 _No major refactoring areas identified at this time. The codebase is well-organized and maintainable._
 
-### **Recent Changes:**
-✅ **Wizard Refactoring**: Restricted to private chats only (removed group support)  
-  - Removed `WIZARD_ONLY_IN_PRIVATE` config option (always enforced now)  
-  - Removed `permission-checker` utility (no longer needed)  
-  - Simplified wizard logic by removing admin permission checks  
+## Future Enhancements
 
-✅ **Config Refactoring**: Extracted message templates into separate module  
-  - Reduced config.js from 257 to 59 lines (77% reduction)  
-  - Created `/src/config/messageTemplates.js` (209 lines)  
-  - Better separation of concerns and easier maintenance  
+### High Priority
+- [ ] Commands: Rename /postride to /shareride.
+- [ ] Translations: Add Russian language support and set the bot's default language through environment variables.
+- [ ] Ride participation: List participants on the same line after the label, separated by commas.
+- [ ] Ride participation: Add an "I am thinking" option to indicate who might join the chat.
+- [ ] Ride participation: Add an "Not interested" option to gather responses from those who will not join the ride.
+- [ ] Ride participation: Limit the ride message to display only the first 15 registered participants/thinking/rejected, and if there are more, show a label like ", and other XX" for each category separately.
 
-✅ **Command Handler Refactoring**: Abstracted common patterns  
-  - Added `extractRideWithCreatorCheck()` helper to BaseCommandHandler  
-  - Added `formatUpdateResultMessage()` helper to BaseCommandHandler  
-  - Created abstract `RideStateChangeHandler` for cancel/resume operations  
-  - Reduced CancelRideCommandHandler from 52 to 20 lines (62% reduction)  
-  - Reduced ResumeRideCommandHandler from 52 to 20 lines (62% reduction)  
-  - Also refactored DeleteRideCommandHandler and UpdateRideCommandHandler  
-  - Better code reuse and consistency across handlers  
+### Medium Priority
+- [ ] Notifications: Send a private notification to the ride creator when a participant joins or leaves. There is a 30-second delay to prevent spamming from frequent toggling; if the participant's status changes again within this period, cancel the pending notification.
+- [ ] Notifications: Remind the joined users about upcoming ride 24 hours and 1 hour before the ride (send a private message; give each user an option to unsubscribe from all notifications).
+- [ ] Ride sharing: Optionally enable everyone to repost the ride via an additional field during ride creation or update.
 
-✅ **Private Chat Mode Enforcement**: Removed configuration complexity  
-  - Removed `PRIVATE_CHAT_COMMANDS_MODE` config option (always enforced now)  
-  - Removed `setupStandardCommandHandlers()` method (13 lines)  
-  - Reduced Bot.js from 200 to 173 lines (27 lines, 13.5% reduction)  
-  - Simplified command setup logic (single path instead of dual)  
-  - Commands now only work in private chats (except `/postride` in groups)  
-  - Aligns with wizard-only-in-private philosophy  
-
-✅ **Wizard Field Configuration**: Eliminated duplication with configuration-driven approach  
-  - Created `/src/wizard/wizardFieldConfig.js` with declarative field definitions (431 lines)  
-  - Reduced RideWizard.js from ~708 to 521 lines (187 lines, 26% reduction)  
-  - Eliminated ~250+ lines of repetitive switch-case and formatting code  
-  - All field validation, formatting, navigation, data mapping, and confirmation display now centralized  
-  - Added `buildRideDataFromWizard()` helper to decouple ride creation from wizard logic  
-  - Added `buildConfirmationMessage()` helper to decouple confirmation formatting  
-  - Much easier to add new fields or modify existing ones  
-  - Cleaner separation: configuration vs. logic  
-  - Cleaned up unused imports  
-
-✅ **MongoDB Tests**: Fixed ARM64/Debian 12 compatibility  
-  - Using Ubuntu 22.04 binaries as workaround  
-  - All 272 tests passing  
+### Low Priority
+- [ ] Translations: Override the bot's default language based on the user's preference (the bot communicates with the user in their chosen language; it also announces the user's rides, created by them, in the preferred language).
 
 ---
 
@@ -350,7 +327,3 @@ This is a **well-architected Telegram bot** with:
 - Production-ready deployment options
 
 The codebase is **maintainable and extensible**, making it suitable for adding new features or refactoring specific components.
-
----
-
-I'm ready to help with refactoring. What specific areas would you like to improve or refactor?

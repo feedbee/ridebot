@@ -198,9 +198,9 @@ export class Bot {
         console.log(`Bot webhook set to ${webhookUrl}`);
       });
     } else {
+      console.log('Polling mode is enabled');
       await this.bot.api.deleteWebhook();
       this.bot.start();
-      console.log('Bot started in polling mode');
     }
   }
 }
