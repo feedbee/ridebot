@@ -103,7 +103,7 @@ describe('StartCommandHandler', () => {
       // Verify the exact message from config was used
       const callArgs = mockCtx.reply.mock.calls[0];
       expect(callArgs[0]).toContain('🚲 Welcome to Ride Announcement Bot!');
-      expect(callArgs[0]).toContain('I help you organize bike rides');
+      expect(callArgs[0]).toContain('I am a <b>Telegram bot for organizing bike rides</b>');
       expect(callArgs[0]).toContain('Happy cycling!');
     });
 

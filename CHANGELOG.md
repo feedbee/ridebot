@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2025-01-27 - Start message simplification and test fixes
+
+### Changed
+- **Start message**: Simplified the `/start` command message to be more user-friendly and less overwhelming for new users. Reduced message length by ~70% while keeping essential information
+- **Help reference**: Streamlined reference to `/help` command for detailed instructions
+
+---
+
 ## [2.0.0] - 2025-10-04 - Breaking change: `/postriode` command renamed to `/shareride`
 
 ### Changed

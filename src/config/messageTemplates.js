@@ -7,42 +7,24 @@ export const messageTemplates = {
   start: `
 <b>🚲 Welcome to Ride Announcement Bot!</b>
 
-I help you organize bike rides with your friends and community.
+I am a <b>Telegram bot for organizing bike rides</b>. I will help you organize bike rides with your friends and community across multiple chats.
 
 <b>Key Features:</b>
 • Create and schedule rides
-• Track participants
-• Share route details
-• Post rides in multiple chats
-• Keep everyone updated
+• Share rides across multiple chats
+• Track participants with join/leave buttons
+• Keep everyone updated automatically
 
-<b>Create Rides and Sync Them Across Chats:</b>
-1. Create a ride with /newride in private chat
-2. Share to other chats with /shareride
-3. All instances stay synchronized
-4. Join/leave updates appear everywhere
-5. Changes and cancellations sync automatically
+<b>Quick Start:</b>
+1. Use /newride in this chat to create your first ride with the wizard
+2. Join your ride with the join button
+3. Share it to other chats with /shareride (bot needs to be added to the other chat before sharing; /shareride@botname to share a ride in a chat where the bot is not an admin)
+4. All participants and updates sync automatically!
 
-<b>Important:</b> Never forward the ride announcements manually - they won't have join buttons and won't stay in sync.
-
-<b>Command Modes:</b>
-All main commands (/newride, /updateride, /dupride, /cancelride, /deleteride) work in two modes:
-• Step-by-step wizard - interactive and beginner-friendly <b>available in private chats with the bot only.</b>
-• Parametrized mode - faster for experienced users
-See /help for detailed examples of both modes.
-To create less noise for others, it is recommended to create the rides in private chat with the bot and repost them in other chats after.
-
-<b>Easy Ride Reference:</b>
-• When working with existing ride, reply to the ride message with /updateride, /cancelride, /deleteride, /dupride, /shareride to identify the ride to modify
-• Alternatively, pass the ride ID directly after the command (e.g., /updateride abc123)
-• You can also use the id: parameter in multi-line commands
-
-<b>Manage Your Rides:</b>
-• Use /listrides to see all rides you've created
-• Navigate through pages with buttons
-• Easily access ride IDs for management
-
-Get started with /newride or type /help for a full guide.
+<b>More details:</b>
+• Type /help for more detailed instructions with examples
+• Use /listrides command to view the rides you created
+• Use ride management commands to manage your ride by ID
 
 Happy cycling! 🚴‍♀️💨
   `.trim(),
@@ -162,20 +144,23 @@ Any parameters not provided will be copied from the original ride.
 By default, the new ride will be scheduled for tomorrow at the same time.
 
 <b>📋 Listing Your Rides</b>
-Use /listrides to see all rides you've created:
+Use /listrides command to see all rides you've created:
 • Rides are sorted by date (newest first)
 • Use navigation buttons to browse pages
 
-<b>📢 Reposting a Ride</b>
+<b>📢 Sharing a Ride</b>
 Only the ride creator can repost a ride to another chat:
 1. Go to the target chat where you want to post the ride
-2. Use /shareride with the ride ID directly after the command: <code>/shareride abc123</code>
-3. Or use /shareride with ride ID as a parameter:
+2. Use /shareride (or /shareride@botname) with the ride ID directly after the command: <code>/shareride@botname abc123</code>
+3. Or use /shareride (or /shareride@botname) with ride ID as a parameter:
 <pre>
-/shareride
-id: abc123
+/shareride@botname
+id: abc123 (or #abc123)
 </pre>
 The ride will be posted to the current chat and all instances will be synchronized when details change or participants join/leave.
+
+<b>Important:</b> The bot needs to be added to the other chat before sharing. Bot needs to be chat admin in the other chat to use the short form of /shareride, but you can always use the full form /shareride@botname.
+
   `.trim(),
 
   ride: `

@@ -300,6 +300,7 @@ _No major refactoring areas identified at this time. The codebase is well-organi
 
 ### High Priority
 - [x] Commands: Rename /postride to /shareride.
+- [x] Documentation: Improve /start message to simplify onboarding
 - [ ] Translations: Add Russian language support and set the bot's default language through environment variables.
 - [ ] Ride participation: List participants on the same line after the label, separated by commas.
 - [ ] Ride participation: Add an "I am thinking" option to indicate who might join the chat.
@@ -307,12 +308,14 @@ _No major refactoring areas identified at this time. The codebase is well-organi
 - [ ] Ride participation: Limit the ride message to display only the first 15 registered participants/thinking/rejected, and if there are more, show a label like ", and other XX" for each category separately.
 
 ### Medium Priority
+- [ ] Rides management: Add management buttons below the ride button in private chat with the bot for ride creator
 - [ ] Notifications: Send a private notification to the ride creator when a participant joins or leaves. There is a 30-second delay to prevent spamming from frequent toggling; if the participant's status changes again within this period, cancel the pending notification.
 - [ ] Notifications: Remind the joined users about upcoming ride 24 hours and 1 hour before the ride (send a private message; give each user an option to unsubscribe from all notifications).
 - [ ] Ride sharing: Optionally enable everyone to repost the ride via an additional field during ride creation or update.
 
 ### Low Priority
 - [ ] Translations: Override the bot's default language based on the user's preference (the bot communicates with the user in their chosen language; it also announces the user's rides, created by them, in the preferred language).
+- [ ] Ride participation: Add a comand to list joined rides for the current user
 
 ---
 
