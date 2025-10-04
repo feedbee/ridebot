@@ -51,11 +51,15 @@ describe('ListParticipantsCommandHandler', () => {
       const ride = {
         id: rideId,
         title: 'Test Ride',
-        participants: [
-          { userId: 1, firstName: 'John', lastName: 'Doe', username: 'johndoe' },
-          { userId: 2, firstName: 'Jane', lastName: 'Smith', username: 'janesmith' },
-          { userId: 3, firstName: 'Bob', lastName: 'Wilson' } // No username
-        ]
+        participation: {
+          joined: [
+            { userId: 1, firstName: 'John', lastName: 'Doe', username: 'johndoe' },
+            { userId: 2, firstName: 'Jane', lastName: 'Smith', username: 'janesmith' },
+            { userId: 3, firstName: 'Bob', lastName: 'Wilson' } // No username
+          ],
+          thinking: [],
+          skipped: []
+        }
       };
 
       mockRideMessagesService.extractRideId.mockReturnValue({ rideId, error: null });
@@ -114,10 +118,14 @@ describe('ListParticipantsCommandHandler', () => {
       const ride = {
         id: rideId,
         title: 'Test Ride',
-        participants: [
-          { userId: 1, username: 'johndoe' },
-          { userId: 2, username: 'jane smith' } // Username with space
-        ]
+        participation: {
+          joined: [
+            { userId: 1, username: 'johndoe' },
+            { userId: 2, username: 'jane smith' } // Username with space
+          ],
+          thinking: [],
+          skipped: []
+        }
       };
 
       mockRideMessagesService.extractRideId.mockReturnValue({ rideId, error: null });

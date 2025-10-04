@@ -264,7 +264,7 @@ describe('ParticipationHandlers', () => {
       
       // Verify
       expect(mockRideService.getRide).toHaveBeenCalledWith('123');
-      expect(mockRideService.leaveRide).toHaveBeenCalledWith('123', 456);
+      expect(mockRideService.leaveRide).toHaveBeenCalledWith('123', { firstName: 'Test', lastName: 'User', userId: 456, username: 'testuser' });
       expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalledWith(mockRide, mockCtx);
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('You have left the ride');
     });

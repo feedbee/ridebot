@@ -49,7 +49,7 @@ export class MemoryStorage extends StorageInterface {
       ...rideData,
       id,
       createdAt: new Date(),
-      participants: []
+      participation: { joined: [], thinking: [], skipped: [] }
     };
     
     this.rides.set(id, newRide);
@@ -106,53 +106,6 @@ export class MemoryStorage extends StorageInterface {
     };
   }
 
-  async addParticipant(rideId, participant) {
-    const ride = this.rides.get(rideId);
-    if (!ride) {
-      throw new Error('Ride not found');
-    }
-
-    // Check if participant already exists
-    const exists = ride.participants.some(p => p.userId === participant.userId);
-    if (exists) {
-      return { success: false, ride: null };
-    }
-
-    const updatedRide = {
-      ...ride,
-      participants: [...ride.participants, {
-        userId: participant.userId,
-        username: participant.username,
-        firstName: participant.firstName || '',
-        lastName: participant.lastName || '',
-        joinedAt: new Date()
-      }]
-    };
-
-    this.rides.set(rideId, updatedRide);
-    return { success: true, ride: updatedRide };
-  }
-
-  async removeParticipant(rideId, userId) {
-    const ride = this.rides.get(rideId);
-    if (!ride) {
-      throw new Error('Ride not found');
-    }
-
-    const initialLength = ride.participants.length;
-    const updatedRide = {
-      ...ride,
-      participants: ride.participants.filter(p => p.userId !== userId)
-    };
-
-    if (updatedRide.participants.length === initialLength) {
-      return { success: false, ride: null };
-    }
-
-    this.rides.set(rideId, updatedRide);
-    return { success: true, ride: updatedRide };
-  }
-
   async deleteRide(rideId) {
     const ride = this.rides.get(rideId);
     if (!ride) {
@@ -161,5 +114,58 @@ export class MemoryStorage extends StorageInterface {
 
     this.rides.delete(rideId);
     return true;
+  }
+
+  async setParticipation(rideId, userId, state, participant) {
+    const ride = this.rides.get(rideId);
+    if (!ride) {
+      throw new Error('Ride not found');
+    }
+
+    // Ensure participation structure exists
+    if (!ride.participation) {
+      ride.participation = { joined: [], thinking: [], skipped: [] };
+    }
+
+    // Remove user from all states first
+    ride.participation.joined = ride.participation.joined.filter(p => p.userId !== userId);
+    ride.participation.thinking = ride.participation.thinking.filter(p => p.userId !== userId);
+    ride.participation.skipped = ride.participation.skipped.filter(p => p.userId !== userId);
+
+    // Add user to the specified state
+    const participantData = {
+      userId: participant.userId,
+      username: participant.username,
+      firstName: participant.firstName || '',
+      lastName: participant.lastName || '',
+      createdAt: new Date()
+    };
+
+    ride.participation[state].push(participantData);
+    
+    // Update the ride in storage
+    this.rides.set(rideId, ride);
+    return { ride: ride };
+  }
+
+  async getParticipation(rideId, userId) {
+    const ride = this.rides.get(rideId);
+    if (!ride || !ride.participation) {
+      return null;
+    }
+
+    if (ride.participation.joined.some(p => p.userId === userId)) return 'joined';
+    if (ride.participation.thinking.some(p => p.userId === userId)) return 'thinking';
+    if (ride.participation.skipped.some(p => p.userId === userId)) return 'skipped';
+    return null;
+  }
+
+  async getAllParticipants(rideId) {
+    const ride = this.rides.get(rideId);
+    if (!ride) {
+      throw new Error('Ride not found');
+    }
+
+    return ride.participation || { joined: [], thinking: [], skipped: [] };
   }
 } 

@@ -71,8 +71,8 @@ export class RideMessagesService {
       const threadId = messageThreadId || ctx.message?.message_thread_id;
 
       // Get participants from the ride object and format the message
-      const participants = ride.participants || [];
-      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
+      const participation = ride.participation || { joined: [], thinking: [], skipped: [] };
+      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participation);
       
       // Prepare reply options
       const replyOptions = {
@@ -127,8 +127,8 @@ export class RideMessagesService {
     }
 
     try {
-      const participants = ride.participants || [];
-      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participants);
+      const participation = ride.participation || { joined: [], thinking: [], skipped: [] };
+      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participation);
       
       let updatedCount = 0;
       let removedCount = 0;

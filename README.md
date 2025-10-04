@@ -217,6 +217,27 @@ The bot supports multiple ways to reference a ride:
 - `WEBHOOK_PORT`: Port for the webhook server to listen on (defaults to `8080`)
 - `MAX_PARTICIPANTS_DISPLAY`: Maximum number of participants to show before displaying "and X more" (defaults to `20`)
 
+## Database Migrations
+
+When using MongoDB in production, run database migrations to update the schema:
+
+```bash
+# Run migrations using Docker
+docker run --rm \
+  -e MONGODB_URI="mongodb://username:password@host:port/database" \
+  bike-ride-bot \
+  npm run migrate
+
+# Or using Node.js directly
+export MONGODB_URI="mongodb://username:password@host:port/database"
+npm run migrate
+```
+
+**Migration Features:**
+- Schema version tracking in `meta` collection
+- Batch processing (100 rides per batch) for large datasets
+- **Schema validation**: App startup fails if database schema is outdated
+
 ## Webhook Setup
 
 When running the bot in production or any environment where you want to use webhooks instead of polling, follow these steps:

@@ -244,7 +244,7 @@ describe('RideMessagesService', () => {
       const result = await rideMessagesService.createRideMessage(mockRide, mockCtx);
 
       // Verify
-      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(mockRide, []);
+      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(mockRide, { joined: [], thinking: [], skipped: [] });
       expect(mockCtx.reply).toHaveBeenCalledWith('Formatted ride message', {
         parse_mode: 'HTML',
         reply_markup: { inline_keyboard: [] }
@@ -486,7 +486,7 @@ describe('RideMessagesService', () => {
       // Verify participants were passed to formatter
       expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(
         mockRide,
-        mockRide.participants
+        { joined: [], thinking: [], skipped: [] }
       );
     });
   });

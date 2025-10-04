@@ -187,14 +187,18 @@ describe('MessageFormatter', () => {
         date: new Date('2025-03-30T10:00:00Z')
       };
       
-      const participants = [
-        { userId: 456, firstName: 'Test1', lastName: 'User1', username: 'testuser1' },
-        { userId: 789, firstName: 'Test2', lastName: 'User2' }, // No username
-        { userId: 101112, username: 'testuser3' } // Legacy format
-      ];
+      const participation = {
+        joined: [
+          { userId: 456, firstName: 'Test1', lastName: 'User1', username: 'testuser1' },
+          { userId: 789, firstName: 'Test2', lastName: 'User2' }, // No username
+          { userId: 101112, username: 'testuser3' } // Legacy format
+        ],
+        thinking: [],
+        skipped: []
+      };
       
       // Execute
-      const result = messageFormatter.formatRideMessage(ride, participants);
+      const result = messageFormatter.formatRideMessage(ride, participation);
       
       // Verify
       expect(result).toContain('<a href="tg://user?id=456">Test1 User1 (@testuser1)</a>');
@@ -212,16 +216,20 @@ describe('MessageFormatter', () => {
         date: new Date('2025-03-30T10:00:00Z')
       };
       
-      const participants = [
-        { userId: 1, firstName: 'User1', lastName: 'One', username: 'user1' },
-        { userId: 2, firstName: 'User2', lastName: 'Two', username: 'user2' },
-        { userId: 3, firstName: 'User3', lastName: 'Three', username: 'user3' },
-        { userId: 4, firstName: 'User4', lastName: 'Four', username: 'user4' },
-        { userId: 5, firstName: 'User5', lastName: 'Five', username: 'user5' }
-      ];
+      const participation = {
+        joined: [
+          { userId: 1, firstName: 'User1', lastName: 'One', username: 'user1' },
+          { userId: 2, firstName: 'User2', lastName: 'Two', username: 'user2' },
+          { userId: 3, firstName: 'User3', lastName: 'Three', username: 'user3' },
+          { userId: 4, firstName: 'User4', lastName: 'Four', username: 'user4' },
+          { userId: 5, firstName: 'User5', lastName: 'Five', username: 'user5' }
+        ],
+        thinking: [],
+        skipped: []
+      };
       
       // Execute
-      const result = messageFormatter.formatRideMessage(ride, participants);
+      const result = messageFormatter.formatRideMessage(ride, participation);
       
       // Verify - should show first 3 participants and "and 2 more"
       expect(result).toContain('<a href="tg://user?id=1">User1 One (@user1)</a>');
@@ -244,14 +252,18 @@ describe('MessageFormatter', () => {
         date: new Date('2025-03-30T10:00:00Z')
       };
       
-      const participants = [
-        { userId: 1, firstName: 'User1', lastName: 'One', username: 'user1' },
-        { userId: 2, firstName: 'User2', lastName: 'Two', username: 'user2' },
-        { userId: 3, firstName: 'User3', lastName: 'Three', username: 'user3' }
-      ];
+      const participation = {
+        joined: [
+          { userId: 1, firstName: 'User1', lastName: 'One', username: 'user1' },
+          { userId: 2, firstName: 'User2', lastName: 'Two', username: 'user2' },
+          { userId: 3, firstName: 'User3', lastName: 'Three', username: 'user3' }
+        ],
+        thinking: [],
+        skipped: []
+      };
       
       // Execute
-      const result = messageFormatter.formatRideMessage(ride, participants);
+      const result = messageFormatter.formatRideMessage(ride, participation);
       
       // Verify - should show all 3 participants without truncation
       expect(result).toContain('<a href="tg://user?id=1">User1 One (@user1)</a>');
@@ -271,15 +283,19 @@ describe('MessageFormatter', () => {
         date: new Date('2025-03-30T10:00:00Z')
       };
       
-      const participants = [
-        { userId: 1, firstName: 'User1', lastName: 'One', username: 'user1' },
-        { userId: 2, firstName: 'User2', lastName: 'Two', username: 'user2' },
-        { userId: 3, firstName: 'User3', lastName: 'Three', username: 'user3' },
-        { userId: 4, firstName: 'User4', lastName: 'Four', username: 'user4' }
-      ];
+      const participation = {
+        joined: [
+          { userId: 1, firstName: 'User1', lastName: 'One', username: 'user1' },
+          { userId: 2, firstName: 'User2', lastName: 'Two', username: 'user2' },
+          { userId: 3, firstName: 'User3', lastName: 'Three', username: 'user3' },
+          { userId: 4, firstName: 'User4', lastName: 'Four', username: 'user4' }
+        ],
+        thinking: [],
+        skipped: []
+      };
       
       // Execute
-      const result = messageFormatter.formatRideMessage(ride, participants);
+      const result = messageFormatter.formatRideMessage(ride, participation);
       
       // Verify - should show first 2 participants and "and 2 more"
       expect(result).toContain('<a href="tg://user?id=1">User1 One (@user1)</a>');

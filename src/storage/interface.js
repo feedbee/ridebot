@@ -20,6 +20,7 @@
  * @property {number} [speedMax]
  * @property {string} [additionalInfo]
  * @property {boolean} [cancelled]
+ * @property {Participation} participation - User participation in different states
  * @property {Date} createdAt
  * @property {number} createdBy
  * @property {Date} [updatedAt]
@@ -32,7 +33,14 @@
  * @property {string} [username]
  * @property {string} [firstName]
  * @property {string} [lastName]
- * @property {Date} joinedAt
+ * @property {Date} createdAt
+ */
+
+/**
+ * @typedef {Object} Participation
+ * @property {Participant[]} joined - Users who have joined the ride
+ * @property {Participant[]} thinking - Users who are thinking about joining
+ * @property {Participant[]} skipped - Users who have skipped the ride
  */
 
 /**
@@ -70,23 +78,35 @@ export class StorageInterface {
     throw new Error('Not implemented');
   }
 
+
   /**
-   * Add a participant to a ride
+   * Set user participation state for a ride
    * @param {string} rideId - Ride ID
-   * @param {Object} participant - Participant data
-   * @returns {Promise<{success: boolean, ride: Ride | null}>} - Success status and updated ride
+   * @param {number} userId - User ID
+   * @param {'joined'|'thinking'|'skipped'} state - Participation state
+   * @param {Participant} participant - Participant data
+   * @returns {Promise<{ride: Ride}>} - Updated ride
    */
-  async addParticipant(rideId, participant) {
+  async setParticipation(rideId, userId, state, participant) {
     throw new Error('Not implemented');
   }
 
   /**
-   * Remove a participant from a ride
+   * Get user's current participation state for a ride
    * @param {string} rideId - Ride ID
-   * @param {number} userId - User ID to remove
-   * @returns {Promise<{success: boolean, ride: Ride | null}>} - Success status and updated ride
+   * @param {number} userId - User ID
+   * @returns {Promise<'joined'|'thinking'|'skipped'|null>} - Current participation state or null if not found
    */
-  async removeParticipant(rideId, userId) {
+  async getParticipation(rideId, userId) {
+    throw new Error('Not implemented');
+  }
+
+  /**
+   * Get all participants for a ride across all states
+   * @param {string} rideId - Ride ID
+   * @returns {Promise<Participation>} - All participation data
+   */
+  async getAllParticipants(rideId) {
     throw new Error('Not implemented');
   }
 

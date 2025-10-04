@@ -26,9 +26,10 @@ export class ListParticipantsCommandHandler extends BaseCommandHandler {
       }
 
       // Format and send the participants list
-      const participants = ride.participants || [];
-      const participantsList = this.formatAllParticipants(participants);
-      const participantCount = participants.length;
+      const participation = ride.participation || { joined: [], thinking: [], skipped: [] };
+      const allParticipants = [...participation.joined, ...participation.thinking, ...participation.skipped];
+      const participantsList = this.formatAllParticipants(allParticipants);
+      const participantCount = allParticipants.length;
       const message = `👥 <b>All Participants for "${escapeHtml(ride.title)}" (${participantCount})</b>\n\n${participantsList}`;
       
       await ctx.reply(message, { parse_mode: 'HTML' });

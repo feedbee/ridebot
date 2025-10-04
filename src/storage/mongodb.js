@@ -2,14 +2,21 @@ import mongoose from 'mongoose';
 import { StorageInterface } from './interface.js';
 import { config } from '../config.js';
 import { DEFAULT_CATEGORY } from '../utils/category-utils.js';
+import { MigrationRunner } from '../migrations/MigrationRunner.js';
 
 const participantSchema = new mongoose.Schema({
   userId: { type: Number, required: true },
   username: { type: String, default: '' }, // Optional as Telegram usernames are optional
   firstName: { type: String, default: '' },
   lastName: { type: String, default: '' },
-  joinedAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now }
 });
+
+const participationSchema = new mongoose.Schema({
+  joined: [participantSchema],
+  thinking: [participantSchema],
+  skipped: [participantSchema]
+}, { _id: false });
 
 const messageSchema = new mongoose.Schema({
   messageId: { type: Number, required: true },
@@ -35,7 +42,7 @@ const rideSchema = new mongoose.Schema({
   organizer: { type: String },
   updatedAt: { type: Date },
   updatedBy: { type: Number },
-  participants: [participantSchema]
+  participation: { type: participationSchema, default: () => ({ joined: [], thinking: [], skipped: [] }) }
 });
 
 // Create indexes
@@ -54,6 +61,13 @@ export class MongoDBStorage extends StorageInterface {
     try {
       await mongoose.connect(config.mongodb.uri);
       console.log('Connected to MongoDB');
+      
+      // Skip schema validation in test environment
+      if (process.env.NODE_ENV !== 'test') {
+        // Validate schema version using MigrationRunner
+        const migrationRunner = new MigrationRunner(config.mongodb.uri);
+        await migrationRunner.validateSchemaVersion();
+      }
     } catch (error) {
       console.error('MongoDB connection error:', error);
       throw error;
@@ -67,7 +81,10 @@ export class MongoDBStorage extends StorageInterface {
   }
 
   async createRide(ride) {
-    let rideData = { ...ride, participants: [] };
+    let rideData = { 
+      ...ride, 
+      participation: { joined: [], thinking: [], skipped: [] }
+    };
     
     // Ensure messages array exists
     if (!rideData.messages) {
@@ -130,50 +147,61 @@ export class MongoDBStorage extends StorageInterface {
     }
   }
 
-  async addParticipant(rideId, participant) {
-    const ride = await Ride.findById(rideId);
-    if (!ride) {
-      throw new Error('Ride not found');
-    }
-
-    // Check if participant already exists
-    const exists = ride.participants.some(p => p.userId === participant.userId);
-    if (exists) {
-      return { success: false, ride: null };
-    }
-
-    ride.participants.push({
-      userId: participant.userId,
-      username: participant.username,
-      firstName: participant.firstName || '',
-      lastName: participant.lastName || '',
-      joinedAt: new Date()
-    });
-
-    await ride.save();
-    return { success: true, ride: this.mapRideToInterface(ride) };
-  }
-
-  async removeParticipant(rideId, userId) {
-    const ride = await Ride.findById(rideId);
-    if (!ride) {
-      throw new Error('Ride not found');
-    }
-
-    const initialLength = ride.participants.length;
-    ride.participants = ride.participants.filter(p => p.userId !== userId);
-
-    if (ride.participants.length === initialLength) {
-      return { success: false, ride: null };
-    }
-
-    await ride.save();
-    return { success: true, ride: this.mapRideToInterface(ride) };
-  }
 
   async deleteRide(rideId) {
     const ride = await Ride.findByIdAndDelete(rideId);
     return ride !== null;
+  }
+
+  async setParticipation(rideId, userId, state, participant) {
+    const ride = await Ride.findById(rideId);
+    if (!ride) {
+      throw new Error('Ride not found');
+    }
+
+    // Ensure participation structure exists
+    if (!ride.participation) {
+      ride.participation = { joined: [], thinking: [], skipped: [] };
+    }
+
+    // Remove user from all states first
+    ride.participation.joined = ride.participation.joined.filter(p => p.userId !== userId);
+    ride.participation.thinking = ride.participation.thinking.filter(p => p.userId !== userId);
+    ride.participation.skipped = ride.participation.skipped.filter(p => p.userId !== userId);
+
+    // Add user to the specified state
+    const participantData = {
+      userId: participant.userId,
+      username: participant.username,
+      firstName: participant.firstName || '',
+      lastName: participant.lastName || '',
+      createdAt: new Date()
+    };
+
+    ride.participation[state].push(participantData);
+    await ride.save();
+    return { ride: this.mapRideToInterface(ride) };
+  }
+
+  async getParticipation(rideId, userId) {
+    const ride = await Ride.findById(rideId);
+    if (!ride || !ride.participation) {
+      return null;
+    }
+
+    if (ride.participation.joined.some(p => p.userId === userId)) return 'joined';
+    if (ride.participation.thinking.some(p => p.userId === userId)) return 'thinking';
+    if (ride.participation.skipped.some(p => p.userId === userId)) return 'skipped';
+    return null;
+  }
+
+  async getAllParticipants(rideId) {
+    const ride = await Ride.findById(rideId);
+    if (!ride) {
+      throw new Error('Ride not found');
+    }
+
+    return ride.participation || { joined: [], thinking: [], skipped: [] };
   }
 
   mapRideToInterface(ride) {
@@ -200,13 +228,29 @@ export class MongoDBStorage extends StorageInterface {
       organizer: rideObj.organizer,
       updatedAt: rideObj.updatedAt,
       updatedBy: rideObj.updatedBy,
-      participants: rideObj.participants?.map(p => ({
-        userId: p.userId,
-        username: p.username,
-        firstName: p.firstName || '',
-        lastName: p.lastName || '',
-        joinedAt: p.joinedAt
-      })) || []
+      participation: {
+        joined: (rideObj.participation?.joined || []).map(p => ({
+          userId: p.userId,
+          username: p.username,
+          firstName: p.firstName || '',
+          lastName: p.lastName || '',
+          createdAt: p.createdAt
+        })),
+        thinking: (rideObj.participation?.thinking || []).map(p => ({
+          userId: p.userId,
+          username: p.username,
+          firstName: p.firstName || '',
+          lastName: p.lastName || '',
+          createdAt: p.createdAt
+        })),
+        skipped: (rideObj.participation?.skipped || []).map(p => ({
+          userId: p.userId,
+          username: p.username,
+          firstName: p.firstName || '',
+          lastName: p.lastName || '',
+          createdAt: p.createdAt
+        }))
+      }
     };
     
     return result;

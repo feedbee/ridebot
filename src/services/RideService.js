@@ -66,25 +66,38 @@ export class RideService {
   }
 
   /**
-   * Add a participant to a ride
+   * Add a participant to a ride (join state)
    * @param {string} rideId - Ride ID
    * @param {Object} participant - Participant data
    * @returns {Promise<Object>} - Success status and updated ride
    */
   async joinRide(rideId, participant) {
-    const result = await this.storage.addParticipant(rideId, participant);
-    return result;
+    // Check if user is already in the desired state
+    const currentState = await this.storage.getParticipation(rideId, participant.userId);
+    if (currentState === 'joined') {
+      return { success: false, ride: null };
+    }
+
+    const result = await this.storage.setParticipation(rideId, participant.userId, 'joined', participant);
+    return { success: true, ride: result.ride };
   }
 
   /**
-   * Remove a participant from a ride
+   * Remove a participant from a ride (set to skipped state)
    * @param {string} rideId - Ride ID
-   * @param {number} userId - User ID
+   * @param {Object} participant - Participant data
    * @returns {Promise<Object>} - Success status and updated ride
    */
-  async leaveRide(rideId, userId) {
-    const result = await this.storage.removeParticipant(rideId, userId);
-    return result;
+  async leaveRide(rideId, participant) {
+    // Check if user is already in the desired state
+    const currentState = await this.storage.getParticipation(rideId, participant.userId);
+    if (!currentState || currentState === 'skipped') {
+      return { success: false, ride: null };
+    }
+
+    // Move user to skipped state using setParticipation
+    const result = await this.storage.setParticipation(rideId, participant.userId, 'skipped', participant);
+    return { success: true, ride: result.ride };
   }
 
   /**

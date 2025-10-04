@@ -68,7 +68,14 @@ export class ParticipationHandlers extends BaseCommandHandler {
         return;
       }
       
-      const result = await this.rideService.leaveRide(rideId, ctx.from.id);
+      const participant = {
+        userId: ctx.from.id,
+        username: ctx.from.username || '',
+        firstName: ctx.from.first_name || '',
+        lastName: ctx.from.last_name || ''
+      };
+      
+      const result = await this.rideService.leaveRide(rideId, participant);
       
       if (result.success) {
         const result2 = await this.updateRideMessage(result.ride, ctx);

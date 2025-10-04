@@ -33,18 +33,18 @@ describe('Concurrent Operations Edge Cases', () => {
 
     // Simulate concurrent join attempts
     const [result1, result2] = await Promise.all([
-      storage.addParticipant(ride.id, participant),
-      storage.addParticipant(ride.id, participant)
+      storage.setParticipation(ride.id, participant.userId, 'joined', participant),
+      storage.setParticipation(ride.id, participant.userId, 'joined', participant)
     ]);
 
-    // One should succeed, one should fail
-    const successCount = [result1.success, result2.success].filter(Boolean).length;
-    expect(successCount).toBe(1);
+    // Both should succeed (new API allows state changes)
+    expect(result1.ride).toBeDefined();
+    expect(result2.ride).toBeDefined();
 
     // Final ride should only have one participant
     const finalRide = await storage.getRide(ride.id);
-    expect(finalRide.participants).toHaveLength(1);
-    expect(finalRide.participants[0].userId).toBe(99999);
+    expect(finalRide.participation.joined).toHaveLength(1);
+    expect(finalRide.participation.joined[0].userId).toBe(99999);
   });
 
   it('should handle concurrent join and leave operations', async () => {
@@ -67,20 +67,21 @@ describe('Concurrent Operations Edge Cases', () => {
     };
 
     // First add the participant
-    await storage.addParticipant(ride.id, participant);
+    await storage.setParticipation(ride.id, participant.userId, 'joined', participant);
 
     // Simulate concurrent operations: leave and join again
     const [leaveResult, joinResult] = await Promise.all([
-      storage.removeParticipant(ride.id, participant.userId),
-      storage.addParticipant(ride.id, participant)
+      storage.setParticipation(ride.id, participant.userId, 'skipped', participant),
+      storage.setParticipation(ride.id, participant.userId, 'joined', participant)
     ]);
 
-    // At least one operation should succeed
-    expect(leaveResult.success || joinResult.success).toBe(true);
+    // Both operations should succeed
+    expect(leaveResult.ride).toBeDefined();
+    expect(joinResult.ride).toBeDefined();
 
     // Final state should be consistent
     const finalRide = await storage.getRide(ride.id);
-    expect(finalRide.participants.length).toBeLessThanOrEqual(1);
+    expect(finalRide.participation.joined.length).toBeLessThanOrEqual(1);
   });
 });
 

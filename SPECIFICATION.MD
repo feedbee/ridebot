@@ -73,9 +73,15 @@ The codebase follows a clean, layered architecture:
 - **[memory.js](cci:7://file:///workspace/src/storage/workspace/src/storage/memory.js:0:0-0:0)**: Development storage using in-memory Map
 
 **Data Models:**
-- **Ride**: Core entity with title, date, category, route, participants, messages
-- **Participant**: User info (userId, username, firstName, lastName, joinedAt)
+- **Ride**: Core entity with title, date, category, route, participation states, messages
+- **Participant**: User info (userId, username, firstName, lastName, createdAt)
+- **Participation**: User participation states (joined, thinking, skipped) for each ride
 - **Message**: Tracks where ride announcements are posted (chatId, messageId, messageThreadId)
+
+**Schema Versioning:**
+- Database migrations supported for MongoDB
+- Schema version tracking in `meta` collection as `{schemaVersion: X}`
+- Migration system with versioned updates and batch processing
 
 ### **4. Services ([/src/services/](cci:7://file:///workspace/src/services:0:0-0:0))**
 
@@ -318,6 +324,7 @@ _No major refactoring areas identified at this time. The codebase is well-organi
 ### Low Priority
 - [ ] Translations: Override the bot's default language based on the user's preference (the bot communicates with the user in their chosen language; it also announces the user's rides, created by them, in the preferred language).
 - [ ] Ride participation: Add a comand to list joined rides for the current user
+- [ ] Quality: Better testing and fixes of setting nummeric ride attributes, like setting interval 22-25 and updating with a single value (29) gives 29-25
 
 ---
 

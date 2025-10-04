@@ -5,7 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.1.0] - 2025-01-27 - Participant display improvements and configuration
+## [2.1.0] - 2025-01-27 - Database migration framework and new participants structure
+
+### Added
+- **Database migration framework**: Complete migration system for MongoDB with version tracking and batch processing
+- **New participants structure**: `participation` field with `joined`, `thinking`, `skipped` arrays for future participation states
+
+## [2.0.1] - 2025-01-27 - Participant display improvements and configuration
 
 ### Added
 - **Environment variable**: `MAX_PARTICIPANTS_DISPLAY` to configure the maximum number of participants shown before displaying "and X more" (defaults to 20)

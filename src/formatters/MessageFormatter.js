@@ -15,11 +15,11 @@ export class MessageFormatter {
   /**
    * Format a ride message with keyboard
    * @param {Object} ride - Ride object
-   * @param {Array} participants - List of participants
+   * @param {Object} participation - Participation object with joined, thinking, skipped arrays
    * @returns {Object} - Object containing message text and keyboard
    */
-  formatRideWithKeyboard(ride, participants) {
-    let message = this.formatRideMessage(ride, participants);
+  formatRideWithKeyboard(ride, participation) {
+    let message = this.formatRideMessage(ride, participation);
     
     // Truncate if message exceeds Telegram's limit
     if (message.length > MessageFormatter.MAX_MESSAGE_LENGTH) {
@@ -58,17 +58,19 @@ export class MessageFormatter {
   /**
    * Format a ride message
    * @param {Object} ride - Ride object
-   * @param {Array} participants - List of participants
+   * @param {Object} participation - Participation object with joined, thinking, skipped arrays
    * @returns {string} - Formatted message
    */
-  formatRideMessage(ride, participants) {
+  formatRideMessage(ride, participation) {
     // Use DateParser for consistent timezone handling
     const formattedDateTime = DateParser.formatDateTime(ride.date);
     const datetime = `${formattedDateTime.date} at ${formattedDateTime.time}`;
     
-    const participantCount = participants.length;
-    const participantsList = participants.length > 0
-      ? this.formatParticipantsList(participants)
+    // Extract joined participants for display
+    const joinedParticipants = participation?.joined || [];
+    const participantCount = joinedParticipants.length;
+    const participantsList = joinedParticipants.length > 0
+      ? this.formatParticipantsList(joinedParticipants)
       : 'No participants yet';
     
     // Build ride details with proper grouping

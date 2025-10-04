@@ -67,13 +67,15 @@ describe('RideService', () => {
       const createdRide = await rideService.createRide(testRide);
       const retrievedRide = await rideService.getRide(createdRide.id);
       
-      // Expect all properties except participants to match
-      const { participants, ...retrievedRideWithoutParticipants } = retrievedRide;
-      const { participants: createdParticipants, ...createdRideWithoutParticipants } = createdRide;
+      // Expect all properties except participation to match
+      const { participation, ...retrievedRideWithoutParticipation } = retrievedRide;
+      const { participation: createdParticipation, ...createdRideWithoutParticipation } = createdRide;
       
-      expect(retrievedRideWithoutParticipants).toEqual(createdRideWithoutParticipants);
-      // Participants should be an empty array
-      expect(participants).toEqual([]);
+      expect(retrievedRideWithoutParticipation).toEqual(createdRideWithoutParticipation);
+      // Participation should have empty arrays
+      expect(participation.joined).toEqual([]);
+      expect(participation.thinking).toEqual([]);
+      expect(participation.skipped).toEqual([]);
     });
 
     it('should update a ride', async () => {
@@ -175,8 +177,8 @@ describe('RideService', () => {
       const result = await rideService.joinRide(ride.id, testParticipant);
       
       expect(result.success).toBe(true);
-      expect(result.ride.participants).toHaveLength(1);
-      const participant = result.ride.participants[0];
+      expect(result.ride.participation.joined).toHaveLength(1);
+      const participant = result.ride.participation.joined[0];
       expect(participant.userId).toBe(testParticipant.userId);
       expect(participant.username).toBe(testParticipant.username);
       expect(participant.firstName).toBe(testParticipant.firstName);
@@ -192,23 +194,24 @@ describe('RideService', () => {
       expect(result.ride).toBeNull();
 
       const updatedRide = await rideService.getRide(ride.id);
-      const participants = updatedRide.participants || [];
-      expect(participants).toHaveLength(1);
+      expect(updatedRide.participation.joined).toHaveLength(1);
     });
 
     it('should remove a participant from a ride', async () => {
       const ride = await rideService.createRide(testRide);
       await rideService.joinRide(ride.id, testParticipant);
       
-      const result = await rideService.leaveRide(ride.id, testParticipant.userId);
+      const result = await rideService.leaveRide(ride.id, testParticipant);
       
       expect(result.success).toBe(true);
-      expect(result.ride.participants).toHaveLength(0);
+      expect(result.ride.participation.joined).toHaveLength(0);
+      expect(result.ride.participation.skipped).toHaveLength(1);
     });
 
     it('should handle removing non-existent participant', async () => {
       const ride = await rideService.createRide(testRide);
-      const result = await rideService.leaveRide(ride.id, 999);
+      const nonExistentParticipant = { userId: 999, username: 'nonexistent', firstName: 'Non', lastName: 'Existent' };
+      const result = await rideService.leaveRide(ride.id, nonExistentParticipant);
       
       expect(result.success).toBe(false);
       expect(result.ride).toBeNull();
