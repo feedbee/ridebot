@@ -74,26 +74,22 @@ describe('StartCommandHandler', () => {
       await expect(startHandler.handle(mockCtx)).rejects.toThrow('Network error');
     });
 
-    it('should work in private chats', async () => {
-      // Setup - private chat
-      mockCtx.message.chat.type = 'private';
+    it('should work in all chat types', async () => {
+      const chatTypes = ['private', 'group', 'supergroup'];
+      
+      for (const chatType of chatTypes) {
+        // Reset mock before each iteration
+        mockCtx.reply.mockClear();
+        
+        // Setup - set chat type
+        mockCtx.message.chat.type = chatType;
 
-      // Execute
-      await startHandler.handle(mockCtx);
+        // Execute
+        await startHandler.handle(mockCtx);
 
-      // Verify message was sent
-      expect(mockCtx.reply).toHaveBeenCalled();
-    });
-
-    it('should work in group chats', async () => {
-      // Setup - group chat
-      mockCtx.message.chat.type = 'group';
-
-      // Execute
-      await startHandler.handle(mockCtx);
-
-      // Verify message was sent
-      expect(mockCtx.reply).toHaveBeenCalled();
+        // Verify message was sent
+        expect(mockCtx.reply).toHaveBeenCalled();
+      }
     });
 
     it('should use the configured start message template', async () => {
