@@ -307,12 +307,12 @@ _No major refactoring areas identified at this time. The codebase is well-organi
 ## Future Enhancements
 
 ### High Priority
+- [ ] Translations: Add Russian language support and set the bot's default language through environment variables.
 - [x] Commands: Rename /postride to /shareride.
 - [x] Documentation: Improve /start message to simplify onboarding
-- [ ] Translations: Add Russian language support and set the bot's default language through environment variables.
 - [x] Ride participation: List participants on the same line after the label, separated by commas.
-- [ ] Ride participation: Add an "I am thinking" option to indicate who might join the chat.
-- [ ] Ride participation: Add an "Not interested" option to gather responses from those who will not join the ride.
+- [x] Ride participation: Add an "I am thinking" option to indicate who might join the chat.
+- [x] Ride participation: Add an "Not interested" option to gather responses from those who will not join the ride.
 - [x] Ride participation: Limit the ride message to display only the first N registered participants (configurable via MAX_PARTICIPANTS_DISPLAY), and if there are more, show a label like "and X more".
 
 ### Medium Priority
