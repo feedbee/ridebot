@@ -157,16 +157,16 @@ describe('RideBot Integration Tests', () => {
       const updatedRide = await storage.getRide(rideId);
       expect(updatedRide.title).toBe(updatedTitle);
       
-      // 5. Leave the ride
-      const leaveCtx = JSON.parse(JSON.stringify(mockCtx));
-      leaveCtx.callbackQuery.data = `leave:${rideId}`;
-      leaveCtx.match = [`leave:${rideId}`, rideId];
+      // 5. Skip the ride
+      const skipCtx = JSON.parse(JSON.stringify(mockCtx));
+      skipCtx.callbackQuery.data = `skip:${rideId}`;
+      skipCtx.match = [`skip:${rideId}`, rideId];
       
-      // Mock the necessary methods for leaving a ride
-      leaveCtx.answerCallbackQuery = jest.fn().mockResolvedValue({});
-      leaveCtx.editMessageText = jest.fn().mockResolvedValue({});
+      // Mock the necessary methods for skipping a ride
+      skipCtx.answerCallbackQuery = jest.fn().mockResolvedValue({});
+      skipCtx.editMessageText = jest.fn().mockResolvedValue({});
       
-      await participationHandlers.handleLeaveRide(leaveCtx);
+      await participationHandlers.handleSkipRide(skipCtx);
       
       // Verify user left
       const rideAfterLeave = await storage.getRide(rideId);

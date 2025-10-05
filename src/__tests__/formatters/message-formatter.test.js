@@ -152,7 +152,7 @@ describe('MessageFormatter', () => {
       
       // Verify
       expect(result).toContain(config.messageTemplates.cancelled);
-      expect(result).toContain('No participants yet');
+      expect(result).toContain('No one joined yet');
       expect(result).toContain(config.messageTemplates.cancelledMessage);
     });
     
@@ -305,6 +305,112 @@ describe('MessageFormatter', () => {
       // Should not contain the 3rd and 4th participants
       expect(result).not.toContain('User3 Three');
       expect(result).not.toContain('User4 Four');
+    });
+
+    it('should always show Joined section even with no participants', () => {
+      // Setup
+      const ride = {
+        id: '123',
+        title: 'Test Ride',
+        date: new Date('2025-03-30T10:00:00Z')
+      };
+      
+      const participation = {
+        joined: [],
+        thinking: [],
+        skipped: []
+      };
+      
+      // Execute
+      const result = messageFormatter.formatRideMessage(ride, participation);
+      
+      // Verify - should always show Joined section
+      expect(result).toContain('🚴 Joined (0): No one joined yet');
+      expect(result).not.toContain('🤔 Thinking');
+      expect(result).not.toContain('🙅 Not interested');
+    });
+
+    it('should show Thinking section only when there are thinking participants', () => {
+      // Setup
+      const ride = {
+        id: '123',
+        title: 'Test Ride',
+        date: new Date('2025-03-30T10:00:00Z')
+      };
+      
+      const participation = {
+        joined: [],
+        thinking: [
+          { userId: 1, firstName: 'Thinker', lastName: 'One', username: 'thinker1' }
+        ],
+        skipped: []
+      };
+      
+      // Execute
+      const result = messageFormatter.formatRideMessage(ride, participation);
+      
+      // Verify - should show Thinking section
+      expect(result).toContain('🚴 Joined (0): No one joined yet');
+      expect(result).toContain('🤔 Thinking (1): <a href="tg://user?id=1">Thinker One (@thinker1)</a>');
+      expect(result).not.toContain('🙅 Not interested');
+    });
+
+    it('should show Not interested section only when there are skipped participants', () => {
+      // Setup
+      const ride = {
+        id: '123',
+        title: 'Test Ride',
+        date: new Date('2025-03-30T10:00:00Z')
+      };
+      
+      const participation = {
+        joined: [],
+        thinking: [],
+        skipped: [
+          { userId: 1, firstName: 'Skipper', lastName: 'One', username: 'skipper1' },
+          { userId: 2, firstName: 'Skipper', lastName: 'Two', username: 'skipper2' }
+        ]
+      };
+      
+      // Execute
+      const result = messageFormatter.formatRideMessage(ride, participation);
+      
+      // Verify - should show Not interested section with count only
+      expect(result).toContain('🚴 Joined (0): No one joined yet');
+      expect(result).not.toContain('🤔 Thinking');
+      expect(result).toContain('🙅 Not interested: 2');
+      // Should not show individual names for not interested
+      expect(result).not.toContain('Skipper One');
+      expect(result).not.toContain('Skipper Two');
+    });
+
+    it('should show all sections when all categories have participants', () => {
+      // Setup
+      const ride = {
+        id: '123',
+        title: 'Test Ride',
+        date: new Date('2025-03-30T10:00:00Z')
+      };
+      
+      const participation = {
+        joined: [
+          { userId: 1, firstName: 'Joiner', lastName: 'One', username: 'joiner1' }
+        ],
+        thinking: [
+          { userId: 2, firstName: 'Thinker', lastName: 'One', username: 'thinker1' }
+        ],
+        skipped: [
+          { userId: 3, firstName: 'Skipper', lastName: 'One', username: 'skipper1' }
+        ]
+      };
+      
+      // Execute
+      const result = messageFormatter.formatRideMessage(ride, participation);
+      
+      // Verify - should show all sections
+      expect(result).toContain('🚴 Joined (1): <a href="tg://user?id=1">Joiner One (@joiner1)</a>');
+      expect(result).toContain('🤔 Thinking (1): <a href="tg://user?id=2">Thinker One (@thinker1)</a>');
+      expect(result).toContain('🙅 Not interested: 1');
     });
   });
   

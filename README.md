@@ -14,7 +14,7 @@ A Telegram bot for organizing bike rides within multiple chats. The bot allows u
   - Optional estimated riding time
   - Optional speed expectations
   - Optional additional information text
-- Join/Leave ride functionality with synchronized participant lists
+- Join/Thinking/Pass ride functionality with synchronized participant lists
 - Automatic route information parsing
 - Update ride announcements
 - Participant list management
@@ -161,7 +161,7 @@ Use `/listrides` to see all rides you've created with pagination support.
 
 ### Listing Ride Participants
 
-Use `/listparticipants rideID` to see all participants for a specific ride. This command shows all participants without the truncation limit applied to regular ride messages.
+Use `/listparticipants rideID` to see all participants for a specific ride. This command shows all participants without the truncation limit applied to regular ride messages, organized by participation state (Joined, Thinking, Not interested).
 
 ## Route Support
 

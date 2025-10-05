@@ -171,10 +171,10 @@ describe('RideService', () => {
     });
   });
 
-  describe('Participant Management', () => {
-    it('should add a participant to a ride', async () => {
+  describe('Participation Management', () => {
+    it('should set participant to joined state', async () => {
       const ride = await rideService.createRide(testRide);
-      const result = await rideService.joinRide(ride.id, testParticipant);
+      const result = await rideService.setParticipation(ride.id, testParticipant, 'joined');
       
       expect(result.success).toBe(true);
       expect(result.ride.participation.joined).toHaveLength(1);
@@ -185,10 +185,30 @@ describe('RideService', () => {
       expect(participant.lastName).toBe(testParticipant.lastName);
     });
 
-    it('should not add the same participant twice', async () => {
+    it('should set participant to thinking state', async () => {
       const ride = await rideService.createRide(testRide);
-      await rideService.joinRide(ride.id, testParticipant);
-      const result = await rideService.joinRide(ride.id, testParticipant);
+      const result = await rideService.setParticipation(ride.id, testParticipant, 'thinking');
+      
+      expect(result.success).toBe(true);
+      expect(result.ride.participation.thinking).toHaveLength(1);
+      const participant = result.ride.participation.thinking[0];
+      expect(participant.userId).toBe(testParticipant.userId);
+    });
+
+    it('should set participant to skipped state', async () => {
+      const ride = await rideService.createRide(testRide);
+      const result = await rideService.setParticipation(ride.id, testParticipant, 'skipped');
+      
+      expect(result.success).toBe(true);
+      expect(result.ride.participation.skipped).toHaveLength(1);
+      const participant = result.ride.participation.skipped[0];
+      expect(participant.userId).toBe(testParticipant.userId);
+    });
+
+    it('should not change state if participant is already in desired state', async () => {
+      const ride = await rideService.createRide(testRide);
+      await rideService.setParticipation(ride.id, testParticipant, 'joined');
+      const result = await rideService.setParticipation(ride.id, testParticipant, 'joined');
       
       expect(result.success).toBe(false);
       expect(result.ride).toBeNull();
@@ -197,24 +217,49 @@ describe('RideService', () => {
       expect(updatedRide.participation.joined).toHaveLength(1);
     });
 
-    it('should remove a participant from a ride', async () => {
+    it('should move participant between states', async () => {
       const ride = await rideService.createRide(testRide);
-      await rideService.joinRide(ride.id, testParticipant);
       
-      const result = await rideService.leaveRide(ride.id, testParticipant);
+      // Start with joined
+      await rideService.setParticipation(ride.id, testParticipant, 'joined');
+      expect((await rideService.getRide(ride.id)).participation.joined).toHaveLength(1);
       
-      expect(result.success).toBe(true);
-      expect(result.ride.participation.joined).toHaveLength(0);
-      expect(result.ride.participation.skipped).toHaveLength(1);
+      // Move to thinking
+      const result1 = await rideService.setParticipation(ride.id, testParticipant, 'thinking');
+      expect(result1.success).toBe(true);
+      const ride1 = await rideService.getRide(ride.id);
+      expect(ride1.participation.joined).toHaveLength(0);
+      expect(ride1.participation.thinking).toHaveLength(1);
+      
+      // Move to skipped
+      const result2 = await rideService.setParticipation(ride.id, testParticipant, 'skipped');
+      expect(result2.success).toBe(true);
+      const ride2 = await rideService.getRide(ride.id);
+      expect(ride2.participation.thinking).toHaveLength(0);
+      expect(ride2.participation.skipped).toHaveLength(1);
     });
 
-    it('should handle removing non-existent participant', async () => {
+    it('should handle non-existent participant gracefully', async () => {
       const ride = await rideService.createRide(testRide);
       const nonExistentParticipant = { userId: 999, username: 'nonexistent', firstName: 'Non', lastName: 'Existent' };
-      const result = await rideService.leaveRide(ride.id, nonExistentParticipant);
+      const result = await rideService.setParticipation(ride.id, nonExistentParticipant, 'joined');
       
-      expect(result.success).toBe(false);
-      expect(result.ride).toBeNull();
+      expect(result.success).toBe(true);
+      expect(result.ride.participation.joined).toHaveLength(1);
+    });
+
+    it('should handle edge case with multiple participants', async () => {
+      const ride = await rideService.createRide(testRide);
+      const participant2 = { userId: 456, username: 'user2', firstName: 'User', lastName: 'Two' };
+      
+      // Add two participants to different states
+      await rideService.setParticipation(ride.id, testParticipant, 'joined');
+      await rideService.setParticipation(ride.id, participant2, 'thinking');
+      
+      const updatedRide = await rideService.getRide(ride.id);
+      expect(updatedRide.participation.joined).toHaveLength(1);
+      expect(updatedRide.participation.thinking).toHaveLength(1);
+      expect(updatedRide.participation.skipped).toHaveLength(0);
     });
   });
 

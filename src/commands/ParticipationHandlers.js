@@ -1,7 +1,7 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
 
 /**
- * Handler for join/leave ride callbacks
+ * Handler for join/thinking/skip ride callbacks
  */
 export class ParticipationHandlers extends BaseCommandHandler {
   /**
@@ -9,51 +9,32 @@ export class ParticipationHandlers extends BaseCommandHandler {
    * @param {import('grammy').Context} ctx - Grammy context
    */
   async handleJoinRide(ctx) {
-    const rideId = ctx.match[1];
-    
-    try {
-      const ride = await this.rideService.getRide(rideId);
-      if (!ride) {
-        await ctx.answerCallbackQuery('Ride not found');
-        return;
-      }
-      
-      if (ride.cancelled) {
-        await ctx.answerCallbackQuery('This ride has been cancelled');
-        return;
-      }
-      
-      const participant = {
-        userId: ctx.from.id,
-        username: ctx.from.username || '',
-        firstName: ctx.from.first_name || '',
-        lastName: ctx.from.last_name || ''
-      };
-      
-      const result = await this.rideService.joinRide(rideId, participant);
-      
-      if (result.success) {
-        const result2 = await this.updateRideMessage(result.ride, ctx);
-        
-        if (result2.success) {
-          await ctx.answerCallbackQuery('You have joined the ride!');
-        } else {
-          await ctx.answerCallbackQuery('You joined the ride, but message updates failed');
-        }
-      } else {
-        await ctx.answerCallbackQuery('You are already in this ride');
-      }
-    } catch (error) {
-      console.error('Error joining ride:', error);
-      await ctx.answerCallbackQuery('An error occurred');
-    }
+    await this.handleParticipationChange(ctx, 'joined', 'You have joined the ride!');
   }
 
   /**
-   * Handle leave ride callback
+   * Handle thinking ride callback
    * @param {import('grammy').Context} ctx - Grammy context
    */
-  async handleLeaveRide(ctx) {
+  async handleThinkingRide(ctx) {
+    await this.handleParticipationChange(ctx, 'thinking', 'You are thinking about this ride');
+  }
+
+  /**
+   * Handle skip ride callback
+   * @param {import('grammy').Context} ctx - Grammy context
+   */
+  async handleSkipRide(ctx) {
+    await this.handleParticipationChange(ctx, 'skipped', 'You have passed on this ride');
+  }
+
+  /**
+   * Handle participation state change
+   * @param {import('grammy').Context} ctx - Grammy context
+   * @param {string} state - The participation state (joined, thinking, skipped)
+   * @param {string} successMessage - Message to show on success
+   */
+  async handleParticipationChange(ctx, state, successMessage) {
     const rideId = ctx.match[1];
     
     try {
@@ -75,21 +56,21 @@ export class ParticipationHandlers extends BaseCommandHandler {
         lastName: ctx.from.last_name || ''
       };
       
-      const result = await this.rideService.leaveRide(rideId, participant);
+      const result = await this.rideService.setParticipation(rideId, participant, state);
       
       if (result.success) {
         const result2 = await this.updateRideMessage(result.ride, ctx);
         
         if (result2.success) {
-          await ctx.answerCallbackQuery('You have left the ride');
+          await ctx.answerCallbackQuery(successMessage);
         } else {
-          await ctx.answerCallbackQuery('You left the ride, but message updates failed');
+          await ctx.answerCallbackQuery(`Your participation was updated, but message updates failed`);
         }
       } else {
-        await ctx.answerCallbackQuery('You are not in this ride');
+        await ctx.answerCallbackQuery(`You are already ${state} for this ride`);
       }
     } catch (error) {
-      console.error('Error leaving ride:', error);
+      console.error(`Error updating participation to ${state}:`, error);
       await ctx.answerCallbackQuery('An error occurred');
     }
   }

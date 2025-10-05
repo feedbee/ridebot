@@ -75,7 +75,7 @@ The codebase follows a clean, layered architecture:
 **Data Models:**
 - **Ride**: Core entity with title, date, category, route, participation states, messages
 - **Participant**: User info (userId, username, firstName, lastName, createdAt)
-- **Participation**: User participation states (joined, thinking, skipped) for each ride
+- **Participation**: User participation states (joined, thinking, skipped) for each ride with three participation options: "I'm in", "Thinking", "Pass"
 - **Message**: Tracks where ride announcements are posted (chatId, messageId, messageThreadId)
 
 **Schema Versioning:**
@@ -117,8 +117,8 @@ All handlers extend **[BaseCommandHandler](cci:2://file:///workspace/src/command
 - **DuplicateRideCommandHandler**: Duplicate rides with modifications
 - **ShareRideCommandHandler**: Share rides to other chats
 - **ListRidesCommandHandler**: Paginated list of user's rides
-- **ListParticipantsCommandHandler**: List all participants for a specific ride (shows all without truncation)
-- **ParticipationHandlers**: Join/leave ride functionality
+- **ListParticipantsCommandHandler**: List all participants for a specific ride (shows all without truncation, organized by participation state)
+- **ParticipationHandlers**: Join/thinking/pass ride functionality
 - **StartCommandHandler**: Welcome message
 - **HelpCommandHandler**: Multi-page help system
 
@@ -138,7 +138,7 @@ All handlers extend **[BaseCommandHandler](cci:2://file:///workspace/src/command
 ### **7. Formatters ([/src/formatters/MessageFormatter.js](cci:7://file:///workspace/src/formatters/MessageFormatter.js:0:0-0:0))**
 
 - **Formats ride messages** with proper HTML escaping
-- Creates inline keyboards (Join/Leave buttons)
+- Creates inline keyboards (Join/Thinking/Pass buttons)
 - Formats ride lists with pagination
 - Handles date/time formatting with timezone support
 - Groups ride details logically
@@ -242,7 +242,7 @@ info: Bring lights
 ### **Joining a Ride**
 1. User clicks "I'm in!" button → `ParticipationHandlers.handleJoinRide()`
 2. Extract ride ID from callback data
-3. [RideService.joinRide()](cci:1://file:///workspace/src/services/RideService.js:71:2-80:3) adds participant to storage
+3. [RideService.setParticipation()](cci:1://file:///workspace/src/services/RideService.js:71:2-80:3) adds participant to storage
 4. [RideMessagesService.updateRideMessages()](cci:1://file:///workspace/src/services/RideMessagesService.js:116:2-204:3) updates ALL instances
 5. All chats see updated participant list
 

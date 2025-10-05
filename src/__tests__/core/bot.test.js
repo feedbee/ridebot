@@ -64,7 +64,7 @@ describe('Bot', () => {
       // Check that commands are properly configured
       expect(bot.botConfig.commands.privateOnly.length).toBe(10); // 10 private commands
       expect(bot.botConfig.commands.mixed.length).toBe(1); // 1 mixed command (shareride)
-      expect(bot.botConfig.callbacks.length).toBe(5); // 5 callback handlers
+      expect(bot.botConfig.callbacks.length).toBe(6); // 6 callback handlers
     });
 
     it('should call configureBot during construction', () => {
@@ -86,7 +86,11 @@ describe('Bot', () => {
         expect.any(Function)
       );
       expect(mockBotCallbackQuery).toHaveBeenCalledWith(
-        /^leave:(.+)$/,
+        /^thinking:(.+)$/,
+        expect.any(Function)
+      );
+      expect(mockBotCallbackQuery).toHaveBeenCalledWith(
+        /^skip:(.+)$/,
         expect.any(Function)
       );
       expect(mockBotCallbackQuery).toHaveBeenCalledWith(

@@ -167,7 +167,9 @@ The ride will be posted to the current chat and all instances will be synchroniz
 🚲 <b>{title}</b>{cancelledBadge}
 
 {rideDetails}
-👥 Participants ({participantCount}): {participants}
+🚴 Joined ({participantCount}): {participants}
+🤔 Thinking ({thinkingCount}): {thinking}
+🙅 Not interested: {notInterestedCount}
 
 🎫 #Ride #{id}{cancelledInstructions}
   `.trim(),
@@ -189,7 +191,8 @@ Click here to start a private chat: @botname
 
 export const buttons = {
   join: "I'm in! 🚴",
-  leave: "Leave 👋",
+  thinking: "Maybe 🤔",
+  pass: "Pass 🙅",
   confirmDelete: "Yes, delete ❌",
   cancelDelete: "No, keep it ✅",
   back: "⬅️ Back",

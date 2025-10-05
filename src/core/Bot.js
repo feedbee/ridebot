@@ -88,7 +88,8 @@ export class Bot {
       },
       callbacks: [
         { pattern: /^join:(.+)$/, handler: (ctx) => participationHandler.handleJoinRide(ctx) },
-        { pattern: /^leave:(.+)$/, handler: (ctx) => participationHandler.handleLeaveRide(ctx) },
+        { pattern: /^thinking:(.+)$/, handler: (ctx) => participationHandler.handleThinkingRide(ctx) },
+        { pattern: /^skip:(.+)$/, handler: (ctx) => participationHandler.handleSkipRide(ctx) },
         { pattern: /^delete:(\w+):(\w+)$/, handler: (ctx) => deleteRideHandler.handleConfirmation(ctx) },
         { pattern: /^list:(\d+)$/, handler: (ctx) => listRidesHandler.handleCallback(ctx) },
         { pattern: /^wizard:(\w+)(?::(.*))?$/, handler: (ctx) => this.wizard.handleWizardAction(ctx) },

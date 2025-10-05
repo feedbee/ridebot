@@ -38,21 +38,34 @@ export class MessageFormatter {
   }
 
   /**
-   * Get a standard ride keyboard with join/leave buttons
+   * Get a standard ride keyboard with join/thinking/skip buttons
    * @param {Object} ride - Ride object
    * @returns {InlineKeyboard} - Keyboard markup
    */
   getRideKeyboard(ride) {
     const keyboard = new InlineKeyboard();
     
-    // Don't add join/leave buttons for cancelled rides
+    // Don't add participation buttons for cancelled rides
     if (!ride.cancelled) {
-      // Always show both buttons
+      // Show all three participation buttons
       keyboard.text(config.buttons.join, `join:${ride.id}`);
-      keyboard.text(config.buttons.leave, `leave:${ride.id}`);
+      keyboard.text(config.buttons.thinking, `thinking:${ride.id}`);
+      keyboard.text(config.buttons.pass, `skip:${ride.id}`);
     }
     
     return keyboard;
+  }
+
+  /**
+   * Format participants list with consistent display logic
+   * @param {Array} participants - Array of participant objects
+   * @param {string} emptyMessage - Message to show when no participants
+   * @returns {string} - Formatted participants list
+   */
+  formatParticipantsWithLogic(participants, emptyMessage = 'No participants yet') {
+    return participants.length > 0
+      ? this.formatParticipantsList(participants)
+      : emptyMessage;
   }
 
   /**
@@ -66,12 +79,26 @@ export class MessageFormatter {
     const formattedDateTime = DateParser.formatDateTime(ride.date);
     const datetime = `${formattedDateTime.date} at ${formattedDateTime.time}`;
     
-    // Extract joined participants for display
+    // Extract all participation categories
     const joinedParticipants = participation?.joined || [];
+    const thinkingParticipants = participation?.thinking || [];
+    const skippedParticipants = participation?.skipped || [];
+    
+    // Format participant counts and lists
     const participantCount = joinedParticipants.length;
-    const participantsList = joinedParticipants.length > 0
-      ? this.formatParticipantsList(joinedParticipants)
-      : 'No participants yet';
+    const thinkingCount = thinkingParticipants.length;
+    const notInterestedCount = skippedParticipants.length;
+    
+    const participantsList = this.formatParticipantsWithLogic(joinedParticipants, 'No one joined yet');
+    
+    // Conditional content - show empty content for hidden sections to avoid empty lines
+    const thinkingContent = thinkingCount > 0 
+      ? this.formatParticipantsList(thinkingParticipants)
+      : '';
+    
+    const notInterestedContent = notInterestedCount > 0
+      ? notInterestedCount.toString()
+      : '';
     
     // Build ride details with proper grouping
     let rideDetails = '';
@@ -127,13 +154,20 @@ export class MessageFormatter {
       .replace('{cancelledBadge}', ride.cancelled ? ` ${config.messageTemplates.cancelled}` : '')
       .replace('{rideDetails}', rideDetails)
       .replace('{participantCount}', participantCount)
-      .replace('{participants}', participantsList);
+      .replace('{participants}', participantsList)
+      .replace('{thinkingCount}', thinkingCount)
+      .replace('{thinking}', thinkingContent)
+      .replace('{notInterestedCount}', notInterestedContent);
     
     // Add cancellation instructions if the ride is cancelled
     const cancelledInstructions = ride.cancelled ? '\n\n' + config.messageTemplates.cancelledMessage : '';
     message = message.replace('{cancelledInstructions}', cancelledInstructions);
 
     message = message.replace('{id}', ride.id);
+    
+    // Remove lines that contain only emoji and empty content (e.g., "🤔 Thinking (0): ")
+    message = message.replace(/🤔 Thinking \(0\): \n/g, '');
+    message = message.replace(/🙅 Not interested: \n/g, '');
     
     return message;
   }

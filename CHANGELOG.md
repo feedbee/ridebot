@@ -9,7 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Database migration framework**: Complete migration system for MongoDB with version tracking and batch processing
-- **New participants structure**: `participation` field with `joined`, `thinking`, `skipped` arrays for future participation states
+- **New participants structure**: `participation` field with `joined`, `thinking`, `skipped` arrays for three participation states
+- **Three participation options**: "I'm in", "Thinking", "Pass" buttons for ride participation
+- **Enhanced participant display**: Organized participant lists by participation state with consistent spacing
 
 ## [2.0.1] - 2025-01-27 - Participant display improvements and configuration
 
