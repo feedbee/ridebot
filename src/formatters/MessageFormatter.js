@@ -125,7 +125,7 @@ export class MessageFormatter {
       group3 += `📍 Meeting point: ${escapeHtml(ride.meetingPoint)}\n`;
     }
     if (ride.routeLink) {
-      group3 += `🔄 Route: <a href="${ride.routeLink}">Link</a>\n`;
+      group3 += `🗺️ Route: <a href="${ride.routeLink}">Link</a>\n`;
     }
     if (group3) {
       rideDetails += `\n${group3}`;
