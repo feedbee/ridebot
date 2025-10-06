@@ -131,7 +131,12 @@ export class RideMessagesService {
 
     try {
       const participation = ride.participation || { joined: [], thinking: [], skipped: [] };
-      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participation);
+      
+      // Check if the current context is for the ride creator in a private chat
+      // This will be used for all messages since we can't determine the original context for each message
+      const isForCreator = ctx?.chat?.type === 'private' && ctx?.from?.id === ride.createdBy;
+      
+      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participation, { isForCreator });
       
       let updatedCount = 0;
       let removedCount = 0;

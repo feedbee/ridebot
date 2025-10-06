@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.1.0] - 2025-01-27 - Database migration framework and new participants structure
+## [2.1.0] - 2025-10-06 - New participants structure and thinking option
 
 ### Added
 - **Database migration framework**: Complete migration system for MongoDB with version tracking and batch processing
@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Enhanced participant display**: Organized participant lists by participation state with consistent spacing
 - **Share line for ride creators**: Ride creators see "Share this ride: `/shareride #ID`" in private chat messages for easy sharing
 
-## [2.0.1] - 2025-01-27 - Participant display improvements and configuration
+## [2.0.1] - 2025-10-04 - Participant display improvements and configuration
 
 ### Added
 - **Environment variable**: `MAX_PARTICIPANTS_DISPLAY` to configure the maximum number of participants shown before displaying "and X more" (defaults to 20)
@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Participant display**: Participants are now displayed on the same line after the "Participants" label, separated by commas instead of bullet points on separate lines
 - **Message formatting**: Improved readability of ride messages with more compact participant lists
 
-## [2.0.1] - 2025-01-27 - Start message simplification and test fixes
+## [2.0.1] - 2025-10-04 - Start message simplification and test fixes
 
 ### Changed
 - **Start message**: Simplified the `/start` command message to be more user-friendly and less overwhelming for new users. Reduced message length by ~70% while keeping essential information

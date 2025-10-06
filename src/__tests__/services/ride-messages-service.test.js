@@ -1024,5 +1024,77 @@ describe('RideMessagesService', () => {
       expect(result).toEqual({ success: true, updatedCount: 0, removedCount: 0 });
       expect(mockCtx.api.editMessageText).not.toHaveBeenCalled();
     });
+
+    it('should include share line for ride creator in private chat when updating', async () => {
+      // Setup
+      const mockRide = {
+        id: 'ride123',
+        createdBy: 123, // Creator ID
+        participants: [],
+        messages: [
+          { chatId: 12345, messageId: 67890 }
+        ]
+      };
+
+      const mockCtx = {
+        chat: { type: 'private' },
+        from: { id: 123 }, // Same as createdBy
+        api: {
+          editMessageText: jest.fn().mockResolvedValue({})
+        }
+      };
+
+      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
+        message: 'Updated ride message with share line',
+        keyboard: { inline_keyboard: [] },
+        parseMode: 'HTML'
+      });
+
+      // Execute
+      await rideMessagesService.updateRideMessages(mockRide, mockCtx);
+
+      // Verify - should pass isForCreator: true
+      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(
+        mockRide,
+        { joined: [], thinking: [], skipped: [] },
+        { isForCreator: true }
+      );
+    });
+
+    it('should not include share line for non-creator when updating', async () => {
+      // Setup
+      const mockRide = {
+        id: 'ride123',
+        createdBy: 123, // Creator ID
+        participants: [],
+        messages: [
+          { chatId: 12345, messageId: 67890 }
+        ]
+      };
+
+      const mockCtx = {
+        chat: { type: 'private' },
+        from: { id: 789 }, // Different from createdBy
+        api: {
+          editMessageText: jest.fn().mockResolvedValue({})
+        }
+      };
+
+      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
+        message: 'Updated ride message without share line',
+        keyboard: { inline_keyboard: [] },
+        parseMode: 'HTML'
+      });
+
+      // Execute
+      await rideMessagesService.updateRideMessages(mockRide, mockCtx);
+
+      // Verify - should pass isForCreator: false
+      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(
+        mockRide,
+        { joined: [], thinking: [], skipped: [] },
+        { isForCreator: false }
+      );
+    });
   });
 }); 
