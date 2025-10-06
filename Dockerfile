@@ -10,6 +10,7 @@ RUN npm ci --only=production
 
 # Copy source files (tests excluded via .dockerignore)
 COPY src/ ./src/
+COPY scripts/ ./scripts/
 
 # Set environment to production
 ENV NODE_ENV=production

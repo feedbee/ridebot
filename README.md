@@ -227,7 +227,7 @@ When using MongoDB in production, run database migrations to update the schema:
 # Run migrations using Docker
 docker run --rm \
   -e MONGODB_URI="mongodb://username:password@host:port/database" \
-  bike-ride-bot \
+  feedbee/ridebot \
   npm run migrate
 
 # Or using Node.js directly
