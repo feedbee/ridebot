@@ -16,10 +16,12 @@ export class MessageFormatter {
    * Format a ride message with keyboard
    * @param {Object} ride - Ride object
    * @param {Object} participation - Participation object with joined, thinking, skipped arrays
+   * @param {Object} options - Additional options for formatting
+   * @param {boolean} options.isForCreator - Whether this message is for the ride creator
    * @returns {Object} - Object containing message text and keyboard
    */
-  formatRideWithKeyboard(ride, participation) {
-    let message = this.formatRideMessage(ride, participation);
+  formatRideWithKeyboard(ride, participation, options = {}) {
+    let message = this.formatRideMessage(ride, participation, options);
     
     // Truncate if message exceeds Telegram's limit
     if (message.length > MessageFormatter.MAX_MESSAGE_LENGTH) {
@@ -72,9 +74,11 @@ export class MessageFormatter {
    * Format a ride message
    * @param {Object} ride - Ride object
    * @param {Object} participation - Participation object with joined, thinking, skipped arrays
+   * @param {Object} options - Additional options for formatting
+   * @param {boolean} options.isForCreator - Whether this message is for the ride creator
    * @returns {string} - Formatted message
    */
-  formatRideMessage(ride, participation) {
+  formatRideMessage(ride, participation, options = {}) {
     // Use DateParser for consistent timezone handling
     const formattedDateTime = DateParser.formatDateTime(ride.date);
     const datetime = `${formattedDateTime.date} at ${formattedDateTime.time}`;
@@ -162,6 +166,10 @@ export class MessageFormatter {
     // Add cancellation instructions if the ride is cancelled
     const cancelledInstructions = ride.cancelled ? '\n\n' + config.messageTemplates.cancelledMessage : '';
     message = message.replace('{cancelledInstructions}', cancelledInstructions);
+
+    // Add share line for ride creator in private chat
+    const shareLine = options.isForCreator ? `Share this ride: <code>/shareride #${ride.id}</code>\n\n` : '';
+    message = message.replace('{shareLine}', shareLine);
 
     message = message.replace('{id}', ride.id);
     

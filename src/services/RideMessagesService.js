@@ -70,9 +70,12 @@ export class RideMessagesService {
       // Message thread id
       const threadId = messageThreadId || ctx.message?.message_thread_id;
 
+      // Check if this message is for the ride creator in a private chat
+      const isForCreator = ctx.chat?.type === 'private' && ctx.from?.id === ride.createdBy;
+
       // Get participants from the ride object and format the message
       const participation = ride.participation || { joined: [], thinking: [], skipped: [] };
-      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participation);
+      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participation, { isForCreator });
       
       // Prepare reply options
       const replyOptions = {

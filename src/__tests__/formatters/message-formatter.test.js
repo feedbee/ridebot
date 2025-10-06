@@ -55,7 +55,7 @@ describe('MessageFormatter', () => {
       const result = messageFormatter.formatRideWithKeyboard(ride, participants);
       
       // Verify
-      expect(messageFormatter.formatRideMessage).toHaveBeenCalledWith(ride, participants);
+      expect(messageFormatter.formatRideMessage).toHaveBeenCalledWith(ride, participants, {});
       expect(messageFormatter.getRideKeyboard).toHaveBeenCalledWith(ride);
       expect(result).toEqual({
         message: 'Formatted message',
@@ -411,6 +411,46 @@ describe('MessageFormatter', () => {
       expect(result).toContain('🚴 Joined (1): <a href="tg://user?id=1">Joiner One (@joiner1)</a>');
       expect(result).toContain('🤔 Thinking (1): <a href="tg://user?id=2">Thinker One (@thinker1)</a>');
       expect(result).toContain('🙅 Not interested: 1');
+    });
+
+    it('should include share line for ride creator', () => {
+      // Setup
+      const ride = {
+        id: 'abc123',
+        title: 'Test Ride',
+        date: new Date('2025-03-30T10:00:00Z')
+      };
+      
+      const participation = { joined: [], thinking: [], skipped: [] };
+      
+      // Execute
+      const result = messageFormatter.formatRideMessage(ride, participation, { isForCreator: true });
+      
+      // Verify - should include share line with correct spacing
+      expect(result).toContain('Share this ride: <code>/shareride #abc123</code>');
+      expect(result).toContain('🎫 #Ride #abc123');
+      // Should have one empty line before and one after the share line
+      expect(result).toMatch(/\n\nShare this ride: <code>\/shareride #abc123<\/code>\n\n🎫 #Ride #abc123/);
+    });
+
+    it('should not include share line for non-creator', () => {
+      // Setup
+      const ride = {
+        id: 'abc123',
+        title: 'Test Ride',
+        date: new Date('2025-03-30T10:00:00Z')
+      };
+      
+      const participation = { joined: [], thinking: [], skipped: [] };
+      
+      // Execute
+      const result = messageFormatter.formatRideMessage(ride, participation, { isForCreator: false });
+      
+      // Verify - should not include share line and have correct spacing
+      expect(result).not.toContain('Share this ride:');
+      expect(result).toContain('🎫 #Ride #abc123');
+      // Should have only one empty line before the #Ride line
+      expect(result).toMatch(/\n\n🎫 #Ride #abc123/);
     });
   });
   

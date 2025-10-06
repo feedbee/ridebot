@@ -171,7 +171,7 @@ The ride will be posted to the current chat and all instances will be synchroniz
 🤔 Thinking ({thinkingCount}): {thinking}
 🙅 Not interested: {notInterestedCount}
 
-🎫 #Ride #{id}{cancelledInstructions}
+{shareLine}🎫 #Ride #{id}{cancelledInstructions}
   `.trim(),
 
   cancelled: '❌ CANCELLED',

@@ -155,6 +155,8 @@ To post an existing ride to another chat:
 2. Use `/shareride` with ride ID directly: `/shareride abc123`
 3. Or use `/shareride` with ride ID as a parameter
 
+**Tip**: Ride creators see a "Share this ride: `/shareride #ID`" line in their private chat messages for easy copying.
+
 ### Listing Your Rides
 
 Use `/listrides` to see all rides you've created with pagination support.

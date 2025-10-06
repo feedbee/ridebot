@@ -244,7 +244,7 @@ describe('RideMessagesService', () => {
       const result = await rideMessagesService.createRideMessage(mockRide, mockCtx);
 
       // Verify
-      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(mockRide, { joined: [], thinking: [], skipped: [] });
+      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(mockRide, { joined: [], thinking: [], skipped: [] }, { isForCreator: false });
       expect(mockCtx.reply).toHaveBeenCalledWith('Formatted ride message', {
         parse_mode: 'HTML',
         reply_markup: { inline_keyboard: [] }
@@ -486,7 +486,110 @@ describe('RideMessagesService', () => {
       // Verify participants were passed to formatter
       expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(
         mockRide,
-        { joined: [], thinking: [], skipped: [] }
+        { joined: [], thinking: [], skipped: [] },
+        { isForCreator: false }
+      );
+    });
+
+    it('should include share line for ride creator in private chat', async () => {
+      // Setup
+      const mockRide = {
+        id: 'ride123',
+        title: 'Morning Ride',
+        createdBy: 123, // Creator ID
+        messages: []
+      };
+
+      const mockCtx = {
+        chat: { id: 456, type: 'private' },
+        from: { id: 123 }, // Same as createdBy
+        reply: jest.fn().mockResolvedValue({ message_id: 789 })
+      };
+
+      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
+        message: 'Formatted ride message with share line',
+        keyboard: { inline_keyboard: [] },
+        parseMode: 'HTML'
+      });
+
+      mockRideService.updateRide.mockResolvedValue(mockRide);
+
+      // Execute
+      await rideMessagesService.createRideMessage(mockRide, mockCtx);
+
+      // Verify - should pass isForCreator: true
+      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(
+        mockRide,
+        { joined: [], thinking: [], skipped: [] },
+        { isForCreator: true }
+      );
+    });
+
+    it('should not include share line for non-creator', async () => {
+      // Setup
+      const mockRide = {
+        id: 'ride123',
+        title: 'Morning Ride',
+        createdBy: 123, // Creator ID
+        messages: []
+      };
+
+      const mockCtx = {
+        chat: { id: 456, type: 'private' },
+        from: { id: 789 }, // Different from createdBy
+        reply: jest.fn().mockResolvedValue({ message_id: 789 })
+      };
+
+      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
+        message: 'Formatted ride message without share line',
+        keyboard: { inline_keyboard: [] },
+        parseMode: 'HTML'
+      });
+
+      mockRideService.updateRide.mockResolvedValue(mockRide);
+
+      // Execute
+      await rideMessagesService.createRideMessage(mockRide, mockCtx);
+
+      // Verify - should pass isForCreator: false
+      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(
+        mockRide,
+        { joined: [], thinking: [], skipped: [] },
+        { isForCreator: false }
+      );
+    });
+
+    it('should not include share line in group chats', async () => {
+      // Setup
+      const mockRide = {
+        id: 'ride123',
+        title: 'Morning Ride',
+        createdBy: 123, // Creator ID
+        messages: []
+      };
+
+      const mockCtx = {
+        chat: { id: 456, type: 'group' },
+        from: { id: 123 }, // Same as createdBy but in group chat
+        reply: jest.fn().mockResolvedValue({ message_id: 789 })
+      };
+
+      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
+        message: 'Formatted ride message without share line',
+        keyboard: { inline_keyboard: [] },
+        parseMode: 'HTML'
+      });
+
+      mockRideService.updateRide.mockResolvedValue(mockRide);
+
+      // Execute
+      await rideMessagesService.createRideMessage(mockRide, mockCtx);
+
+      // Verify - should pass isForCreator: false (not private chat)
+      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(
+        mockRide,
+        { joined: [], thinking: [], skipped: [] },
+        { isForCreator: false }
       );
     });
   });

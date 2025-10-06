@@ -141,6 +141,7 @@ All handlers extend **[BaseCommandHandler](cci:2://file:///workspace/src/command
 - Creates inline keyboards (Join/Thinking/Pass buttons)
 - Formats ride lists with pagination
 - Handles date/time formatting with timezone support
+- **Share line for creators**: Shows "Share this ride: `/shareride #ID`" for ride creators in private chats
 - Groups ride details logically
 
 ### **8. Utilities ([/src/utils/](cci:7://file:///workspace/src/utils:0:0-0:0))**
