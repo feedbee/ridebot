@@ -6,8 +6,11 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "NODE_ENV=development nodemon src/index.js",
-    "test": "MONGOMS_DOWNLOAD_DIR=/tmp/mongodb-binaries node --experimental-vm-modules node_modules/jest/bin/jest.js --testTimeout=30000",
-    "test:coverage": "MONGOMS_DOWNLOAD_DIR=/tmp/mongodb-binaries node --experimental-vm-modules node_modules/jest/bin/jest.js --testTimeout=30000 --coverage",
+    "test": "MONGOMS_DOWNLOAD_DIR=/tmp/mongodb-binaries node --experimental-vm-modules node_modules/jest/bin/jest.js --testTimeout=30000 --runInBand",
+    "test:coverage": "MONGOMS_DOWNLOAD_DIR=/tmp/mongodb-binaries node --experimental-vm-modules node_modules/jest/bin/jest.js --testTimeout=30000 --runInBand --coverage",
+    "test:basic": "npm run test -- --testPathIgnorePatterns=mongodb-storage.test.js",
+    "test:mongo": "npm run test -- src/__tests__/storage/mongodb-storage.test.js",
+    "test:coverage:basic": "npm run test:coverage -- --testPathIgnorePatterns=mongodb-storage.test.js",
     "migrate": "node scripts/migrate.js"
   },
   "dependencies": {
