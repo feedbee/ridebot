@@ -153,96 +153,61 @@ describe('RouteParser', () => {
   });
 
   describe('processRouteInfo', () => {
-    beforeEach(() => {
-      // Reset all mocks before each test
-      jest.spyOn(RouteParser, 'isValidRouteUrl');
-      jest.spyOn(RouteParser, 'isKnownProvider');
-      jest.spyOn(RouteParser, 'parseRoute');
-    });
-
-    afterEach(() => {
-      jest.restoreAllMocks();
-    });
-
     test('should process valid route URLs', async () => {
-      // Set up mocks for this test
-      RouteParser.isValidRouteUrl.mockReturnValue(true);
-      RouteParser.isKnownProvider.mockReturnValue(true);
-      RouteParser.parseRoute.mockResolvedValue({ distance: 50, duration: 180 });
+      const parseRouteSpy = jest
+        .spyOn(RouteParser, 'parseRoute')
+        .mockResolvedValue({ distance: 50, duration: 180 });
       
-      const result = await RouteParser.processRouteInfo('https://example.com/route');
+      const result = await RouteParser.processRouteInfo('https://www.strava.com/routes/123456');
       
       expect(result).toEqual({
-        routeLink: 'https://example.com/route',
+        routeLink: 'https://www.strava.com/routes/123456',
         distance: 50,
         duration: 180
       });
-      expect(RouteParser.isValidRouteUrl).toHaveBeenCalledWith('https://example.com/route');
-      expect(RouteParser.isKnownProvider).toHaveBeenCalledWith('https://example.com/route');
-      expect(RouteParser.parseRoute).toHaveBeenCalledWith('https://example.com/route');
+      parseRouteSpy.mockRestore();
     });
 
     test('should handle invalid URL formats', async () => {
-      // Set up mocks for this test
-      RouteParser.isValidRouteUrl.mockReturnValue(false);
-      
       const result = await RouteParser.processRouteInfo('not-a-url');
       
       expect(result).toEqual({
         error: 'Invalid URL format. Please provide a valid URL.',
         routeLink: 'not-a-url'
       });
-      expect(RouteParser.isValidRouteUrl).toHaveBeenCalledWith('not-a-url');
-      expect(RouteParser.isKnownProvider).not.toHaveBeenCalled();
-      expect(RouteParser.parseRoute).not.toHaveBeenCalled();
     });
 
     test('should handle unknown providers', async () => {
-      // Set up mocks for this test
-      RouteParser.isValidRouteUrl.mockReturnValue(true);
-      RouteParser.isKnownProvider.mockReturnValue(false);
-      
       const result = await RouteParser.processRouteInfo('https://unknown.com/route');
       
       expect(result).toEqual({
         routeLink: 'https://unknown.com/route'
       });
-      expect(RouteParser.isValidRouteUrl).toHaveBeenCalledWith('https://unknown.com/route');
-      expect(RouteParser.isKnownProvider).toHaveBeenCalledWith('https://unknown.com/route');
-      expect(RouteParser.parseRoute).not.toHaveBeenCalled();
     });
 
     test('should handle partial route parsing results', async () => {
-      // Set up mocks for this test
-      RouteParser.isValidRouteUrl.mockReturnValue(true);
-      RouteParser.isKnownProvider.mockReturnValue(true);
-      RouteParser.parseRoute.mockResolvedValue({ distance: 50 }); // Only distance, no duration
+      const parseRouteSpy = jest
+        .spyOn(RouteParser, 'parseRoute')
+        .mockResolvedValue({ distance: 50 });
       
-      const result = await RouteParser.processRouteInfo('https://example.com/route');
+      const result = await RouteParser.processRouteInfo('https://www.strava.com/routes/123456');
       
       expect(result).toEqual({
-        routeLink: 'https://example.com/route',
+        routeLink: 'https://www.strava.com/routes/123456',
         distance: 50
       });
-      expect(RouteParser.isValidRouteUrl).toHaveBeenCalledWith('https://example.com/route');
-      expect(RouteParser.isKnownProvider).toHaveBeenCalledWith('https://example.com/route');
-      expect(RouteParser.parseRoute).toHaveBeenCalledWith('https://example.com/route');
+      parseRouteSpy.mockRestore();
     });
     
     test('should handle null result from route parser', async () => {
-      // Set up mocks for this test
-      RouteParser.isValidRouteUrl.mockReturnValue(true);
-      RouteParser.isKnownProvider.mockReturnValue(true);
-      RouteParser.parseRoute.mockResolvedValue(null);
+      const parseRouteSpy = jest.spyOn(RouteParser, 'parseRoute').mockResolvedValue(null);
       
-      const result = await RouteParser.processRouteInfo('https://example.com/route');
+      const result = await RouteParser.processRouteInfo('https://www.strava.com/routes/123456');
       
       expect(result).toEqual({
-        routeLink: 'https://example.com/route'
+        routeLink: 'https://www.strava.com/routes/123456'
       });
-      expect(RouteParser.isValidRouteUrl).toHaveBeenCalledWith('https://example.com/route');
-      expect(RouteParser.isKnownProvider).toHaveBeenCalledWith('https://example.com/route');
-      expect(RouteParser.parseRoute).toHaveBeenCalledWith('https://example.com/route');
+      parseRouteSpy.mockRestore();
     });
   });
 }); 

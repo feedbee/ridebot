@@ -294,16 +294,14 @@ describe('Bot', () => {
       expect(mockBotStart).toHaveBeenCalled();
     });
 
-    it('should call setupBotCommands before starting', async () => {
+    it('should configure bot commands before starting', async () => {
       const { config } = await import('../../config.js');
       config.bot.useWebhook = false;
 
-      const setupSpy = jest.spyOn(bot, 'setupBotCommands').mockResolvedValue();
-
       await bot.start();
 
-      expect(setupSpy).toHaveBeenCalled();
-      setupSpy.mockRestore();
+      expect(mockApiSetMyCommands).toHaveBeenCalled();
+      expect(mockBotStart).toHaveBeenCalled();
     });
   });
 });

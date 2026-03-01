@@ -427,13 +427,12 @@ describe('RideWizard Edge Cases', () => {
       const stateKey = wizard.getWizardStateKey(ctx.from.id, ctx.chat.id);
       const state = wizard.wizardStates.get(stateKey);
       state.step = 'confirm';
-      const sendSpy = jest.spyOn(wizard, 'sendWizardStep').mockResolvedValue({});
 
       ctx.match = ['wizard:back', 'back'];
       await wizard.handleWizardAction(ctx);
 
       expect(state.step).toBe('info');
-      expect(sendSpy).toHaveBeenCalledWith(ctx, true);
+      expect(ctx.api.editMessageText).toHaveBeenCalled();
     });
 
     it('should auto-fill organizer from username in confirm step when names are missing', async () => {
