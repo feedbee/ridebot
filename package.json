@@ -39,6 +39,14 @@
       "src/**/*.js",
       "!src/storage/interface.js",
       "!src/migrations/**/*.js"
-    ]
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 70,
+        "functions": 65,
+        "lines": 72,
+        "statements": 72
+      }
+    }
   }
 }
