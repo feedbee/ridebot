@@ -39,6 +39,39 @@ A Telegram bot for organizing bike rides within multiple chats. The bot allows u
    npm run dev
    ```
 
+### Running Commands In VS Code Devcontainer
+
+`./scripts/devcontainer-exec.sh` is a general helper for running any command in the active VS Code devcontainer for this repository (when it exists), without hardcoding container IDs.
+
+```bash
+./scripts/devcontainer-exec.sh <command> [args...]
+```
+
+Examples:
+
+```bash
+./scripts/devcontainer-exec.sh npm test
+./scripts/devcontainer-exec.sh npm run dev
+```
+
+Detection mode (find devcontainer only, no command execution):
+
+```bash
+./scripts/devcontainer-exec.sh --find-container-id
+```
+
+Test shortcut:
+
+```bash
+./run-tests.sh
+```
+
+`./run-tests.sh` uses this order:
+- If already inside a container: `npm test`
+- Else if Docker is unavailable: local host `npm test`
+- Else if this repo devcontainer is running: `./scripts/devcontainer-exec.sh npm test`
+- Else: disposable `node:latest` container with `npm install && npm test`
+
 ## Production Deployment
 
 1. Update `.env` with production values:
