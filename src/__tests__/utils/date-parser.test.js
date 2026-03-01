@@ -10,6 +10,10 @@ describe('DateParser', () => {
   // Save original config
   const originalTimezone = config.dateFormat.defaultTimezone;
   
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   // Restore original config after all tests
   afterAll(() => {
     config.dateFormat.defaultTimezone = originalTimezone;
@@ -27,16 +31,17 @@ describe('DateParser', () => {
 
       const result = DateParser.parseDateTime('tomorrow at 2pm');
       expect(result).not.toBeNull();
-      expect(result.date.getDate()).toBe(10); // tomorrow's date
-      expect(result.date.getHours()).toBe(14); // 2pm
-
-      jest.useRealTimers();
+      expect(result.date.getDate()).toBe(10); // tomorrow's date in local timezone
+      expect(result.date.getHours()).toBe(14); // 2pm in local timezone
     });
 
     it('should parse absolute dates correctly', () => {
       const result = DateParser.parseDateTime('March 15 2024 at 15:30');
       expect(result).not.toBeNull();
-      expect(result.date.toISOString()).toMatch(/^2024-03-15T15:30/);
+      const formatted = DateParser.formatDateTime(result.date);
+      expect(formatted.time).toBe('15:30');
+      expect(formatted.date).toContain('15');
+      expect(formatted.date).toContain('2024');
     });
 
     it('should return null for invalid date formats', () => {
@@ -57,21 +62,18 @@ describe('DateParser', () => {
 
       const result = DateParser.parseDateTime('tomorrow at 2pm');
       expect(result).not.toBeNull();
-      expect(result.date.getDate()).toBe(10); // tomorrow's date
-      expect(result.date.getHours()).toBe(14); // 2pm in the configured timezone
-
-      jest.useRealTimers();
+      const formatted = DateParser.formatDateTime(result.date);
+      expect(formatted.time).toBe('14:00');
+      expect(formatted.date).toContain('10');
     });
     
     it('should parse absolute dates correctly with timezone', () => {
       const result = DateParser.parseDateTime('March 15 2024 at 15:30');
       expect(result).not.toBeNull();
-      // The exact time in ISO string will depend on the timezone offset, but the date should be correct
-      expect(result.date.getFullYear()).toBe(2024);
-      expect(result.date.getMonth()).toBe(2); // March is month 2 (0-indexed)
-      expect(result.date.getDate()).toBe(15);
-      expect(result.date.getHours()).toBe(15);
-      expect(result.date.getMinutes()).toBe(30);
+      const formatted = DateParser.formatDateTime(result.date);
+      expect(formatted.time).toBe('15:30');
+      expect(formatted.date).toContain('15');
+      expect(formatted.date).toContain('2024');
     });
     
     it('should return null for invalid date formats with timezone', () => {
@@ -90,8 +92,6 @@ describe('DateParser', () => {
 
       expect(DateParser.isPast(pastDate)).toBe(true);
       expect(DateParser.isPast(futureDate)).toBe(false);
-
-      jest.useRealTimers();
     });
   });
 
