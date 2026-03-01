@@ -9,11 +9,14 @@ import {
   FieldType,
   WIZARD_FIELDS,
   getFieldConfig,
+  getFirstField,
+  buildRideDataFromWizard,
   buildConfirmationMessage
 } from '../../wizard/wizardFieldConfig.js';
 import { DEFAULT_CATEGORY } from '../../utils/category-utils.js';
 import { DateParser } from '../../utils/date-parser.js';
 import { escapeHtml } from '../../utils/html-escape.js';
+import { RouteParser } from '../../utils/route-parser.js';
 
 describe('wizardFieldConfig', () => {
   describe('FieldType', () => {
@@ -244,6 +247,30 @@ describe('wizardFieldConfig', () => {
       expect(WIZARD_FIELDS.route.required).toBe(false);
       expect(WIZARD_FIELDS.route.clearable).toBe(true);
     });
+
+    it('should post-process known route with distance and duration and skip to speed', async () => {
+      jest.spyOn(RouteParser, 'isKnownProvider').mockReturnValueOnce(true);
+      jest.spyOn(RouteParser, 'parseRoute').mockResolvedValueOnce({ distance: 60, duration: 150 });
+      const state = { data: {} };
+
+      const nextStep = await WIZARD_FIELDS.route.postProcess('https://strava.com/routes/1', state);
+
+      expect(state.data.distance).toBe(60);
+      expect(state.data.duration).toBe(150);
+      expect(nextStep).toBe('speed');
+    });
+
+    it('should post-process known route with only distance and skip to duration', async () => {
+      jest.spyOn(RouteParser, 'isKnownProvider').mockReturnValueOnce(true);
+      jest.spyOn(RouteParser, 'parseRoute').mockResolvedValueOnce({ distance: 42 });
+      const state = { data: {} };
+
+      const nextStep = await WIZARD_FIELDS.route.postProcess('https://strava.com/routes/2', state);
+
+      expect(state.data.distance).toBe(42);
+      expect(state.data.duration).toBeUndefined();
+      expect(nextStep).toBe('duration');
+    });
   });
 
   describe('organizer field', () => {
@@ -352,6 +379,68 @@ describe('wizardFieldConfig', () => {
       expect(message).not.toContain('<script>');
       expect(message).toContain('&lt;script&gt;');
     });
+
+    it('should format speed when only minimum is set', () => {
+      const wizardData = {
+        title: 'Min speed ride',
+        category: DEFAULT_CATEGORY,
+        organizer: 'John Doe',
+        datetime: new Date('2025-10-10T18:00:00Z'),
+        speedMin: 24
+      };
+
+      const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser);
+      expect(message).toContain('min 24 km/h');
+    });
+
+    it('should format speed when only maximum is set', () => {
+      const wizardData = {
+        title: 'Max speed ride',
+        category: DEFAULT_CATEGORY,
+        organizer: 'John Doe',
+        datetime: new Date('2025-10-10T18:00:00Z'),
+        speedMax: 31
+      };
+
+      const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser);
+      expect(message).toContain('max 31 km/h');
+    });
+
+    it('should omit zero duration as an empty optional value', () => {
+      const wizardData = {
+        title: 'Zero duration ride',
+        category: DEFAULT_CATEGORY,
+        organizer: 'John Doe',
+        datetime: new Date('2025-10-10T18:00:00Z'),
+        duration: 0
+      };
+
+      const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser);
+      expect(message).not.toContain('⏱ Duration');
+    });
+  });
+
+  describe('helper builders', () => {
+    it('should return title as first field', () => {
+      expect(getFirstField()).toBe(WIZARD_FIELDS.title);
+    });
+
+    it('should build ride data for create and update modes', () => {
+      const wizardData = {
+        title: 'Ride',
+        category: 'Road Ride',
+        datetime: new Date('2025-10-10T18:00:00Z')
+      };
+
+      const createData = buildRideDataFromWizard(wizardData, { currentUser: 10, isUpdate: false });
+      expect(createData.createdBy).toBe(10);
+      expect(createData.messages).toEqual([]);
+      expect(createData.updatedBy).toBeUndefined();
+
+      const updateData = buildRideDataFromWizard(wizardData, { currentUser: 11, isUpdate: true });
+      expect(updateData.updatedBy).toBe(11);
+      expect(updateData.createdBy).toBeUndefined();
+    });
   });
 
   describe('field navigation', () => {
@@ -372,4 +461,3 @@ describe('wizardFieldConfig', () => {
     });
   });
 });
-

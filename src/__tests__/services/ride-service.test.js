@@ -53,6 +53,10 @@ describe('RideService', () => {
     config.dateFormat.defaultTimezone = null;
   });
 
+  afterAll(() => {
+    config.dateFormat.defaultTimezone = originalTimezone;
+  });
+
   describe('Basic CRUD Operations', () => {
     it('should create a ride', async () => {
       const ride = await rideService.createRide(testRide);
@@ -772,6 +776,173 @@ describe('RideService', () => {
       expect(result.error).toBe('Invalid URL format. Please provide a valid URL.');
       expect(result.ride).toBeNull();
       expect(RouteParser.processRouteInfo).toHaveBeenCalledWith('not-a-valid-url');
+    });
+  });
+
+  describe('Branch Coverage: service edge behaviors', () => {
+    it('should add updatedBy in updateRide when userId is provided', async () => {
+      const createdRide = await rideService.createRide(testRide);
+      const updatedRide = await rideService.updateRide(createdRide.id, { title: 'Changed' }, 4242);
+
+      expect(updatedRide.title).toBe('Changed');
+      expect(updatedRide.updatedBy).toBe(4242);
+    });
+
+    it('should not add updatedBy in updateRide when updates are empty', async () => {
+      const createdRide = await rideService.createRide(testRide);
+      const updatedRide = await rideService.updateRide(createdRide.id, {}, 4242);
+      expect(updatedRide.updatedBy).toBeUndefined();
+    });
+
+    it('should add updatedBy when cancelling and resuming with userId', async () => {
+      const createdRide = await rideService.createRide(testRide);
+      const cancelledRide = await rideService.cancelRide(createdRide.id, 111);
+      expect(cancelledRide.cancelled).toBe(true);
+      expect(cancelledRide.updatedBy).toBe(111);
+
+      const resumedRide = await rideService.resumeRide(createdRide.id, 222);
+      expect(resumedRide.cancelled).toBe(false);
+      expect(resumedRide.updatedBy).toBe(222);
+    });
+
+    it('should return current ride when updateRideFromParams has no effective updates', async () => {
+      const createdRide = await rideService.createRide(testRide);
+
+      const result = await rideService.updateRideFromParams(createdRide.id, {});
+
+      expect(result.error).toBeNull();
+      expect(result.ride.id).toBe(createdRide.id);
+      expect(result.ride.updatedBy).toBeUndefined();
+    });
+
+    it('should include updatedBy in updateRideFromParams when updates are present', async () => {
+      const createdRide = await rideService.createRide(testRide);
+
+      const result = await rideService.updateRideFromParams(createdRide.id, { title: 'Title 2' }, 99);
+
+      expect(result.error).toBeNull();
+      expect(result.ride.title).toBe('Title 2');
+      expect(result.ride.updatedBy).toBe(99);
+    });
+
+    it('should apply parsed route data in updateRideFromParams when explicit values are absent', async () => {
+      const createdRide = await rideService.createRide(testRide);
+      RouteParser.processRouteInfo.mockResolvedValueOnce({
+        routeLink: 'https://example.com/updated-route',
+        distance: 88,
+        duration: 250
+      });
+
+      const result = await rideService.updateRideFromParams(createdRide.id, {
+        route: 'https://example.com/updated-route'
+      });
+
+      expect(result.error).toBeNull();
+      expect(result.ride.routeLink).toBe('https://example.com/updated-route');
+      expect(result.ride.distance).toBe(88);
+      expect(result.ride.duration).toBe(250);
+    });
+
+    it('should prioritize explicit route params in updateRideFromParams over parser values', async () => {
+      const createdRide = await rideService.createRide(testRide);
+      RouteParser.processRouteInfo.mockResolvedValueOnce({
+        routeLink: 'https://example.com/updated-route',
+        distance: 88,
+        duration: 250
+      });
+
+      const result = await rideService.updateRideFromParams(createdRide.id, {
+        route: 'https://example.com/updated-route',
+        dist: '95',
+        duration: '3h'
+      });
+
+      expect(result.error).toBeNull();
+      expect(result.ride.routeLink).toBe('https://example.com/updated-route');
+      expect(result.ride.distance).toBe(95);
+      expect(result.ride.duration).toBe(180);
+    });
+
+    it('should return generic error when updateRideFromParams throws unexpectedly', async () => {
+      const createdRide = await rideService.createRide(testRide);
+      jest.spyOn(storage, 'updateRide').mockRejectedValueOnce(new Error('Update failed'));
+
+      const result = await rideService.updateRideFromParams(createdRide.id, { title: 'X' });
+
+      expect(result.ride).toBeNull();
+      expect(result.error).toBe('An error occurred while updating the ride.');
+    });
+
+    it('should return generic error when createRideFromParams throws unexpectedly', async () => {
+      jest.spyOn(storage, 'createRide').mockRejectedValueOnce(new Error('DB exploded'));
+
+      const result = await rideService.createRideFromParams({ title: 'X', when: 'tomorrow 9am' }, 1, { id: 1 });
+
+      expect(result.ride).toBeNull();
+      expect(result.error).toBe('An error occurred while creating the ride.');
+    });
+
+    it('should cover getDefaultOrganizer fallback variants', () => {
+      expect(rideService.getDefaultOrganizer(null)).toBe('');
+      expect(rideService.getDefaultOrganizer({ username: 'user_no_space' })).toBe('@user_no_space');
+      expect(rideService.getDefaultOrganizer({ username: 'name with space' })).toBe('name with space');
+      expect(rideService.getDefaultOrganizer({ first_name: 'Jane', last_name: 'Doe' })).toBe('Jane Doe');
+    });
+
+    it('should return not found error when duplicating unknown ride', async () => {
+      const result = await rideService.duplicateRide('missing-ride', {}, { id: 1, username: 'u' });
+      expect(result).toEqual({ ride: null, error: 'Original ride not found' });
+    });
+
+    it('should duplicate ride preserving key original fields by default', async () => {
+      const originalRide = await rideService.createRide({
+        ...testRide,
+        date: new Date('2030-03-15T15:00:00Z'),
+        speedMin: 26,
+        speedMax: 30,
+        organizer: 'Org',
+        category: 'Road Ride',
+        additionalInfo: 'Info'
+      });
+      const result = await rideService.duplicateRide(originalRide.id, {}, { id: 7, username: 'user7' });
+
+      expect(result.error).toBeNull();
+      expect(result.ride).toBeDefined();
+      expect(result.ride.id).not.toBe(originalRide.id);
+      expect(result.ride.title).toBe(originalRide.title);
+      expect(result.ride.category).toBe(originalRide.category);
+      expect(result.ride.organizer).toBe(originalRide.organizer);
+      expect(result.ride.meetingPoint).toBe(originalRide.meetingPoint);
+      expect(result.ride.routeLink).toBe(originalRide.routeLink);
+      expect(result.ride.distance).toBe(originalRide.distance);
+      expect(result.ride.duration).toBe(originalRide.duration);
+      expect(result.ride.speedMin).toBe(26);
+      expect(result.ride.speedMax).toBe(30);
+      expect(result.ride.additionalInfo).toBe(originalRide.additionalInfo);
+    });
+
+    it('should duplicate ride with single-bound speed values', async () => {
+      const onlyMinRide = await rideService.createRide({
+        ...testRide,
+        date: new Date('2030-03-15T15:00:00Z'),
+        speedMin: 24,
+        speedMax: null
+      });
+      const onlyMaxRide = await rideService.createRide({
+        ...testRide,
+        date: new Date('2030-03-16T15:00:00Z'),
+        title: 'Only max',
+        speedMin: null,
+        speedMax: 31
+      });
+      const minResult = await rideService.duplicateRide(onlyMinRide.id, {}, { id: 7 });
+      expect(minResult.error).toBeNull();
+      expect(minResult.ride.speedMin).toBe(24);
+      expect(minResult.ride.speedMax).toBeUndefined();
+
+      const maxResult = await rideService.duplicateRide(onlyMaxRide.id, {}, { id: 7 });
+      expect(maxResult.error).toBeNull();
+      expect([maxResult.ride.speedMin, maxResult.ride.speedMax]).toContain(31);
     });
   });
 });

@@ -419,5 +419,59 @@ describe('RideWizard Edge Cases', () => {
       );
     });
   });
-});
 
+  describe('additional branch coverage', () => {
+    it('should navigate back from confirm to info step', async () => {
+      const ctx = createMockContext();
+      await wizard.startWizard(ctx);
+      const stateKey = wizard.getWizardStateKey(ctx.from.id, ctx.chat.id);
+      const state = wizard.wizardStates.get(stateKey);
+      state.step = 'confirm';
+      const sendSpy = jest.spyOn(wizard, 'sendWizardStep').mockResolvedValue({});
+
+      ctx.match = ['wizard:back', 'back'];
+      await wizard.handleWizardAction(ctx);
+
+      expect(state.step).toBe('info');
+      expect(sendSpy).toHaveBeenCalledWith(ctx, true);
+    });
+
+    it('should auto-fill organizer from username in confirm step when names are missing', async () => {
+      const ctx = createMockContext();
+      ctx.from = { id: 123, first_name: '', last_name: '', username: 'solo_user' };
+      const state = {
+        step: 'confirm',
+        isUpdate: false,
+        data: {
+          title: 'Ride',
+          category: 'Road Ride',
+          datetime: new Date('2026-01-01T10:00:00Z')
+        },
+        primaryMessageId: null
+      };
+
+      await wizard.sendConfirmStep(ctx, state, false);
+
+      expect(state.data.organizer).toBe('@solo_user');
+    });
+
+    it('should auto-fill organizer from full name and username in confirm step', async () => {
+      const ctx = createMockContext();
+      ctx.from = { id: 123, first_name: 'John', last_name: 'Doe', username: 'johnny' };
+      const state = {
+        step: 'confirm',
+        isUpdate: false,
+        data: {
+          title: 'Ride',
+          category: 'Road Ride',
+          datetime: new Date('2026-01-01T10:00:00Z')
+        },
+        primaryMessageId: null
+      };
+
+      await wizard.sendConfirmStep(ctx, state, false);
+
+      expect(state.data.organizer).toBe('John Doe (@johnny)');
+    });
+  });
+});

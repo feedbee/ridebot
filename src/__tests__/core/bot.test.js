@@ -200,6 +200,29 @@ describe('Bot', () => {
       expect(startCall).toBeDefined();
       expect(startCall[0]).toBe('start');
     });
+
+    it('should execute public command wrapper only for non-private chats', () => {
+      bot = new Bot(storage);
+      jest.clearAllMocks();
+
+      const publicHandler = jest.fn();
+      bot.botConfig.commands.publicOnly = [
+        { command: 'pubcmd', description: 'Public test command', handler: publicHandler }
+      ];
+
+      bot.setupCommandHandlers();
+
+      const publicCall = mockBotCommand.mock.calls.find(call => call[0] === 'pubcmd');
+      expect(publicCall).toBeDefined();
+      const wrappedHandler = publicCall[1];
+
+      wrappedHandler({ chat: { type: 'private' } });
+      expect(publicHandler).not.toHaveBeenCalled();
+
+      wrappedHandler({ chat: { type: 'group' } });
+      expect(publicHandler).toHaveBeenCalledTimes(1);
+    });
+
   });
 
   describe('setupBotCommands', () => {
@@ -284,4 +307,3 @@ describe('Bot', () => {
     });
   });
 });
-
