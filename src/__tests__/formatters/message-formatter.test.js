@@ -56,7 +56,7 @@ describe('MessageFormatter', () => {
       
       // Verify
       expect(messageFormatter.formatRideMessage).toHaveBeenCalledWith(ride, participants, {});
-      expect(messageFormatter.getRideKeyboard).toHaveBeenCalledWith(ride);
+      expect(messageFormatter.getRideKeyboard).toHaveBeenCalledWith(ride, 'en');
       expect(result).toEqual({
         message: 'Formatted message',
         keyboard: { inline_keyboard: [] },
@@ -132,8 +132,8 @@ describe('MessageFormatter', () => {
       expect(result).toContain('50 km');
       expect(result).toContain('Ride #123');
       expect(result).toContain('Bring lights and a jacket');
-      expect(messageFormatter.formatDuration).toHaveBeenCalledWith(120);
-      expect(messageFormatter.formatSpeedRange).toHaveBeenCalledWith(25, 30);
+      expect(messageFormatter.formatDuration).toHaveBeenCalledWith(120, 'en');
+      expect(messageFormatter.formatSpeedRange).toHaveBeenCalledWith(25, 30, 'en');
     });
     
     it('should format ride message with cancelled status', () => {
@@ -151,9 +151,9 @@ describe('MessageFormatter', () => {
       const result = messageFormatter.formatRideMessage(ride, participants);
       
       // Verify
-      expect(result).toContain(config.messageTemplates.cancelled);
+      expect(result).toContain('❌ CANCELLED');
       expect(result).toContain('No one joined yet');
-      expect(result).toContain(config.messageTemplates.cancelledMessage);
+      expect(result).toContain('This ride has been cancelled.');
     });
     
     it('should handle empty optional fields', () => {

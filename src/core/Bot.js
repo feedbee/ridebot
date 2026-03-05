@@ -6,6 +6,7 @@ import { RideService } from '../services/RideService.js';
 import { RideMessagesService } from '../services/RideMessagesService.js';
 import { MessageFormatter } from '../formatters/MessageFormatter.js';
 import { threadMiddleware } from '../middleware/threadMiddleware.js';
+import { i18nMiddleware } from '../middleware/i18nMiddleware.js';
 import { HelpCommandHandler } from '../commands/HelpCommandHandler.js';
 import { StartCommandHandler } from '../commands/StartCommandHandler.js';
 import { NewRideCommandHandler } from '../commands/NewRideCommandHandler.js';
@@ -18,8 +19,8 @@ import { DuplicateRideCommandHandler } from '../commands/DuplicateRideCommandHan
 import { ShareRideCommandHandler } from '../commands/ShareRideCommandHandler.js';
 import { ResumeRideCommandHandler } from '../commands/ResumeRideCommandHandler.js';
 import { ParticipationHandlers } from '../commands/ParticipationHandlers.js';
-import { messageTemplates } from '../config/messageTemplates.js';
 import { replaceBotUsername } from '../utils/botUtils.js';
+import { t } from '../i18n/index.js';
 
 /**
  * Core Bot class that coordinates all components
@@ -60,23 +61,23 @@ export class Bot {
     return {
       commands: {
         privateOnly: [
-          { command: 'start', description: 'Start the bot and get welcome information', handler: (ctx) => startHandler.handle(ctx) },
-          { command: 'help', description: 'Show help information about commands', handler: (ctx) => helpHandler.handle(ctx) },
-          { command: 'newride', description: 'Create a new ride', handler: (ctx) => newRideHandler.handle(ctx) },
-          { command: 'updateride', description: 'Update an existing ride', handler: (ctx) => updateRideHandler.handle(ctx) },
-          { command: 'cancelride', description: 'Cancel a ride', handler: (ctx) => cancelRideHandler.handle(ctx) },
-          { command: 'deleteride', description: 'Delete a ride', handler: (ctx) => deleteRideHandler.handle(ctx) },
-          { command: 'listrides', description: 'List all your rides', handler: (ctx) => listRidesHandler.handle(ctx) },
-          { command: 'listparticipants', description: 'List all participants for a ride', handler: (ctx) => listParticipantsHandler.handle(ctx) },
-          { command: 'dupride', description: 'Duplicate an existing ride', handler: (ctx) => duplicateRideHandler.handle(ctx) },
-          { command: 'resumeride', description: 'Resume a cancelled ride', handler: (ctx) => resumeRideHandler.handle(ctx) },  
+          { command: 'start', descriptionKey: 'bot.commandDescriptions.start', handler: (ctx) => startHandler.handle(ctx) },
+          { command: 'help', descriptionKey: 'bot.commandDescriptions.help', handler: (ctx) => helpHandler.handle(ctx) },
+          { command: 'newride', descriptionKey: 'bot.commandDescriptions.newride', handler: (ctx) => newRideHandler.handle(ctx) },
+          { command: 'updateride', descriptionKey: 'bot.commandDescriptions.updateride', handler: (ctx) => updateRideHandler.handle(ctx) },
+          { command: 'cancelride', descriptionKey: 'bot.commandDescriptions.cancelride', handler: (ctx) => cancelRideHandler.handle(ctx) },
+          { command: 'deleteride', descriptionKey: 'bot.commandDescriptions.deleteride', handler: (ctx) => deleteRideHandler.handle(ctx) },
+          { command: 'listrides', descriptionKey: 'bot.commandDescriptions.listrides', handler: (ctx) => listRidesHandler.handle(ctx) },
+          { command: 'listparticipants', descriptionKey: 'bot.commandDescriptions.listparticipants', handler: (ctx) => listParticipantsHandler.handle(ctx) },
+          { command: 'dupride', descriptionKey: 'bot.commandDescriptions.dupride', handler: (ctx) => duplicateRideHandler.handle(ctx) },
+          { command: 'resumeride', descriptionKey: 'bot.commandDescriptions.resumeride', handler: (ctx) => resumeRideHandler.handle(ctx) },  
         ],
         publicOnly: [],
         mixed: [
-          { command: 'shareride', description: 'Share a ride in a chat', handler: async (ctx) => {
+          { command: 'shareride', descriptionKey: 'bot.commandDescriptions.shareride', handler: async (ctx) => {
             // If no parameters provided in group chat, show a helpful message
             if (ctx.chat?.type !== 'private' && !ctx.match) {
-              const message = await replaceBotUsername(messageTemplates.shareRideHelp, ctx);
+              const message = await replaceBotUsername(ctx.t('templates.shareRideHelp'), ctx);
               await ctx.reply(message, { parse_mode: 'HTML' });
               return;
             }
@@ -101,6 +102,9 @@ export class Bot {
    * Set up all command and callback handlers
    */
   configureBot() {
+    // Apply middleware for localization context
+    this.bot.use(i18nMiddleware);
+
     // Apply middleware for handling message thread IDs in topics
     this.bot.use(threadMiddleware);
     
@@ -154,20 +158,29 @@ export class Bot {
    */
   async setupBotCommands() {
     try {
+      const language = config.i18n.defaultLanguage;
+      const translateMenuDescription = (descriptionKey) => t(language, descriptionKey, {}, {
+        fallbackLanguage: config.i18n.fallbackLanguage,
+        withMissingMarker: config.isDev
+      });
+
       // Merge private and mixed commands for private chats
       const privateCommands = [
         ...this.botConfig.commands.privateOnly,
         ...this.botConfig.commands.mixed
-      ].map(({ command, description }) => ({ command, description }));
+      ].map(({ command, descriptionKey }) => ({
+        command,
+        description: translateMenuDescription(descriptionKey)
+      }));
       await this.bot.api.setMyCommands(privateCommands, { scope: { type: 'all_private_chats' } });
 
       // Mixed commands for group chats
       const groupCommands = [
         ...this.botConfig.commands.publicOnly,
         ...this.botConfig.commands.mixed
-      ].map(({ command, description }) => ({ 
+      ].map(({ command, descriptionKey }) => ({ 
         command, 
-        description 
+        description: translateMenuDescription(descriptionKey)
       }));
       await this.bot.api.setMyCommands(groupCommands, { scope: { type: 'all_group_chats' } });
       

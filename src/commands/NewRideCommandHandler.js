@@ -39,11 +39,9 @@ export class NewRideCommandHandler extends BaseCommandHandler {
    * @param {Object} params - Command parameters
    */
   async handleWithParams(ctx, params) {
-    const { ride, error } = await this.rideService.createRideFromParams(
-      params, 
-      ctx.chat.id,
-      ctx.from
-    );
+    const { ride, error } = ctx.lang
+      ? await this.rideService.createRideFromParams(params, ctx.chat.id, ctx.from, { language: ctx.lang })
+      : await this.rideService.createRideFromParams(params, ctx.chat.id, ctx.from);
 
     if (error) {
       await ctx.reply(error);

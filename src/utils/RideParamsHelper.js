@@ -1,21 +1,33 @@
+import { config } from '../config.js';
+import { t } from '../i18n/index.js';
+
 export class RideParamsHelper {
   /**
    * Valid ride parameters and their descriptions
    * @type {Object.<string, string>}
    */
-  static VALID_PARAMS = {
-    'title': 'Title of the ride',
-    'category': 'Ride category',
-    'organizer': 'Ride organizer name',
-    'when': 'Date and time of the ride',
-    'meet': 'Meeting point',
-    'route': 'Route URL',
-    'dist': 'Distance in kilometers',
-    'duration': 'Duration in minutes',
-    'speed': 'Speed range (e.g. 25-28)',
-    'info': 'Additional information',
-    'id': 'Ride ID (for commands that need it)'
-  };
+  static VALID_PARAMS = RideParamsHelper.getValidParams();
+
+  static getValidParams(language = config.i18n.defaultLanguage) {
+    const translate = (key) => t(language, key, {}, {
+      fallbackLanguage: config.i18n.fallbackLanguage,
+      withMissingMarker: config.isDev
+    });
+
+    return {
+      title: translate('params.title'),
+      category: translate('params.category'),
+      organizer: translate('params.organizer'),
+      when: translate('params.when'),
+      meet: translate('params.meet'),
+      route: translate('params.route'),
+      dist: translate('params.dist'),
+      duration: translate('params.duration'),
+      speed: translate('params.speed'),
+      info: translate('params.info'),
+      id: translate('params.id')
+    };
+  }
 
   /**
    * Parse ride parameters from text

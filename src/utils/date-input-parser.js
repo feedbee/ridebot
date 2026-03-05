@@ -1,19 +1,26 @@
 import { DateParser } from './date-parser.js';
 import { config } from '../config.js';
+import { t } from '../i18n/index.js';
 
 /**
  * Parse and validate date/time input
  * @param {string} text - Date/time text to parse
  * @returns {{date: Date|null, error?: string}} Result object containing either the parsed date or error message
  */
-export function parseDateTimeInput(text) {
+export function parseDateTimeInput(text, options = {}) {
+  const language = options.language || config.i18n.defaultLanguage;
+  const translate = (key, params = {}) => t(language, key, params, {
+    fallbackLanguage: config.i18n.fallbackLanguage,
+    withMissingMarker: config.isDev
+  });
+
   const parsedDate = DateParser.parseDateTime(text);
   if (!parsedDate) {
-    let errorMessage = '❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30';
+    let errorMessage = translate('parsers.date.invalidFormat');
     
     // Add timezone information to the error message if a default timezone is configured
     if (config.dateFormat.defaultTimezone) {
-      errorMessage += `\n\nNote: Times are interpreted in the ${config.dateFormat.defaultTimezone} timezone.`;
+      errorMessage += `\n\n${translate('parsers.date.timezoneNote', { timezone: config.dateFormat.defaultTimezone })}`;
     }
     
     return {
@@ -25,7 +32,7 @@ export function parseDateTimeInput(text) {
   if (DateParser.isPast(parsedDate.date)) {
     return {
       date: null,
-      error: '❌ The ride can\'t be scheduled in the past! Please provide a future date and time.'
+      error: translate('parsers.date.pastDate')
     };
   }
 

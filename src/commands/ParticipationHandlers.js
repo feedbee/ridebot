@@ -9,7 +9,7 @@ export class ParticipationHandlers extends BaseCommandHandler {
    * @param {import('grammy').Context} ctx - Grammy context
    */
   async handleJoinRide(ctx) {
-    await this.handleParticipationChange(ctx, 'joined', 'You have joined the ride!');
+    await this.handleParticipationChange(ctx, 'joined', this.translate(ctx, 'commands.participation.joinedSuccess'));
   }
 
   /**
@@ -17,7 +17,7 @@ export class ParticipationHandlers extends BaseCommandHandler {
    * @param {import('grammy').Context} ctx - Grammy context
    */
   async handleThinkingRide(ctx) {
-    await this.handleParticipationChange(ctx, 'thinking', 'You are thinking about this ride');
+    await this.handleParticipationChange(ctx, 'thinking', this.translate(ctx, 'commands.participation.thinkingSuccess'));
   }
 
   /**
@@ -25,7 +25,7 @@ export class ParticipationHandlers extends BaseCommandHandler {
    * @param {import('grammy').Context} ctx - Grammy context
    */
   async handleSkipRide(ctx) {
-    await this.handleParticipationChange(ctx, 'skipped', 'You have passed on this ride');
+    await this.handleParticipationChange(ctx, 'skipped', this.translate(ctx, 'commands.participation.skippedSuccess'));
   }
 
   /**
@@ -40,12 +40,12 @@ export class ParticipationHandlers extends BaseCommandHandler {
     try {
       const ride = await this.rideService.getRide(rideId);
       if (!ride) {
-        await ctx.answerCallbackQuery('Ride not found');
+        await ctx.answerCallbackQuery(this.translate(ctx, 'commands.participation.rideNotFound'));
         return;
       }
       
       if (ride.cancelled) {
-        await ctx.answerCallbackQuery('This ride has been cancelled');
+        await ctx.answerCallbackQuery(this.translate(ctx, 'commands.participation.rideCancelled'));
         return;
       }
       
@@ -64,14 +64,15 @@ export class ParticipationHandlers extends BaseCommandHandler {
         if (result2.success) {
           await ctx.answerCallbackQuery(successMessage);
         } else {
-          await ctx.answerCallbackQuery(`Your participation was updated, but message updates failed`);
+          await ctx.answerCallbackQuery(this.translate(ctx, 'commands.participation.updatedButMessageFailed'));
         }
       } else {
-        await ctx.answerCallbackQuery(`You are already ${state} for this ride`);
+        const stateLabel = this.translate(ctx, `commands.participation.states.${state}`);
+        await ctx.answerCallbackQuery(this.translate(ctx, 'commands.participation.alreadyInState', { state: stateLabel }));
       }
     } catch (error) {
       console.error(`Error updating participation to ${state}:`, error);
-      await ctx.answerCallbackQuery('An error occurred');
+      await ctx.answerCallbackQuery(this.translate(ctx, 'commands.participation.genericError'));
     }
   }
 }

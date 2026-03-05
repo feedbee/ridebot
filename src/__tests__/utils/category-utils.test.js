@@ -1,12 +1,13 @@
 /**
  * @jest-environment node
  */
-import { jest } from '@jest/globals';
-import { 
-  VALID_CATEGORIES, 
-  DEFAULT_CATEGORY, 
-  normalizeCategory, 
-  isValidCategory 
+import {
+  CATEGORY_CODES,
+  VALID_CATEGORIES,
+  DEFAULT_CATEGORY,
+  normalizeCategory,
+  isValidCategory,
+  getCategoryLabel
 } from '../../utils/category-utils.js';
 
 describe('category-utils', () => {
@@ -24,45 +25,32 @@ describe('category-utils', () => {
     });
 
     it('should have expected categories', () => {
-      expect(VALID_CATEGORIES).toContain('Regular/Mixed Ride');
-      expect(VALID_CATEGORIES).toContain('Road Ride');
-      expect(VALID_CATEGORIES).toContain('Gravel Ride');
-      expect(VALID_CATEGORIES).toContain('Mountain/Enduro/Downhill Ride');
-      expect(VALID_CATEGORIES).toContain('MTB-XC Ride');
-      expect(VALID_CATEGORIES).toContain('E-Bike Ride');
-      expect(VALID_CATEGORIES).toContain('Virtual/Indoor Ride');
+      expect(VALID_CATEGORIES).toContain(CATEGORY_CODES.MIXED);
+      expect(VALID_CATEGORIES).toContain(CATEGORY_CODES.ROAD);
+      expect(VALID_CATEGORIES).toContain(CATEGORY_CODES.GRAVEL);
+      expect(VALID_CATEGORIES).toContain(CATEGORY_CODES.MTB);
+      expect(VALID_CATEGORIES).toContain(CATEGORY_CODES.MTB_XC);
+      expect(VALID_CATEGORIES).toContain(CATEGORY_CODES.E_BIKE);
+      expect(VALID_CATEGORIES).toContain(CATEGORY_CODES.VIRTUAL);
     });
   });
 
   describe('normalizeCategory', () => {
     const testCases = [
-      // Default cases
       { input: '', expected: DEFAULT_CATEGORY, description: 'empty string' },
       { input: '   ', expected: DEFAULT_CATEGORY, description: 'whitespace only' },
       { input: null, expected: DEFAULT_CATEGORY, description: 'null' },
       { input: undefined, expected: DEFAULT_CATEGORY, description: 'undefined' },
-      
-      // Case insensitive exact matches
-      { input: 'Road Ride', expected: 'Road Ride', description: 'exact match' },
-      { input: 'road ride', expected: 'Road Ride', description: 'lowercase' },
-      { input: 'ROAD RIDE', expected: 'Road Ride', description: 'uppercase' },
-      { input: 'RoAd RiDe', expected: 'Road Ride', description: 'mixed case' },
-      
-      // Partial matches
-      { input: 'Road', expected: 'Road Ride', description: 'partial match' },
-      { input: 'Gravel', expected: 'Gravel Ride', description: 'gravel partial' },
-      { input: 'MTB-XC', expected: 'MTB-XC Ride', description: 'MTB-XC partial' },
-      { input: 'Mountain', expected: 'Mountain/Enduro/Downhill Ride', description: 'mountain partial' },
-      { input: 'Virtual', expected: 'Virtual/Indoor Ride', description: 'virtual partial' },
-      
-      // Whitespace handling
-      { input: '  Road Ride  ', expected: 'Road Ride', description: 'trimmed whitespace' },
-      { input: '\tRoad Ride\t', expected: 'Road Ride', description: 'trimmed tabs' },
-      
-      // Invalid inputs
-      { input: 'InvalidCategory', expected: DEFAULT_CATEGORY, description: 'invalid input' },
-      { input: 'xyz123', expected: DEFAULT_CATEGORY, description: 'random text' },
-      { input: 'Road  Ride', expected: DEFAULT_CATEGORY, description: 'extra spaces' }
+
+      { input: 'road', expected: CATEGORY_CODES.ROAD, description: 'canonical code' },
+      { input: 'ROAD', expected: CATEGORY_CODES.ROAD, description: 'canonical uppercase' },
+      { input: '  mtb-xc  ', expected: CATEGORY_CODES.MTB_XC, description: 'canonical with whitespace' },
+      { input: 'E-BIKE', expected: CATEGORY_CODES.E_BIKE, description: 'canonical e-bike uppercase' },
+
+      { input: 'Road Ride', expected: DEFAULT_CATEGORY, description: 'legacy EN label is not supported' },
+      { input: 'Шоссе', expected: DEFAULT_CATEGORY, description: 'localized label is not supported' },
+      { input: 'virtual_indoor', expected: DEFAULT_CATEGORY, description: 'legacy code is not supported' },
+      { input: 'xyz123', expected: DEFAULT_CATEGORY, description: 'random text' }
     ];
 
     testCases.forEach(({ input, expected, description }) => {
@@ -74,21 +62,25 @@ describe('category-utils', () => {
 
   describe('isValidCategory', () => {
     const validCases = [
-      'Road Ride',
-      'road ride',
-      'ROAD RIDE',
-      'Road',
-      'Gravel',
-      'MTB-XC',
-      'Mountain',
-      'Virtual',
-      '  Road Ride  '
+      'road',
+      'ROAD',
+      'gravel',
+      'mtb',
+      'mtb-xc',
+      'e-bike',
+      'virtual',
+      '  mixed  '
     ];
 
     const invalidCases = [
       null,
       undefined,
-      ''
+      '',
+      'Road Ride',
+      'Шоссе',
+      'regular_mixed',
+      'virtual_indoor',
+      'invalid'
     ];
 
     validCases.forEach(input => {
@@ -98,14 +90,23 @@ describe('category-utils', () => {
     });
 
     invalidCases.forEach(input => {
-      it(`should return false for ${input}`, () => {
+      it(`should return false for ${input}` , () => {
         expect(isValidCategory(input)).toBe(false);
       });
     });
+  });
 
-    it('should normalize invalid inputs to default category (which is valid)', () => {
-      expect(isValidCategory('InvalidCategory')).toBe(true);
-      expect(isValidCategory('xyz123')).toBe(true);
+  describe('getCategoryLabel', () => {
+    it('should render EN labels for category code', () => {
+      expect(getCategoryLabel(CATEGORY_CODES.ROAD, 'en')).toBe('Road Ride');
+    });
+
+    it('should render RU labels for category code', () => {
+      expect(getCategoryLabel(CATEGORY_CODES.ROAD, 'ru')).toBe('Шоссе');
+    });
+
+    it('should fallback to default category label for unknown value', () => {
+      expect(getCategoryLabel('Road Ride', 'ru')).toBe('Смешанная поездка');
     });
   });
 });

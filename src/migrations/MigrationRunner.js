@@ -126,6 +126,14 @@ export class MigrationRunner {
           const { migrateToParticipationStates } = await import('./migrations/001_participation_states.js');
           await migrateToParticipationStates(db);
         }
+      },
+      {
+        version: 2,
+        name: 'Normalize category values to canonical codes',
+        up: async (db) => {
+          const { migrateCategoryToCodes } = await import('./migrations/002_category_codes.js');
+          await migrateCategoryToCodes(db);
+        }
       }
       // Future migrations can be added here
     ];

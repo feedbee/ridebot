@@ -1,5 +1,7 @@
 import { RouteParser } from '../utils/route-parser.js';
 import { FieldProcessor } from '../utils/FieldProcessor.js';
+import { config } from '../config.js';
+import { t } from '../i18n/index.js';
 
 /**
  * Service class for managing rides and their messages
@@ -10,6 +12,13 @@ export class RideService {
    */
   constructor(storage) {
     this.storage = storage;
+  }
+
+  translate(language, key, params = {}) {
+    return t(language || config.i18n.defaultLanguage, key, params, {
+      fallbackLanguage: config.i18n.fallbackLanguage,
+      withMissingMarker: config.isDev
+    });
   }
 
   /**
@@ -127,22 +136,29 @@ export class RideService {
    * @param {Object} user - User object with id, first_name, last_name, username fields
    * @returns {Promise<Object>} - Created ride and any errors
    */
-  async createRideFromParams(params, chatId, user) {
+  async createRideFromParams(params, chatId, user, options = {}) {
+    const language = options.language;
     if (!params.title || !params.when) {
       return { 
         ride: null, 
-        error: 'Please provide at least title and date/time.'
+        error: this.translate(language, 'services.ride.pleaseProvideTitleAndDate')
       };
     }
 
     try {
       // Use FieldProcessor to handle all field processing
-      const { data, error } = FieldProcessor.processRideFields(params, false);
+      const processorOptions = language ? { language } : undefined;
+      const { data, error } = processorOptions
+        ? FieldProcessor.processRideFields(params, false, processorOptions)
+        : FieldProcessor.processRideFields(params, false);
       if (error) return { ride: null, error };
       
       // Handle route processing (async)
       if (data._requiresRouteProcessing) {
-        const routeInfo = await RouteParser.processRouteInfo(data._routeParam);
+        const routeOptions = language ? { language } : undefined;
+        const routeInfo = routeOptions
+          ? await RouteParser.processRouteInfo(data._routeParam, routeOptions)
+          : await RouteParser.processRouteInfo(data._routeParam);
         if (routeInfo.error) return { ride: null, error: routeInfo.error };
         
         data.routeLink = routeInfo.routeLink;
@@ -176,7 +192,7 @@ export class RideService {
       return { ride, error: null };
     } catch (error) {
       console.error('Error creating ride:', error);
-      return { ride: null, error: 'An error occurred while creating the ride.' };
+      return { ride: null, error: this.translate(language, 'services.ride.errorCreatingRide') };
     }
   }
 
@@ -209,17 +225,24 @@ export class RideService {
    * @param {number} [userId] - User ID of the person updating the ride
    * @returns {Promise<Object>} - Updated ride and any errors
    */
-  async updateRideFromParams(rideId, params, userId = null) {
+  async updateRideFromParams(rideId, params, userId = null, options = {}) {
+    const language = options.language;
     try {
       // Use FieldProcessor to handle all field processing for updates
-      const { data, error } = FieldProcessor.processRideFields(params, true);
+      const processorOptions = language ? { language } : undefined;
+      const { data, error } = processorOptions
+        ? FieldProcessor.processRideFields(params, true, processorOptions)
+        : FieldProcessor.processRideFields(params, true);
       if (error) return { ride: null, error };
       
       const updates = { ...data };
       
       // Handle route processing (async)
       if (data._requiresRouteProcessing) {
-        const routeInfo = await RouteParser.processRouteInfo(data._routeParam);
+        const routeOptions = language ? { language } : undefined;
+        const routeInfo = routeOptions
+          ? await RouteParser.processRouteInfo(data._routeParam, routeOptions)
+          : await RouteParser.processRouteInfo(data._routeParam);
         if (routeInfo.error) return { ride: null, error: routeInfo.error };
         
         updates.routeLink = routeInfo.routeLink;
@@ -254,7 +277,7 @@ export class RideService {
       return { ride, error: null };
     } catch (error) {
       console.error('Error updating ride:', error);
-      return { ride: null, error: 'An error occurred while updating the ride.' };
+      return { ride: null, error: this.translate(language, 'services.ride.errorUpdatingRide') };
     }
   }
 
@@ -265,10 +288,11 @@ export class RideService {
    * @param {Object} user - User object with id, first_name, last_name, username fields
    * @returns {Promise<Object>} - Created ride and any errors
    */
-  async duplicateRide(originalRideId, params, user) {
+  async duplicateRide(originalRideId, params, user, options = {}) {
+    const language = options.language;
     const originalRide = await this.getRide(originalRideId);
     if (!originalRide) {
-      return { ride: null, error: 'Original ride not found' };
+      return { ride: null, error: this.translate(language, 'services.ride.originalRideNotFound') };
     }
     
     // Calculate tomorrow's date as default
@@ -311,6 +335,6 @@ export class RideService {
     }
     
     // Use existing createRideFromParams to handle all the validation and processing
-    return await this.createRideFromParams(mergedParams, null, user);
+    return await this.createRideFromParams(mergedParams, null, user, { language });
   }
 }

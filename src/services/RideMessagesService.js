@@ -1,4 +1,6 @@
 import { RideParamsHelper } from '../utils/RideParamsHelper.js';
+import { config } from '../config.js';
+import { t } from '../i18n/index.js';
 
 /**
  * Service class for handling ride message operations
@@ -13,12 +15,21 @@ export class RideMessagesService {
     this.messageFormatter = messageFormatter;
   }
 
+  translate(language, key, params = {}) {
+    return t(language || config.i18n.defaultLanguage, key, params, {
+      fallbackLanguage: config.i18n.fallbackLanguage,
+      withMissingMarker: config.isDev
+    });
+  }
+
   /**
    * Extract ride ID from message text or reply
    * @param {Object} message - Message object
+   * @param {{language?: string}} options - Localization options
    * @returns {Object} - Ride ID or error
    */
-  extractRideId(message) {
+  extractRideId(message, options = {}) {
+    const language = options.language;
     // First check if ID is provided right after the command on the same line
     // Extract just the first line to ensure we don't match across newlines
     const firstLine = message.text.split('\n')[0];
@@ -45,7 +56,7 @@ export class RideMessagesService {
       if (!rideIdMatch) {
         return { 
           rideId: null, 
-          error: 'Could not find ride ID in the message. Please make sure you are replying to a ride message or provide a ride ID.'
+          error: this.translate(language, 'services.rideMessages.couldNotFindRideIdInMessage')
         };
       }
       // No need to strip # here as the regex already handles it
@@ -54,7 +65,7 @@ export class RideMessagesService {
     
     return { 
       rideId: null, 
-      error: `Please provide a ride ID after the command (e.g., /${commandName} rideID) or reply to a ride message.`
+      error: this.translate(language, 'services.rideMessages.provideRideIdAfterCommand', { commandName })
     };
   }
 

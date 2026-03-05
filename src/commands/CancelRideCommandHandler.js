@@ -8,13 +8,13 @@ export class CancelRideCommandHandler extends RideStateChangeHandler {
    * Get the state check configuration for cancelling a ride
    * @returns {{checkState: function, errorMessage: string, serviceMethod: string, successAction: string, actionVerb: string}}
    */
-  getStateConfig() {
+  getStateConfig(ctx) {
     return {
       checkState: (ride) => !ride.cancelled,
-      errorMessage: 'This ride is already cancelled.',
+      errorMessage: this.translate(ctx, 'commands.cancel.alreadyCancelled'),
       serviceMethod: 'cancelRide',
-      successAction: 'cancelled',
-      actionVerb: 'cancel'
+      successAction: this.translate(ctx, 'commands.common.actions.cancelled'),
+      actionVerb: this.translate(ctx, 'commands.common.verbs.cancel')
     };
   }
 }

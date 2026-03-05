@@ -2,6 +2,8 @@ import { config } from '../config.js';
 import { escapeHtml } from '../utils/html-escape.js';
 import { InlineKeyboard } from 'grammy';
 import { DateParser } from '../utils/date-parser.js';
+import { getCategoryLabel } from '../utils/category-utils.js';
+import { t } from '../i18n/index.js';
 
 /**
  * Handles formatting messages for display
@@ -12,6 +14,17 @@ export class MessageFormatter {
    */
   static MAX_MESSAGE_LENGTH = 4096;
 
+  translate(key, params = {}, language = config.i18n.defaultLanguage) {
+    return t(language, key, params, {
+      fallbackLanguage: config.i18n.fallbackLanguage,
+      withMissingMarker: config.isDev
+    });
+  }
+
+  escapeForRegex(text) {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
   /**
    * Format a ride message with keyboard
    * @param {Object} ride - Ride object
@@ -21,16 +34,17 @@ export class MessageFormatter {
    * @returns {Object} - Object containing message text and keyboard
    */
   formatRideWithKeyboard(ride, participation, options = {}) {
+    const language = options.lang || config.i18n.defaultLanguage;
     let message = this.formatRideMessage(ride, participation, options);
     
     // Truncate if message exceeds Telegram's limit
     if (message.length > MessageFormatter.MAX_MESSAGE_LENGTH) {
-      const truncateMarker = '\n\n... (message truncated due to length)';
+      const truncateMarker = this.translate('formatter.truncateMarker', {}, language);
       const maxLength = MessageFormatter.MAX_MESSAGE_LENGTH - truncateMarker.length;
       message = message.substring(0, maxLength) + truncateMarker;
     }
     
-    const keyboard = this.getRideKeyboard(ride);
+    const keyboard = this.getRideKeyboard(ride, language);
     
     return {
       message,
@@ -44,15 +58,15 @@ export class MessageFormatter {
    * @param {Object} ride - Ride object
    * @returns {InlineKeyboard} - Keyboard markup
    */
-  getRideKeyboard(ride) {
+  getRideKeyboard(ride, language = config.i18n.defaultLanguage) {
     const keyboard = new InlineKeyboard();
     
     // Don't add participation buttons for cancelled rides
     if (!ride.cancelled) {
       // Show all three participation buttons
-      keyboard.text(config.buttons.join, `join:${ride.id}`);
-      keyboard.text(config.buttons.thinking, `thinking:${ride.id}`);
-      keyboard.text(config.buttons.pass, `skip:${ride.id}`);
+      keyboard.text(this.translate('buttons.join', {}, language), `join:${ride.id}`);
+      keyboard.text(this.translate('buttons.thinking', {}, language), `thinking:${ride.id}`);
+      keyboard.text(this.translate('buttons.pass', {}, language), `skip:${ride.id}`);
     }
     
     return keyboard;
@@ -64,7 +78,10 @@ export class MessageFormatter {
    * @param {string} emptyMessage - Message to show when no participants
    * @returns {string} - Formatted participants list
    */
-  formatParticipantsWithLogic(participants, emptyMessage = 'No participants yet') {
+  formatParticipantsWithLogic(
+    participants,
+    emptyMessage = this.translate('formatter.noParticipantsYet')
+  ) {
     return participants.length > 0
       ? this.formatParticipantsList(participants)
       : emptyMessage;
@@ -79,9 +96,10 @@ export class MessageFormatter {
    * @returns {string} - Formatted message
    */
   formatRideMessage(ride, participation, options = {}) {
+    const language = options.lang || config.i18n.defaultLanguage;
     // Use DateParser for consistent timezone handling
     const formattedDateTime = DateParser.formatDateTime(ride.date);
-    const datetime = `${formattedDateTime.date} at ${formattedDateTime.time}`;
+    const datetime = `${formattedDateTime.date} ${this.translate('formatter.atWord', {}, language)} ${formattedDateTime.time}`;
     
     // Extract all participation categories
     const joinedParticipants = participation?.joined || [];
@@ -93,7 +111,10 @@ export class MessageFormatter {
     const thinkingCount = thinkingParticipants.length;
     const notInterestedCount = skippedParticipants.length;
     
-    const participantsList = this.formatParticipantsWithLogic(joinedParticipants, 'No one joined yet');
+    const participantsList = this.formatParticipantsWithLogic(
+      joinedParticipants,
+      this.translate('formatter.noOneJoinedYet', {}, language)
+    );
     
     // Conditional content - show empty content for hidden sections to avoid empty lines
     const thinkingContent = thinkingCount > 0 
@@ -110,22 +131,22 @@ export class MessageFormatter {
     // Group 1: Title is already handled in the template
     
     // Group 2: When and Category
-    let group2 = `📅 When: ${datetime}\n`;
+    let group2 = `📅 ${this.translate('formatter.labels.when', {}, language)}: ${datetime}\n`;
     if (ride.category) {
-      group2 += `🚵 Category: ${escapeHtml(ride.category)}\n`;
+      group2 += `🚵 ${this.translate('formatter.labels.category', {}, language)}: ${escapeHtml(getCategoryLabel(ride.category, language))}\n`;
     }
     rideDetails += group2;
     
     // Group 3: Organizer, Meeting point, Route
     let group3 = '';
     if (ride.organizer) {
-      group3 += `👤 Organizer: ${escapeHtml(ride.organizer)}\n`;
+      group3 += `👤 ${this.translate('formatter.labels.organizer', {}, language)}: ${escapeHtml(ride.organizer)}\n`;
     }
     if (ride.meetingPoint) {
-      group3 += `📍 Meeting point: ${escapeHtml(ride.meetingPoint)}\n`;
+      group3 += `📍 ${this.translate('formatter.labels.meetingPoint', {}, language)}: ${escapeHtml(ride.meetingPoint)}\n`;
     }
     if (ride.routeLink) {
-      group3 += `🗺️ Route: <a href="${ride.routeLink}">Link</a>\n`;
+      group3 += `🗺️ ${this.translate('formatter.labels.route', {}, language)}: <a href="${ride.routeLink}">${this.translate('formatter.routeLinkLabel', {}, language)}</a>\n`;
     }
     if (group3) {
       rideDetails += `\n${group3}`;
@@ -134,13 +155,13 @@ export class MessageFormatter {
     // Group 4: Distance, Duration, Speed
     let group4 = '';
     if (ride.distance) {
-      group4 += `📏 Distance: ${ride.distance} km\n`;
+      group4 += `📏 ${this.translate('formatter.labels.distance', {}, language)}: ${ride.distance} ${this.translate('formatter.units.km', {}, language)}\n`;
     }
     if (ride.duration) {
-      group4 += `⏱ Duration: ${this.formatDuration(ride.duration)}\n`;
+      group4 += `⏱ ${this.translate('formatter.labels.duration', {}, language)}: ${this.formatDuration(ride.duration, language)}\n`;
     }
     if (ride.speedMin || ride.speedMax) {
-      group4 += `⚡ Speed: ${this.formatSpeedRange(ride.speedMin, ride.speedMax)}\n`;
+      group4 += `⚡ ${this.translate('formatter.labels.speed', {}, language)}: ${this.formatSpeedRange(ride.speedMin, ride.speedMax, language)}\n`;
     }
     if (group4) {
       rideDetails += `\n${group4}`;
@@ -148,34 +169,47 @@ export class MessageFormatter {
     
     // Group 5: Additional info
     if (ride.additionalInfo) {
-      rideDetails += `\nℹ️ Additional info: ${escapeHtml(ride.additionalInfo)}\n`;
+      rideDetails += `\nℹ️ ${this.translate('formatter.labels.additionalInfo', {}, language)}: ${escapeHtml(ride.additionalInfo)}\n`;
     }
     
     // Convert Markdown template to HTML
-    let message = config.messageTemplates.ride
+    let message = this.translate('templates.ride', {}, language)
       .replace(/\*([^*]+)\*/g, '<b>$1</b>') // Bold text
       .replace('{title}', escapeHtml(ride.title))
-      .replace('{cancelledBadge}', ride.cancelled ? ` ${config.messageTemplates.cancelled}` : '')
+      .replace('{cancelledBadge}', ride.cancelled ? ` ${this.translate('templates.cancelled', {}, language)}` : '')
       .replace('{rideDetails}', rideDetails)
       .replace('{participantCount}', participantCount)
       .replace('{participants}', participantsList)
       .replace('{thinkingCount}', thinkingCount)
       .replace('{thinking}', thinkingContent)
-      .replace('{notInterestedCount}', notInterestedContent);
+      .replace('{notInterestedCount}', notInterestedContent)
+      .replace('{joinedLabel}', this.translate('formatter.participation.joined', {}, language))
+      .replace('{thinkingLabel}', this.translate('formatter.participation.thinking', {}, language))
+      .replace('{notInterestedLabel}', this.translate('formatter.participation.notInterested', {}, language));
     
     // Add cancellation instructions if the ride is cancelled
-    const cancelledInstructions = ride.cancelled ? '\n\n' + config.messageTemplates.cancelledMessage : '';
+    const cancelledInstructions = ride.cancelled ? `\n\n${this.translate('templates.cancelledMessage', {}, language)}` : '';
     message = message.replace('{cancelledInstructions}', cancelledInstructions);
 
     // Add share line for ride creator in private chat
-    const shareLine = options.isForCreator ? `Share this ride: <code>/shareride #${ride.id}</code>\n\n` : '';
+    const shareLine = options.isForCreator
+      ? `${this.translate('formatter.shareLine', { id: ride.id }, language)}\n\n`
+      : '';
     message = message.replace('{shareLine}', shareLine);
 
     message = message.replace('{id}', ride.id);
     
     // Remove lines that contain only emoji and empty content (e.g., "🤔 Thinking (0): ")
-    message = message.replace(/🤔 Thinking \(0\): \n/g, '');
-    message = message.replace(/🙅 Not interested: \n/g, '');
+    const thinkingLabel = this.translate('formatter.participation.thinking', {}, language);
+    const notInterestedLabel = this.translate('formatter.participation.notInterested', {}, language);
+    message = message.replace(
+      new RegExp(`🤔 ${this.escapeForRegex(thinkingLabel)} \\(0\\): \\n`, 'g'),
+      ''
+    );
+    message = message.replace(
+      new RegExp(`🙅 ${this.escapeForRegex(notInterestedLabel)}: \\n`, 'g'),
+      ''
+    );
     
     return message;
   }
@@ -188,17 +222,18 @@ export class MessageFormatter {
    * @returns {string} - Formatted message
    */
   formatRidesList(rides, page, totalPages) {
+    const language = config.i18n.defaultLanguage;
     if (rides.length === 0) {
-      return 'You have not created any rides yet.';
+      return this.translate('formatter.noCreatedRides', {}, language);
     }
     
-    let message = '🚲 <b>Your Rides</b>\n\n';
+    let message = `🚲 <b>${this.translate('formatter.yourRidesTitle', {}, language)}</b>\n\n`;
     
     for (const ride of rides) {
       // Use DateParser for consistent timezone handling
       const formattedDateTime = DateParser.formatDateTime(ride.date);
-      const datetime = `${formattedDateTime.date} at ${formattedDateTime.time}`;
-      const status = ride.cancelled ? '❌ CANCELLED' : '';
+      const datetime = `${formattedDateTime.date} ${this.translate('formatter.atWord', {}, language)} ${formattedDateTime.time}`;
+      const status = ride.cancelled ? this.translate('templates.cancelled', {}, language) : '';
       
       message += `<b>${escapeHtml(ride.title)}</b> ${status}\n`;
       message += `📅 ${datetime}\n`;
@@ -210,16 +245,20 @@ export class MessageFormatter {
       // Add chat information
       if (ride.messages && ride.messages.length > 0) {
         const chatCount = ride.messages.length;
-        message += `📢 Posted in ${chatCount} ${chatCount === 1 ? 'chat' : 'chats'}\n`;
+        if (chatCount === 1) {
+          message += `📢 ${this.translate('formatter.postedInSingleChat', { count: chatCount }, language)}\n`;
+        } else {
+          message += `📢 ${this.translate('formatter.postedInMultipleChats', { count: chatCount }, language)}\n`;
+        }
       } else {
-        message += `📢 Not posted in any chats\n`;
+        message += `📢 ${this.translate('formatter.notPostedInAnyChats', {}, language)}\n`;
       }
       
       message += `🎫 #Ride #${ride.id}\n\n`;
     }
     
     if (totalPages > 1) {
-      message += `\nPage ${page}/${totalPages}`;
+      message += `\n${this.translate('formatter.pageLabel', { page, totalPages }, language)}`;
     }
     
     return message;
@@ -230,19 +269,19 @@ export class MessageFormatter {
    * @param {number} minutes - Duration in minutes
    * @returns {string} - Formatted duration
    */
-  formatDuration(minutes) {
+  formatDuration(minutes, language = config.i18n.defaultLanguage) {
     if (minutes < 60) {
-      return `${minutes} min`;
+      return `${minutes} ${this.translate('formatter.units.min', {}, language)}`;
     }
     
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
     
     if (remainingMinutes === 0) {
-      return `${hours} h`;
+      return `${hours} ${this.translate('formatter.units.hour', {}, language)}`;
     }
     
-    return `${hours} h ${remainingMinutes} min`;
+    return `${hours} ${this.translate('formatter.units.hour', {}, language)} ${remainingMinutes} ${this.translate('formatter.units.min', {}, language)}`;
   }
 
   /**
@@ -251,17 +290,17 @@ export class MessageFormatter {
    * @param {number|null} max - Maximum speed
    * @returns {string} - Formatted speed range
    */
-  formatSpeedRange(min, max) {
+  formatSpeedRange(min, max, language = config.i18n.defaultLanguage) {
     if (min && max) {
-      return `${min}-${max} km/h`;
+      return `${min}-${max} ${this.translate('formatter.units.kmh', {}, language)}`;
     }
     
     if (min) {
-      return `${min}+ km/h`;
+      return `${min}+ ${this.translate('formatter.units.kmh', {}, language)}`;
     }
     
     if (max) {
-      return `up to ${max} km/h`;
+      return this.translate('formatter.upToSpeed', { max }, language);
     }
     
     return '';
@@ -272,7 +311,7 @@ export class MessageFormatter {
    * @returns {string} - Confirmation message
    */
   formatDeleteConfirmation() {
-    return config.messageTemplates.deleteConfirmation;
+    return this.translate('templates.deleteConfirmation');
   }
 
   /**
@@ -297,7 +336,10 @@ export class MessageFormatter {
         .map(p => this.formatParticipant(p))
         .join(', ');
       
-      return `${displayedList} and ${remainingCount} more`;
+      return this.translate('formatter.andMoreParticipants', {
+        displayedList,
+        count: remainingCount
+      });
     }
   }
 

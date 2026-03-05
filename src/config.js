@@ -1,10 +1,16 @@
 import dotenv from 'dotenv';
-import { messageTemplates, buttons } from './config/messageTemplates.js';
 
 dotenv.config();
 
+const defaultLanguage = process.env.DEFAULT_LANGUAGE || 'en';
+const fallbackLanguage = process.env.FALLBACK_LANGUAGE || 'en';
+
 export const config = {
   isDev: process.env.NODE_ENV === 'development',
+  i18n: {
+    defaultLanguage,
+    fallbackLanguage
+  },
   bot: {
     token: process.env.BOT_TOKEN,
     webhookDomain: process.env.WEBHOOK_DOMAIN,
@@ -53,7 +59,5 @@ export const config = {
       ]
     }
   },
-  maxParticipantsDisplay: parseInt(process.env.MAX_PARTICIPANTS_DISPLAY, 10) || 20,
-  messageTemplates,
-  buttons
+  maxParticipantsDisplay: parseInt(process.env.MAX_PARTICIPANTS_DISPLAY, 10) || 20
 }; 

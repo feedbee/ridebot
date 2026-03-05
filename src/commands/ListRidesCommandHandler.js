@@ -1,6 +1,5 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
 import { InlineKeyboard } from 'grammy';
-import { config } from '../config.js';
 
 /**
  * Handler for the listrides command
@@ -48,11 +47,11 @@ export class ListRidesCommandHandler extends BaseCommandHandler {
     const keyboard = new InlineKeyboard();
     
     if (page > 1) {
-      keyboard.text(config.buttons.previous, `list:${page - 1}`);
+      keyboard.text(ctx.t('buttons.previous'), `list:${page - 1}`);
     }
     
     if (page < totalPages) {
-      keyboard.text(config.buttons.next, `list:${page + 1}`);
+      keyboard.text(ctx.t('buttons.next'), `list:${page + 1}`);
     }
     
     // Check if keyboard has any buttons

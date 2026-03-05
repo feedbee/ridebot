@@ -23,7 +23,7 @@ export class UpdateRideCommandHandler extends BaseCommandHandler {
   async handle(ctx) {
     const { ride, error } = await this.extractRideWithCreatorCheck(
       ctx,
-      'Only the ride creator can update this ride.'
+      this.translate(ctx, 'commands.update.onlyCreator')
     );
     
     if (error) {
@@ -66,11 +66,9 @@ export class UpdateRideCommandHandler extends BaseCommandHandler {
    * @param {Object} params - Command parameters
    */
   async handleWithParams(ctx, ride, params) {
-    const { ride: updatedRide, error } = await this.rideService.updateRideFromParams(
-      ride.id, 
-      params,
-      ctx.from.id
-    );
+    const { ride: updatedRide, error } = ctx.lang
+      ? await this.rideService.updateRideFromParams(ride.id, params, ctx.from.id, { language: ctx.lang })
+      : await this.rideService.updateRideFromParams(ride.id, params, ctx.from.id);
 
     if (error) {
       await ctx.reply(error);
@@ -81,10 +79,10 @@ export class UpdateRideCommandHandler extends BaseCommandHandler {
     const result = await this.updateRideMessage(updatedRide, ctx);
     
     if (result.success) {
-      const reply = this.formatUpdateResultMessage(result, 'updated');
+      const reply = this.formatUpdateResultMessage(ctx, result, this.translate(ctx, 'commands.common.actions.updated'));
       await ctx.reply(reply);
     } else {
-      await ctx.reply(`Ride has been updated, but there was an error updating the ride message. You may need to create a new ride message.`);
+      await ctx.reply(this.translate(ctx, 'commands.update.messageUpdateError'));
       console.error('Error updated ride:', result.error);
     }
   }

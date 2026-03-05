@@ -6,15 +6,6 @@ import { jest } from '@jest/globals';
 import { DeleteRideCommandHandler } from '../../commands/DeleteRideCommandHandler.js';
 import { InlineKeyboard } from 'grammy';
 
-jest.mock('../../config.js', () => ({
-  config: {
-    buttons: {
-      confirmDelete: 'Yes, delete',
-      cancelDelete: 'No, keep it'
-    }
-  }
-}));
-
 describe('DeleteRideCommandHandler', () => {
   let handler;
   let mockRideService;
@@ -41,6 +32,24 @@ describe('DeleteRideCommandHandler', () => {
       api: {
         deleteMessage: jest.fn().mockResolvedValue({})
       },
+      t: jest.fn((key, params = {}) => {
+        const values = {
+          'buttons.confirmDelete': 'Yes, delete',
+          'buttons.cancelDelete': 'No, keep it',
+          'commands.delete.onlyCreator': 'Only the ride creator can delete this ride.',
+          'commands.delete.cancelledMessage': 'Deletion cancelled.',
+          'commands.delete.cancelledCallback': 'Deletion cancelled',
+          'commands.delete.notFoundMessage': 'Ride not found.',
+          'commands.delete.notFoundCallback': 'Ride not found',
+          'commands.delete.successMessage': 'Ride deleted successfully.',
+          'commands.delete.successCallback': 'Ride deleted successfully',
+          'commands.delete.failedMessage': 'Failed to delete ride.',
+          'commands.delete.failedCallback': 'Failed to delete ride'
+        };
+        if (key === 'commands.delete.deletedMessages') return `Deleted ${params.count} message(s).`;
+        if (key === 'commands.delete.removedMessages') return `Removed ${params.count} unavailable message(s).`;
+        return values[key] || key;
+      }),
       from: { id: 123 },
       message: { text: '/deleteride 456' }
     };
@@ -88,6 +97,22 @@ describe('DeleteRideCommandHandler', () => {
         api: {
           deleteMessage: jest.fn().mockResolvedValue({})
         },
+        t: jest.fn((key, params = {}) => {
+          const values = {
+            'commands.delete.onlyCreator': 'Only the ride creator can delete this ride.',
+            'commands.delete.cancelledMessage': 'Deletion cancelled.',
+            'commands.delete.cancelledCallback': 'Deletion cancelled',
+            'commands.delete.notFoundMessage': 'Ride not found.',
+            'commands.delete.notFoundCallback': 'Ride not found',
+            'commands.delete.successMessage': 'Ride deleted successfully.',
+            'commands.delete.successCallback': 'Ride deleted successfully',
+            'commands.delete.failedMessage': 'Failed to delete ride.',
+            'commands.delete.failedCallback': 'Failed to delete ride'
+          };
+          if (key === 'commands.delete.deletedMessages') return `Deleted ${params.count} message(s).`;
+          if (key === 'commands.delete.removedMessages') return `Removed ${params.count} unavailable message(s).`;
+          return values[key] || key;
+        }),
         from: { id: 123 }
       };
     });

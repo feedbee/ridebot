@@ -1,79 +1,95 @@
 /**
- * Utility functions for ride category validation and normalization
+ * Utility functions for ride category validation, normalization and localization
  */
+import { config } from '../config.js';
+import { t } from '../i18n/index.js';
+
+export const CATEGORY_CODES = {
+  MIXED: 'mixed',
+  ROAD: 'road',
+  GRAVEL: 'gravel',
+  MTB: 'mtb',
+  MTB_XC: 'mtb-xc',
+  E_BIKE: 'e-bike',
+  VIRTUAL: 'virtual'
+};
 
 /**
- * List of valid ride categories
+ * List of valid ride category codes.
  */
-export const VALID_CATEGORIES = [
-  'Regular/Mixed Ride',
-  'Road Ride',
-  'Gravel Ride',
-  'Mountain/Enduro/Downhill Ride',
-  'MTB-XC Ride',
-  'E-Bike Ride',
-  'Virtual/Indoor Ride'
-];
+export const VALID_CATEGORIES = Object.freeze(Object.values(CATEGORY_CODES));
 
 /**
- * Default category to use when none is provided
+ * Default category to use when none is provided.
  */
-export const DEFAULT_CATEGORY = 'Regular/Mixed Ride';
+export const DEFAULT_CATEGORY = CATEGORY_CODES.MIXED;
+
+const CATEGORY_I18N_KEY_BY_CODE = Object.freeze({
+  [CATEGORY_CODES.MIXED]: 'categories.regularMixed',
+  [CATEGORY_CODES.ROAD]: 'categories.road',
+  [CATEGORY_CODES.GRAVEL]: 'categories.gravel',
+  [CATEGORY_CODES.MTB]: 'categories.mountainEnduroDownhill',
+  [CATEGORY_CODES.MTB_XC]: 'categories.mtbXc',
+  [CATEGORY_CODES.E_BIKE]: 'categories.eBike',
+  [CATEGORY_CODES.VIRTUAL]: 'categories.virtualIndoor'
+});
+
+function normalizeText(input) {
+  return String(input).trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function isCode(value) {
+  return VALID_CATEGORIES.includes(value);
+}
 
 /**
- * Normalize a category input to a valid category
- * @param {string} input - User input for ride category
- * @returns {string} - Normalized ride category
+ * Normalize category input to a canonical category code.
+ * Accepts only canonical codes.
+ * @param {string} input
+ * @returns {string}
  */
 export function normalizeCategory(input) {
-  // Default category
-  if (!input || input.trim() === '') {
+  if (!input || String(input).trim() === '') {
     return DEFAULT_CATEGORY;
   }
-  
-  // Normalize input: lowercase, remove extra spaces
-  const normalizedInput = input.trim().toLowerCase();
-  
-  // Check for exact match (case insensitive)
-  for (const category of VALID_CATEGORIES) {
-    if (category.toLowerCase() === normalizedInput) {
-      return category;
-    }
+
+  const normalizedInput = normalizeText(input);
+  if (isCode(normalizedInput)) {
+    return normalizedInput;
   }
-  
-  // Check if input is a partial match (without 'ride' word)
-  for (const category of VALID_CATEGORIES) {
-    const parts = category.toLowerCase().split(' ');
-    // Remove 'ride' from the parts if present
-    const categoryWithoutRide = parts.filter(part => part !== 'ride').join(' ');
-    
-    if (categoryWithoutRide === normalizedInput || category.toLowerCase().includes(normalizedInput)) {
-      return category;
-    }
-  }
-  
-  // For inputs that might match any part of the category
-  for (const category of VALID_CATEGORIES) {
-    const parts = category.toLowerCase().split('/');
-    for (const part of parts) {
-      if (part.trim() === normalizedInput) {
-        return category;
-      }
-    }
-  }
-  
-  // If no match found, return the default category
+
   return DEFAULT_CATEGORY;
 }
 
 /**
- * Validate if a category is valid
- * @param {string} category - Category to validate
- * @returns {boolean} - True if valid, false otherwise
+ * Get i18n key for category code. Falls back to default category key.
+ * @param {string} category
+ * @returns {string}
+ */
+export function getCategoryI18nKey(category) {
+  const code = normalizeCategory(category);
+  return CATEGORY_I18N_KEY_BY_CODE[code] || CATEGORY_I18N_KEY_BY_CODE[DEFAULT_CATEGORY];
+}
+
+/**
+ * Render category label for a given language using i18n.
+ * @param {string} category
+ * @param {string} [language]
+ * @returns {string}
+ */
+export function getCategoryLabel(category, language = config.i18n.defaultLanguage) {
+  return t(language, getCategoryI18nKey(category), {}, {
+    fallbackLanguage: config.i18n.fallbackLanguage,
+    withMissingMarker: config.isDev
+  });
+}
+
+/**
+ * Validate if category is a supported canonical code.
+ * @param {string} category
+ * @returns {boolean}
  */
 export function isValidCategory(category) {
-  if (!category) return false;
-  
-  const normalizedCategory = normalizeCategory(category);
-  return VALID_CATEGORIES.includes(normalizedCategory);
+  if (!category || String(category).trim() === '') return false;
+  return isCode(normalizeText(category));
 }

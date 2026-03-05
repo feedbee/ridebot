@@ -20,9 +20,12 @@ export class ShareRideCommandHandler extends BaseCommandHandler {
    */
   async handle(ctx) {
     // Extract the ride ID from the command
-    const { rideId, error } = this.rideMessagesService.extractRideId(ctx.message);
+    const extractOptions = ctx.lang ? { language: ctx.lang } : undefined;
+    const { rideId, error } = extractOptions
+      ? this.rideMessagesService.extractRideId(ctx.message, extractOptions)
+      : this.rideMessagesService.extractRideId(ctx.message);
     if (!rideId) {
-      await ctx.reply(error || 'Please provide a valid ride ID. Usage: /shareride rideID');
+      await ctx.reply(error || this.translate(ctx, 'commands.share.invalidRideIdUsage'));
       return;
     }
 
@@ -30,18 +33,18 @@ export class ShareRideCommandHandler extends BaseCommandHandler {
       // Get the ride by ID
       const ride = await this.rideService.getRide(rideId);
       if (!ride) {
-        await ctx.reply(`Ride #${rideId} not found.`);
+        await ctx.reply(this.translate(ctx, 'commands.common.rideNotFoundByIdWithDot', { id: rideId }));
         return;
       }
 
       // Only allow the ride creator to repost
       if (!this.isRideCreator(ride, ctx.from.id)) {
-        await ctx.reply('Only the ride creator can repost this ride.');
+        await ctx.reply(this.translate(ctx, 'commands.share.onlyCreatorRepost'));
         return;
       }
 
       if (ride.cancelled) {
-        await ctx.reply('Cannot repost a cancelled ride.');
+        await ctx.reply(this.translate(ctx, 'commands.share.cannotRepostCancelled'));
         return;
       }
 
@@ -53,7 +56,9 @@ export class ShareRideCommandHandler extends BaseCommandHandler {
         msg.chatId === currentChatId && 
         (msg.messageThreadId || null) === currentThreadId
       )) {
-        await ctx.reply(`This ride is already posted in this chat${currentThreadId ? ' topic' : ''}.`, {
+        await ctx.reply(this.translate(ctx, 'commands.share.alreadyPostedInChat', {
+          topicSuffix: currentThreadId ? this.translate(ctx, 'commands.share.topicSuffix') : ''
+        }), {
           message_thread_id: currentThreadId
         });
         return;
@@ -63,11 +68,11 @@ export class ShareRideCommandHandler extends BaseCommandHandler {
       const result = await this.shareRideToChat(ride, ctx);
       
       if (!result.success) {
-        await ctx.reply(`Failed to post ride: ${result.error}`);
+        await ctx.reply(this.translate(ctx, 'commands.share.failedToPostWithError', { error: result.error }));
       }
     } catch (error) {
       console.error('Error posting ride:', error);
-      await ctx.reply('An error occurred while posting the ride.');
+      await ctx.reply(this.translate(ctx, 'commands.share.postingError'));
     }
   }
 
@@ -87,13 +92,13 @@ export class ShareRideCommandHandler extends BaseCommandHandler {
       // Handle common errors
       if (error.description) {
         if (error.description.includes('bot was blocked')) {
-          return { success: false, error: 'The bot is not a member of this chat or was blocked.' };
+          return { success: false, error: this.translate(ctx, 'commands.share.botNotMemberOrBlocked') };
         } else if (error.description.includes('not enough rights')) {
-          return { success: false, error: 'The bot does not have permission to send messages in this chat.' };
+          return { success: false, error: this.translate(ctx, 'commands.share.botNoPermission') };
         }
       }
       
-      return { success: false, error: 'Failed to post ride' };
+      return { success: false, error: this.translate(ctx, 'commands.share.failedToPost') };
     }
   }
 }

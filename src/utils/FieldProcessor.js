@@ -11,14 +11,16 @@ export class FieldProcessor {
    * Process ride fields from parameters
    * @param {Object} params - Input parameters
    * @param {boolean} isUpdate - Whether this is an update operation (affects how '-' is handled)
+   * @param {{language?: string}} options - Localization options
    * @returns {Object} - { data, error }
    */
-  static processRideFields(params, isUpdate = false) {
+  static processRideFields(params, isUpdate = false, options = {}) {
+    const language = options.language;
     const result = { data: {}, error: null };
     
     // Process date
     if (params.when) {
-      const dateResult = parseDateTimeInput(params.when);
+      const dateResult = parseDateTimeInput(params.when, { language });
       if (!dateResult.date) {
         return { data: null, error: dateResult.error };
       }
@@ -32,7 +34,7 @@ export class FieldProcessor {
     
     // Process duration
     if (params.duration !== undefined) {
-      const durationResult = this.processDurationField(params.duration, isUpdate);
+      const durationResult = this.processDurationField(params.duration, isUpdate, { language });
       if (durationResult.error) {
         return { data: null, error: durationResult.error };
       }
@@ -78,13 +80,14 @@ export class FieldProcessor {
    * Process duration field
    * @param {string} value - Field value
    * @param {boolean} isUpdate - Whether this is an update operation
+   * @param {{language?: string}} options - Localization options
    * @returns {Object} - { value, error }
    */
-  static processDurationField(value, isUpdate) {
+  static processDurationField(value, isUpdate, options = {}) {
     if (isUpdate && value === '-') {
       return { value: null, error: null };
     }
-    const result = parseDuration(value);
+    const result = parseDuration(value, { language: options.language });
     return { value: result.duration, error: result.error };
   }
   

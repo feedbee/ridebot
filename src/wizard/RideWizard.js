@@ -1,9 +1,10 @@
 import { InlineKeyboard } from 'grammy';
 import { config } from '../config.js';
-import { DEFAULT_CATEGORY, VALID_CATEGORIES } from '../utils/category-utils.js';
+import { DEFAULT_CATEGORY, VALID_CATEGORIES, getCategoryLabel } from '../utils/category-utils.js';
 import { escapeHtml } from '../utils/html-escape.js';
 import { DateParser } from '../utils/date-parser.js';
 import { getFieldConfig, FieldType, buildRideDataFromWizard, buildConfirmationMessage } from './wizardFieldConfig.js';
+import { t } from '../i18n/index.js';
 
 export class RideWizard {
   /**
@@ -18,6 +19,18 @@ export class RideWizard {
     this.messageFormatter = messageFormatter;
     this.rideMessagesService = rideMessagesService;
     this.wizardStates = new Map();
+  }
+
+  translate(ctx, key, params = {}) {
+    if (ctx?.t) {
+      return ctx.t(key, params);
+    }
+
+    const language = ctx?.lang || config.i18n.defaultLanguage;
+    return t(language, key, params, {
+      fallbackLanguage: config.i18n.fallbackLanguage,
+      withMissingMarker: config.isDev
+    });
   }
   
 
@@ -35,13 +48,13 @@ export class RideWizard {
     // Check if there's already an active wizard in this chat
     const stateKey = this.getWizardStateKey(ctx.from.id, ctx.chat.id);
     if (this.wizardStates.has(stateKey)) {
-      await ctx.reply('Please complete or cancel the current ride creation wizard before starting a new one.');
+      await ctx.reply(this.translate(ctx, 'wizard.messages.completeOrCancelCurrent'));
       return;
     }
 
     // Wizards are only allowed in private chats
     if (ctx.chat.type !== 'private') {
-      await ctx.reply('⚠️ Wizard commands are only available in private chats with the bot. Please use the command with parameters instead.');
+      await ctx.reply(this.translate(ctx, 'wizard.messages.privateChatOnlyReply'));
       return;
     }
 
@@ -75,13 +88,13 @@ export class RideWizard {
     const state = this.wizardStates.get(stateKey);
 
     if (!state) {
-      await ctx.answerCallbackQuery('Wizard session expired');
+      await ctx.answerCallbackQuery(this.translate(ctx, 'wizard.messages.sessionExpired'));
       return;
     }
     
     // Wizards are only allowed in private chats
     if (ctx.chat.type !== 'private') {
-      await ctx.answerCallbackQuery('⚠️ Wizard commands are only available in private chats with the bot');
+      await ctx.answerCallbackQuery(this.translate(ctx, 'wizard.messages.privateChatOnlyCallback'));
       this.wizardStates.delete(stateKey);
       return;
     }
@@ -90,17 +103,17 @@ export class RideWizard {
         case 'category':
           if (VALID_CATEGORIES.includes(param)) {
             state.data.category = param;
-            const categoryConfig = getFieldConfig('category');
+            const categoryConfig = getFieldConfig('category', ctx.lang);
             state.step = categoryConfig.nextStep;
             await this.sendWizardStep(ctx, true);
           } else {
-            await ctx.answerCallbackQuery('Invalid category selected');
+            await ctx.answerCallbackQuery(this.translate(ctx, 'wizard.messages.invalidCategory'));
           }
           break;
 
         case 'back':
           // Navigate to previous step using field configuration
-          const currentFieldConfig = getFieldConfig(state.step);
+          const currentFieldConfig = getFieldConfig(state.step, ctx.lang);
           if (currentFieldConfig && currentFieldConfig.previousStep) {
             state.step = currentFieldConfig.previousStep;
             await this.sendWizardStep(ctx, true);
@@ -113,7 +126,7 @@ export class RideWizard {
 
         case 'keep':
           // Move to the next step using field configuration
-          const keepFieldConfig = getFieldConfig(state.step);
+          const keepFieldConfig = getFieldConfig(state.step, ctx.lang);
           if (keepFieldConfig && keepFieldConfig.nextStep) {
             state.step = keepFieldConfig.nextStep;
             await this.sendWizardStep(ctx, true);
@@ -122,7 +135,7 @@ export class RideWizard {
 
         case 'skip':
           // Clear the current field value and move to next step using configuration
-          const skipFieldConfig = getFieldConfig(state.step);
+          const skipFieldConfig = getFieldConfig(state.step, ctx.lang);
           if (skipFieldConfig) {
             // Clear the field value(s)
             this.clearFieldValue(state, skipFieldConfig);
@@ -145,7 +158,7 @@ export class RideWizard {
           }
           await ctx.deleteMessage();
           this.wizardStates.delete(stateKey);
-          await ctx.reply('Ride creation cancelled');
+          await ctx.reply(this.translate(ctx, 'wizard.messages.creationCancelled'));
           await ctx.answerCallbackQuery();
           return;
 
@@ -168,7 +181,7 @@ export class RideWizard {
             await this.updateRideMessage(updatedRide, ctx);
             await ctx.deleteMessage();
             this.wizardStates.delete(stateKey);
-            await ctx.answerCallbackQuery('Ride updated successfully!');
+            await ctx.answerCallbackQuery(this.translate(ctx, 'wizard.messages.updatedSuccessfully'));
           } else {
             // Create new ride
             const ride = await this.storage.createRide(rideData);
@@ -180,7 +193,11 @@ export class RideWizard {
             await this.rideMessagesService.createRideMessage(ride, ctx, state.data.messageThreadId);
 
             this.wizardStates.delete(stateKey);
-            await ctx.answerCallbackQuery(state.data.originalRideId ? 'Ride duplicated successfully!' : 'Ride created successfully!');
+            await ctx.answerCallbackQuery(
+              state.data.originalRideId
+                ? this.translate(ctx, 'wizard.messages.duplicatedSuccessfully')
+                : this.translate(ctx, 'wizard.messages.createdSuccessfully')
+            );
           }
           return;
       }
@@ -188,7 +205,7 @@ export class RideWizard {
       await ctx.answerCallbackQuery();
     } catch (error) {
       console.error('Error in handleWizardAction:', error);
-      await ctx.answerCallbackQuery('Error: ' + error.message);
+      await ctx.answerCallbackQuery(this.translate(ctx, 'wizard.messages.errorWithMessage', { message: error.message }));
     }
   }
 
@@ -202,7 +219,7 @@ export class RideWizard {
     
     // Wizards are only allowed in private chats
     if (ctx.chat.type !== 'private') {
-      await ctx.reply('⚠️ Wizard commands are only available in private chats with the bot. Please use the command with parameters instead.');
+      await ctx.reply(this.translate(ctx, 'wizard.messages.privateChatOnlyReply'));
       this.wizardStates.delete(stateKey);
       return;
     }
@@ -212,7 +229,7 @@ export class RideWizard {
       state.errorMessageIds.push(ctx.message.message_id); // Always delete user's input
 
       // Get field configuration for current step
-      const fieldConfig = getFieldConfig(state.step);
+      const fieldConfig = getFieldConfig(state.step, ctx.lang);
       
       if (!fieldConfig) {
         console.error(`No field configuration found for step: ${state.step}`);
@@ -308,20 +325,20 @@ export class RideWizard {
     let keyboard = new InlineKeyboard();
 
     // Get field configuration
-    const fieldConfig = getFieldConfig(state.step);
+    const fieldConfig = getFieldConfig(state.step, ctx.lang);
     
     if (fieldConfig) {
       // Build message with current value
       message = fieldConfig.prompt;
       
       // Add current value if exists
-      const currentValue = this.getCurrentValueDisplay(state, fieldConfig);
+      const currentValue = this.getCurrentValueDisplay(state, fieldConfig, ctx);
       if (currentValue) {
-        message += `\n\nCurrent value: ${currentValue}`;
+        message += `\n\n${this.translate(ctx, 'wizard.messages.currentValue')}: ${currentValue}`;
       }
       
       // Build keyboard based on field type
-      keyboard = this.buildFieldKeyboard(state, fieldConfig);
+      keyboard = this.buildFieldKeyboard(state, fieldConfig, ctx);
     } else if (state.step === 'confirm') {
       // Handle confirm step separately (special case)
       return this.sendConfirmStep(ctx, state, edit);
@@ -340,7 +357,7 @@ export class RideWizard {
    * @param {Object} fieldConfig - Field configuration
    * @returns {string} Formatted current value or empty string
    */
-  getCurrentValueDisplay(state, fieldConfig) {
+  getCurrentValueDisplay(state, fieldConfig, ctx = null) {
     // Use custom hasValue function if provided (e.g., for speed)
     const hasValue = fieldConfig.hasValue 
       ? fieldConfig.hasValue(state)
@@ -353,10 +370,18 @@ export class RideWizard {
       const formatted = fieldConfig.formatter(state.data[fieldConfig.dataKey], state);
       return escapeHtml(formatted.toString());
     }
+
+    if (fieldConfig.type === FieldType.CATEGORY) {
+      return escapeHtml(getCategoryLabel(state.data[fieldConfig.dataKey], this.getContextLanguage(ctx)));
+    }
     
     // Default formatting
     const value = state.data[fieldConfig.dataKey];
     return escapeHtml(value.toString());
+  }
+
+  getContextLanguage(ctx = null) {
+    return ctx?.lang || config.i18n.defaultLanguage;
   }
 
   /**
@@ -382,7 +407,7 @@ export class RideWizard {
    * @param {Object} fieldConfig - Field configuration
    * @returns {InlineKeyboard} Keyboard for the field
    */
-  buildFieldKeyboard(state, fieldConfig) {
+  buildFieldKeyboard(state, fieldConfig, ctx = null) {
     const keyboard = new InlineKeyboard();
     
     // Add field-specific buttons (e.g., category options)
@@ -393,36 +418,36 @@ export class RideWizard {
         if (index % 2 === 1) keyboard.row();
       });
       // Add back button on a new row
-      keyboard.text(config.buttons.back, 'wizard:back');
+      keyboard.text(this.translate(ctx, 'buttons.back'), 'wizard:back');
       
       // Add keep button if field has current value
       if (this.hasFieldValue(state, fieldConfig)) {
-        keyboard.text(config.buttons.keep, 'wizard:keep');
+        keyboard.text(this.translate(ctx, 'buttons.keep'), 'wizard:keep');
       }
       
       // Add skip button if field is skippable
       if (fieldConfig.skippable) {
-        keyboard.text(config.buttons.skip, 'wizard:skip');
+        keyboard.text(this.translate(ctx, 'buttons.skip'), 'wizard:skip');
       }
     } else {
       // Standard back button for text input fields
       if (state.step !== 'title') { // No back button on first step
-        keyboard.text(config.buttons.back, 'wizard:back');
+        keyboard.text(this.translate(ctx, 'buttons.back'), 'wizard:back');
       }
       
       // Add keep button if field has current value
       if (this.hasFieldValue(state, fieldConfig)) {
-        keyboard.text(config.buttons.keep, 'wizard:keep');
+        keyboard.text(this.translate(ctx, 'buttons.keep'), 'wizard:keep');
       }
       
       // Add skip button if field is skippable
       if (fieldConfig.skippable) {
-        keyboard.text(config.buttons.skip, 'wizard:skip');
+        keyboard.text(this.translate(ctx, 'buttons.skip'), 'wizard:skip');
       }
     }
     
     // Add cancel button (always present)
-    keyboard.row().text(config.buttons.cancel, 'wizard:cancel');
+    keyboard.row().text(this.translate(ctx, 'buttons.cancel'), 'wizard:cancel');
     
     return keyboard;
   }
@@ -452,14 +477,14 @@ export class RideWizard {
     }
     
     // Build confirmation message using configuration
-    const message = buildConfirmationMessage(state.data, state.isUpdate, escapeHtml, DateParser);
+    const message = buildConfirmationMessage(state.data, state.isUpdate, escapeHtml, DateParser, ctx.lang);
     
     // Build keyboard
     const keyboard = new InlineKeyboard()
-      .text(config.buttons.back, 'wizard:back')
-      .text(state.isUpdate ? config.buttons.update : config.buttons.create, 'wizard:confirm')
+      .text(this.translate(ctx, 'buttons.back'), 'wizard:back')
+      .text(state.isUpdate ? this.translate(ctx, 'buttons.update') : this.translate(ctx, 'buttons.create'), 'wizard:confirm')
       .row()
-      .text(config.buttons.cancel, 'wizard:cancel');
+      .text(this.translate(ctx, 'buttons.cancel'), 'wizard:cancel');
     
     // Send or edit the message
     await this.sendOrEditMessage(ctx, state, message, keyboard, edit);

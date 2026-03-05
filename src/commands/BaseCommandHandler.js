@@ -2,6 +2,8 @@
  * Base class for command handlers
  */
 import { RideParamsHelper } from '../utils/RideParamsHelper.js';
+import { config } from '../config.js';
+import { t } from '../i18n/index.js';
 
 export class BaseCommandHandler {
   /**
@@ -23,6 +25,17 @@ export class BaseCommandHandler {
     throw new Error('Method not implemented');
   }
 
+  translate(ctx, key, params = {}) {
+    if (ctx?.t) {
+      return ctx.t(key, params);
+    }
+    const language = ctx?.lang || config.i18n.defaultLanguage;
+    return t(language, key, params, {
+      fallbackLanguage: config.i18n.fallbackLanguage,
+      withMissingMarker: config.isDev
+    });
+  }
+
   /**
    * Validate if user is the creator of a ride
    * @param {Object} ride - Ride object
@@ -39,7 +52,10 @@ export class BaseCommandHandler {
    * @returns {Promise<{ride: Object|null, error: string|null}>}
    */
   async extractRide(ctx) {
-    const { rideId, error } = this.rideMessagesService.extractRideId(ctx.message);
+    const extractOptions = ctx.lang ? { language: ctx.lang } : undefined;
+    const { rideId, error } = extractOptions
+      ? this.rideMessagesService.extractRideId(ctx.message, extractOptions)
+      : this.rideMessagesService.extractRideId(ctx.message);
     
     if (error) {
       return { ride: null, error };
@@ -48,13 +64,13 @@ export class BaseCommandHandler {
     try {
       const ride = await this.rideService.getRide(rideId);
       if (!ride) {
-        return { ride: null, error: `Ride #${rideId} not found` };
+        return { ride: null, error: this.translate(ctx, 'commands.common.rideNotFoundById', { id: rideId }) };
       }
 
       return { ride, error: null };
     } catch (error) {
       console.error('Error extracting ride:', error);
-      return { ride: null, error: 'Error accessing ride data' };
+      return { ride: null, error: this.translate(ctx, 'commands.common.errorAccessingRideData') };
     }
   }
   
@@ -87,13 +103,14 @@ export class BaseCommandHandler {
     const { params, unknownParams } = RideParamsHelper.parseRideParams(text);
     
     if (unknownParams.length > 0) {
-      const validParamsList = Object.entries(RideParamsHelper.VALID_PARAMS)
+      const validParams = RideParamsHelper.getValidParams(ctx.lang);
+      const validParamsList = Object.entries(validParams)
         .map(([key, desc]) => `${key}: ${desc}`)
         .join('\n');
       
       await ctx.reply(
-        `Unknown parameter(s): ${unknownParams.join(', ')}\n\n` +
-        'Valid parameters are:\n' +
+        `${this.translate(ctx, 'commands.common.unknownParameters', { params: unknownParams.join(', ') })}\n\n` +
+        `${this.translate(ctx, 'commands.common.validParameters')}\n` +
         validParamsList
       );
       return { params, hasUnknownParams: true };
@@ -107,7 +124,7 @@ export class BaseCommandHandler {
    * @param {string} [creatorOnlyMessage] - Custom message for non-creator users
    * @returns {Promise<{ride: Object|null, error: string|null}>}
    */
-  async extractRideWithCreatorCheck(ctx, creatorOnlyMessage = 'Only the ride creator can perform this action.') {
+  async extractRideWithCreatorCheck(ctx, creatorOnlyMessage = null) {
     const { ride, error } = await this.extractRide(ctx);
     
     if (error) {
@@ -115,7 +132,7 @@ export class BaseCommandHandler {
     }
     
     if (!this.isRideCreator(ride, ctx.from.id)) {
-      return { ride: null, error: creatorOnlyMessage };
+      return { ride: null, error: creatorOnlyMessage || this.translate(ctx, 'commands.common.onlyCreatorAction') };
     }
     
     return { ride, error: null };
@@ -127,15 +144,22 @@ export class BaseCommandHandler {
    * @param {string} successAction - Action performed (e.g., "cancelled", "resumed", "updated")
    * @returns {string} - Formatted message
    */
-  formatUpdateResultMessage(result, successAction) {
+  formatUpdateResultMessage(ctx, result, successAction) {
     let reply = '';
     if (result.updatedCount > 0) {
-      reply = `Ride ${successAction} successfully. Updated ${result.updatedCount} message(s).`;
+      reply = this.translate(ctx, 'commands.common.rideActionUpdatedMessages', {
+        action: successAction,
+        count: result.updatedCount
+      });
     } else {
-      reply = `Ride has been ${successAction}, but no messages were updated. You may want to /shareride the ride in the chats of your choice again, they could have been removed.`;
+      reply = this.translate(ctx, 'commands.common.rideActionNoMessagesUpdated', {
+        action: successAction
+      });
     }
     if (result.removedCount > 0) {
-      reply += ` Removed ${result.removedCount} unavailable message(s).`;
+      reply += ` ${this.translate(ctx, 'commands.common.removedUnavailableMessages', {
+        count: result.removedCount
+      })}`;
     }
     return reply;
   }

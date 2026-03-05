@@ -253,7 +253,7 @@ describe('RideWizard Edge Cases', () => {
       await wizard.handleWizardInput(ctx);
 
       // Enter category (which triggers keep button path)
-      ctx.match = ['wizard:category', 'category', 'Road Ride'];
+      ctx.match = ['wizard:category', 'category', 'road'];
       await wizard.handleWizardAction(ctx);
 
       // Now we're at organizer - enter a value
@@ -443,7 +443,7 @@ describe('RideWizard Edge Cases', () => {
         isUpdate: false,
         data: {
           title: 'Ride',
-          category: 'Road Ride',
+          category: 'road',
           datetime: new Date('2026-01-01T10:00:00Z')
         },
         primaryMessageId: null
@@ -462,7 +462,7 @@ describe('RideWizard Edge Cases', () => {
         isUpdate: false,
         data: {
           title: 'Ride',
-          category: 'Road Ride',
+          category: 'road',
           datetime: new Date('2026-01-01T10:00:00Z')
         },
         primaryMessageId: null

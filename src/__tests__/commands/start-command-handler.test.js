@@ -3,7 +3,7 @@
  */
 import { jest } from '@jest/globals';
 import { StartCommandHandler } from '../../commands/StartCommandHandler.js';
-import { config } from '../../config.js';
+import { en } from '../../i18n/locales/en.js';
 
 describe('StartCommandHandler', () => {
   let startHandler;
@@ -32,6 +32,13 @@ describe('StartCommandHandler', () => {
         message_id: 123,
         chat: { id: 456 }
       }),
+      api: {
+        getMe: jest.fn().mockResolvedValue({ username: 'testbot' })
+      },
+      t: jest.fn((key) => {
+        if (key === 'templates.start') return en.templates.start;
+        return key;
+      }),
       message: {
         from: {
           id: 789,
@@ -59,10 +66,11 @@ describe('StartCommandHandler', () => {
 
       // Verify
       expect(mockCtx.reply).toHaveBeenCalledTimes(1);
-      expect(mockCtx.reply).toHaveBeenCalledWith(
-        config.messageTemplates.start,
-        { parse_mode: 'HTML' }
-      );
+      const [message, options] = mockCtx.reply.mock.calls[0];
+      expect(message).toContain('🚲 Welcome to Ride Announcement Bot!');
+      expect(message).toContain('/shareride@testbot');
+      expect(options).toEqual({ parse_mode: 'HTML' });
+      expect(mockCtx.t).toHaveBeenCalledWith('templates.start');
     });
 
     it('should handle reply failures gracefully', async () => {
@@ -113,4 +121,3 @@ describe('StartCommandHandler', () => {
     });
   });
 });
-

@@ -64,11 +64,9 @@ export class DuplicateRideCommandHandler extends BaseCommandHandler {
    */
   async handleWithParams(ctx, originalRide, params) {
     // Use the RideService duplicateRide method which handles all the logic
-    const { ride, error } = await this.rideService.duplicateRide(
-      originalRide.id,
-      params,
-      ctx.from
-    );
+    const { ride, error } = ctx.lang
+      ? await this.rideService.duplicateRide(originalRide.id, params, ctx.from, { language: ctx.lang })
+      : await this.rideService.duplicateRide(originalRide.id, params, ctx.from);
 
     if (error) {
       await ctx.reply(error);
@@ -78,6 +76,6 @@ export class DuplicateRideCommandHandler extends BaseCommandHandler {
     // Create the ride message using the centralized method
     await this.rideMessagesService.createRideMessage(ride, ctx);
 
-    await ctx.reply('Ride duplicated successfully!');
+    await ctx.reply(this.translate(ctx, 'commands.duplicate.success'));
   }
 }

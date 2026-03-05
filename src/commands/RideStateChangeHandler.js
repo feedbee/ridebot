@@ -18,12 +18,12 @@ export class RideStateChangeHandler extends BaseCommandHandler {
    * @param {import('grammy').Context} ctx - Grammy context
    */
   async handle(ctx) {
-    const config = this.getStateConfig();
+    const stateConfig = this.getStateConfig(ctx);
     
     // Extract ride and validate creator
     const { ride, error } = await this.extractRideWithCreatorCheck(
       ctx,
-      `Only the ride creator can ${config.actionVerb} this ride.`
+      this.translate(ctx, 'commands.stateChange.onlyCreator', { action: stateConfig.actionVerb })
     );
     
     if (error) {
@@ -32,25 +32,25 @@ export class RideStateChangeHandler extends BaseCommandHandler {
     }
 
     // Check current state
-    if (!config.checkState(ride)) {
-      await ctx.reply(config.errorMessage);
+    if (!stateConfig.checkState(ride)) {
+      await ctx.reply(stateConfig.errorMessage);
       return;
     }
 
     // Perform state change
-    const updatedRide = await this.rideService[config.serviceMethod](ride.id, ctx.from.id);
+    const updatedRide = await this.rideService[stateConfig.serviceMethod](ride.id, ctx.from.id);
     
     // Update the ride message
     const result = await this.updateRideMessage(updatedRide, ctx);
     
     if (result.success) {
-      const reply = this.formatUpdateResultMessage(result, config.successAction);
+      const reply = this.formatUpdateResultMessage(ctx, result, stateConfig.successAction);
       await ctx.reply(reply);
     } else {
       await ctx.reply(
-        `Ride has been ${config.successAction}, but there was an error updating the ride message. You may need to create a new ride message.`
+        this.translate(ctx, 'commands.stateChange.messageUpdateError', { action: stateConfig.successAction })
       );
-      console.error(`Error ${config.successAction} ride:`, result.error);
+      console.error(`Error ${stateConfig.successAction} ride:`, result.error);
     }
   }
 }

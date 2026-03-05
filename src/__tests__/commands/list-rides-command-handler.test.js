@@ -5,15 +5,6 @@
 import { jest } from '@jest/globals';
 import { ListRidesCommandHandler } from '../../commands/ListRidesCommandHandler.js';
 
-jest.mock('../../config.js', () => ({
-  config: {
-    buttons: {
-      previous: '« Previous',
-      next: 'Next »'
-    }
-  }
-}));
-
 describe('ListRidesCommandHandler', () => {
   let handler;
   let mockRideService;
@@ -33,6 +24,13 @@ describe('ListRidesCommandHandler', () => {
       reply: jest.fn().mockResolvedValue({}),
       editMessageText: jest.fn().mockResolvedValue({}),
       answerCallbackQuery: jest.fn().mockResolvedValue({}),
+      t: jest.fn((key) => {
+        const values = {
+          'buttons.previous': '« Previous',
+          'buttons.next': 'Next »'
+        };
+        return values[key] || key;
+      }),
       from: { id: 123 },
       message: { text: '/listrides' },
       match: ['list:2', '2']

@@ -6,6 +6,7 @@
 
 import { jest } from '@jest/globals';
 import { MemoryStorage } from '../../storage/memory.js';
+import { config } from '../../config.js';
 
 // Mock Grammy before importing Bot
 const mockBotUse = jest.fn();
@@ -39,10 +40,16 @@ const { Bot } = await import('../../core/Bot.js');
 describe('Bot', () => {
   let bot;
   let storage;
+  let originalDefaultLanguage;
 
   beforeEach(() => {
     storage = new MemoryStorage();
+    originalDefaultLanguage = config.i18n.defaultLanguage;
     jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    config.i18n.defaultLanguage = originalDefaultLanguage;
   });
 
   describe('constructor', () => {
@@ -78,6 +85,19 @@ describe('Bot', () => {
   describe('configureBot', () => {
     beforeEach(() => {
       bot = new Bot(storage);
+    });
+
+    it('should register i18n middleware that sets language and translator', async () => {
+      const i18nMiddleware = mockBotUse.mock.calls[0][0];
+      const next = jest.fn().mockResolvedValue(undefined);
+      const ctx = {};
+
+      await i18nMiddleware(ctx, next);
+
+      expect(ctx.lang).toBe('en');
+      expect(typeof ctx.t).toBe('function');
+      expect(ctx.t('common.greeting', { name: 'Alex' })).toBe('Hello, Alex!');
+      expect(next).toHaveBeenCalledTimes(1);
     });
 
     it('should register callback query handlers', () => {
@@ -144,6 +164,12 @@ describe('Bot', () => {
       const mockCtx = {
         chat: { type: 'group' },
         match: null,
+        t: jest.fn((key) => {
+          if (key === 'templates.shareRideHelp') {
+            return '<b>ℹ️ How to share a ride in this chat:</b>\n\nClick here to start a private chat: @botname';
+          }
+          return key;
+        }),
         reply: jest.fn().mockResolvedValue({}),
         api: {
           getMe: jest.fn().mockResolvedValue({ username: 'testbot' })
@@ -266,6 +292,20 @@ describe('Bot', () => {
         error
       );
       consoleErrorSpy.mockRestore();
+    });
+
+    it('should localize command descriptions using default language', async () => {
+      config.i18n.defaultLanguage = 'ru';
+
+      await bot.setupBotCommands();
+
+      expect(mockApiSetMyCommands).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ command: 'start', description: 'Запустить бота и показать приветствие' }),
+          expect.objectContaining({ command: 'shareride', description: 'Опубликовать поездку в чате' })
+        ]),
+        { scope: { type: 'all_private_chats' } }
+      );
     });
   });
 

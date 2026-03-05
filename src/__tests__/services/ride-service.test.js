@@ -901,7 +901,7 @@ describe('RideService', () => {
         speedMin: 26,
         speedMax: 30,
         organizer: 'Org',
-        category: 'Road Ride',
+        category: 'road',
         additionalInfo: 'Info'
       });
       const result = await rideService.duplicateRide(originalRide.id, {}, { id: 7, username: 'user7' });

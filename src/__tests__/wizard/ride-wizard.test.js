@@ -20,7 +20,7 @@ class MockStorage {
       ...ride, 
       id: id.toString(), 
       participants: [],
-      category: ride.category || 'Regular/Mixed Ride' // Ensure category has a default value
+      category: ride.category || 'mixed' // Ensure category has a default value
     };
     this.rides.set(id.toString(), newRide);
     return newRide;
@@ -215,7 +215,7 @@ describe('RideWizard', () => {
       ctx.message = { text: 'Test Ride', message_id: 2 };
       await wizard.handleWizardInput(ctx);
       
-      ctx.message = { text: 'Road Ride', message_id: 3 };
+      ctx.message = { text: 'road', message_id: 3 };
       await wizard.handleWizardInput(ctx);
       
       // Set organizer
@@ -243,13 +243,13 @@ describe('RideWizard', () => {
       await wizard.handleWizardInput(ctx);
       
       // Select a valid category
-      ctx.match = ['wizard:category:Road Ride', 'category', 'Road Ride'];
+      ctx.match = ['wizard:category:road', 'category', 'road'];
       await wizard.handleWizardAction(ctx);
       
       // Verify category was set and moved to next step
       const stateKey = wizard.getWizardStateKey(ctx.from.id, ctx.chat.id);
       const state = wizard.wizardStates.get(stateKey);
-      expect(state.data.category).toBe('Road Ride');
+      expect(state.data.category).toBe('road');
       expect(state.step).toBe('organizer');
       
       // Verify message was updated
@@ -286,7 +286,7 @@ describe('RideWizard', () => {
       await wizard.handleWizardInput(ctx);
       
       // Select a valid category
-      ctx.match = ['wizard:category:Road Ride', 'category', 'Road Ride'];
+      ctx.match = ['wizard:category:road', 'category', 'road'];
       await wizard.handleWizardAction(ctx);
       
       // Go back to category step
@@ -332,7 +332,7 @@ describe('RideWizard', () => {
       ctx.message = { text: 'Test Ride', message_id: 2 };
       await wizard.handleWizardInput(ctx);
       
-      ctx.message = { text: 'Road Ride', message_id: 3 };
+      ctx.message = { text: 'road', message_id: 3 };
       await wizard.handleWizardInput(ctx);
       
       // Set organizer
@@ -375,7 +375,7 @@ describe('RideWizard', () => {
       ctx.message = { text: 'Test Ride', message_id: 2 };
       await wizard.handleWizardInput(ctx);
       
-      ctx.message = { text: 'Road Ride', message_id: 3 };
+      ctx.message = { text: 'road', message_id: 3 };
       await wizard.handleWizardInput(ctx);
       
       // Set organizer
@@ -428,7 +428,7 @@ describe('RideWizard', () => {
       await wizard.handleWizardInput(ctx);
       
       // Set category
-      ctx.message = { text: 'Road Ride', message_id: 3 };
+      ctx.message = { text: 'road', message_id: 3 };
       await wizard.handleWizardInput(ctx);
       
       // Set organizer
@@ -451,7 +451,7 @@ describe('RideWizard', () => {
       await wizard.handleWizardInput(ctx);
       
       // Set category
-      ctx.message = { text: 'Road Ride', message_id: 3 };
+      ctx.message = { text: 'road', message_id: 3 };
       await wizard.handleWizardInput(ctx);
       
       // Set organizer
@@ -473,7 +473,7 @@ describe('RideWizard', () => {
       ctx.message = { text: 'Test Ride', message_id: 2 };
       await wizard.handleWizardInput(ctx);
       
-      ctx.message = { text: 'Road Ride', message_id: 3 };
+      ctx.message = { text: 'road', message_id: 3 };
       await wizard.handleWizardInput(ctx);
       
       // Set organizer
@@ -499,7 +499,7 @@ describe('RideWizard', () => {
       // Fill all fields
       const inputs = [
         { text: 'Evening Ride', step: 'title' },
-        { text: 'Road Ride', step: 'category' },
+        { text: 'road', step: 'category' },
         { text: 'John Doe', step: 'organizer' },
         { text: 'tomorrow at 6pm', step: 'date' },
         { text: 'https://example.com/route', step: 'route' },
@@ -523,7 +523,7 @@ describe('RideWizard', () => {
       const createdRide = Array.from(storage.rides.values())[0];
       expect(createdRide).toBeDefined();
       expect(createdRide.title).toBe('Evening Ride');
-      expect(createdRide.category).toBe('Road Ride');
+      expect(createdRide.category).toBe('road');
       expect(createdRide.organizer).toBe('John Doe');
       expect(createdRide.meetingPoint).toBe('City Center');
       expect(createdRide.speedMin).toBe(25);
@@ -540,7 +540,7 @@ describe('RideWizard', () => {
       // Fill only required fields
       const inputs = [
         { text: 'Quick Ride', step: 'title' },
-        { text: 'Regular/Mixed Ride', step: 'category' },
+        { text: 'mixed', step: 'category' },
         { text: 'tomorrow at 3pm', step: 'date' }
       ];
       
@@ -574,7 +574,7 @@ describe('RideWizard', () => {
       // Create an existing ride
       const existingRide = await storage.createRide({
         title: 'Original Ride',
-        category: 'Road Ride',
+        category: 'road',
         date: new Date(),
         createdBy: ctx.from.id
       });

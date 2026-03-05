@@ -1,5 +1,6 @@
 import { StorageInterface } from './interface.js';
 import { randomUUID } from 'crypto';
+import { normalizeCategory } from '../utils/category-utils.js';
 
 const BASE62_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 
@@ -47,6 +48,7 @@ export class MemoryStorage extends StorageInterface {
     
     const newRide = {
       ...rideData,
+      category: normalizeCategory(rideData.category),
       id,
       createdAt: new Date(),
       participation: { joined: [], thinking: [], skipped: [] }
@@ -76,6 +78,10 @@ export class MemoryStorage extends StorageInterface {
     if (updatesToApply.updatedBy) {
       updatesToApply.updatedAt = new Date();
     }
+
+    if (updatesToApply.category !== undefined) {
+      updatesToApply.category = normalizeCategory(updatesToApply.category);
+    }
     
     const updatedRide = {
       ...ride,
@@ -92,7 +98,10 @@ export class MemoryStorage extends StorageInterface {
       return null;
     }
     
-    return ride;
+    return {
+      ...ride,
+      category: normalizeCategory(ride.category)
+    };
   }
 
   async getRidesByCreator(userId, skip, limit) {
@@ -102,7 +111,10 @@ export class MemoryStorage extends StorageInterface {
 
     return {
       total: userRides.length,
-      rides: userRides.slice(skip, skip + limit)
+      rides: userRides.slice(skip, skip + limit).map(ride => ({
+        ...ride,
+        category: normalizeCategory(ride.category)
+      }))
     };
   }
 

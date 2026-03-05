@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { StorageInterface } from './interface.js';
 import { config } from '../config.js';
-import { DEFAULT_CATEGORY } from '../utils/category-utils.js';
+import { DEFAULT_CATEGORY, normalizeCategory } from '../utils/category-utils.js';
 import { MigrationRunner } from '../migrations/MigrationRunner.js';
 
 const participantSchema = new mongoose.Schema({
@@ -83,6 +83,7 @@ export class MongoDBStorage extends StorageInterface {
   async createRide(ride) {
     let rideData = { 
       ...ride, 
+      category: normalizeCategory(ride.category),
       participation: { joined: [], thinking: [], skipped: [] }
     };
     
@@ -109,6 +110,10 @@ export class MongoDBStorage extends StorageInterface {
     // Set updatedAt to current time only if updatedBy is set
     if (updatesToApply.updatedBy) {
       updatesToApply.updatedAt = new Date();
+    }
+
+    if (updatesToApply.category !== undefined) {
+      updatesToApply.category = normalizeCategory(updatesToApply.category);
     }
     
     // Apply updates
@@ -212,7 +217,7 @@ export class MongoDBStorage extends StorageInterface {
     const result = {
       id: rideObj._id.toString(),
       title: rideObj.title,
-      category: rideObj.category || DEFAULT_CATEGORY,
+      category: normalizeCategory(rideObj.category || DEFAULT_CATEGORY),
       date: rideObj.date,
       messages: rideObj.messages || [],
       routeLink: rideObj.routeLink,

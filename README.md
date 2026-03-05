@@ -209,7 +209,20 @@ Route information (distance and estimated time) will be automatically parsed whe
 
 ## Ride Categories
 
-The bot supports the following ride categories:
+Ride category is stored in data as a stable code and rendered with localized labels.
+
+Canonical category codes:
+- `mixed` (default)
+- `road`
+- `gravel`
+- `mtb`
+- `mtb-xc`
+- `e-bike`
+- `virtual`
+
+Displayed labels (EN/RU) are localized through i18n dictionaries.
+
+The bot accepts both canonical codes and legacy labels in command input, for example:
 - Regular/Mixed Ride (default)
 - Road Ride
 - Gravel Ride
@@ -251,6 +264,20 @@ The bot supports multiple ways to reference a ride:
 - `WEBHOOK_PATH`: Path for the webhook (e.g., `/webhook`, defaults to `/`)
 - `WEBHOOK_PORT`: Port for the webhook server to listen on (defaults to `8080`)
 - `MAX_PARTICIPANTS_DISPLAY`: Maximum number of participants to show before displaying "and X more" (defaults to `20`)
+- `DEFAULT_LANGUAGE`: Default UI language for bot replies (defaults to `en`)
+- `FALLBACK_LANGUAGE`: Fallback UI language for missing keys (defaults to `en`)
+
+## Adding a New Language
+
+1. Create a new locale file in `src/i18n/locales/` (for example `de.js`).
+2. Export a locale object with the same key structure as `en`.
+3. Register the locale in `src/i18n/index.js` locales map.
+4. Keep category labels in `categories.*` keys (category data is stored as stable codes, not labels).
+5. Run tests:
+   - `./run-tests.sh --mode basic`
+   - `./run-tests.sh --mode mongo` (if Mongo test environment is available)
+
+The test `src/__tests__/i18n/locales-consistency.test.js` enforces key parity between locales.
 
 ## Database Migrations
 
@@ -272,6 +299,7 @@ npm run migrate
 - Schema version tracking in `meta` collection
 - Batch processing (100 rides per batch) for large datasets
 - **Schema validation**: App startup fails if database schema is outdated
+- Includes data migration for legacy category labels -> canonical category codes (`road`, `gravel`, etc.)
 
 ## Webhook Setup
 

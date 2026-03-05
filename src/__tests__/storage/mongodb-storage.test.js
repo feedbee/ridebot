@@ -468,7 +468,7 @@ describe('MongoDBStorage', () => {
       // Get the actual Mongoose document
       const rideDoc = await mongoose.model('Ride').findById(ride.id);
       const result = storage.mapRideToInterface(rideDoc);
-      expect(result.category).toBe('Regular/Mixed Ride'); // DEFAULT_CATEGORY
+      expect(result.category).toBe('mixed'); // DEFAULT_CATEGORY
     });
 
     test('should handle ride with missing messages', async () => {

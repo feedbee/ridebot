@@ -1,8 +1,16 @@
 import { config } from '../config.js';
 import fetch from 'node-fetch';
 import * as cheerio from 'cheerio';
+import { t } from '../i18n/index.js';
 
 export class RouteParser {
+  static translate(language, key, params = {}) {
+    return t(language || config.i18n.defaultLanguage, key, params, {
+      fallbackLanguage: config.i18n.fallbackLanguage,
+      withMissingMarker: config.isDev
+    });
+  }
+
   /**
    * Check if the URL is from a supported provider that we can parse
    * @param {string} url 
@@ -113,11 +121,16 @@ export class RouteParser {
   /**
    * Process route information
    * @param {string} url - Route URL
+   * @param {{language?: string}} options - Localization options
    * @returns {{routeLink: string, distance?: number, duration?: number, error?: string}} - Route information
    */
-  static async processRouteInfo(url) {
+  static async processRouteInfo(url, options = {}) {
+    const language = options.language;
     if (!this.isValidRouteUrl(url)) {
-      return { error: 'Invalid URL format. Please provide a valid URL.', routeLink: url };
+      return {
+        error: this.translate(language, 'utils.routeParser.invalidUrl'),
+        routeLink: url
+      };
     }
 
     if (this.isKnownProvider(url)) {

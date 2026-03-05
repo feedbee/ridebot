@@ -1,5 +1,4 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
-import { config } from '../config.js';
 import { replaceBotUsername } from '../utils/botUtils.js';
 
 /**
@@ -11,7 +10,7 @@ export class StartCommandHandler extends BaseCommandHandler {
    * @param {import('grammy').Context} ctx - Grammy context
    */
   async handle(ctx) {
-    const startMessage = await replaceBotUsername(config.messageTemplates.start, ctx);
+    const startMessage = await replaceBotUsername(ctx.t('templates.start'), ctx);
     await ctx.reply(startMessage, { parse_mode: 'HTML' });
   }
 }

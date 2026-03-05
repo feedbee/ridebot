@@ -316,7 +316,7 @@ describe('wizardFieldConfig', () => {
     it('should build message with all fields', () => {
       const wizardData = {
         title: 'Evening Ride',
-        category: 'Road Ride',
+        category: 'road',
         organizer: 'John Doe',
         datetime: new Date('2025-10-10T18:00:00Z'),
         meetingPoint: 'City Center',
@@ -351,14 +351,14 @@ describe('wizardFieldConfig', () => {
       const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser);
 
       expect(message).toContain('Quick Ride');
-      expect(message).toContain(DEFAULT_CATEGORY);
+      expect(message).toContain('Regular/Mixed Ride');
       expect(message).toBeDefined();
     });
 
     it('should indicate update mode', () => {
       const wizardData = {
         title: 'Updated Ride',
-        category: 'Road Ride',
+        category: 'road',
         datetime: new Date('2025-10-10T18:00:00Z')
       };
 
@@ -428,7 +428,7 @@ describe('wizardFieldConfig', () => {
     it('should build ride data for create and update modes', () => {
       const wizardData = {
         title: 'Ride',
-        category: 'Road Ride',
+        category: 'road',
         datetime: new Date('2025-10-10T18:00:00Z')
       };
 
