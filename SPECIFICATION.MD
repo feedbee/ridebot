@@ -339,8 +339,8 @@ _No major refactoring areas identified at this time. The codebase is well-organi
 - [x] Ride participation: Add an "I am thinking" option to indicate who might join the chat.
 - [x] Ride participation: Add an "Not interested" option to gather responses from those who will not join the ride.
 - [x] Ride participation: Limit the ride message to display only the first N registered participants (configurable via MAX_PARTICIPANTS_DISPLAY), and if there are more, show a label like "and X more".
+- [x] Correct dates recognition in differfent languages
 - [ ] Creating rides with AI
-- [ ] Correct dates recognition in differfent languages
 
 ### Medium Priority
 - [ ] Rides management: Add management buttons below the ride button in private chat with the bot for ride creator
@@ -351,7 +351,7 @@ _No major refactoring areas identified at this time. The codebase is well-organi
 ### Low Priority
 - [ ] Translations: Override the bot's default language based on the user's preference (the bot communicates with the user in their chosen language; it also announces the user's rides, created by them, in the preferred language).
 - [ ] Ride participation: Add a comand to list joined rides for the current user
-- [ ] Quality: Better testing and fixes of setting nummeric ride attributes, like setting interval 22-25 and updating with a single value (29) gives 29-25
+- [x] Quality: Better testing and fixes of setting nummeric ride attributes, like setting interval 22-25 and updating with a single value (29) gives 29-25
 - [ ] Add keyboard shortcut to keep the current value
 - [ ] Update readme for installation via Docker
 - [ ] Resolve multiple mongoDB instances/connections

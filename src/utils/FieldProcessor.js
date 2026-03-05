@@ -102,9 +102,20 @@ export class FieldProcessor {
       return { speedMin: null, speedMax: null };
     }
     const [min, max] = value.split('-').map(s => parseFloat(s.trim()));
+    const hasMin = !isNaN(min);
+    const hasMax = !isNaN(max);
     const result = {};
-    if (!isNaN(min)) result.speedMin = min;
-    if (!isNaN(max)) result.speedMax = max;
+
+    if (hasMin) result.speedMin = min;
+    if (hasMax) result.speedMax = max;
+
+    // Updates merge into the existing ride, so an omitted bound must be
+    // explicitly cleared when switching from a range to a single-bound value.
+    if (isUpdate && (hasMin || hasMax)) {
+      if (!hasMin) result.speedMin = null;
+      if (!hasMax) result.speedMax = null;
+    }
+
     return result;
   }
   

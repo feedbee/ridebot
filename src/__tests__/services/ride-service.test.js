@@ -687,6 +687,48 @@ describe('RideService', () => {
       expect(result.ride.speedMin).toBeNull();
       expect(result.ride.speedMax).toBeNull();
     });
+
+    it('should clear stale speed max when updating a range with a single value', async () => {
+      const ride = await rideService.createRide({
+        ...testRide,
+        speedMin: 22,
+        speedMax: 25
+      });
+
+      const result = await rideService.updateRideFromParams(ride.id, { speed: '29' }, 123456, 789);
+
+      expect(result.error).toBeNull();
+      expect(result.ride.speedMin).toBe(29);
+      expect(result.ride.speedMax).toBeNull();
+    });
+
+    it('should clear stale speed min when updating a range with a max-only value', async () => {
+      const ride = await rideService.createRide({
+        ...testRide,
+        speedMin: 22,
+        speedMax: 25
+      });
+
+      const result = await rideService.updateRideFromParams(ride.id, { speed: '-29' }, 123456, 789);
+
+      expect(result.error).toBeNull();
+      expect(result.ride.speedMin).toBeNull();
+      expect(result.ride.speedMax).toBe(29);
+    });
+
+    it('should replace an existing single speed value with a full range', async () => {
+      const ride = await rideService.createRide({
+        ...testRide,
+        speedMin: 22,
+        speedMax: null
+      });
+
+      const result = await rideService.updateRideFromParams(ride.id, { speed: '24-27' }, 123456, 789);
+
+      expect(result.error).toBeNull();
+      expect(result.ride.speedMin).toBe(24);
+      expect(result.ride.speedMax).toBe(27);
+    });
   });
 
   describe('Ride Updates from Parameters', () => {
