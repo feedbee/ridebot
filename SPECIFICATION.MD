@@ -340,6 +340,7 @@ _No major refactoring areas identified at this time. The codebase is well-organi
 - [x] Ride participation: Add an "Not interested" option to gather responses from those who will not join the ride.
 - [x] Ride participation: Limit the ride message to display only the first N registered participants (configurable via MAX_PARTICIPANTS_DISPLAY), and if there are more, show a label like "and X more".
 - [ ] Creating rides with AI
+- [ ] Correct dates recognition in differfent languages
 
 ### Medium Priority
 - [ ] Rides management: Add management buttons below the ride button in private chat with the bot for ride creator
@@ -354,7 +355,6 @@ _No major refactoring areas identified at this time. The codebase is well-organi
 - [ ] Add keyboard shortcut to keep the current value
 - [ ] Update readme for installation via Docker
 - [ ] Resolve multiple mongoDB instances/connections
-- [ ] Check indexes on participants
 
 ---
 

@@ -45,9 +45,8 @@ const rideSchema = new mongoose.Schema({
   participation: { type: participationSchema, default: () => ({ joined: [], thinking: [], skipped: [] }) }
 });
 
-// Create indexes
-rideSchema.index({ 'messages.chatId': 1, 'messages.messageId': 1, 'messages.messageThreadId': 1 }, { sparse: true });
-rideSchema.index({ createdBy: 1, date: -1 }); // For efficient querying of rides by creator
+// Supports getRidesByCreator() query pattern: filter by createdBy + sort by date desc.
+rideSchema.index({ createdBy: 1, date: -1 });
 
 const Ride = mongoose.model('Ride', rideSchema);
 
@@ -61,6 +60,8 @@ export class MongoDBStorage extends StorageInterface {
     try {
       await mongoose.connect(config.mongodb.uri);
       console.log('Connected to MongoDB');
+      await Ride.createIndexes();
+      console.log('Ride indexes ensured');
       
       // Skip schema validation in test environment
       if (process.env.NODE_ENV !== 'test') {
