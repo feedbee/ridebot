@@ -353,7 +353,7 @@ _No major refactoring areas identified at this time. The codebase is well-organi
 - [ ] Ride participation: Add a comand to list joined rides for the current user
 - [x] Quality: Better testing and fixes of setting nummeric ride attributes, like setting interval 22-25 and updating with a single value (29) gives 29-25
 - [ ] Add keyboard shortcut to keep the current value
-- [ ] Update readme for installation via Docker
+- [x] Update readme for installation via Docker
 - [ ] Resolve multiple mongoDB instances/connections
 
 ---

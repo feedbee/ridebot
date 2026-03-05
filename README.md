@@ -74,12 +74,27 @@ Test shortcut:
 
 ## Production Deployment
 
+You can deploy the bot using Docker, either via Docker Compose or standalone.
+
+### Using Docker Compose (Recommended)
+
 1. Update `.env` with production values:
-   - Set `WEBHOOK_DOMAIN` to your domain
-   - Set `MONGODB_URI` if using external MongoDB
-2. Build and run with Docker Compose:
+   - Set `BOT_TOKEN`, and `WEBHOOK_DOMAIN` to your domain.
+   - Set `MONGODB_URI` if using external MongoDB.
+2. Build and start the services:
    ```bash
    docker-compose up -d
+   ```
+
+### Using Standalone Docker
+
+1. Build the image:
+   ```bash
+   docker build -t feedbee/ridebot .
+   ```
+2. Run the container (make sure your `.env` file is ready):
+   ```bash
+   docker run -d --name ridebot --env-file .env feedbee/ridebot
    ```
 
 ## Usage
