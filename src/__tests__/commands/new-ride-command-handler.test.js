@@ -5,6 +5,7 @@
 import { jest } from '@jest/globals';
 import { NewRideCommandHandler } from '../../commands/NewRideCommandHandler.js';
 import { RideParamsHelper } from '../../utils/RideParamsHelper.js';
+import { t } from '../../i18n/index.js';
 
 jest.mock('../../utils/RideParamsHelper.js');
 
@@ -15,13 +16,14 @@ RideParamsHelper.VALID_PARAMS = {
   meet: 'Meeting point'
 };
 
-describe('NewRideCommandHandler', () => {
+describe.each(['en', 'ru'])('NewRideCommandHandler (%s)', (language) => {
   let handler;
   let mockRideService;
   let mockMessageFormatter;
   let mockRideMessagesService;
   let mockWizard;
   let mockCtx;
+  const tr = (key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -42,6 +44,7 @@ describe('NewRideCommandHandler', () => {
 
     mockCtx = {
       message: { text: '/newride' },
+      lang: language,
       chat: { id: 789 },
       from: {
         id: 101112,
@@ -90,7 +93,8 @@ describe('NewRideCommandHandler', () => {
       expect(mockRideService.createRideFromParams).toHaveBeenCalledWith(
         { title: 'Test Ride', when: 'tomorrow 11:00' },
         789,
-        expect.objectContaining({ id: 101112 })
+        expect.objectContaining({ id: 101112 }),
+        { language }
       );
       expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(createdRide, mockCtx);
       expect(mockWizard.startWizard).not.toHaveBeenCalled();
@@ -114,11 +118,14 @@ describe('NewRideCommandHandler', () => {
   describe('handleWithParams', () => {
     it('replies with error and does not post message when service returns error', async () => {
       const params = { title: 'Test Ride', when: 'invalid date' };
-      mockRideService.createRideFromParams.mockResolvedValue({ ride: null, error: 'Invalid date format' });
+      mockRideService.createRideFromParams.mockResolvedValue({
+        ride: null,
+        error: tr('parsers.date.invalidFormat')
+      });
 
       await handler.handleWithParams(mockCtx, params);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith('Invalid date format');
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('parsers.date.invalidFormat'));
       expect(mockRideMessagesService.createRideMessage).not.toHaveBeenCalled();
     });
 

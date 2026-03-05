@@ -6,6 +6,7 @@
 
 import { RideWizard } from '../../wizard/RideWizard.js';
 import { jest } from '@jest/globals';
+import { t } from '../../i18n/index.js';
 
 // Mock storage
 class MockStorage {
@@ -31,7 +32,7 @@ class MockStorage {
 }
 
 // Mock context factory
-const createMockContext = (userId = 123, chatId = 456, chatType = 'private') => {
+const createMockContext = (userId = 123, chatId = 456, chatType = 'private', language = 'en') => {
   const messages = [];
   const deletedMessages = [];
   const editedMessages = [];
@@ -39,6 +40,7 @@ const createMockContext = (userId = 123, chatId = 456, chatType = 'private') => 
   const ctx = {
     from: { id: userId, first_name: 'Test', last_name: 'User', username: 'testuser' },
     chat: { id: chatId, type: chatType },
+    lang: language,
     message: null,
     match: null,
     reply: jest.fn().mockImplementation((text, options) => {
@@ -65,12 +67,13 @@ const createMockContext = (userId = 123, chatId = 456, chatType = 'private') => 
   return ctx;
 };
 
-describe('RideWizard Edge Cases', () => {
+describe.each(['en', 'ru'])('RideWizard Edge Cases (%s)', (language) => {
   let wizard;
   let storage;
   let mockRideService;
   let mockMessageFormatter;
   let mockRideMessagesService;
+  const tr = (key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
 
   beforeEach(() => {
     storage = new MockStorage();
@@ -89,16 +92,16 @@ describe('RideWizard Edge Cases', () => {
 
   describe('wizard session expired', () => {
     it('should handle wizard action when session expired', async () => {
-      const ctx = createMockContext();
+      const ctx = createMockContext(123, 456, 'private', language);
       ctx.match = ['wizard:skip', 'skip'];
 
       await wizard.handleWizardAction(ctx);
 
-      expect(ctx.answerCallbackQuery).toHaveBeenCalledWith('Wizard session expired');
+      expect(ctx.answerCallbackQuery).toHaveBeenCalledWith(tr('wizard.messages.sessionExpired'));
     });
 
     it('should handle wizard input when session expired', async () => {
-      const ctx = createMockContext();
+      const ctx = createMockContext(123, 456, 'private', language);
       ctx.message = { text: 'some input', message_id: 1 };
 
       await wizard.handleWizardInput(ctx);
@@ -110,49 +113,49 @@ describe('RideWizard Edge Cases', () => {
 
   describe('group chat restrictions', () => {
     it('should reject wizard start in group chat', async () => {
-      const ctx = createMockContext(123, 456, 'group');
+      const ctx = createMockContext(123, 456, 'group', language);
 
       await wizard.startWizard(ctx);
 
       expect(ctx.reply).toHaveBeenCalledWith(
-        expect.stringContaining('only available in private chats')
+        expect.stringContaining(tr('wizard.messages.privateChatOnlyReply'))
       );
     });
 
     it('should reject wizard action in group chat', async () => {
-      const ctx = createMockContext(123, 456, 'private');
+      const ctx = createMockContext(123, 456, 'private', language);
       await wizard.startWizard(ctx);
 
       // Change to group chat
-      const groupCtx = createMockContext(123, 456, 'group');
+      const groupCtx = createMockContext(123, 456, 'group', language);
       groupCtx.match = ['wizard:skip', 'skip'];
 
       await wizard.handleWizardAction(groupCtx);
 
       expect(groupCtx.answerCallbackQuery).toHaveBeenCalledWith(
-        expect.stringContaining('only available in private chats')
+        expect.stringContaining(tr('wizard.messages.privateChatOnlyCallback'))
       );
     });
 
     it('should reject wizard input in group chat', async () => {
-      const ctx = createMockContext(123, 456, 'private');
+      const ctx = createMockContext(123, 456, 'private', language);
       await wizard.startWizard(ctx);
 
       // Change to group chat
-      const groupCtx = createMockContext(123, 456, 'group');
+      const groupCtx = createMockContext(123, 456, 'group', language);
       groupCtx.message = { text: 'test', message_id: 1 };
 
       await wizard.handleWizardInput(groupCtx);
 
       expect(groupCtx.reply).toHaveBeenCalledWith(
-        expect.stringContaining('only available in private chats')
+        expect.stringContaining(tr('wizard.messages.privateChatOnlyReply'))
       );
     });
   });
 
   describe('clearable fields with dash', () => {
     it('should clear field when dash is entered', async () => {
-      const ctx = createMockContext();
+      const ctx = createMockContext(123, 456, 'private', language);
       await wizard.startWizard(ctx);
 
       // Navigate to a clearable field (distance)
@@ -189,7 +192,7 @@ describe('RideWizard Edge Cases', () => {
 
   describe('invalid category selection', () => {
     it('should reject invalid category', async () => {
-      const ctx = createMockContext();
+      const ctx = createMockContext(123, 456, 'private', language);
       await wizard.startWizard(ctx);
 
       // Enter title
@@ -200,13 +203,13 @@ describe('RideWizard Edge Cases', () => {
       ctx.match = ['wizard:category', 'category', 'InvalidCategory'];
       await wizard.handleWizardAction(ctx);
 
-      expect(ctx.answerCallbackQuery).toHaveBeenCalledWith('Invalid category selected');
+      expect(ctx.answerCallbackQuery).toHaveBeenCalledWith(tr('wizard.messages.invalidCategory'));
     });
   });
 
   describe('back navigation edge cases', () => {
     it('should navigate back through wizard steps', async () => {
-      const ctx = createMockContext();
+      const ctx = createMockContext(123, 456, 'private', language);
       await wizard.startWizard(ctx);
 
       // Enter title
@@ -229,7 +232,7 @@ describe('RideWizard Edge Cases', () => {
 
   describe('command input during wizard', () => {
     it('should ignore command input during wizard', async () => {
-      const ctx = createMockContext();
+      const ctx = createMockContext(123, 456, 'private', language);
       await wizard.startWizard(ctx);
 
       // Try to enter a command
@@ -245,7 +248,7 @@ describe('RideWizard Edge Cases', () => {
 
   describe('keep button functionality', () => {
     it('should keep existing value when keep is clicked', async () => {
-      const ctx = createMockContext();
+      const ctx = createMockContext(123, 456, 'private', language);
       await wizard.startWizard(ctx);
 
       // Enter title
@@ -277,7 +280,7 @@ describe('RideWizard Edge Cases', () => {
 
   describe('error handling during wizard', () => {
     it('should handle error in handleWizardAction', async () => {
-      const ctx = createMockContext();
+      const ctx = createMockContext(123, 456, 'private', language);
       ctx.deleteMessage = jest.fn().mockResolvedValue();
       await wizard.startWizard(ctx);
 
@@ -303,15 +306,18 @@ describe('RideWizard Edge Cases', () => {
         'Error in handleWizardAction:',
         expect.any(Error)
       );
-      expect(ctx.answerCallbackQuery).toHaveBeenCalledWith(
-        expect.stringContaining('Error:')
-      );
+      const expectedErrorPrefix = tr('wizard.messages.errorWithMessage', { message: '' });
+      expect(
+        ctx.answerCallbackQuery.mock.calls.some(
+          ([value]) => typeof value === 'string' && value.startsWith(expectedErrorPrefix)
+        )
+      ).toBe(true);
 
       consoleErrorSpy.mockRestore();
     });
 
     it('should handle message deletion errors during cancel', async () => {
-      const ctx = createMockContext();
+      const ctx = createMockContext(123, 456, 'private', language);
       ctx.api.deleteMessage.mockRejectedValue(new Error('Cannot delete message'));
       
       await wizard.startWizard(ctx);
@@ -327,7 +333,7 @@ describe('RideWizard Edge Cases', () => {
       await wizard.handleWizardAction(ctx);
 
       expect(consoleErrorSpy).toHaveBeenCalled();
-      expect(ctx.reply).toHaveBeenCalledWith('Ride creation cancelled');
+      expect(ctx.reply).toHaveBeenCalledWith(tr('wizard.messages.creationCancelled'));
 
       consoleErrorSpy.mockRestore();
     });
@@ -335,7 +341,7 @@ describe('RideWizard Edge Cases', () => {
 
   describe('duplicate ride creation', () => {
     it('should show duplicate success message', async () => {
-      const ctx = createMockContext();
+      const ctx = createMockContext(123, 456, 'private', language);
       
       // Start wizard with originalRideId (duplicate mode)
       await wizard.startWizard(ctx, {
@@ -358,13 +364,13 @@ describe('RideWizard Edge Cases', () => {
       ctx.match = ['wizard:confirm', 'confirm'];
       await wizard.handleWizardAction(ctx);
 
-      expect(ctx.answerCallbackQuery).toHaveBeenCalledWith('Ride duplicated successfully!');
+      expect(ctx.answerCallbackQuery).toHaveBeenCalledWith(tr('wizard.messages.duplicatedSuccessfully'));
     });
   });
 
   describe('update ride with message removal', () => {
     it('should log removed message count', async () => {
-      const ctx = createMockContext();
+      const ctx = createMockContext(123, 456, 'private', language);
       const existingRide = await storage.createRide({
         title: 'Test Ride',
         date: new Date(),
@@ -408,21 +414,21 @@ describe('RideWizard Edge Cases', () => {
 
   describe('already active wizard', () => {
     it('should reject starting new wizard when one is active', async () => {
-      const ctx = createMockContext();
+      const ctx = createMockContext(123, 456, 'private', language);
       await wizard.startWizard(ctx);
 
       // Try to start another
       await wizard.startWizard(ctx);
 
       expect(ctx.reply).toHaveBeenCalledWith(
-        expect.stringContaining('complete or cancel the current')
+        expect.stringContaining(tr('wizard.messages.completeOrCancelCurrent'))
       );
     });
   });
 
   describe('additional branch coverage', () => {
     it('should navigate back from confirm to info step', async () => {
-      const ctx = createMockContext();
+      const ctx = createMockContext(123, 456, 'private', language);
       await wizard.startWizard(ctx);
       const stateKey = wizard.getWizardStateKey(ctx.from.id, ctx.chat.id);
       const state = wizard.wizardStates.get(stateKey);
@@ -436,7 +442,7 @@ describe('RideWizard Edge Cases', () => {
     });
 
     it('should auto-fill organizer from username in confirm step when names are missing', async () => {
-      const ctx = createMockContext();
+      const ctx = createMockContext(123, 456, 'private', language);
       ctx.from = { id: 123, first_name: '', last_name: '', username: 'solo_user' };
       const state = {
         step: 'confirm',
@@ -455,7 +461,7 @@ describe('RideWizard Edge Cases', () => {
     });
 
     it('should auto-fill organizer from full name and username in confirm step', async () => {
-      const ctx = createMockContext();
+      const ctx = createMockContext(123, 456, 'private', language);
       ctx.from = { id: 123, first_name: 'John', last_name: 'Doe', username: 'johnny' };
       const state = {
         step: 'confirm',

@@ -4,13 +4,15 @@
 
 import { jest } from '@jest/globals';
 import { CancelRideCommandHandler } from '../../commands/CancelRideCommandHandler.js';
+import { t } from '../../i18n/index.js';
 
-describe('CancelRideCommandHandler', () => {
+describe.each(['en', 'ru'])('CancelRideCommandHandler (%s)', (language) => {
   let handler;
   let mockRideService;
   let mockMessageFormatter;
   let mockRideMessagesService;
   let mockCtx;
+  const tr = (key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
 
   beforeEach(() => {
     mockRideService = {
@@ -27,6 +29,7 @@ describe('CancelRideCommandHandler', () => {
 
     mockCtx = {
       reply: jest.fn().mockResolvedValue({}),
+      lang: language,
       from: { id: 123 },
       message: { text: '/cancelride 456' }
     };
@@ -36,11 +39,16 @@ describe('CancelRideCommandHandler', () => {
 
   describe('handle', () => {
     it('replies with extraction error', async () => {
-      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: null, error: 'No ride ID found' });
+      mockRideMessagesService.extractRideId.mockReturnValue({
+        rideId: null,
+        error: tr('services.rideMessages.provideRideIdAfterCommand', { commandName: 'cancelride' })
+      });
 
       await handler.handle(mockCtx);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith('No ride ID found');
+      expect(mockCtx.reply).toHaveBeenCalledWith(
+        tr('services.rideMessages.provideRideIdAfterCommand', { commandName: 'cancelride' })
+      );
       expect(mockRideService.cancelRide).not.toHaveBeenCalled();
     });
 
@@ -50,7 +58,9 @@ describe('CancelRideCommandHandler', () => {
 
       await handler.handle(mockCtx);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith('Only the ride creator can cancel this ride.');
+      expect(mockCtx.reply).toHaveBeenCalledWith(
+        tr('commands.stateChange.onlyCreator', { action: tr('commands.common.verbs.cancel') })
+      );
       expect(mockRideService.cancelRide).not.toHaveBeenCalled();
     });
 
@@ -60,7 +70,7 @@ describe('CancelRideCommandHandler', () => {
 
       await handler.handle(mockCtx);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith('This ride is already cancelled.');
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.cancel.alreadyCancelled'));
       expect(mockRideService.cancelRide).not.toHaveBeenCalled();
     });
 
@@ -77,7 +87,12 @@ describe('CancelRideCommandHandler', () => {
       await handler.handle(mockCtx);
 
       expect(mockRideService.cancelRide).toHaveBeenCalledWith('456', 123);
-      expect(mockCtx.reply).toHaveBeenCalledWith('Ride cancelled successfully. Updated 1 message(s).');
+      expect(mockCtx.reply).toHaveBeenCalledWith(
+        tr('commands.common.rideActionUpdatedMessages', {
+          action: tr('commands.common.actions.cancelled'),
+          count: 1
+        })
+      );
     });
 
     it('reports both updated and removed counters for multi-chat propagation', async () => {
@@ -93,8 +108,13 @@ describe('CancelRideCommandHandler', () => {
       await handler.handle(mockCtx);
 
       const replyText = mockCtx.reply.mock.calls[0][0];
-      expect(replyText).toContain('Updated 2 message(s)');
-      expect(replyText).toContain('Removed 1 unavailable message(s)');
+      expect(replyText).toContain(
+        tr('commands.common.rideActionUpdatedMessages', {
+          action: tr('commands.common.actions.cancelled'),
+          count: 2
+        })
+      );
+      expect(replyText).toContain(tr('commands.common.removedUnavailableMessages', { count: 1 }));
     });
   });
 

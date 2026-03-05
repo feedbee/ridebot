@@ -4,8 +4,11 @@
 
 import { jest } from '@jest/globals';
 import { parseDateTimeInput } from '../../utils/date-input-parser.js';
+import { t } from '../../i18n/index.js';
 
 describe('parseDateTimeInput', () => {
+  const tr = (language, key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
+
   beforeEach(() => {
     const now = new Date('2024-03-09T12:00:00Z');
     jest.useFakeTimers().setSystemTime(now);
@@ -39,15 +42,16 @@ describe('parseDateTimeInput', () => {
     expect(result.error).toBeUndefined();
   });
 
-  it('should reject past dates', () => {
-    const result = parseDateTimeInput('yesterday at 2pm');
+  it.each(['en', 'ru'])('should reject past dates (%s)', (language) => {
+    const input = language === 'ru' ? 'вчера в 14:00' : 'yesterday at 2pm';
+    const result = parseDateTimeInput(input, { language });
     expect(result.date).toBeNull();
-    expect(result.error).toContain('can\'t be scheduled in the past');
+    expect(result.error).toContain(tr(language, 'parsers.date.pastDate'));
   });
 
-  it('should handle invalid date formats', () => {
-    const result = parseDateTimeInput('not a valid date');
+  it.each(['en', 'ru'])('should handle invalid date formats (%s)', (language) => {
+    const result = parseDateTimeInput('not a valid date', { language });
     expect(result.date).toBeNull();
-    expect(result.error).toContain('couldn\'t understand that date/time format');
+    expect(result.error).toContain(tr(language, 'parsers.date.invalidFormat'));
   });
 }); 

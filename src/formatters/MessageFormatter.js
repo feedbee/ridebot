@@ -80,10 +80,11 @@ export class MessageFormatter {
    */
   formatParticipantsWithLogic(
     participants,
-    emptyMessage = this.translate('formatter.noParticipantsYet')
+    emptyMessage = this.translate('formatter.noParticipantsYet'),
+    language = config.i18n.defaultLanguage
   ) {
     return participants.length > 0
-      ? this.formatParticipantsList(participants)
+      ? this.formatParticipantsList(participants, language)
       : emptyMessage;
   }
 
@@ -113,12 +114,13 @@ export class MessageFormatter {
     
     const participantsList = this.formatParticipantsWithLogic(
       joinedParticipants,
-      this.translate('formatter.noOneJoinedYet', {}, language)
+      this.translate('formatter.noOneJoinedYet', {}, language),
+      language
     );
     
     // Conditional content - show empty content for hidden sections to avoid empty lines
     const thinkingContent = thinkingCount > 0 
-      ? this.formatParticipantsList(thinkingParticipants)
+      ? this.formatParticipantsList(thinkingParticipants, language)
       : '';
     
     const notInterestedContent = notInterestedCount > 0
@@ -319,7 +321,7 @@ export class MessageFormatter {
    * @param {Array} participants - List of participants
    * @returns {string} - Formatted participants list
    */
-  formatParticipantsList(participants) {
+  formatParticipantsList(participants, language = config.i18n.defaultLanguage) {
     const maxDisplay = config.maxParticipantsDisplay;
     
     if (participants.length <= maxDisplay) {
@@ -339,7 +341,7 @@ export class MessageFormatter {
       return this.translate('formatter.andMoreParticipants', {
         displayedList,
         count: remainingCount
-      });
+      }, language);
     }
   }
 

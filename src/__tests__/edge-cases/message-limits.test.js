@@ -7,15 +7,25 @@
 
 import { jest } from '@jest/globals';
 import { MessageFormatter } from '../../formatters/MessageFormatter.js';
+import { config } from '../../config.js';
+import { t } from '../../i18n/index.js';
 
 describe('Message Limits Edge Cases', () => {
   let messageFormatter;
+  let originalDefaultLanguage;
+  const tr = (language, key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
 
   beforeEach(() => {
     messageFormatter = new MessageFormatter();
+    originalDefaultLanguage = config.i18n.defaultLanguage;
   });
 
-  it('should truncate messages that would exceed Telegram limit of 4096 chars', () => {
+  afterEach(() => {
+    config.i18n.defaultLanguage = originalDefaultLanguage;
+  });
+
+  it.each(['en', 'ru'])('should truncate messages that would exceed Telegram limit of 4096 chars (%s)', (language) => {
+    config.i18n.defaultLanguage = language;
     // Create a ride that will generate a very long message
     const longText = 'A'.repeat(2000);
     const ride = {
@@ -40,7 +50,7 @@ describe('Message Limits Edge Cases', () => {
     // Telegram's limit is 4096 characters for text messages
     // The formatter should truncate and add a marker
     expect(result.message.length).toBeLessThanOrEqual(4096);
-    expect(result.message).toContain('(message truncated due to length)');
+    expect(result.message).toContain(tr(language, 'formatter.truncateMarker').trim());
   });
 
   it('should handle normal-sized messages within Telegram limits', () => {
@@ -69,4 +79,3 @@ describe('Message Limits Edge Cases', () => {
     expect(result.message).toContain('Evening Ride');
   });
 });
-

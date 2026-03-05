@@ -5,13 +5,15 @@
 import { jest } from '@jest/globals';
 import { DeleteRideCommandHandler } from '../../commands/DeleteRideCommandHandler.js';
 import { InlineKeyboard } from 'grammy';
+import { t } from '../../i18n/index.js';
 
-describe('DeleteRideCommandHandler', () => {
+describe.each(['en', 'ru'])('DeleteRideCommandHandler (%s)', (language) => {
   let handler;
   let mockRideService;
   let mockMessageFormatter;
   let mockRideMessagesService;
   let mockCtx;
+  const tr = (key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
 
   beforeEach(() => {
     mockRideService = {
@@ -32,24 +34,8 @@ describe('DeleteRideCommandHandler', () => {
       api: {
         deleteMessage: jest.fn().mockResolvedValue({})
       },
-      t: jest.fn((key, params = {}) => {
-        const values = {
-          'buttons.confirmDelete': 'Yes, delete',
-          'buttons.cancelDelete': 'No, keep it',
-          'commands.delete.onlyCreator': 'Only the ride creator can delete this ride.',
-          'commands.delete.cancelledMessage': 'Deletion cancelled.',
-          'commands.delete.cancelledCallback': 'Deletion cancelled',
-          'commands.delete.notFoundMessage': 'Ride not found.',
-          'commands.delete.notFoundCallback': 'Ride not found',
-          'commands.delete.successMessage': 'Ride deleted successfully.',
-          'commands.delete.successCallback': 'Ride deleted successfully',
-          'commands.delete.failedMessage': 'Failed to delete ride.',
-          'commands.delete.failedCallback': 'Failed to delete ride'
-        };
-        if (key === 'commands.delete.deletedMessages') return `Deleted ${params.count} message(s).`;
-        if (key === 'commands.delete.removedMessages') return `Removed ${params.count} unavailable message(s).`;
-        return values[key] || key;
-      }),
+      lang: language,
+      t: jest.fn((key, params = {}) => tr(key, params)),
       from: { id: 123 },
       message: { text: '/deleteride 456' }
     };
@@ -59,11 +45,16 @@ describe('DeleteRideCommandHandler', () => {
 
   describe('handle', () => {
     it('replies with extraction error', async () => {
-      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: null, error: 'No ride ID found' });
+      mockRideMessagesService.extractRideId.mockReturnValue({
+        rideId: null,
+        error: tr('services.rideMessages.provideRideIdAfterCommand', { commandName: 'deleteride' })
+      });
 
       await handler.handle(mockCtx);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith('No ride ID found');
+      expect(mockCtx.reply).toHaveBeenCalledWith(
+        tr('services.rideMessages.provideRideIdAfterCommand', { commandName: 'deleteride' })
+      );
     });
 
     it('blocks non-creator from delete flow', async () => {
@@ -72,7 +63,7 @@ describe('DeleteRideCommandHandler', () => {
 
       await handler.handle(mockCtx);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith('Only the ride creator can delete this ride.');
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.delete.onlyCreator'));
     });
 
     it('shows confirmation keyboard for creator', async () => {
@@ -97,22 +88,8 @@ describe('DeleteRideCommandHandler', () => {
         api: {
           deleteMessage: jest.fn().mockResolvedValue({})
         },
-        t: jest.fn((key, params = {}) => {
-          const values = {
-            'commands.delete.onlyCreator': 'Only the ride creator can delete this ride.',
-            'commands.delete.cancelledMessage': 'Deletion cancelled.',
-            'commands.delete.cancelledCallback': 'Deletion cancelled',
-            'commands.delete.notFoundMessage': 'Ride not found.',
-            'commands.delete.notFoundCallback': 'Ride not found',
-            'commands.delete.successMessage': 'Ride deleted successfully.',
-            'commands.delete.successCallback': 'Ride deleted successfully',
-            'commands.delete.failedMessage': 'Failed to delete ride.',
-            'commands.delete.failedCallback': 'Failed to delete ride'
-          };
-          if (key === 'commands.delete.deletedMessages') return `Deleted ${params.count} message(s).`;
-          if (key === 'commands.delete.removedMessages') return `Removed ${params.count} unavailable message(s).`;
-          return values[key] || key;
-        }),
+        lang: language,
+        t: jest.fn((key, params = {}) => tr(key, params)),
         from: { id: 123 }
       };
     });
@@ -122,8 +99,8 @@ describe('DeleteRideCommandHandler', () => {
 
       await handler.handleConfirmation(mockCtx);
 
-      expect(mockCtx.editMessageText).toHaveBeenCalledWith('Deletion cancelled.');
-      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('Deletion cancelled');
+      expect(mockCtx.editMessageText).toHaveBeenCalledWith(tr('commands.delete.cancelledMessage'));
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.delete.cancelledCallback'));
       expect(mockRideService.getRide).not.toHaveBeenCalled();
     });
 
@@ -132,8 +109,8 @@ describe('DeleteRideCommandHandler', () => {
 
       await handler.handleConfirmation(mockCtx);
 
-      expect(mockCtx.editMessageText).toHaveBeenCalledWith('Ride not found.');
-      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('Ride not found');
+      expect(mockCtx.editMessageText).toHaveBeenCalledWith(tr('commands.delete.notFoundMessage'));
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.delete.notFoundCallback'));
       expect(mockRideService.deleteRide).not.toHaveBeenCalled();
     });
 
@@ -142,7 +119,7 @@ describe('DeleteRideCommandHandler', () => {
 
       await handler.handleConfirmation(mockCtx);
 
-      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('Only the ride creator can delete this ride.');
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.delete.onlyCreator'));
       expect(mockRideService.deleteRide).not.toHaveBeenCalled();
     });
 
@@ -166,10 +143,10 @@ describe('DeleteRideCommandHandler', () => {
 
       expect(mockCtx.api.deleteMessage).toHaveBeenCalledTimes(3);
       const text = mockCtx.editMessageText.mock.calls[0][0];
-      expect(text).toContain('Ride deleted successfully.');
-      expect(text).toContain('Deleted 2 message(s).');
-      expect(text).toContain('Removed 1 unavailable message(s).');
-      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('Ride deleted successfully');
+      expect(text).toContain(tr('commands.delete.successMessage'));
+      expect(text).toContain(tr('commands.delete.deletedMessages', { count: 2 }));
+      expect(text).toContain(tr('commands.delete.removedMessages', { count: 1 }));
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.delete.successCallback'));
     });
 
     it('reports failed ride deletion', async () => {
@@ -178,8 +155,8 @@ describe('DeleteRideCommandHandler', () => {
 
       await handler.handleConfirmation(mockCtx);
 
-      expect(mockCtx.editMessageText).toHaveBeenCalledWith('Failed to delete ride.');
-      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('Failed to delete ride');
+      expect(mockCtx.editMessageText).toHaveBeenCalledWith(tr('commands.delete.failedMessage'));
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.delete.failedCallback'));
     });
   });
 });

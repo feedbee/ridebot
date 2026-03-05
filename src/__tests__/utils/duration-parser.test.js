@@ -3,6 +3,7 @@
  */
 
 import { parseDuration } from '../../utils/duration-parser.js';
+import { t } from '../../i18n/index.js';
 
 describe('parseDuration', () => {
   it('should parse plain minutes', () => {
@@ -38,9 +39,11 @@ describe('parseDuration', () => {
     expect(parseDuration('2 HOURS 30 MINUTES').duration).toBe(150);
   });
 
-  it('should handle invalid formats', () => {
-    const result = parseDuration('invalid');
+  it.each(['en', 'ru'])('should handle invalid formats (%s)', (language) => {
+    const result = parseDuration('invalid', { language });
     expect(result.duration).toBeNull();
-    expect(result.error).toContain('couldn\'t understand that duration format');
+    expect(result.error).toContain(
+      t(language, 'parsers.duration.invalidFormat', {}, { fallbackLanguage: 'en' }).split('\n')[0]
+    );
   });
-}); 
+});

@@ -4,13 +4,15 @@
 
 import { jest } from '@jest/globals';
 import { ShareRideCommandHandler } from '../../commands/ShareRideCommandHandler.js';
+import { t } from '../../i18n/index.js';
 
-describe('ShareRideCommandHandler', () => {
+describe.each(['en', 'ru'])('ShareRideCommandHandler (%s)', (language) => {
   let handler;
   let mockRideService;
   let mockCtx;
   let mockMessageFormatter;
   let mockRideMessagesService;
+  const tr = (key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
 
   beforeEach(() => {
     mockRideService = {
@@ -29,6 +31,7 @@ describe('ShareRideCommandHandler', () => {
         text: '/shareride 123',
         message_thread_id: null
       },
+      lang: language,
       from: {
         id: 789,
         first_name: 'Test',
@@ -45,11 +48,16 @@ describe('ShareRideCommandHandler', () => {
 
   describe('handle', () => {
     it('replies with parse error when ride id is missing', async () => {
-      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: null, error: 'Error message' });
+      mockRideMessagesService.extractRideId.mockReturnValue({
+        rideId: null,
+        error: tr('services.rideMessages.provideRideIdAfterCommand', { commandName: 'shareride' })
+      });
 
       await handler.handle(mockCtx);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith('Error message');
+      expect(mockCtx.reply).toHaveBeenCalledWith(
+        tr('services.rideMessages.provideRideIdAfterCommand', { commandName: 'shareride' })
+      );
       expect(mockRideService.getRide).not.toHaveBeenCalled();
     });
 
@@ -59,7 +67,7 @@ describe('ShareRideCommandHandler', () => {
 
       await handler.handle(mockCtx);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith('Ride #123 not found.');
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.common.rideNotFoundByIdWithDot', { id: '123' }));
     });
 
     it('blocks repost by non-creator', async () => {
@@ -68,7 +76,7 @@ describe('ShareRideCommandHandler', () => {
 
       await handler.handle(mockCtx);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith('Only the ride creator can repost this ride.');
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.share.onlyCreatorRepost'));
       expect(mockRideMessagesService.createRideMessage).not.toHaveBeenCalled();
     });
 
@@ -78,7 +86,7 @@ describe('ShareRideCommandHandler', () => {
 
       await handler.handle(mockCtx);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith('Cannot repost a cancelled ride.');
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.share.cannotRepostCancelled'));
     });
 
     it('does not repost when ride already posted in current chat', async () => {
@@ -92,7 +100,7 @@ describe('ShareRideCommandHandler', () => {
 
       await handler.handle(mockCtx);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith('This ride is already posted in this chat.', {
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.share.alreadyPostedInChat', { topicSuffix: '' }), {
         message_thread_id: null
       });
       expect(mockRideMessagesService.createRideMessage).not.toHaveBeenCalled();
@@ -115,7 +123,7 @@ describe('ShareRideCommandHandler', () => {
         mockCtx,
         null
       );
-      expect(mockCtx.reply).not.toHaveBeenCalledWith(expect.stringContaining('Failed to post ride'));
+      expect(mockCtx.reply).not.toHaveBeenCalledWith(expect.stringContaining(tr('commands.share.failedToPost')));
     });
 
     it('returns user-friendly error when repost fails', async () => {
@@ -127,7 +135,9 @@ describe('ShareRideCommandHandler', () => {
 
       await handler.handle(mockCtx);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith('Failed to post ride: The bot is not a member of this chat or was blocked.');
+      expect(mockCtx.reply).toHaveBeenCalledWith(
+        tr('commands.share.failedToPostWithError', { error: tr('commands.share.botNotMemberOrBlocked') })
+      );
     });
 
     it('handles unexpected service errors', async () => {
@@ -136,7 +146,7 @@ describe('ShareRideCommandHandler', () => {
 
       await handler.handle(mockCtx);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith('An error occurred while posting the ride.');
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.share.postingError'));
     });
   });
 
@@ -165,7 +175,7 @@ describe('ShareRideCommandHandler', () => {
 
       expect(result).toEqual({
         success: false,
-        error: 'The bot does not have permission to send messages in this chat.'
+        error: tr('commands.share.botNoPermission')
       });
     });
 
@@ -174,7 +184,7 @@ describe('ShareRideCommandHandler', () => {
 
       const result = await handler.shareRideToChat({ id: '123', messages: [] }, mockCtx);
 
-      expect(result).toEqual({ success: false, error: 'Failed to post ride' });
+      expect(result).toEqual({ success: false, error: tr('commands.share.failedToPost') });
     });
   });
 });

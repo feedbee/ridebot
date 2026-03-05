@@ -5,6 +5,7 @@
 import { jest } from '@jest/globals';
 import { DuplicateRideCommandHandler } from '../../commands/DuplicateRideCommandHandler.js';
 import { RideParamsHelper } from '../../utils/RideParamsHelper.js';
+import { t } from '../../i18n/index.js';
 
 jest.mock('../../utils/RideParamsHelper.js');
 
@@ -16,13 +17,14 @@ RideParamsHelper.VALID_PARAMS = {
   speed: 'Speed range'
 };
 
-describe('DuplicateRideCommandHandler', () => {
+describe.each(['en', 'ru'])('DuplicateRideCommandHandler (%s)', (language) => {
   let handler;
   let mockRideService;
   let mockRideMessagesService;
   let mockMessageFormatter;
   let mockWizard;
   let mockCtx;
+  const tr = (key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -45,6 +47,7 @@ describe('DuplicateRideCommandHandler', () => {
 
     mockCtx = {
       message: { text: '/dupride #123' },
+      lang: language,
       from: {
         id: 101112,
         username: 'testuser',
@@ -64,11 +67,14 @@ describe('DuplicateRideCommandHandler', () => {
 
   describe('handle', () => {
     it('replies with extraction error when ride cannot be resolved', async () => {
-      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: null, error: 'Ride #123 not found' });
+      mockRideMessagesService.extractRideId.mockReturnValue({
+        rideId: null,
+        error: tr('commands.common.rideNotFoundById', { id: '123' })
+      });
 
       await handler.handle(mockCtx);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith('Ride #123 not found');
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.common.rideNotFoundById', { id: '123' }));
       expect(mockWizard.startWizard).not.toHaveBeenCalled();
     });
 
@@ -114,10 +120,11 @@ describe('DuplicateRideCommandHandler', () => {
       expect(mockRideService.duplicateRide).toHaveBeenCalledWith(
         '123',
         { title: 'New Ride', when: 'tomorrow 11:00' },
-        mockCtx.from
+        mockCtx.from,
+        { language }
       );
       expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith({ id: '456', title: 'New Ride' }, mockCtx);
-      expect(mockCtx.reply).toHaveBeenCalledWith('Ride duplicated successfully!');
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.duplicate.success'));
     });
   });
 
@@ -125,12 +132,12 @@ describe('DuplicateRideCommandHandler', () => {
     it('returns service error to user and skips message posting', async () => {
       mockRideService.duplicateRide.mockResolvedValue({
         ride: null,
-        error: 'Invalid date format. Please use format: DD.MM.YYYY HH:MM or natural language like "tomorrow 18:00"'
+        error: tr('parsers.date.invalidFormat')
       });
 
       await handler.handleWithParams(mockCtx, { id: '123' }, { when: 'invalid date' });
 
-      expect(mockCtx.reply).toHaveBeenCalledWith(expect.stringContaining('Invalid date format'));
+      expect(mockCtx.reply).toHaveBeenCalledWith(expect.stringContaining(tr('parsers.date.invalidFormat').split('\n')[0]));
       expect(mockRideMessagesService.createRideMessage).not.toHaveBeenCalled();
     });
 
@@ -152,7 +159,7 @@ describe('DuplicateRideCommandHandler', () => {
         { id: '789', title: 'Topic Ride' },
         topicCtx
       );
-      expect(topicCtx.reply).toHaveBeenCalledWith('Ride duplicated successfully!');
+      expect(topicCtx.reply).toHaveBeenCalledWith(tr('commands.duplicate.success'));
     });
   });
 });

@@ -3,9 +3,26 @@
  */
 import { jest } from '@jest/globals';
 import { StartCommandHandler } from '../../commands/StartCommandHandler.js';
-import { en } from '../../i18n/locales/en.js';
+import { t } from '../../i18n/index.js';
 
-describe('StartCommandHandler', () => {
+describe.each(['en', 'ru'])('StartCommandHandler (%s)', (language) => {
+  const expectedStartFragments = {
+    en: [
+      '<b>🚲 Welcome to Ride Announcement Bot!</b>',
+      '<b>Key Features:</b>',
+      '<b>Quick Start:</b>',
+      '<b>More details:</b>',
+      'Happy cycling! 🚴‍♀️💨'
+    ],
+    ru: [
+      '<b>🚲 Добро пожаловать в Ride Announcement Bot!</b>',
+      '<b>Ключевые возможности:</b>',
+      '<b>Быстрый старт:</b>',
+      '<b>Подробнее:</b>',
+      'Хороших покатушек! 🚴‍♀️💨'
+    ]
+  };
+
   let startHandler;
   let mockRideService;
   let mockMessageFormatter;
@@ -35,10 +52,8 @@ describe('StartCommandHandler', () => {
       api: {
         getMe: jest.fn().mockResolvedValue({ username: 'testbot' })
       },
-      t: jest.fn((key) => {
-        if (key === 'templates.start') return en.templates.start;
-        return key;
-      }),
+      lang: language,
+      t: jest.fn((key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' })),
       message: {
         from: {
           id: 789,
@@ -67,8 +82,8 @@ describe('StartCommandHandler', () => {
       // Verify
       expect(mockCtx.reply).toHaveBeenCalledTimes(1);
       const [message, options] = mockCtx.reply.mock.calls[0];
-      expect(message).toContain('🚲 Welcome to Ride Announcement Bot!');
       expect(message).toContain('/shareride@testbot');
+      expect(message).not.toContain('@botname');
       expect(options).toEqual({ parse_mode: 'HTML' });
       expect(mockCtx.t).toHaveBeenCalledWith('templates.start');
     });
@@ -104,11 +119,16 @@ describe('StartCommandHandler', () => {
       // Execute
       await startHandler.handle(mockCtx);
 
-      // Verify the exact message from config was used
+      // Verify user-facing content was preserved
       const callArgs = mockCtx.reply.mock.calls[0];
-      expect(callArgs[0]).toContain('🚲 Welcome to Ride Announcement Bot!');
-      expect(callArgs[0]).toContain('I am a <b>Telegram bot for organizing bike rides</b>');
-      expect(callArgs[0]).toContain('Happy cycling!');
+      expect(callArgs[0]).toContain('/newride');
+      expect(callArgs[0]).toContain('/help');
+      expect(callArgs[0]).toContain('/listrides');
+      expect(callArgs[0]).toContain('@testbot');
+      expect(callArgs[0]).not.toContain('@botname');
+      for (const fragment of expectedStartFragments[language]) {
+        expect(callArgs[0]).toContain(fragment);
+      }
     });
 
     it('should include HTML parse mode in options', async () => {

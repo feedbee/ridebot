@@ -5,6 +5,7 @@
 import { jest } from '@jest/globals';
 import { UpdateRideCommandHandler } from '../../commands/UpdateRideCommandHandler.js';
 import { RideParamsHelper } from '../../utils/RideParamsHelper.js';
+import { t } from '../../i18n/index.js';
 
 jest.mock('../../utils/RideParamsHelper.js');
 
@@ -17,13 +18,15 @@ RideParamsHelper.VALID_PARAMS = {
   category: 'Ride category'
 };
 
-describe('UpdateRideCommandHandler', () => {
+describe.each(['en', 'ru'])('UpdateRideCommandHandler (%s)', (language) => {
   let handler;
   let mockRideService;
   let mockMessageFormatter;
   let mockWizard;
   let mockRideMessagesService;
   let mockCtx;
+
+  const tr = (key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -49,6 +52,7 @@ describe('UpdateRideCommandHandler', () => {
         text: '/updateride #123',
         message_id: 456
       },
+      lang: language,
       chat: {
         id: 789
       },
@@ -76,7 +80,7 @@ describe('UpdateRideCommandHandler', () => {
 
       await handler.handle(mockCtx);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith('Ride #123 not found');
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.common.rideNotFoundById', { id: '123' }));
       expect(mockWizard.startWizard).not.toHaveBeenCalled();
     });
 
@@ -86,7 +90,7 @@ describe('UpdateRideCommandHandler', () => {
 
       await handler.handle(mockCtx);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith('Only the ride creator can update this ride.');
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.update.onlyCreator'));
       expect(mockWizard.startWizard).not.toHaveBeenCalled();
     });
 
@@ -149,9 +153,15 @@ describe('UpdateRideCommandHandler', () => {
       expect(mockRideService.updateRideFromParams).toHaveBeenCalledWith(
         '123',
         { title: 'Updated Ride', when: 'tomorrow 11:00' },
-        101112
+        101112,
+        { language }
       );
-      expect(mockCtx.reply).toHaveBeenCalledWith('Ride updated successfully. Updated 1 message(s).');
+      expect(mockCtx.reply).toHaveBeenCalledWith(
+        tr('commands.common.rideActionUpdatedMessages', {
+          action: tr('commands.common.actions.updated'),
+          count: 1
+        })
+      );
       expect(mockWizard.startWizard).not.toHaveBeenCalled();
     });
 
@@ -173,12 +183,17 @@ describe('UpdateRideCommandHandler', () => {
       const originalRide = { id: '123' };
       const params = { when: 'invalid date' };
 
-      mockRideService.updateRideFromParams.mockResolvedValue({ ride: null, error: 'Invalid date format' });
+      mockRideService.updateRideFromParams.mockResolvedValue({ ride: null, error: tr('parsers.date.invalidFormat') });
 
       await handler.handleWithParams(mockCtx, originalRide, params);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith('Invalid date format');
-      expect(mockCtx.reply).not.toHaveBeenCalledWith(expect.stringContaining('Ride updated successfully'));
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('parsers.date.invalidFormat'));
+      expect(mockCtx.reply).not.toHaveBeenCalledWith(
+        expect.stringContaining(tr('commands.common.rideActionUpdatedMessages', {
+          action: tr('commands.common.actions.updated'),
+          count: 1
+        }))
+      );
     });
 
     it('reports no-updates case from message propagation', async () => {
@@ -197,7 +212,11 @@ describe('UpdateRideCommandHandler', () => {
 
       await handler.handleWithParams(mockCtx, originalRide, params);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith('Ride has been updated, but no messages were updated. You may want to /shareride the ride in the chats of your choice again, they could have been removed.');
+      expect(mockCtx.reply).toHaveBeenCalledWith(
+        tr('commands.common.rideActionNoMessagesUpdated', {
+          action: tr('commands.common.actions.updated')
+        })
+      );
     });
 
     it('includes removed counter in success response for multi-chat propagation', async () => {
@@ -217,8 +236,13 @@ describe('UpdateRideCommandHandler', () => {
       await handler.handleWithParams(mockCtx, originalRide, params);
 
       const replyText = mockCtx.reply.mock.calls[0][0];
-      expect(replyText).toContain('Ride updated successfully. Updated 2 message(s).');
-      expect(replyText).toContain('Removed 1 unavailable message(s).');
+      expect(replyText).toContain(
+        tr('commands.common.rideActionUpdatedMessages', {
+          action: tr('commands.common.actions.updated'),
+          count: 2
+        })
+      );
+      expect(replyText).toContain(tr('commands.common.removedUnavailableMessages', { count: 1 }));
     });
   });
 

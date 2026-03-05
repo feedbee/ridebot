@@ -4,11 +4,13 @@
 
 import { jest } from '@jest/globals';
 import { RideMessagesService } from '../../services/RideMessagesService.js';
+import { t } from '../../i18n/index.js';
 
 describe('RideMessagesService', () => {
   let rideMessagesService;
   let mockRideService;
   let mockMessageFormatter;
+  const tr = (language, key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
 
   beforeEach(() => {
     // Create mock ride service for extended tests
@@ -185,20 +187,22 @@ describe('RideMessagesService', () => {
     });
     
     // Test for returning error when no ID is found
-    it('should return error when no ID is found', () => {
+    it.each(['en', 'ru'])('should return error when no ID is found (%s)', (language) => {
       const message = {
         text: '/updateride'
         // No reply and no ID parameter
       };
       
-      const result = rideMessagesService.extractRideId(message);
+      const result = rideMessagesService.extractRideId(message, { language });
       
       expect(result.rideId).toBeNull();
-      expect(result.error).toBe('Please provide a ride ID after the command (e.g., /updateride rideID) or reply to a ride message.');
+      expect(result.error).toBe(
+        tr(language, 'services.rideMessages.provideRideIdAfterCommand', { commandName: 'updateride' })
+      );
     });
     
     // Test for returning error when replied message has no ride ID
-    it('should return error when replied message has no ride ID', () => {
+    it.each(['en', 'ru'])('should return error when replied message has no ride ID (%s)', (language) => {
       const message = {
         text: '/updateride',
         reply_to_message: {
@@ -206,10 +210,10 @@ describe('RideMessagesService', () => {
         }
       };
       
-      const result = rideMessagesService.extractRideId(message);
+      const result = rideMessagesService.extractRideId(message, { language });
       
       expect(result.rideId).toBeNull();
-      expect(result.error).toContain('Could not find ride ID in the message');
+      expect(result.error).toContain(tr(language, 'services.rideMessages.couldNotFindRideIdInMessage'));
     });
   });
 

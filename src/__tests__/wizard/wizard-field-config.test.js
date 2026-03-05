@@ -14,11 +14,14 @@ import {
   buildConfirmationMessage
 } from '../../wizard/wizardFieldConfig.js';
 import { DEFAULT_CATEGORY } from '../../utils/category-utils.js';
+import { getCategoryLabel } from '../../utils/category-utils.js';
 import { DateParser } from '../../utils/date-parser.js';
 import { escapeHtml } from '../../utils/html-escape.js';
 import { RouteParser } from '../../utils/route-parser.js';
+import { t } from '../../i18n/index.js';
 
 describe('wizardFieldConfig', () => {
+  const tr = (key, params = {}) => t('en', key, params, { fallbackLanguage: 'en' });
   describe('FieldType', () => {
     it('should export all field types', () => {
       expect(FieldType.TEXT).toBe('text');
@@ -87,13 +90,13 @@ describe('wizardFieldConfig', () => {
     it('should reject empty title', () => {
       const result = WIZARD_FIELDS.title.validator('');
       expect(result.valid).toBe(false);
-      expect(result.error).toBeDefined();
+      expect(result.error).toBe(tr('wizard.validation.titleRequired'));
     });
 
     it('should reject whitespace-only title', () => {
       const result = WIZARD_FIELDS.title.validator('   ');
       expect(result.valid).toBe(false);
-      expect(result.error).toBe('Title cannot be empty');
+      expect(result.error).toBe(tr('wizard.validation.titleRequired'));
     });
 
     it('should be required and not clearable', () => {
@@ -113,13 +116,13 @@ describe('wizardFieldConfig', () => {
     it('should reject invalid date input', () => {
       const result = WIZARD_FIELDS.date.validator('invalid date');
       expect(result.valid).toBe(false);
-      expect(result.error).toContain('understand that date/time format');
+      expect(result.error).toContain(tr('parsers.date.invalidFormat'));
     });
 
     it('should reject past dates', () => {
       const result = WIZARD_FIELDS.date.validator('yesterday');
       expect(result.valid).toBe(false);
-      expect(result.error).toContain("can't be scheduled in the past");
+      expect(result.error).toBe(tr('parsers.date.pastDate'));
     });
 
     it('should be required', () => {
@@ -158,7 +161,7 @@ describe('wizardFieldConfig', () => {
     it('should reject non-numeric input', () => {
       const result = WIZARD_FIELDS.distance.validator('abc');
       expect(result.valid).toBe(false);
-      expect(result.error).toContain('valid number');
+      expect(result.error).toBe(tr('wizard.validation.distanceInvalid'));
     });
 
     it('should be optional and clearable', () => {
@@ -184,7 +187,7 @@ describe('wizardFieldConfig', () => {
     it('should reject invalid duration format', () => {
       const result = WIZARD_FIELDS.duration.validator('invalid');
       expect(result.valid).toBe(false);
-      expect(result.error).toContain('understand that duration format');
+      expect(result.error).toContain(tr('parsers.duration.invalidFormat'));
     });
 
     it('should be optional and clearable', () => {
@@ -312,7 +315,9 @@ describe('wizardFieldConfig', () => {
     });
   });
 
-  describe('buildConfirmationMessage', () => {
+  describe.each(['en', 'ru'])('buildConfirmationMessage (%s)', (language) => {
+    const tr = (key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
+
     it('should build message with all fields', () => {
       const wizardData = {
         title: 'Evening Ride',
@@ -328,14 +333,14 @@ describe('wizardFieldConfig', () => {
         additionalInfo: 'Bring lights'
       };
 
-      const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser);
+      const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser, language);
 
       expect(message).toContain('Evening Ride');
-      expect(message).toContain('Road Ride');
+      expect(message).toContain(getCategoryLabel('road', language));
       expect(message).toContain('John Doe');
       expect(message).toContain('City Center');
       expect(message).toContain('50');
-      expect(message).toContain('2h 0m'); // Duration is formatted, not raw minutes
+      expect(message).toContain(`2${tr('formatter.units.hour')} 0${tr('formatter.units.min')}`);
       expect(message).toContain('25');
       expect(message).toContain('30');
       expect(message).toContain('Bring lights');
@@ -348,10 +353,10 @@ describe('wizardFieldConfig', () => {
         datetime: new Date('2025-10-10T18:00:00Z')
       };
 
-      const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser);
+      const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser, language);
 
       expect(message).toContain('Quick Ride');
-      expect(message).toContain('Regular/Mixed Ride');
+      expect(message).toContain(getCategoryLabel(DEFAULT_CATEGORY, language));
       expect(message).toBeDefined();
     });
 
@@ -362,9 +367,9 @@ describe('wizardFieldConfig', () => {
         datetime: new Date('2025-10-10T18:00:00Z')
       };
 
-      const message = buildConfirmationMessage(wizardData, true, escapeHtml, DateParser);
+      const message = buildConfirmationMessage(wizardData, true, escapeHtml, DateParser, language);
 
-      expect(message).toContain('update');
+      expect(message).toContain(tr('wizard.confirm.updateAction'));
     });
 
     it('should escape HTML in user input', () => {
@@ -374,7 +379,7 @@ describe('wizardFieldConfig', () => {
         datetime: new Date('2025-10-10T18:00:00Z')
       };
 
-      const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser);
+      const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser, language);
 
       expect(message).not.toContain('<script>');
       expect(message).toContain('&lt;script&gt;');
@@ -389,8 +394,10 @@ describe('wizardFieldConfig', () => {
         speedMin: 24
       };
 
-      const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser);
-      expect(message).toContain('min 24 km/h');
+      const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser, language);
+      expect(message).toContain(
+        `${tr('wizard.speedMinPrefix')} 24 ${tr('formatter.units.kmh')}`
+      );
     });
 
     it('should format speed when only maximum is set', () => {
@@ -402,8 +409,10 @@ describe('wizardFieldConfig', () => {
         speedMax: 31
       };
 
-      const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser);
-      expect(message).toContain('max 31 km/h');
+      const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser, language);
+      expect(message).toContain(
+        `${tr('wizard.speedMaxPrefix')} 31 ${tr('formatter.units.kmh')}`
+      );
     });
 
     it('should omit zero duration as an empty optional value', () => {
@@ -415,8 +424,8 @@ describe('wizardFieldConfig', () => {
         duration: 0
       };
 
-      const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser);
-      expect(message).not.toContain('⏱ Duration');
+      const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser, language);
+      expect(message).not.toContain(tr('wizard.confirm.labels.duration'));
     });
   });
 

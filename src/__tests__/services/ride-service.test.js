@@ -6,6 +6,7 @@ import { jest } from '@jest/globals';
 import { RideService } from '../../services/RideService.js';
 import { MemoryStorage } from '../../storage/memory.js';
 import { config } from '../../config.js';
+import { t } from '../../i18n/index.js';
 
 // Import the module first, then mock its methods
 import { RouteParser } from '../../utils/route-parser.js';
@@ -40,6 +41,7 @@ describe('RideService', () => {
     firstName: 'Test',
     lastName: 'User'
   };
+  const tr = (language, key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
 
   beforeEach(() => {
     // Reset mocks before each test
@@ -348,7 +350,7 @@ describe('RideService', () => {
       expect(RouteParser.processRouteInfo).toHaveBeenCalledWith('https://example.com/route');
     });
 
-    it('should handle invalid route URLs in updates', async () => {
+    it.each(['en', 'ru'])('should handle invalid route URLs in updates (%s)', async (language) => {
       const ride = await rideService.createRide(testRide);
       
       const params = {
@@ -357,15 +359,15 @@ describe('RideService', () => {
       
       // Mock processRouteInfo to return an error
       RouteParser.processRouteInfo.mockResolvedValueOnce({
-        error: 'Invalid URL format. Please provide a valid URL.',
+        error: tr(language, 'utils.routeParser.invalidUrl'),
         routeLink: 'not-a-valid-url'
       });
       
-      const result = await rideService.updateRideFromParams(ride.id, params);
+      const result = await rideService.updateRideFromParams(ride.id, params, null, { language });
       
-      expect(result.error).toBe('Invalid URL format. Please provide a valid URL.');
+      expect(result.error).toBe(tr(language, 'utils.routeParser.invalidUrl'));
       expect(result.ride).toBeNull();
-      expect(RouteParser.processRouteInfo).toHaveBeenCalledWith('not-a-valid-url');
+      expect(RouteParser.processRouteInfo).toHaveBeenCalledWith('not-a-valid-url', { language });
     });
   });
 
@@ -397,36 +399,36 @@ describe('RideService', () => {
       expect(result.ride.additionalInfo).toBe(params.info);
     });
 
-    it('should require title and date parameters', async () => {
+    it.each(['en', 'ru'])('should require title and date parameters (%s)', async (language) => {
       const params = {
         title: 'Sunday Morning Ride'
         // Missing 'when' parameter
       };
       
-      const result = await rideService.createRideFromParams(params, 123456, 789);
+      const result = await rideService.createRideFromParams(params, 123456, 789, { language });
       
-      expect(result.error).toBe('Please provide at least title and date/time.');
+      expect(result.error).toBe(tr(language, 'services.ride.pleaseProvideTitleAndDate'));
       expect(result.ride).toBeNull();
     });
 
-    it('should handle invalid date formats', async () => {
+    it.each(['en', 'ru'])('should handle invalid date formats (%s)', async (language) => {
       const params = {
         title: 'Sunday Morning Ride',
         when: 'not a valid date'
       };
       
-      const result = await rideService.createRideFromParams(params, 123456, 789);
+      const result = await rideService.createRideFromParams(params, 123456, 789, { language });
       
       // Check that the error message contains the base error text
-      expect(result.error).toContain('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• this saturday 10am\n• 21 Jul 14:30');
+      expect(result.error).toContain(tr(language, 'parsers.date.invalidFormat'));
       
       // The timezone note should not be present when no timezone is configured
-      expect(result.error).not.toContain('Note: Times are interpreted in the');
+      expect(result.error).not.toContain(tr(language, 'parsers.date.timezoneNote', { timezone: 'Europe/London' }));
       
       expect(result.ride).toBeNull();
     });
     
-    it('should include timezone info in error message when timezone is configured', async () => {
+    it.each(['en', 'ru'])('should include timezone info in error message when timezone is configured (%s)', async (language) => {
       // Set a timezone for this specific test
       config.dateFormat.defaultTimezone = 'Europe/London';
       
@@ -435,13 +437,13 @@ describe('RideService', () => {
         when: 'not a valid date'
       };
       
-      const result = await rideService.createRideFromParams(params, 123456, 789);
+      const result = await rideService.createRideFromParams(params, 123456, 789, { language });
       
       // Check that the error message contains the base error text
-      expect(result.error).toContain('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• this saturday 10am\n• 21 Jul 14:30');
+      expect(result.error).toContain(tr(language, 'parsers.date.invalidFormat'));
       
       // The timezone note should be present when a timezone is configured
-      expect(result.error).toContain('Note: Times are interpreted in the Europe/London timezone.');
+      expect(result.error).toContain(tr(language, 'parsers.date.timezoneNote', { timezone: 'Europe/London' }));
       
       expect(result.ride).toBeNull();
     });
@@ -707,7 +709,7 @@ describe('RideService', () => {
       expect(result.ride.distance).toBe(testRide.distance);
     });
 
-    it('should handle invalid date formats in updates', async () => {
+    it.each(['en', 'ru'])('should handle invalid date formats in updates (%s)', async (language) => {
       const ride = await storage.createRide({
         title: 'Original Ride',
         date: new Date('2024-03-15T15:00:00Z'),
@@ -718,18 +720,18 @@ describe('RideService', () => {
         when: 'not a valid date'
       };
       
-      const result = await rideService.updateRideFromParams(ride.id, params);
+      const result = await rideService.updateRideFromParams(ride.id, params, null, { language });
       
       // Check that the error message contains the base error text
-      expect(result.error).toContain('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• this saturday 10am\n• 21 Jul 14:30');
+      expect(result.error).toContain(tr(language, 'parsers.date.invalidFormat'));
       
       // The timezone note should not be present when no timezone is configured
-      expect(result.error).not.toContain('Note: Times are interpreted in the');
+      expect(result.error).not.toContain(tr(language, 'parsers.date.timezoneNote', { timezone: 'Europe/London' }));
       
       expect(result.ride).toBeNull();
     });
     
-    it('should include timezone info in update error message when timezone is configured', async () => {
+    it.each(['en', 'ru'])('should include timezone info in update error message when timezone is configured (%s)', async (language) => {
       // Set a timezone for this specific test
       config.dateFormat.defaultTimezone = 'Europe/London';
       
@@ -743,18 +745,18 @@ describe('RideService', () => {
         when: 'not a valid date'
       };
       
-      const result = await rideService.updateRideFromParams(ride.id, params);
+      const result = await rideService.updateRideFromParams(ride.id, params, null, { language });
       
       // Check that the error message contains the base error text
-      expect(result.error).toContain('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• this saturday 10am\n• 21 Jul 14:30');
+      expect(result.error).toContain(tr(language, 'parsers.date.invalidFormat'));
       
       // The timezone note should be present when a timezone is configured
-      expect(result.error).toContain('Note: Times are interpreted in the Europe/London timezone.');
+      expect(result.error).toContain(tr(language, 'parsers.date.timezoneNote', { timezone: 'Europe/London' }));
       
       expect(result.ride).toBeNull();
     });
     
-    it('should handle invalid route URLs in updates', async () => {
+    it.each(['en', 'ru'])('should handle invalid route URLs in updates (%s)', async (language) => {
       const ride = await storage.createRide({
         title: 'Original Ride',
         date: new Date('2024-03-15T15:00:00Z'),
@@ -767,15 +769,15 @@ describe('RideService', () => {
       
       // Mock processRouteInfo to return an error
       RouteParser.processRouteInfo.mockResolvedValueOnce({
-        error: 'Invalid URL format. Please provide a valid URL.',
+        error: tr(language, 'utils.routeParser.invalidUrl'),
         routeLink: 'not-a-valid-url'
       });
       
-      const result = await rideService.updateRideFromParams(ride.id, params);
+      const result = await rideService.updateRideFromParams(ride.id, params, null, { language });
       
-      expect(result.error).toBe('Invalid URL format. Please provide a valid URL.');
+      expect(result.error).toBe(tr(language, 'utils.routeParser.invalidUrl'));
       expect(result.ride).toBeNull();
-      expect(RouteParser.processRouteInfo).toHaveBeenCalledWith('not-a-valid-url');
+      expect(RouteParser.processRouteInfo).toHaveBeenCalledWith('not-a-valid-url', { language });
     });
   });
 
@@ -863,23 +865,23 @@ describe('RideService', () => {
       expect(result.ride.duration).toBe(180);
     });
 
-    it('should return generic error when updateRideFromParams throws unexpectedly', async () => {
+    it.each(['en', 'ru'])('should return generic error when updateRideFromParams throws unexpectedly (%s)', async (language) => {
       const createdRide = await rideService.createRide(testRide);
       jest.spyOn(storage, 'updateRide').mockRejectedValueOnce(new Error('Update failed'));
 
-      const result = await rideService.updateRideFromParams(createdRide.id, { title: 'X' });
+      const result = await rideService.updateRideFromParams(createdRide.id, { title: 'X' }, null, { language });
 
       expect(result.ride).toBeNull();
-      expect(result.error).toBe('An error occurred while updating the ride.');
+      expect(result.error).toBe(tr(language, 'services.ride.errorUpdatingRide'));
     });
 
-    it('should return generic error when createRideFromParams throws unexpectedly', async () => {
+    it.each(['en', 'ru'])('should return generic error when createRideFromParams throws unexpectedly (%s)', async (language) => {
       jest.spyOn(storage, 'createRide').mockRejectedValueOnce(new Error('DB exploded'));
 
-      const result = await rideService.createRideFromParams({ title: 'X', when: 'tomorrow 9am' }, 1, { id: 1 });
+      const result = await rideService.createRideFromParams({ title: 'X', when: 'tomorrow 9am' }, 1, { id: 1 }, { language });
 
       expect(result.ride).toBeNull();
-      expect(result.error).toBe('An error occurred while creating the ride.');
+      expect(result.error).toBe(tr(language, 'services.ride.errorCreatingRide'));
     });
 
     it('should cover getDefaultOrganizer fallback variants', () => {
@@ -889,9 +891,9 @@ describe('RideService', () => {
       expect(rideService.getDefaultOrganizer({ first_name: 'Jane', last_name: 'Doe' })).toBe('Jane Doe');
     });
 
-    it('should return not found error when duplicating unknown ride', async () => {
-      const result = await rideService.duplicateRide('missing-ride', {}, { id: 1, username: 'u' });
-      expect(result).toEqual({ ride: null, error: 'Original ride not found' });
+    it.each(['en', 'ru'])('should return not found error when duplicating unknown ride (%s)', async (language) => {
+      const result = await rideService.duplicateRide('missing-ride', {}, { id: 1, username: 'u' }, { language });
+      expect(result).toEqual({ ride: null, error: tr(language, 'services.ride.originalRideNotFound') });
     });
 
     it('should duplicate ride preserving key original fields by default', async () => {

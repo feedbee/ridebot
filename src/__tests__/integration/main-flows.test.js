@@ -14,13 +14,15 @@ import { CancelRideCommandHandler } from '../../commands/CancelRideCommandHandle
 import { RideWizard } from '../../wizard/RideWizard.js';
 import { config } from '../../config.js';
 import { randomUUID } from 'crypto';
+import { t } from '../../i18n/index.js';
 
-describe('RideBot Integration Tests', () => {
+describe.each(['en', 'ru'])('RideBot Integration Tests (%s)', (language) => {
   let storage;
   let rideService;
   let messageFormatter;
   let wizard;
   let mockCtx;
+  const tr = (key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
   
   // Command handlers
   let newRideHandler;
@@ -45,6 +47,8 @@ describe('RideBot Integration Tests', () => {
     
     // Create base mock context
     mockCtx = {
+      lang: language,
+      t: jest.fn((key, params = {}) => tr(key, params)),
       chat: {
         id: 123456789,
         type: 'group'
@@ -198,7 +202,7 @@ describe('RideBot Integration Tests', () => {
       await participationHandlers.handleJoinRide(joinCtx);
       
       // Verify error message was sent
-      expect(joinCtx.answerCallbackQuery).toHaveBeenCalledWith('Ride not found');
+      expect(joinCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.participation.rideNotFound'));
     });
     
     it('should handle errors when updating a non-existent ride', async () => {

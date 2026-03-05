@@ -4,13 +4,15 @@
 
 import { jest } from '@jest/globals';
 import { ResumeRideCommandHandler } from '../../commands/ResumeRideCommandHandler.js';
+import { t } from '../../i18n/index.js';
 
-describe('ResumeRideCommandHandler', () => {
+describe.each(['en', 'ru'])('ResumeRideCommandHandler (%s)', (language) => {
   let handler;
   let mockRideService;
   let mockMessageFormatter;
   let mockRideMessagesService;
   let mockCtx;
+  const tr = (key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
 
   beforeEach(() => {
     mockRideService = {
@@ -27,6 +29,7 @@ describe('ResumeRideCommandHandler', () => {
 
     mockCtx = {
       reply: jest.fn().mockResolvedValue({}),
+      lang: language,
       from: { id: 123 },
       message: { text: '/resumeride 456' }
     };
@@ -36,11 +39,16 @@ describe('ResumeRideCommandHandler', () => {
 
   describe('handle', () => {
     it('replies with extraction error', async () => {
-      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: null, error: 'No ride ID found' });
+      mockRideMessagesService.extractRideId.mockReturnValue({
+        rideId: null,
+        error: tr('services.rideMessages.provideRideIdAfterCommand', { commandName: 'resumeride' })
+      });
 
       await handler.handle(mockCtx);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith('No ride ID found');
+      expect(mockCtx.reply).toHaveBeenCalledWith(
+        tr('services.rideMessages.provideRideIdAfterCommand', { commandName: 'resumeride' })
+      );
       expect(mockRideService.resumeRide).not.toHaveBeenCalled();
     });
 
@@ -50,7 +58,9 @@ describe('ResumeRideCommandHandler', () => {
 
       await handler.handle(mockCtx);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith('Only the ride creator can resume this ride.');
+      expect(mockCtx.reply).toHaveBeenCalledWith(
+        tr('commands.stateChange.onlyCreator', { action: tr('commands.common.verbs.resume') })
+      );
       expect(mockRideService.resumeRide).not.toHaveBeenCalled();
     });
 
@@ -60,7 +70,7 @@ describe('ResumeRideCommandHandler', () => {
 
       await handler.handle(mockCtx);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith('This ride is not cancelled.');
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.resume.notCancelled'));
       expect(mockRideService.resumeRide).not.toHaveBeenCalled();
     });
 
@@ -78,8 +88,12 @@ describe('ResumeRideCommandHandler', () => {
 
       expect(mockRideService.resumeRide).toHaveBeenCalledWith('456', 123);
       const replyText = mockCtx.reply.mock.calls[0][0];
-      expect(replyText).toContain('Ride resumed successfully.');
-      expect(replyText).toContain('Updated 1 message(s)');
+      expect(replyText).toContain(
+        tr('commands.common.rideActionUpdatedMessages', {
+          action: tr('commands.common.actions.resumed'),
+          count: 1
+        })
+      );
     });
 
     it('reports when no messages were updated', async () => {
@@ -94,7 +108,11 @@ describe('ResumeRideCommandHandler', () => {
 
       await handler.handle(mockCtx);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith('Ride has been resumed, but no messages were updated. You may want to /shareride the ride in the chats of your choice again, they could have been removed.');
+      expect(mockCtx.reply).toHaveBeenCalledWith(
+        tr('commands.common.rideActionNoMessagesUpdated', {
+          action: tr('commands.common.actions.resumed')
+        })
+      );
     });
 
     it('reports removed unavailable messages for multi-chat propagation', async () => {
@@ -110,8 +128,13 @@ describe('ResumeRideCommandHandler', () => {
       await handler.handle(mockCtx);
 
       const replyText = mockCtx.reply.mock.calls[0][0];
-      expect(replyText).toContain('Updated 2 message(s)');
-      expect(replyText).toContain('Removed 1 unavailable message(s)');
+      expect(replyText).toContain(
+        tr('commands.common.rideActionUpdatedMessages', {
+          action: tr('commands.common.actions.resumed'),
+          count: 2
+        })
+      );
+      expect(replyText).toContain(tr('commands.common.removedUnavailableMessages', { count: 1 }));
     });
   });
 });

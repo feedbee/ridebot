@@ -1,6 +1,7 @@
 import { RideWizard } from '../../wizard/RideWizard.js';
 import { config } from '../../config.js';
 import { jest } from '@jest/globals';
+import { t } from '../../i18n/index.js';
 
 // Create a backup of the original config for tests
 const originalConfig = { ...config };
@@ -40,7 +41,7 @@ class MockStorage {
 }
 
 // Mock context factory
-const createMockContext = (userId = 123, chatId = 456, chatType = 'private') => {
+const createMockContext = (userId = 123, chatId = 456, chatType = 'private', language = 'en') => {
   const messages = [];
   const deletedMessages = [];
   const editedMessages = [];
@@ -50,6 +51,7 @@ const createMockContext = (userId = 123, chatId = 456, chatType = 'private') => 
   const ctx = {
     from: { id: userId },
     chat: { id: chatId, type: chatType },
+    lang: language,
     message: { message_id: 1 },
     match: [],
     reply: async (text, extra = {}) => {
@@ -104,13 +106,14 @@ const createMockContext = (userId = 123, chatId = 456, chatType = 'private') => 
   return ctx;
 };
 
-describe('RideWizard', () => {
+describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
   let wizard;
   let storage;
   let ctx;
   let mockRideService;
   let mockMessageFormatter;
   let mockRideMessagesService;
+  const tr = (key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
 
   beforeEach(() => {
     storage = new MockStorage();
@@ -124,7 +127,7 @@ describe('RideWizard', () => {
       updateRideMessages: jest.fn().mockResolvedValue(true)
     };
     wizard = new RideWizard(storage, mockRideService, mockMessageFormatter, mockRideMessagesService);
-    ctx = createMockContext();
+    ctx = createMockContext(123, 456, 'private', language);
   });
   
   afterEach(() => {
@@ -137,28 +140,28 @@ describe('RideWizard', () => {
   describe('Wizard State Management', () => {
     test('should start a new wizard session in private chat', async () => {
       await wizard.startWizard(ctx);
-      expect(ctx._test.messages[0].text).toContain('Please enter the ride title');
+      expect(ctx._test.messages[0].text).toContain(tr('wizard.prompts.title'));
     });
 
     test('should prevent starting wizard in public chat', async () => {
       // Create a public chat context
-      const publicCtx = createMockContext(123, 456, 'group');
+      const publicCtx = createMockContext(123, 456, 'group', language);
       
       await wizard.startWizard(publicCtx);
-      expect(publicCtx._test.messages[0].text).toContain('Wizard commands are only available in private chats');
+      expect(publicCtx._test.messages[0].text).toContain(tr('wizard.messages.privateChatOnlyReply'));
     });
 
     test('should prevent starting multiple wizards', async () => {
       await wizard.startWizard(ctx);
       await wizard.startWizard(ctx);
-      expect(ctx._test.messages[1].text).toContain('Please complete or cancel');
+      expect(ctx._test.messages[1].text).toContain(tr('wizard.messages.completeOrCancelCurrent'));
     });
 
     test('should handle wizard cancellation', async () => {
       await wizard.startWizard(ctx);
       ctx.match = ['wizard:cancel', 'cancel'];
       await wizard.handleWizardAction(ctx);
-      expect(ctx._test.messages[1].text).toBe('Ride creation cancelled');
+      expect(ctx._test.messages[1].text).toBe(tr('wizard.messages.creationCancelled'));
     });
   });
 
@@ -175,12 +178,12 @@ describe('RideWizard', () => {
       await wizard.handleWizardAction(ctx);
       
       const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
-      expect(lastMessage.text).toContain('Please enter the ride title');
+      expect(lastMessage.text).toContain(tr('wizard.prompts.title'));
     });
     
     test('should prevent wizard actions in public chat', async () => {
       // Create a public chat context
-      const publicCtx = createMockContext(123, 456, 'group');
+      const publicCtx = createMockContext(123, 456, 'group', language);
       
       // Initialize wizard state manually since startWizard won't work in public chat
       const stateKey = wizard.getWizardStateKey(publicCtx.from.id, publicCtx.chat.id);
@@ -190,12 +193,12 @@ describe('RideWizard', () => {
       publicCtx.match = ['wizard:back', 'back'];
       await wizard.handleWizardAction(publicCtx);
       
-      expect(publicCtx._test.callbackAnswers[0]).toContain('Wizard commands are only available in private chats');
+      expect(publicCtx._test.callbackAnswers[0]).toContain(tr('wizard.messages.privateChatOnlyCallback'));
     });
     
     test('should prevent wizard input in public chat', async () => {
       // Create a public chat context
-      const publicCtx = createMockContext(123, 456, 'group');
+      const publicCtx = createMockContext(123, 456, 'group', language);
       
       // Initialize wizard state manually since startWizard won't work in public chat
       const stateKey = wizard.getWizardStateKey(publicCtx.from.id, publicCtx.chat.id);
@@ -205,7 +208,7 @@ describe('RideWizard', () => {
       publicCtx.message = { text: 'Test Ride', message_id: 2 };
       await wizard.handleWizardInput(publicCtx);
       
-      expect(publicCtx._test.messages[0].text).toContain('Wizard commands are only available in private chats');
+      expect(publicCtx._test.messages[0].text).toContain(tr('wizard.messages.privateChatOnlyReply'));
     });
 
     test('should handle skip button for optional fields', async () => {
@@ -230,7 +233,7 @@ describe('RideWizard', () => {
       await wizard.handleWizardAction(ctx);
       
       const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
-      expect(lastMessage.text).toContain('Please enter the distance');
+      expect(lastMessage.text).toContain(tr('wizard.prompts.distance'));
     });
   });
 
@@ -254,7 +257,7 @@ describe('RideWizard', () => {
       
       // Verify message was updated
       const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
-      expect(lastMessage.text).toContain('Who is organizing this ride?');
+      expect(lastMessage.text).toContain(tr('wizard.prompts.organizer'));
     });
 
     test('should handle invalid category selection', async () => {
@@ -269,7 +272,7 @@ describe('RideWizard', () => {
       await wizard.handleWizardAction(ctx);
       
       // Verify error message was shown
-      expect(ctx._test.callbackAnswers[0]).toBe('Invalid category selected');
+      expect(ctx._test.callbackAnswers[0]).toBe(tr('wizard.messages.invalidCategory'));
       
       // Verify state remains unchanged
       const stateKey = wizard.getWizardStateKey(ctx.from.id, ctx.chat.id);
@@ -295,13 +298,13 @@ describe('RideWizard', () => {
       
       // Verify keep button is shown
       const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
-      expect(lastMessage.text).toContain('Please select the ride category');
+      expect(lastMessage.text).toContain(tr('wizard.prompts.category'));
       
       // Verify keyboard layout
       const keyboard = lastMessage.reply_markup.inline_keyboard;
       expect(keyboard).toHaveLength(5); // 5 rows of buttons
       expect(keyboard[3]).toContainEqual(
-        expect.objectContaining({ text: '↩️ Keep current', callback_data: 'wizard:keep' })
+        expect.objectContaining({ text: tr('buttons.keep'), callback_data: 'wizard:keep' })
       );
     });
 
@@ -355,7 +358,7 @@ describe('RideWizard', () => {
       
       // Verify we're now at the confirmation step
       const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
-      expect(lastMessage.text).toContain('Please confirm the ride details');
+      expect(lastMessage.text).toContain(tr('wizard.confirm.header', { action: tr('wizard.confirm.rideAction') }));
       expect(lastMessage.text).toContain('Bring lights and a jacket');
       
       // Confirm and create the ride
@@ -398,8 +401,8 @@ describe('RideWizard', () => {
       
       // Verify we're now at the confirmation step
       const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
-      expect(lastMessage.text).toContain('Please confirm the ride details');
-      expect(lastMessage.text).not.toContain('Additional info:');
+      expect(lastMessage.text).toContain(tr('wizard.confirm.header', { action: tr('wizard.confirm.rideAction') }));
+      expect(lastMessage.text).not.toContain(`${tr('wizard.confirm.labels.additionalInfo')}:`);
       
       // Confirm and create the ride
       ctx.match = ['wizard:confirm', 'confirm'];
@@ -417,7 +420,7 @@ describe('RideWizard', () => {
       await wizard.handleWizardInput(ctx);
       
       const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
-      expect(lastMessage.text).toContain('Please select the ride category');
+      expect(lastMessage.text).toContain(tr('wizard.prompts.category'));
     });
 
     test('should handle date input', async () => {
@@ -440,7 +443,7 @@ describe('RideWizard', () => {
       await wizard.handleWizardInput(ctx);
       
       const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
-      expect(lastMessage.text).toContain('Please enter the route link');
+      expect(lastMessage.text).toContain(tr('wizard.prompts.route'));
     });
 
     test('should handle invalid date input', async () => {
@@ -463,7 +466,7 @@ describe('RideWizard', () => {
       await wizard.handleWizardInput(ctx);
       
       expect(ctx._test.messages).toHaveLength(2); // Initial message + error message
-      expect(ctx._test.messages[1].text).toContain('I couldn\'t understand that date/time format');
+      expect(ctx._test.messages[1].text).toContain(tr('parsers.date.invalidFormat').split('\n')[0]);
     });
 
     test('should handle route link input', async () => {
@@ -488,7 +491,7 @@ describe('RideWizard', () => {
       await wizard.handleWizardInput(ctx);
       
       const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
-      expect(lastMessage.text).toContain('Please enter the distance');
+      expect(lastMessage.text).toContain(tr('wizard.prompts.distance'));
     });
   });
 

@@ -4,6 +4,7 @@
 
 import { jest } from '@jest/globals';
 import { ParticipationHandlers } from '../../commands/ParticipationHandlers.js';
+import { t } from '../../i18n/index.js';
 
 // Mock the grammy module
 jest.mock('grammy', () => {
@@ -17,12 +18,13 @@ jest.mock('grammy', () => {
   };
 });
 
-describe('ParticipationHandlers', () => {
+describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
   let participationHandlers;
   let mockRideService;
   let mockMessageFormatter;
   let mockRideMessagesService;
   let mockCtx;
+  const tr = (key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
   
   beforeEach(() => {
     // Create mock RideService
@@ -48,6 +50,8 @@ describe('ParticipationHandlers', () => {
     // Create mock Grammy context
     mockCtx = {
       match: ['join:123', '123'],
+      lang: language,
+      t: jest.fn((key, params = {}) => tr(key, params)),
       from: {
         id: 456,
         username: 'testuser',
@@ -74,7 +78,7 @@ describe('ParticipationHandlers', () => {
       
       // Verify
       expect(mockRideService.getRide).toHaveBeenCalledWith('123');
-      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('Ride not found');
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.participation.rideNotFound'));
       expect(mockRideService.setParticipation).not.toHaveBeenCalled();
     });
     
@@ -90,7 +94,7 @@ describe('ParticipationHandlers', () => {
       
       // Verify
       expect(mockRideService.getRide).toHaveBeenCalledWith('123');
-      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('This ride has been cancelled');
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.participation.rideCancelled'));
       expect(mockRideService.setParticipation).not.toHaveBeenCalled();
     });
     
@@ -124,7 +128,7 @@ describe('ParticipationHandlers', () => {
         lastName: 'User'
       }, 'joined');
       expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalledWith(mockRide, mockCtx);
-      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('You have joined the ride!');
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.participation.joinedSuccess'));
     });
     
     // Multi-chat propagation: just expect the simple reply
@@ -153,7 +157,7 @@ describe('ParticipationHandlers', () => {
         lastName: 'User'
       }, 'joined');
       expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalledWith(mockRide, mockCtx);
-      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('You have joined the ride!');
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.participation.joinedSuccess'));
     });
 
     it('should handle already joined ride', async () => {
@@ -170,7 +174,11 @@ describe('ParticipationHandlers', () => {
       // Verify
       expect(mockRideService.getRide).toHaveBeenCalledWith('123');
       expect(mockRideService.setParticipation).toHaveBeenCalled();
-      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('You are already joined for this ride');
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(
+        tr('commands.participation.alreadyInState', {
+          state: tr('commands.participation.states.joined')
+        })
+      );
     });
     
     it('should handle error during join', async () => {
@@ -191,7 +199,7 @@ describe('ParticipationHandlers', () => {
       );
       
       // Verify user-facing error message
-      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('An error occurred');
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.participation.genericError'));
       
       // Verify no partial state - setParticipation should not have been called
       expect(mockRideService.setParticipation).not.toHaveBeenCalled();
@@ -225,7 +233,7 @@ describe('ParticipationHandlers', () => {
         firstName: 'Test',
         lastName: 'User'
       }, 'thinking');
-      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('You are thinking about this ride');
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.participation.thinkingSuccess'));
     });
   });
 
@@ -253,7 +261,7 @@ describe('ParticipationHandlers', () => {
         firstName: 'Test',
         lastName: 'User'
       }, 'skipped');
-      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith('You have passed on this ride');
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.participation.skippedSuccess'));
     });
   });
   

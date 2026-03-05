@@ -4,12 +4,14 @@
 
 import { jest } from '@jest/globals';
 import { ListRidesCommandHandler } from '../../commands/ListRidesCommandHandler.js';
+import { t } from '../../i18n/index.js';
 
-describe('ListRidesCommandHandler', () => {
+describe.each(['en', 'ru'])('ListRidesCommandHandler (%s)', (language) => {
   let handler;
   let mockRideService;
   let mockMessageFormatter;
   let mockCtx;
+  const tr = (key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
 
   beforeEach(() => {
     mockRideService = {
@@ -24,13 +26,8 @@ describe('ListRidesCommandHandler', () => {
       reply: jest.fn().mockResolvedValue({}),
       editMessageText: jest.fn().mockResolvedValue({}),
       answerCallbackQuery: jest.fn().mockResolvedValue({}),
-      t: jest.fn((key) => {
-        const values = {
-          'buttons.previous': '« Previous',
-          'buttons.next': 'Next »'
-        };
-        return values[key] || key;
-      }),
+      lang: language,
+      t: jest.fn((key, params = {}) => tr(key, params)),
       from: { id: 123 },
       message: { text: '/listrides' },
       match: ['list:2', '2']

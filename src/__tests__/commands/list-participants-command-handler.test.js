@@ -4,13 +4,15 @@
 
 import { jest } from '@jest/globals';
 import { ListParticipantsCommandHandler } from '../../commands/ListParticipantsCommandHandler.js';
+import { t } from '../../i18n/index.js';
 
-describe('ListParticipantsCommandHandler', () => {
+describe.each(['en', 'ru'])('ListParticipantsCommandHandler (%s)', (language) => {
   let listParticipantsHandler;
   let mockRideService;
   let mockMessageFormatter;
   let mockRideMessagesService;
   let mockCtx;
+  const tr = (key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
 
   beforeEach(() => {
     // Create mock services
@@ -30,6 +32,7 @@ describe('ListParticipantsCommandHandler', () => {
     // Create mock Grammy context
     mockCtx = {
       reply: jest.fn().mockResolvedValue({}),
+      lang: language,
       from: { id: 123 },
       message: {
         text: '/listparticipants abc123'
@@ -74,16 +77,19 @@ describe('ListParticipantsCommandHandler', () => {
       await listParticipantsHandler.handle(mockCtx);
 
       // Verify
-      expect(mockRideMessagesService.extractRideId).toHaveBeenCalledWith(mockCtx.message);
+      expect(mockRideMessagesService.extractRideId).toHaveBeenCalledWith(
+        mockCtx.message,
+        { language }
+      );
       expect(mockRideService.getRide).toHaveBeenCalledWith(rideId);
       expect(mockCtx.reply).toHaveBeenCalledWith(
-        expect.stringContaining('All Participants for "Test Ride" (3)'),
+        expect.stringContaining(tr('commands.listParticipants.allParticipantsTitle', { title: 'Test Ride', total: 3 })),
         { parse_mode: 'HTML' }
       );
       
       const replyMessage = mockCtx.reply.mock.calls[0][0];
-      expect(replyMessage).toContain('🚴 <b>Joined (2):</b>');
-      expect(replyMessage).toContain('🤔 <b>Thinking (1):</b>');
+      expect(replyMessage).toContain(`🚴 <b>${tr('commands.listParticipants.joinedLabel', { count: 2 })}:</b>`);
+      expect(replyMessage).toContain(`🤔 <b>${tr('commands.listParticipants.thinkingLabel', { count: 1 })}:</b>`);
       expect(replyMessage).toContain('<a href="tg://user?id=1">John Doe (@johndoe)</a>');
       expect(replyMessage).toContain('<a href="tg://user?id=2">Jane Smith (@janesmith)</a>');
       expect(replyMessage).toContain('<a href="tg://user?id=3">Bob Wilson</a>');
@@ -106,15 +112,15 @@ describe('ListParticipantsCommandHandler', () => {
 
       // Verify
       expect(mockCtx.reply).toHaveBeenCalledWith(
-        expect.stringContaining('All Participants for "Test Ride" (0)'),
+        expect.stringContaining(tr('commands.listParticipants.allParticipantsTitle', { title: 'Test Ride', total: 0 })),
         { parse_mode: 'HTML' }
       );
       expect(mockCtx.reply).toHaveBeenCalledWith(
-        expect.stringContaining('🚴 <b>Joined (0):</b>'),
+        expect.stringContaining(`🚴 <b>${tr('commands.listParticipants.joinedLabel', { count: 0 })}:</b>`),
         { parse_mode: 'HTML' }
       );
       expect(mockCtx.reply).toHaveBeenCalledWith(
-        expect.stringContaining('No one joined yet.'),
+        expect.stringContaining(tr('commands.listParticipants.noOneJoinedYet')),
         { parse_mode: 'HTML' }
       );
     });
@@ -150,10 +156,10 @@ describe('ListParticipantsCommandHandler', () => {
 
       // Verify
       const replyMessage = mockCtx.reply.mock.calls[0][0];
-      expect(replyMessage).toContain('All Participants for "Test Ride" (3)');
-      expect(replyMessage).toContain('🚴 <b>Joined (1):</b>');
-      expect(replyMessage).toContain('🤔 <b>Thinking (1):</b>');
-      expect(replyMessage).toContain('🙅 <b>Not interested (1):</b>');
+      expect(replyMessage).toContain(tr('commands.listParticipants.allParticipantsTitle', { title: 'Test Ride', total: 3 }));
+      expect(replyMessage).toContain(`🚴 <b>${tr('commands.listParticipants.joinedLabel', { count: 1 })}:</b>`);
+      expect(replyMessage).toContain(`🤔 <b>${tr('commands.listParticipants.thinkingLabel', { count: 1 })}:</b>`);
+      expect(replyMessage).toContain(`🙅 <b>${tr('commands.listParticipants.notInterestedLabel', { count: 1 })}:</b>`);
       expect(replyMessage).toContain('<a href="tg://user?id=1">John Doe (@johndoe)</a>');
       expect(replyMessage).toContain('<a href="tg://user?id=2">Jane Smith (@janesmith)</a>');
       expect(replyMessage).toContain('<a href="tg://user?id=3">Bob Wilson (@bobwilson)</a>');
@@ -167,7 +173,7 @@ describe('ListParticipantsCommandHandler', () => {
       await listParticipantsHandler.handle(mockCtx);
 
       // Verify
-      expect(mockCtx.reply).toHaveBeenCalledWith('Please provide a valid ride ID. Usage: /listparticipants rideID');
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.listParticipants.invalidRideIdUsage'));
       expect(mockRideService.getRide).not.toHaveBeenCalled();
     });
 
@@ -181,7 +187,7 @@ describe('ListParticipantsCommandHandler', () => {
       await listParticipantsHandler.handle(mockCtx);
 
       // Verify
-      expect(mockCtx.reply).toHaveBeenCalledWith('Ride #abc123 not found.');
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.common.rideNotFoundByIdWithDot', { id: rideId }));
     });
 
     it('should handle service errors gracefully', async () => {
@@ -194,7 +200,7 @@ describe('ListParticipantsCommandHandler', () => {
       await listParticipantsHandler.handle(mockCtx);
 
       // Verify
-      expect(mockCtx.reply).toHaveBeenCalledWith('An error occurred while retrieving participants.');
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.listParticipants.retrieveError'));
     });
   });
 
