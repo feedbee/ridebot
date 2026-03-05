@@ -340,7 +340,9 @@ _No major refactoring areas identified at this time. The codebase is well-organi
 - [x] Feature: (Ride participation) Add an "Not interested" option to gather responses from those who will not join the ride.
 - [x] Feature: (Ride participation) Limit the ride message to display only the first N registered participants (configurable via MAX_PARTICIPANTS_DISPLAY), and if there are more, show a label like "and X more".
 - [x] Bug: Correct dates recognition in differfent languages
+- [ ] Feature: Use AI to parse ride parameters from route link
 - [ ] Feature: Creating rides with AI
+- [ ] Enhancement: Clarify average speed vs minspeed vs pace
 
 ### Medium Priority
 - [ ] Feature: (Rides management) Add management buttons below the ride button in private chat with the bot for ride creator
