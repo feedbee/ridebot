@@ -48,6 +48,26 @@ describe('DateParser', () => {
       const result = DateParser.parseDateTime('not a valid date');
       expect(result).toBeNull();
     });
+
+    it('should parse Russian date input when language is explicitly Russian', () => {
+      const now = new Date('2024-03-09T12:00:00Z');
+      jest.useFakeTimers().setSystemTime(now);
+
+      const result = DateParser.parseDateTime('завтра в 14:00', { language: 'ru' });
+      expect(result).not.toBeNull();
+      expect(result.date.getDate()).toBe(10);
+      expect(result.date.getHours()).toBe(14);
+    });
+
+    it('should parse Russian date input even when language is English', () => {
+      const now = new Date('2024-03-09T12:00:00Z');
+      jest.useFakeTimers().setSystemTime(now);
+
+      const result = DateParser.parseDateTime('завтра в 14:00', { language: 'en' });
+      expect(result).not.toBeNull();
+      expect(result.date.getDate()).toBe(10);
+      expect(result.date.getHours()).toBe(14);
+    });
   });
   
   describe('parseDateTime with timezone', () => {

@@ -418,7 +418,7 @@ describe('RideService', () => {
       const result = await rideService.createRideFromParams(params, 123456, 789);
       
       // Check that the error message contains the base error text
-      expect(result.error).toContain('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30');
+      expect(result.error).toContain('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• this saturday 10am\n• 21 Jul 14:30');
       
       // The timezone note should not be present when no timezone is configured
       expect(result.error).not.toContain('Note: Times are interpreted in the');
@@ -438,7 +438,7 @@ describe('RideService', () => {
       const result = await rideService.createRideFromParams(params, 123456, 789);
       
       // Check that the error message contains the base error text
-      expect(result.error).toContain('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30');
+      expect(result.error).toContain('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• this saturday 10am\n• 21 Jul 14:30');
       
       // The timezone note should be present when a timezone is configured
       expect(result.error).toContain('Note: Times are interpreted in the Europe/London timezone.');
@@ -721,7 +721,7 @@ describe('RideService', () => {
       const result = await rideService.updateRideFromParams(ride.id, params);
       
       // Check that the error message contains the base error text
-      expect(result.error).toContain('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30');
+      expect(result.error).toContain('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• this saturday 10am\n• 21 Jul 14:30');
       
       // The timezone note should not be present when no timezone is configured
       expect(result.error).not.toContain('Note: Times are interpreted in the');
@@ -746,7 +746,7 @@ describe('RideService', () => {
       const result = await rideService.updateRideFromParams(ride.id, params);
       
       // Check that the error message contains the base error text
-      expect(result.error).toContain('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30');
+      expect(result.error).toContain('❌ I couldn\'t understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• this saturday 10am\n• 21 Jul 14:30');
       
       // The timezone note should be present when a timezone is configured
       expect(result.error).toContain('Note: Times are interpreted in the Europe/London timezone.');

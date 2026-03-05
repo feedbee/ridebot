@@ -40,7 +40,7 @@ Use /newride command followed by parameters (one per line):
 <pre>
 /newride
 title: Ride title
-when: Date and time (e.g., "tomorrow at 6pm", "next saturday 10am", "21 Jul 14:30")
+when: Date and time (e.g., "tomorrow at 6pm", "this saturday 10am", "21 Jul 14:30")
 category: One of: "Regular/Mixed Ride" (default), "Road Ride", "Gravel Ride", "Mountain/Enduro/Downhill Ride", "MTB-XC Ride", "E-Bike Ride", "Virtual/Indoor Ride" (optional)
 meet: Meeting point (optional)
 route: Route link (optional)
@@ -344,7 +344,7 @@ Click here to start a private chat: @botname
   },
   parsers: {
     date: {
-      invalidFormat: "❌ I couldn't understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30",
+      invalidFormat: "❌ I couldn't understand that date/time format. Please try something like:\n• tomorrow at 6pm\n• in 2 hours\n• this saturday 10am\n• 21 Jul 14:30",
       timezoneNote: 'Note: Times are interpreted in the {timezone} timezone.',
       pastDate: "❌ The ride can't be scheduled in the past! Please provide a future date and time."
     },
@@ -372,7 +372,7 @@ Click here to start a private chat: @botname
       title: '📝 Please enter the ride title:',
       category: '🚲 Please select the ride category:',
       organizer: '👤 Who is organizing this ride?\n<i>Enter a dash (-) to clear/skip this field</i>',
-      date: '📅 When is the ride?\nYou can use natural language like:\n• tomorrow at 6pm\n• in 2 hours\n• next saturday 10am\n• 21 Jul 14:30',
+      date: '📅 When is the ride?\nYou can use natural language like:\n• tomorrow at 6pm\n• in 2 hours\n• this saturday 10am\n• 21 Jul 14:30',
       route: '🔗 Please enter the route link (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
       distance: '📏 Please enter the distance in kilometers (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
       duration: '⏱ Please enter the duration (e.g., \"2h 30m\", \"90m\", \"1.5h\"):\n<i>Enter a dash (-) to clear/skip this field</i>',

@@ -21,6 +21,24 @@ describe('parseDateTimeInput', () => {
     expect(result.error).toBeUndefined();
   });
 
+  it('should parse valid Russian future dates', () => {
+    const result = parseDateTimeInput('завтра в 14:00', { language: 'ru' });
+    expect(result.date).not.toBeNull();
+    expect(result.error).toBeUndefined();
+  });
+
+  it('should parse Russian date input even when interface language is English', () => {
+    const result = parseDateTimeInput('завтра в 14:00', { language: 'en' });
+    expect(result.date).not.toBeNull();
+    expect(result.error).toBeUndefined();
+  });
+
+  it('should parse English date input even when interface language is Russian', () => {
+    const result = parseDateTimeInput('tomorrow at 2pm', { language: 'ru' });
+    expect(result.date).not.toBeNull();
+    expect(result.error).toBeUndefined();
+  });
+
   it('should reject past dates', () => {
     const result = parseDateTimeInput('yesterday at 2pm');
     expect(result.date).toBeNull();

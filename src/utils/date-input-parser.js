@@ -14,7 +14,7 @@ export function parseDateTimeInput(text, options = {}) {
     withMissingMarker: config.isDev
   });
 
-  const parsedDate = DateParser.parseDateTime(text);
+  const parsedDate = DateParser.parseDateTime(text, { language });
   if (!parsedDate) {
     let errorMessage = translate('parsers.date.invalidFormat');
     

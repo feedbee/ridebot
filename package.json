@@ -35,6 +35,9 @@
   "jest": {
     "transform": {},
     "testEnvironment": "node",
+    "setupFiles": [
+      "<rootDir>/src/test-setup/jest-env.js"
+    ],
     "moduleNameMapper": {
       "^(\\.{1,2}/.*)\\.js$": "$1"
     },

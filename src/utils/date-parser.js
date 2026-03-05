@@ -2,23 +2,93 @@ import * as chrono from 'chrono-node';
 import { config } from '../config.js';
 
 export class DateParser {
+  static CHRONO_LOCALE_PARSERS = Object.freeze({
+    en: chrono.en,
+    ru: chrono.ru,
+    de: chrono.de,
+    es: chrono.es,
+    fr: chrono.fr,
+    it: chrono.it,
+    ja: chrono.ja,
+    nl: chrono.nl,
+    pt: chrono.pt,
+    sv: chrono.sv,
+    uk: chrono.uk,
+    zh: chrono.zh
+  });
+
+  static CHRONO_LOCALE_ORDER = Object.freeze([
+    'en',
+    'ru',
+    'de',
+    'es',
+    'fr',
+    'it',
+    'ja',
+    'nl',
+    'pt',
+    'sv',
+    'uk',
+    'zh'
+  ]);
+
+  static normalizeLanguageCode(language) {
+    if (!language) return null;
+    return String(language).trim().toLowerCase().split(/[-_]/)[0];
+  }
+
+  static getChronoParsers(language) {
+    const requested = this.normalizeLanguageCode(language);
+    const fallback = this.normalizeLanguageCode(config.i18n.fallbackLanguage);
+    const orderedKeys = [];
+
+    if (requested && this.CHRONO_LOCALE_PARSERS[requested]) orderedKeys.push(requested);
+    if (fallback && this.CHRONO_LOCALE_PARSERS[fallback] && fallback !== requested) orderedKeys.push(fallback);
+
+    this.CHRONO_LOCALE_ORDER.forEach((key) => {
+      if (!orderedKeys.includes(key)) orderedKeys.push(key);
+    });
+
+    return orderedKeys
+      .map(key => this.CHRONO_LOCALE_PARSERS[key])
+      .filter(Boolean);
+  }
+
   /**
    * Parse natural language date/time into a Date object
    * @param {string} text - Natural language date/time (e.g., "tomorrow at 6pm", "in 2 hours")
+   * @param {{language?: string}} [options]
    * @returns {{date: Date, text: string}|null} Parsed date and the text that was recognized
    */
-  static parseDateTime(text) {
+  static parseDateTime(text, options = {}) {
     try {
       // For relative dates (like "tomorrow"), the reference date needs to be in the target timezone
       const convertedRefDate = this.convertToTimezone(new Date(), config.dateFormat.defaultTimezone);
-      
-      const results = chrono.parse(text, convertedRefDate, { forwardDate: true });
-      
-      if (results.length === 0) {
-        return null;
+
+      let bestResult = null;
+      for (const parser of this.getChronoParsers(options.language)) {
+        const results = parser.parse(text, convertedRefDate, { forwardDate: true });
+        if (results.length > 0) {
+          const candidate = results[0];
+          if (
+            !bestResult ||
+            candidate.index < bestResult.index ||
+            (candidate.index === bestResult.index && candidate.text.length > bestResult.text.length)
+          ) {
+            bestResult = candidate;
+          }
+        }
       }
 
-      const parsedResult = results[0];
+      let parsedResult = bestResult;
+      if (!parsedResult) {
+        const fallbackResults = chrono.parse(text, convertedRefDate, { forwardDate: true });
+        if (fallbackResults.length === 0) {
+          return null;
+        }
+        parsedResult = fallbackResults[0];
+      }
+
       // We expect input in local timezone
       const date = this.convertFromTimezone(parsedResult.start.date(), config.dateFormat.defaultTimezone);
       
