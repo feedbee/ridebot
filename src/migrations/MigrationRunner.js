@@ -54,22 +54,22 @@ export class MigrationRunner {
    */
   async runMigrations() {
     await this.connect();
-    
+
     try {
       const currentVersion = await this.getCurrentVersion();
-      const migrations = this.getMigrations();
+      const migrations = MigrationRunner.getMigrations();
       const pendingMigrations = migrations.filter(m => m.version > currentVersion);
-      
+
       console.log(`Current schema version: ${currentVersion}`);
       console.log(`Found ${pendingMigrations.length} pending migrations`);
-      
+
       for (const migration of pendingMigrations) {
         console.log(`Running migration ${migration.version}: ${migration.name}`);
         await migration.up(this.db);
         await this.setVersion(migration.version);
         console.log(`✓ Migration ${migration.version} completed`);
       }
-      
+
       if (pendingMigrations.length === 0) {
         console.log('No migrations to run');
       } else {
@@ -85,38 +85,32 @@ export class MigrationRunner {
    * @returns {number} Required schema version
    */
   getRequiredVersion() {
-    const migrations = this.getMigrations();
+    const migrations = MigrationRunner.getMigrations();
     return migrations.length > 0 ? Math.max(...migrations.map(m => m.version)) : 0;
   }
 
   /**
-   * Validate that the database schema is up to date
-   * @throws {Error} If schema version is outdated
+   * Validate that a given schema version meets the required version.
+   * Contains all comparison logic and error messages.
+   * @param {number} currentVersion - The current schema version from the database
+   * @throws {Error} If the schema version is outdated
    */
-  async validateSchemaVersion() {
-    await this.connect();
-    
-    try {
-      const currentVersion = await this.getCurrentVersion();
-      const requiredVersion = this.getRequiredVersion();
-      
-      if (currentVersion < requiredVersion) {
-        const errorMessage = `Database schema is outdated. Current version: ${currentVersion}, Required version: ${requiredVersion}. Please run migrations first (see README.md).`;
-        console.error('Schema validation failed:', errorMessage);
-        throw new Error(errorMessage);
-      }
-      
-      console.log(`Schema validation passed. Current version: ${currentVersion}`);
-    } finally {
-      await this.disconnect();
+  static validateVersion(currentVersion) {
+    const migrations = MigrationRunner.getMigrations();
+    const requiredVersion = migrations.length > 0 ? Math.max(...migrations.map(m => m.version)) : 0;
+    if (currentVersion < requiredVersion) {
+      const errorMessage = `Database schema is outdated. Current version: ${currentVersion}, Required version: ${requiredVersion}. Please run migrations first (see README.md).`;
+      console.error('Schema validation failed:', errorMessage);
+      throw new Error(errorMessage);
     }
+    console.log(`Schema validation passed. Current version: ${currentVersion}`);
   }
 
   /**
    * Get all available migrations
    * @returns {Array} Array of migration objects
    */
-  getMigrations() {
+  static getMigrations() {
     return [
       {
         version: 1,

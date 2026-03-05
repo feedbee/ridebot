@@ -51,10 +51,10 @@ describe('MigrationRunner', () => {
     ];
 
     runner = new MigrationRunner('mongodb://test');
-    
+
     // Mock getMigrations to return our test migrations
-    jest.spyOn(runner, 'getMigrations').mockReturnValue(mockMigrations);
-    
+    jest.spyOn(MigrationRunner, 'getMigrations').mockReturnValue(mockMigrations);
+
     jest.clearAllMocks();
   });
 
@@ -70,7 +70,7 @@ describe('MigrationRunner', () => {
     });
 
     it('should get migrations (mocked)', () => {
-      const migrations = runner.getMigrations();
+      const migrations = MigrationRunner.getMigrations();
       expect(migrations).toHaveLength(2);
       expect(migrations[0].version).toBe(1);
       expect(migrations[0].name).toBe('Test Migration 1');
@@ -83,6 +83,29 @@ describe('MigrationRunner', () => {
     });
   });
 
+  describe('MigrationRunner.validateVersion (static)', () => {
+    it('should not throw when schema is up to date', () => {
+      expect(() => MigrationRunner.validateVersion(2)).not.toThrow();
+    });
+
+    it('should not throw when schema is ahead of required', () => {
+      expect(() => MigrationRunner.validateVersion(99)).not.toThrow();
+    });
+
+    it('should throw when schema is outdated', () => {
+      expect(() => MigrationRunner.validateVersion(0)).toThrow(
+        'Database schema is outdated. Current version: 0, Required version: 2. Please run migrations first (see README.md).'
+      );
+    });
+
+    it('should throw with correct version numbers in message', () => {
+      expect(() => MigrationRunner.validateVersion(1)).toThrow(
+        'Database schema is outdated. Current version: 1, Required version: 2. Please run migrations first (see README.md).'
+      );
+    });
+  });
+
+
   describe('Database operations with manual setup', () => {
     beforeEach(async () => {
       // Manually set up the connection state
@@ -92,29 +115,29 @@ describe('MigrationRunner', () => {
 
     it('should get current version from database', async () => {
       mockCollection.findOne.mockResolvedValue({ schemaVersion: 3 });
-      
+
       const version = await runner.getCurrentVersion();
-      
+
       expect(version).toBe(3);
       expect(mockCollection.findOne).toHaveBeenCalledWith({});
     });
 
     it('should return 0 for no version found', async () => {
       mockCollection.findOne.mockResolvedValue(null);
-      
+
       const version = await runner.getCurrentVersion();
-      
+
       expect(version).toBe(0);
     });
 
     it('should set version in database', async () => {
       mockCollection.replaceOne.mockResolvedValue({});
-      
+
       await runner.setVersion(5);
-      
+
       expect(mockCollection.replaceOne).toHaveBeenCalledWith(
         {},
-        expect.objectContaining({ 
+        expect.objectContaining({
           schemaVersion: 5,
           updatedAt: expect.any(Date)
         }),
@@ -192,36 +215,6 @@ describe('MigrationRunner', () => {
     });
   });
 
-  describe('Schema validation with mocked connection', () => {
-    beforeEach(() => {
-      // Mock the connect method
-      jest.spyOn(runner, 'connect').mockImplementation(async () => {
-        runner.client = mockClient;
-        runner.db = mockDb;
-      });
-    });
-
-    afterEach(() => {
-      runner.connect.mockRestore();
-    });
-
-    it('should pass validation when schema is up to date', async () => {
-      mockCollection.findOne.mockResolvedValue({ schemaVersion: 2 });
-
-      await expect(runner.validateSchemaVersion()).resolves.not.toThrow();
-      expect(runner.connect).toHaveBeenCalled();
-    });
-
-    it('should fail validation when schema is outdated', async () => {
-      mockCollection.findOne.mockResolvedValue({ schemaVersion: 0 });
-
-      await expect(runner.validateSchemaVersion()).rejects.toThrow(
-        'Database schema is outdated. Current version: 0, Required version: 2. Please run migrations first (see README.md).'
-      );
-      expect(runner.connect).toHaveBeenCalled();
-    });
-  });
-
   describe('Edge cases', () => {
     beforeEach(() => {
       // Mock the connect method
@@ -237,8 +230,8 @@ describe('MigrationRunner', () => {
 
     it('should handle empty migrations list', async () => {
       // Mock empty migrations
-      jest.spyOn(runner, 'getMigrations').mockReturnValue([]);
-      
+      jest.spyOn(MigrationRunner, 'getMigrations').mockReturnValue([]);
+
       mockCollection.findOne.mockResolvedValue({ schemaVersion: 0 });
 
       await runner.runMigrations();

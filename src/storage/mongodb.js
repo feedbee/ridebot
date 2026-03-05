@@ -62,12 +62,13 @@ export class MongoDBStorage extends StorageInterface {
       console.log('Connected to MongoDB');
       await Ride.createIndexes();
       console.log('Ride indexes ensured');
-      
+
       // Skip schema validation in test environment
       if (process.env.NODE_ENV !== 'test') {
-        // Validate schema version using MigrationRunner
-        const migrationRunner = new MigrationRunner(config.mongodb.uri);
-        await migrationRunner.validateSchemaVersion();
+        const db = mongoose.connection.db;
+        const metaDoc = await db.collection('meta').findOne({});
+        const currentVersion = metaDoc ? metaDoc.schemaVersion : 0;
+        MigrationRunner.validateVersion(currentVersion);
       }
     } catch (error) {
       console.error('MongoDB connection error:', error);
@@ -82,17 +83,17 @@ export class MongoDBStorage extends StorageInterface {
   }
 
   async createRide(ride) {
-    let rideData = { 
-      ...ride, 
+    let rideData = {
+      ...ride,
       category: normalizeCategory(ride.category),
       participation: { joined: [], thinking: [], skipped: [] }
     };
-    
+
     // Ensure messages array exists
     if (!rideData.messages) {
       rideData.messages = [];
     }
-    
+
     const newRide = new Ride(rideData);
     await newRide.save();
     return this.mapRideToInterface(newRide);
@@ -103,11 +104,11 @@ export class MongoDBStorage extends StorageInterface {
     if (!ride) {
       throw new Error('Ride not found');
     }
-    
+
     // Preserve the messages array if it's not being updated
     // This is critical to ensure message tracking works properly
     let updatesToApply = { ...updates };
-    
+
     // Set updatedAt to current time only if updatedBy is set
     if (updatesToApply.updatedBy) {
       updatesToApply.updatedAt = new Date();
@@ -116,7 +117,7 @@ export class MongoDBStorage extends StorageInterface {
     if (updatesToApply.category !== undefined) {
       updatesToApply.category = normalizeCategory(updatesToApply.category);
     }
-    
+
     // Apply updates
     Object.assign(ride, updatesToApply);
     await ride.save();
@@ -213,7 +214,7 @@ export class MongoDBStorage extends StorageInterface {
   mapRideToInterface(ride) {
     if (!ride) return null;
     const rideObj = ride.toObject ? ride.toObject() : ride;
-    
+
     // Create the ride object with the messages array
     const result = {
       id: rideObj._id.toString(),
@@ -258,7 +259,7 @@ export class MongoDBStorage extends StorageInterface {
         }))
       }
     };
-    
+
     return result;
   }
 } 

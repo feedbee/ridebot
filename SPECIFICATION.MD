@@ -332,29 +332,29 @@ _No major refactoring areas identified at this time. The codebase is well-organi
 ## Future Enhancements
 
 ### High Priority
-- [x] Translations: Add Russian language support and set the bot's default language through environment variables.
-- [x] Commands: Rename /postride to /shareride.
+- [x] Feature: (Translations) Add Russian language support and set the bot's default language through environment variables.
+- [x] Feature: (Commands) Rename /postride to /shareride.
 - [x] Documentation: Improve /start message to simplify onboarding
-- [x] Ride participation: List participants on the same line after the label, separated by commas.
-- [x] Ride participation: Add an "I am thinking" option to indicate who might join the chat.
-- [x] Ride participation: Add an "Not interested" option to gather responses from those who will not join the ride.
-- [x] Ride participation: Limit the ride message to display only the first N registered participants (configurable via MAX_PARTICIPANTS_DISPLAY), and if there are more, show a label like "and X more".
-- [x] Correct dates recognition in differfent languages
-- [ ] Creating rides with AI
+- [x] Feature: (Ride participation) List participants on the same line after the label, separated by commas.
+- [x] Feature: (Ride participation) Add an "I am thinking" option to indicate who might join the chat.
+- [x] Feature: (Ride participation) Add an "Not interested" option to gather responses from those who will not join the ride.
+- [x] Feature: (Ride participation) Limit the ride message to display only the first N registered participants (configurable via MAX_PARTICIPANTS_DISPLAY), and if there are more, show a label like "and X more".
+- [x] Bug: Correct dates recognition in differfent languages
+- [ ] Feature: Creating rides with AI
 
 ### Medium Priority
-- [ ] Rides management: Add management buttons below the ride button in private chat with the bot for ride creator
-- [ ] Notifications: Send a private notification to the ride creator when a participant joins or leaves. There is a 30-second delay to prevent spamming from frequent toggling; if the participant's status changes again within this period, cancel the pending notification.
-- [ ] Notifications: Remind the joined users about upcoming ride 24 hours and 1 hour before the ride (send a private message; give each user an option to unsubscribe from all notifications).
-- [ ] Ride sharing: Optionally enable everyone to repost the ride via an additional field during ride creation or update.
+- [ ] Feature: (Rides management) Add management buttons below the ride button in private chat with the bot for ride creator
+- [ ] Feature: (Notifications) Send a private notification to the ride creator when a participant joins or leaves. There is a 30-second delay to prevent spamming from frequent toggling; if the participant's status changes again within this period, cancel the pending notification.
+- [ ] Feature: (Notifications) Remind the joined users about upcoming ride 24 hours and 1 hour before the ride (send a private message; give each user an option to unsubscribe from all notifications).
+- [ ] Feature: (Ride sharing) Optionally enable everyone to repost the ride via an additional field during ride creation or update.
 
 ### Low Priority
-- [ ] Translations: Override the bot's default language based on the user's preference (the bot communicates with the user in their chosen language; it also announces the user's rides, created by them, in the preferred language).
-- [ ] Ride participation: Add a comand to list joined rides for the current user
-- [x] Quality: Better testing and fixes of setting nummeric ride attributes, like setting interval 22-25 and updating with a single value (29) gives 29-25
-- [ ] Add keyboard shortcut to keep the current value
-- [x] Update readme for installation via Docker
-- [ ] Resolve multiple mongoDB instances/connections
+- [x] Bug: Better testing and fixes of setting nummeric ride attributes, like setting interval 22-25 and updating with a single value (29) gives 29-25
+- [x] Documentation: Update readme for installation via Docker
+- [x] Bug: Resolve multiple mongoDB instances/connections
+- [ ] Feature: (Translations) Override the bot's default language based on the user's preference (the bot communicates with the user in their chosen language; it also announces the user's rides, created by them, in the preferred language).
+- [ ] Feature: (Ride participation) Add a comand to list joined rides for the current user
+- [ ] Feature: Add keyboard shortcut to keep the current value
 
 ---
 
