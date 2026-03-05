@@ -259,15 +259,39 @@ info: Bring lights
 
 ## Testing
 
-Comprehensive test suite covering:
-- All command handlers
-- Services (RideService, RideMessagesService)
-- Storage implementations (MongoDB, Memory)
-- Utilities (parsers, formatters)
-- Wizard flows
-- Integration tests for main flows
+The project uses a layered Jest strategy with clear local/CI execution modes.
 
-**Test Framework:** Jest with MongoDB Memory Server
+Coverage includes:
+- Command handlers
+- Core bot setup and webhook/polling flows
+- Services (`RideService`, `RideMessagesService`)
+- Storage (`memory`, `mongodb`)
+- Wizard flows and field configuration
+- Utilities (date/route/params/duration/html/category)
+- Integration tests for main user flows
+
+Test scripts:
+- `npm test`: run full suite in a single pass
+- `npm run test:basic`: run full suite except MongoMemoryServer tests
+- `npm run test:mongo`: run MongoMemoryServer suite only
+- `npm run test:coverage`: full-suite coverage with thresholds
+- `npm run test:coverage:basic`: coverage for non-Mongo suite
+
+Runner helper:
+- `./run-tests.sh --mode all|basic|mongo [--coverage]`
+- Default mode is `all`
+
+Quality gates:
+- Jest global coverage thresholds are enforced (`statements/lines/functions/branches`).
+- CI runs the full suite on pull requests and pushes to `main`.
+- No nightly-only test dependency; regression coverage is part of standard CI signal.
+
+Testing approach:
+- Recent refactor reduced implementation-coupled assertions and favors behavior checks:
+  - user-visible replies and outcomes
+  - state transitions and persistence effects
+  - multi-chat propagation side effects
+- Test taxonomy and conventions are documented in [`docs/testing-conventions.md`](docs/testing-conventions.md).
 
 ---
 
@@ -308,13 +332,14 @@ _No major refactoring areas identified at this time. The codebase is well-organi
 ## Future Enhancements
 
 ### High Priority
-- [ ] Translations: Add Russian language support and set the bot's default language through environment variables.
+- [x] Translations: Add Russian language support and set the bot's default language through environment variables.
 - [x] Commands: Rename /postride to /shareride.
 - [x] Documentation: Improve /start message to simplify onboarding
 - [x] Ride participation: List participants on the same line after the label, separated by commas.
 - [x] Ride participation: Add an "I am thinking" option to indicate who might join the chat.
 - [x] Ride participation: Add an "Not interested" option to gather responses from those who will not join the ride.
 - [x] Ride participation: Limit the ride message to display only the first N registered participants (configurable via MAX_PARTICIPANTS_DISPLAY), and if there are more, show a label like "and X more".
+- [ ] Creating rides with AI
 
 ### Medium Priority
 - [ ] Rides management: Add management buttons below the ride button in private chat with the bot for ride creator
@@ -326,6 +351,10 @@ _No major refactoring areas identified at this time. The codebase is well-organi
 - [ ] Translations: Override the bot's default language based on the user's preference (the bot communicates with the user in their chosen language; it also announces the user's rides, created by them, in the preferred language).
 - [ ] Ride participation: Add a comand to list joined rides for the current user
 - [ ] Quality: Better testing and fixes of setting nummeric ride attributes, like setting interval 22-25 and updating with a single value (29) gives 29-25
+- [ ] Add keyboard shortcut to keep the current value
+- [ ] Update readme for installation via Docker
+- [ ] Resolve multiple mongoDB instances/connections
+- [ ] Check indexes on participants
 
 ---
 
