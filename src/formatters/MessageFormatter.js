@@ -98,7 +98,7 @@ export class MessageFormatter {
   formatRideMessage(ride, participation, options = {}) {
     const language = options.lang || config.i18n.defaultLanguage;
     // Use DateParser for consistent timezone handling
-    const formattedDateTime = DateParser.formatDateTime(ride.date);
+    const formattedDateTime = DateParser.formatDateTime(ride.date, language);
     const datetime = `${formattedDateTime.date} ${this.translate('formatter.atWord', {}, language)} ${formattedDateTime.time}`;
     
     // Extract all participation categories
@@ -231,7 +231,7 @@ export class MessageFormatter {
     
     for (const ride of rides) {
       // Use DateParser for consistent timezone handling
-      const formattedDateTime = DateParser.formatDateTime(ride.date);
+      const formattedDateTime = DateParser.formatDateTime(ride.date, language);
       const datetime = `${formattedDateTime.date} ${this.translate('formatter.atWord', {}, language)} ${formattedDateTime.time}`;
       const status = ride.cancelled ? this.translate('templates.cancelled', {}, language) : '';
       

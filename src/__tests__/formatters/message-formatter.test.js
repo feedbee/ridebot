@@ -5,6 +5,7 @@
 import { jest } from '@jest/globals';
 import { MessageFormatter } from '../../formatters/MessageFormatter.js';
 import { config } from '../../config.js';
+import { DateParser } from '../../utils/date-parser.js';
 
 // Mock the grammy module
 jest.mock('grammy', () => {
@@ -98,6 +99,10 @@ describe('MessageFormatter', () => {
   });
   
   describe('formatRideMessage', () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     it('should format ride message with all fields', () => {
       // Setup
       const ride = {
@@ -204,6 +209,19 @@ describe('MessageFormatter', () => {
       expect(result).toContain('<a href="tg://user?id=456">Test1 User1 (@testuser1)</a>');
       expect(result).toContain('<a href="tg://user?id=789">Test2 User2</a>');
       expect(result).toContain('<a href="tg://user?id=101112">@testuser3</a>');
+    });
+
+    it('should format date using the selected message language', () => {
+      const ride = {
+        id: '123',
+        title: 'Test Ride',
+        date: new Date('2025-03-30T10:00:00Z')
+      };
+
+      const formatSpy = jest.spyOn(DateParser, 'formatDateTime');
+      messageFormatter.formatRideMessage(ride, { joined: [], thinking: [], skipped: [] }, { lang: 'ru' });
+
+      expect(formatSpy).toHaveBeenCalledWith(ride.date, 'ru');
     });
 
     it('should truncate participants when there are more than MAX_PARTICIPANTS_DISPLAY', () => {

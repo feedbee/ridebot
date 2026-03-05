@@ -115,7 +115,7 @@ export function getWizardFields(language = config.i18n.defaultLanguage) {
       },
       formatter: (date) => {
         if (!(date instanceof Date) || isNaN(date)) return '';
-        const formattedDateTime = DateParser.formatDateTime(date);
+        const formattedDateTime = DateParser.formatDateTime(date, language);
         return `${formattedDateTime.date} ${translate(language, 'formatter.atWord')} ${formattedDateTime.time}`;
       }
     },
@@ -352,7 +352,7 @@ function getConfirmationFields(language = config.i18n.defaultLanguage) {
       dataKey: 'datetime',
       required: true,
       format: (value, htmlEscape, dateParser) => {
-        const formattedDateTime = dateParser.formatDateTime(value);
+        const formattedDateTime = dateParser.formatDateTime(value, language);
         return `${formattedDateTime.date} ${translate(language, 'formatter.atWord')} ${formattedDateTime.time}`;
       }
     },

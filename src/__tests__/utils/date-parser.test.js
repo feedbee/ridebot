@@ -125,5 +125,12 @@ describe('DateParser', () => {
       expect(typeof formatted.date).toBe('string');
       expect(typeof formatted.time).toBe('string');
     });
+
+    it('should resolve display locale from language', () => {
+      expect(DateParser.getDisplayLocale('ru')).toBe('ru-RU');
+      expect(DateParser.getDisplayLocale('ru-RU')).toBe('ru-RU');
+      expect(DateParser.getDisplayLocale('en')).toBe('en-GB');
+      expect(DateParser.getDisplayLocale('unknown')).toBe(config.dateFormat.locale);
+    });
   });
-}); 
+});

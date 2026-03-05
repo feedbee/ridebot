@@ -2,6 +2,21 @@ import * as chrono from 'chrono-node';
 import { config } from '../config.js';
 
 export class DateParser {
+  static DISPLAY_LOCALE_BY_LANGUAGE = Object.freeze({
+    en: 'en-GB',
+    ru: 'ru-RU',
+    de: 'de-DE',
+    es: 'es-ES',
+    fr: 'fr-FR',
+    it: 'it-IT',
+    ja: 'ja-JP',
+    nl: 'nl-NL',
+    pt: 'pt-PT',
+    sv: 'sv-SE',
+    uk: 'uk-UA',
+    zh: 'zh-CN'
+  });
+
   static CHRONO_LOCALE_PARSERS = Object.freeze({
     en: chrono.en,
     ru: chrono.ru,
@@ -106,19 +121,34 @@ export class DateParser {
   /**
    * Format date for display in messages
    * @param {Date} date 
+   * @param {string} [language]
    * @returns {{date: string, time: string}} Formatted date and time strings
    */
-  static formatDateTime(date) {
+  static formatDateTime(date, language) {
     // Convert the date from the configured timezone for display
     const displayDate = this.convertToTimezone(date, config.dateFormat.defaultTimezone);
+    const displayLocale = this.getDisplayLocale(language);
     
-    const dateStr = displayDate.toLocaleDateString(config.dateFormat.locale, config.dateFormat.date);
-    const timeStr = displayDate.toLocaleTimeString(config.dateFormat.locale, config.dateFormat.time);
+    const dateStr = displayDate.toLocaleDateString(displayLocale, config.dateFormat.date);
+    const timeStr = displayDate.toLocaleTimeString(displayLocale, config.dateFormat.time);
 
     return {
       date: dateStr,
       time: timeStr
     };
+  }
+
+  /**
+   * Resolve locale used for user-facing date/time formatting
+   * @param {string} [language]
+   * @returns {string}
+   */
+  static getDisplayLocale(language) {
+    const normalized = this.normalizeLanguageCode(language);
+    if (normalized && this.DISPLAY_LOCALE_BY_LANGUAGE[normalized]) {
+      return this.DISPLAY_LOCALE_BY_LANGUAGE[normalized];
+    }
+    return config.dateFormat.locale;
   }
 
   /**
