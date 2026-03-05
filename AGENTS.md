@@ -15,12 +15,9 @@
 ## Test command
 
 - Standard test entrypoint:
-  - `./run-tests.sh`
-- `./run-tests.sh` execution order:
-  - If already inside any Docker container: run `npm test` directly.
-  - Else if Docker is unavailable: run `npm test` locally on host.
-  - Else if this repo devcontainer is running: run `npm test` via `./scripts/devcontainer-exec.sh`.
-  - Else: run tests in a disposable `node:latest` container with `npm install && npm test`.
+  - `./run-tests.sh --mode basic`
+- Always run only basic tests by default (no Mongo mode), because Mongo-based runs may hang.
+- Do not run `--mode mongo` unless the user explicitly asks for it.
 
 ## Notes
 

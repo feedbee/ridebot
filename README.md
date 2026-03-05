@@ -266,6 +266,7 @@ The bot supports multiple ways to reference a ride:
 - `MAX_PARTICIPANTS_DISPLAY`: Maximum number of participants to show before displaying "and X more" (defaults to `20`)
 - `DEFAULT_LANGUAGE`: Default UI language for bot replies (defaults to `en`)
 - `FALLBACK_LANGUAGE`: Fallback UI language for missing keys (defaults to `en`)
+- `DEFAULT_TIMEZONE`: Default timezone for ride date/time parsing and formatting (e.g., `Europe/Warsaw`)
 
 ## Adding a New Language
 
