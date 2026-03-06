@@ -1,5 +1,6 @@
 import { RideWizard } from '../../wizard/RideWizard.js';
 import { config } from '../../config.js';
+import { RouteParser } from '../../utils/route-parser.js';
 import { jest } from '@jest/globals';
 import { t } from '../../i18n/index.js';
 
@@ -492,6 +493,39 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
       
       const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
       expect(lastMessage.text).toContain(tr('wizard.prompts.distance'));
+    });
+
+    test('should prefill parsed distance and duration but still show both steps', async () => {
+      jest.spyOn(RouteParser, 'isKnownProvider').mockReturnValueOnce(true);
+      jest.spyOn(RouteParser, 'parseRoute').mockResolvedValueOnce({ distance: 60, duration: 150 });
+
+      await wizard.startWizard(ctx);
+
+      ctx.message = { text: 'Test Ride', message_id: 2 };
+      await wizard.handleWizardInput(ctx);
+
+      ctx.message = { text: 'road', message_id: 3 };
+      await wizard.handleWizardInput(ctx);
+
+      ctx.message = { text: 'Test Organizer', message_id: 4 };
+      await wizard.handleWizardInput(ctx);
+
+      ctx.message = { text: 'tomorrow at 2pm', message_id: 5 };
+      await wizard.handleWizardInput(ctx);
+
+      ctx.message = { text: 'https://strava.com/routes/1', message_id: 6 };
+      await wizard.handleWizardInput(ctx);
+
+      let lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
+      expect(lastMessage.text).toContain(tr('wizard.prompts.distance'));
+      expect(lastMessage.text).toContain(`${tr('wizard.messages.currentValue')}: 60 ${tr('formatter.units.km')}`);
+
+      ctx.match = ['wizard:keep', 'keep'];
+      await wizard.handleWizardAction(ctx);
+
+      lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
+      expect(lastMessage.text).toContain(tr('wizard.prompts.duration'));
+      expect(lastMessage.text).toContain(`${tr('wizard.messages.currentValue')}: 2${tr('formatter.units.hour')} 30${tr('formatter.units.min')}`);
     });
   });
 

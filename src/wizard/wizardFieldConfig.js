@@ -147,12 +147,6 @@ export function getWizardFields(language = config.i18n.defaultLanguage) {
             if (routeInfo.distance) state.data.distance = routeInfo.distance;
             if (routeInfo.duration) state.data.duration = routeInfo.duration;
           }
-
-          if (state.data.distance && state.data.duration) {
-            return 'speed';
-          } else if (state.data.distance) {
-            return 'duration';
-          }
         }
         return 'distance';
       }

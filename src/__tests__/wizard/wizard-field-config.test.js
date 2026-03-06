@@ -251,7 +251,7 @@ describe('wizardFieldConfig', () => {
       expect(WIZARD_FIELDS.route.clearable).toBe(true);
     });
 
-    it('should post-process known route with distance and duration and skip to speed', async () => {
+    it('should post-process known route with distance and duration and prefill distance step', async () => {
       jest.spyOn(RouteParser, 'isKnownProvider').mockReturnValueOnce(true);
       jest.spyOn(RouteParser, 'parseRoute').mockResolvedValueOnce({ distance: 60, duration: 150 });
       const state = { data: {} };
@@ -260,10 +260,10 @@ describe('wizardFieldConfig', () => {
 
       expect(state.data.distance).toBe(60);
       expect(state.data.duration).toBe(150);
-      expect(nextStep).toBe('speed');
+      expect(nextStep).toBe('distance');
     });
 
-    it('should post-process known route with only distance and skip to duration', async () => {
+    it('should post-process known route with only distance and prefill distance step', async () => {
       jest.spyOn(RouteParser, 'isKnownProvider').mockReturnValueOnce(true);
       jest.spyOn(RouteParser, 'parseRoute').mockResolvedValueOnce({ distance: 42 });
       const state = { data: {} };
@@ -272,7 +272,7 @@ describe('wizardFieldConfig', () => {
 
       expect(state.data.distance).toBe(42);
       expect(state.data.duration).toBeUndefined();
-      expect(nextStep).toBe('duration');
+      expect(nextStep).toBe('distance');
     });
   });
 
