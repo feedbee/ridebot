@@ -49,7 +49,8 @@ export const config = {
     ridewithgps: {
       domain: 'ridewithgps.com',
       patterns: [
-        /https?:\/\/(?:www\.)?ridewithgps\.com\/routes\/\d+/
+        /https?:\/\/(?:www\.)?ridewithgps\.com\/routes\/\d+/,
+        /https?:\/\/(?:www\.)?ridewithgps\.com\/trips\/\d+/
       ]
     },
     komoot: {

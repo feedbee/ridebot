@@ -112,25 +112,33 @@ describe('RouteParser', () => {
 
   describe('parseRideWithGPSRoute', () => {
     test('should parse route details', () => {
-      const html = `
-        <div class="route-stats">
-          <div class="distance">50.5 km</div>
-          <div class="time">2h 30m</div>
-        </div>
-      `;
+      const htmlPath = path.join(__dirname, '../../test-setup/html/ridewithgps-route.html');
+      const html = fs.readFileSync(htmlPath, 'utf8');
       const $ = cheerio.load(html);
-      const result = RouteParser.parseRideWithGPSRoute($);
+      const result = RouteParser.parseRideWithGPSRoute($, 'https://ridewithgps.com/routes/48435067');
       expect(result).toEqual({
-        distance: 50.5, // Parser returns exact value, not rounded
-        duration: 150 // 2h 30m in minutes
+        distance: 163.3
       });
     });
 
-    test('should return null for invalid HTML', () => {
-      const html = '<div>Invalid content</div>';
-      const $ = cheerio.load(html);
-      const result = RouteParser.parseRideWithGPSRoute($);
-      expect(result).toBeNull();
+    describe('parseRideWithGPSActivity', () => {
+      test('should parse activity details', () => {
+        const htmlPath = path.join(__dirname, '../../test-setup/html/ridewithgps-activity.html');
+        const html = fs.readFileSync(htmlPath, 'utf8');
+        const $ = cheerio.load(html);
+        const result = RouteParser.parseRideWithGPSRoute($, 'https://ridewithgps.com/trips/369168327');
+        expect(result).toEqual({
+          distance: 57.0,
+          duration: 137
+        });
+      });
+
+      test('should return null for invalid HTML', () => {
+        const html = '<div>Invalid content</div>';
+        const $ = cheerio.load(html);
+        const result = RouteParser.parseRideWithGPSRoute($, 'https://ridewithgps.com/routes/48435067');
+        expect(result).toBeNull();
+      });
     });
   });
 

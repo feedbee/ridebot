@@ -96,7 +96,7 @@ export class RouteParser {
           result = this.parseStravaRoute($, url);
           break;
         case 'ridewithgps':
-          result = this.parseRideWithGPSRoute($);
+          result = this.parseRideWithGPSRoute($, url);
           break;
         case 'komoot':
           result = this.parseKomootRoute($);
@@ -231,30 +231,61 @@ export class RouteParser {
   /**
    * Parse RideWithGPS route details
    * @param {cheerio.Root} $ 
+   * @param {string} url
    * @returns {{distance?: number, duration?: number}|null}
    */
-  static parseRideWithGPSRoute($) {
+  static parseRideWithGPSRoute($, url) {
     try {
       let distance, duration;
-      const distanceText = $('.route-stats').find('.distance').text();
-      const durationText = $('.route-stats').find('.time').text();
+      const isActivity = url && url.includes('/trips/');
 
-      // Extract distance in kilometers
-      const distanceMatch = distanceText.match(/(\d+(?:\.\d+)?)\s*km/);
-      if (distanceMatch) {
-        distance = parseFloat(distanceMatch[1]);
-      } else {
-        console.warn('[RouteParser] Could not extract distance from RideWithGPS route');
+      // Look for the meta description tag
+      const ogDescription = $('meta[property="og:description"]').attr('content');
+
+      if (ogDescription) {
+        // Extract distance in kilometers
+        const distanceMatch = ogDescription.match(/(\d+(?:\.\d+)?)\s*km/);
+        if (distanceMatch) {
+          distance = parseFloat(distanceMatch[1]);
+        }
       }
 
-      // Extract duration in format "1h 30m" or "45m"
-      const durationMatch = durationText.match(/(?:(\d+)h\s*)?(?:(\d+)m)?/);
-      if (durationMatch) {
-        const hours = parseInt(durationMatch[1] || '0');
-        const minutes = parseInt(durationMatch[2] || '0');
-        duration = hours * 60 + minutes;
+      // Fallback for distance if not found in og:description
+      if (!distance) {
+        const distanceText = $('.route-stats').find('.distance').text();
+        const distanceMatch = distanceText.match(/(\d+(?:\.\d+)?)\s*km/);
+        if (distanceMatch) {
+          distance = parseFloat(distanceMatch[1]);
+        } else {
+          console.warn('[RouteParser] Could not extract distance from RideWithGPS route');
+        }
+      }
+
+      if (isActivity) {
+        // For activities/trips, duration is usually found in a table row
+        const totalDurationTd = $('td.metric-label').filter(function () {
+          return $(this).text().trim() === 'Total Duration:';
+        });
+
+        if (totalDurationTd.length) {
+          const durationText = totalDurationTd.next('td.data').text().trim();
+          const durationParts = durationText.split(':');
+          if (durationParts.length >= 2) {
+            const hours = parseInt(durationParts[0] || '0', 10);
+            const minutes = parseInt(durationParts[1] || '0', 10);
+            const seconds = parseInt(durationParts[2] || '0', 10);
+            duration = hours * 60 + minutes + (seconds >= 30 ? 1 : 0);
+          }
+        }
       } else {
-        console.warn('[RouteParser] Could not extract duration from RideWithGPS route');
+        // For routes, fallback to previous method if it still exists
+        const durationText = $('.route-stats').find('.time').text();
+        const durationMatch = durationText.match(/(?:(\d+)h\s*)?(?:(\d+)m)?/);
+        if (durationMatch && (durationMatch[1] || durationMatch[2])) {
+          const hours = parseInt(durationMatch[1] || '0', 10);
+          const minutes = parseInt(durationMatch[2] || '0', 10);
+          duration = hours * 60 + minutes;
+        }
       }
 
       // Return any data we were able to parse
@@ -265,7 +296,7 @@ export class RouteParser {
       // Only return null if we couldn't parse anything
       return Object.keys(result).length > 0 ? result : null;
     } catch (error) {
-      console.warn(`[RouteParser] Error parsing RideWithGPS route: ${error.message}`);
+      console.warn(`[RouteParser] Error parsing RideWithGPS route: ${error.message} for URL: ${url}`);
       return null;
     }
   }
