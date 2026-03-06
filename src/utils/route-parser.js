@@ -17,7 +17,7 @@ export class RouteParser {
    * @returns {boolean}
    */
   static isKnownProvider(url) {
-    return Object.values(config.routeProviders).some(provider => 
+    return Object.values(config.routeProviders).some(provider =>
       provider.patterns.some(pattern => pattern.test(url))
     );
   }
@@ -81,12 +81,12 @@ export class RouteParser {
 
     try {
       const response = await fetch(url);
-      
+
       if (!response.ok) {
         console.warn(`[RouteParser] Failed to fetch route data: ${response.status} ${response.statusText} for URL: ${url}`);
         return null;
       }
-      
+
       const html = await response.text();
       const $ = cheerio.load(html);
 
@@ -105,12 +105,12 @@ export class RouteParser {
           console.warn(`[RouteParser] Unsupported provider: ${provider} for URL: ${url}`);
           return null;
       }
-      
+
       if (!result) {
         console.warn(`[RouteParser] Could not parse route data from ${provider} for URL: ${url}`);
         return null;
       }
-      
+
       return result;
     } catch (error) {
       console.warn(`[RouteParser] Error parsing route: ${error.message} for URL: ${url}`);
@@ -135,16 +135,16 @@ export class RouteParser {
 
     if (this.isKnownProvider(url)) {
       const result = await this.parseRoute(url);
-      
+
       // Create a response object with the route link
       const response = { routeLink: url };
-      
+
       // Add any available data from the parser
       if (result) {
         if (result.distance) response.distance = result.distance;
         if (result.duration) response.duration = result.duration;
       }
-      
+
       return response;
     }
 
@@ -169,7 +169,7 @@ export class RouteParser {
         // Parse activity page using stable data-cy attributes
         const distanceContainer = $('[data-cy="summary-distance"]');
         const timeContainer = $('[data-cy="summary-time"]');
-        
+
         // Get text from the last div in each container (avoiding class-based selectors)
         const distanceText = distanceContainer.find('div').last().text().trim();
         const durationText = timeContainer.find('div').last().text().trim();
@@ -193,15 +193,15 @@ export class RouteParser {
         // Parse route page using stable selectors
         // Find elements with class starting with Detail_routeStat
         const routeStats = $('div[class^="Detail_routeStat"]');
-        
+
         // Find the distance element by looking for elements with both svg and span
-        const distanceElement = routeStats.filter(function() {
+        const distanceElement = routeStats.filter(function () {
           return $(this).find('svg').length > 0 && $(this).find('span').length > 0;
         }).first(); // Take the first one as distance is typically the first stat
-        
+
         if (distanceElement.length) {
           const distanceText = distanceElement.find('span').text().trim();
-          
+
           // Extract distance in kilometers
           const distanceMatch = distanceText.match(/(\d+(?:\.\d+)?)\s*km/);
           if (distanceMatch) {
@@ -219,7 +219,7 @@ export class RouteParser {
       const result = {};
       if (distance) result.distance = Math.round(distance);
       if (duration) result.duration = duration;
-      
+
       // Only return null if we couldn't parse anything
       return Object.keys(result).length > 0 ? result : null;
     } catch (error) {
@@ -261,7 +261,7 @@ export class RouteParser {
       const result = {};
       if (distance) result.distance = distance;
       if (duration) result.duration = duration;
-      
+
       // Only return null if we couldn't parse anything
       return Object.keys(result).length > 0 ? result : null;
     } catch (error) {
@@ -270,40 +270,42 @@ export class RouteParser {
     }
   }
 
-  /**
-   * Parse Komoot route details
-   * @param {cheerio.Root} $ 
-   * @returns {{distance?: number, duration?: number}|null}
-   */
   static parseKomootRoute($) {
     try {
       let distance, duration;
-      const distanceText = $('.tour-stats').find('.distance').text();
-      const durationText = $('.tour-stats').find('.duration').text();
 
-      // Extract distance in kilometers
-      const distanceMatch = distanceText.match(/(\d+(?:\.\d+)?)\s*km/);
+      // Look for the meta description tag
+      const metaDescription = $('meta[property="og:description"]').attr('content');
+
+      if (!metaDescription) {
+        console.warn('[RouteParser] Could not find og:description tag for Komoot route');
+        return null;
+      }
+
+      // Example content: "Valery went on an outdoor adventure with komoot! Distance: 57.0 km | Duration: 02:17 h"
+      // Distance parse: 57.6 km
+      const distanceMatch = metaDescription.match(/(\d+(?:\.\d+)?)\s*km/);
       if (distanceMatch) {
         distance = parseFloat(distanceMatch[1]);
       } else {
-        console.warn('[RouteParser] Could not extract distance from Komoot route');
+        console.warn('[RouteParser] Could not extract distance from Komoot route og:description');
       }
 
-      // Extract duration in format "1h 30m" or "45m"
-      const durationMatch = durationText.match(/(?:(\d+)h\s*)?(?:(\d+)m)?/);
+      // Duration parse: 02:03 h
+      const durationMatch = metaDescription.match(/(?:(\d+):)?(\d+)\s*h/);
       if (durationMatch) {
-        const hours = parseInt(durationMatch[1] || '0');
-        const minutes = parseInt(durationMatch[2] || '0');
+        const hours = parseInt(durationMatch[1] || '0', 10);
+        const minutes = parseInt(durationMatch[2] || '0', 10);
         duration = hours * 60 + minutes;
       } else {
-        console.warn('[RouteParser] Could not extract duration from Komoot route');
+        console.warn('[RouteParser] Could not extract duration from Komoot route og:description');
       }
 
       // Return any data we were able to parse
       const result = {};
       if (distance) result.distance = distance;
       if (duration) result.duration = duration;
-      
+
       // Only return null if we couldn't parse anything
       return Object.keys(result).length > 0 ? result : null;
     } catch (error) {

@@ -1,6 +1,12 @@
 import { jest } from '@jest/globals';
 import { RouteParser } from '../../utils/route-parser.js';
 import * as cheerio from 'cheerio';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 describe('RouteParser', () => {
   describe('isValidRouteUrl', () => {
@@ -130,84 +136,93 @@ describe('RouteParser', () => {
 
   describe('parseKomootRoute', () => {
     test('should parse route details', () => {
-      const html = `
-        <div class="tour-stats">
-          <div class="distance">30.8 km</div>
-          <div class="duration">1h 45m</div>
-        </div>
-      `;
+      const htmlPath = path.join(__dirname, '../../test-setup/html/komoot-route.html');
+      const html = fs.readFileSync(htmlPath, 'utf8');
       const $ = cheerio.load(html);
       const result = RouteParser.parseKomootRoute($);
       expect(result).toEqual({
-        distance: 30.8, // Parser returns exact value, not rounded
-        duration: 105 // 1h 45m in minutes
+        distance: 57.6, // Parser returns exact value, not rounded
+        duration: 123 // 2h 03m in minutes
       });
     });
 
-    test('should return null for invalid HTML', () => {
-      const html = '<div>Invalid content</div>';
-      const $ = cheerio.load(html);
-      const result = RouteParser.parseKomootRoute($);
-      expect(result).toBeNull();
+    describe('parseKomootActivity', () => {
+      test('should parse route details from recorded activity', () => {
+        const htmlPath = path.join(__dirname, '../../test-setup/html/komoot-activity.html');
+        const html = fs.readFileSync(htmlPath, 'utf8');
+        const $ = cheerio.load(html);
+        const result = RouteParser.parseKomootRoute($);
+        expect(result).toEqual({
+          distance: 57.0, // Parser returns exact value, not rounded
+          duration: 137 // 2h 17m in minutes
+        });
+      });
+
+      test('should return null for invalid HTML', () => {
+        const html = '<div>Invalid content</div>';
+        const $ = cheerio.load(html);
+        const result = RouteParser.parseKomootRoute($);
+        expect(result).toBeNull();
+      });
+    });
+
+    describe('processRouteInfo', () => {
+      test('should process valid route URLs', async () => {
+        const parseRouteSpy = jest
+          .spyOn(RouteParser, 'parseRoute')
+          .mockResolvedValue({ distance: 50, duration: 180 });
+
+        const result = await RouteParser.processRouteInfo('https://www.strava.com/routes/123456');
+
+        expect(result).toEqual({
+          routeLink: 'https://www.strava.com/routes/123456',
+          distance: 50,
+          duration: 180
+        });
+        parseRouteSpy.mockRestore();
+      });
+
+      test('should handle invalid URL formats', async () => {
+        const result = await RouteParser.processRouteInfo('not-a-url');
+
+        expect(result).toEqual({
+          error: 'Invalid URL format. Please provide a valid URL.',
+          routeLink: 'not-a-url'
+        });
+      });
+
+      test('should handle unknown providers', async () => {
+        const result = await RouteParser.processRouteInfo('https://unknown.com/route');
+
+        expect(result).toEqual({
+          routeLink: 'https://unknown.com/route'
+        });
+      });
+
+      test('should handle partial route parsing results', async () => {
+        const parseRouteSpy = jest
+          .spyOn(RouteParser, 'parseRoute')
+          .mockResolvedValue({ distance: 50 });
+
+        const result = await RouteParser.processRouteInfo('https://www.strava.com/routes/123456');
+
+        expect(result).toEqual({
+          routeLink: 'https://www.strava.com/routes/123456',
+          distance: 50
+        });
+        parseRouteSpy.mockRestore();
+      });
+
+      test('should handle null result from route parser', async () => {
+        const parseRouteSpy = jest.spyOn(RouteParser, 'parseRoute').mockResolvedValue(null);
+
+        const result = await RouteParser.processRouteInfo('https://www.strava.com/routes/123456');
+
+        expect(result).toEqual({
+          routeLink: 'https://www.strava.com/routes/123456'
+        });
+        parseRouteSpy.mockRestore();
+      });
     });
   });
-
-  describe('processRouteInfo', () => {
-    test('should process valid route URLs', async () => {
-      const parseRouteSpy = jest
-        .spyOn(RouteParser, 'parseRoute')
-        .mockResolvedValue({ distance: 50, duration: 180 });
-      
-      const result = await RouteParser.processRouteInfo('https://www.strava.com/routes/123456');
-      
-      expect(result).toEqual({
-        routeLink: 'https://www.strava.com/routes/123456',
-        distance: 50,
-        duration: 180
-      });
-      parseRouteSpy.mockRestore();
-    });
-
-    test('should handle invalid URL formats', async () => {
-      const result = await RouteParser.processRouteInfo('not-a-url');
-      
-      expect(result).toEqual({
-        error: 'Invalid URL format. Please provide a valid URL.',
-        routeLink: 'not-a-url'
-      });
-    });
-
-    test('should handle unknown providers', async () => {
-      const result = await RouteParser.processRouteInfo('https://unknown.com/route');
-      
-      expect(result).toEqual({
-        routeLink: 'https://unknown.com/route'
-      });
-    });
-
-    test('should handle partial route parsing results', async () => {
-      const parseRouteSpy = jest
-        .spyOn(RouteParser, 'parseRoute')
-        .mockResolvedValue({ distance: 50 });
-      
-      const result = await RouteParser.processRouteInfo('https://www.strava.com/routes/123456');
-      
-      expect(result).toEqual({
-        routeLink: 'https://www.strava.com/routes/123456',
-        distance: 50
-      });
-      parseRouteSpy.mockRestore();
-    });
-    
-    test('should handle null result from route parser', async () => {
-      const parseRouteSpy = jest.spyOn(RouteParser, 'parseRoute').mockResolvedValue(null);
-      
-      const result = await RouteParser.processRouteInfo('https://www.strava.com/routes/123456');
-      
-      expect(result).toEqual({
-        routeLink: 'https://www.strava.com/routes/123456'
-      });
-      parseRouteSpy.mockRestore();
-    });
-  });
-}); 
+});
