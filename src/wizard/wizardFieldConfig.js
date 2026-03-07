@@ -10,6 +10,7 @@ import {
 import { DateParser } from '../utils/date-parser.js';
 import { config } from '../config.js';
 import { t } from '../i18n/index.js';
+import { parseSpeedInput, formatSpeed } from '../utils/speed-utils.js';
 
 /**
  * Wizard field configuration
@@ -211,37 +212,17 @@ export function getWizardFields(language = config.i18n.defaultLanguage) {
       nextStep: 'meet',
       previousStep: 'duration',
       validator: (text) => {
-        const trimmed = text.trim().replace(/^~/, '');
-        let speedMin = null;
-        let speedMax = null;
-
-        if (/^-\d/.test(trimmed)) {
-          const max = parseFloat(trimmed.slice(1));
-          if (!isNaN(max)) speedMax = max;
-        } else if (/\d[+-]$/.test(trimmed)) {
-          const min = parseFloat(trimmed);
-          if (!isNaN(min)) speedMin = min;
-        } else if (/^\d/.test(trimmed) && trimmed.includes('-')) {
-          const [minStr, maxStr] = trimmed.split('-');
-          const min = parseFloat(minStr);
-          const max = parseFloat(maxStr);
-          if (!isNaN(min)) speedMin = min;
-          if (!isNaN(max)) speedMax = max;
-        } else {
-          const avg = parseFloat(trimmed);
-          if (!isNaN(avg)) { speedMin = avg; speedMax = avg; }
-        }
-
-        return { valid: true, value: { speedMin, speedMax } };
+        const parsed = parseSpeedInput(text);
+        return {
+          valid: true,
+          value: {
+            speedMin: parsed?.speedMin ?? null,
+            speedMax: parsed?.speedMax ?? null
+          }
+        };
       },
       formatter: (value, state) => {
-        const { speedMin, speedMax } = state.data;
-        const kmh = translate(language, 'formatter.units.kmh');
-        if (speedMin && speedMax && speedMin === speedMax) return `~${speedMin} ${kmh}`;
-        if (speedMin && speedMax) return `${speedMin}-${speedMax} ${kmh}`;
-        if (speedMin) return `${speedMin}+ ${kmh}`;
-        if (speedMax) return translate(language, 'formatter.upToSpeed', { max: speedMax });
-        return '';
+        return formatSpeed(state.data.speedMin, state.data.speedMax, language);
       },
       hasValue: (state) => state.data.speedMin || state.data.speedMax
     },
@@ -390,13 +371,7 @@ function getConfirmationFields(language = config.i18n.defaultLanguage) {
       dataKey: ['speedMin', 'speedMax'],
       required: false,
       format: (value, htmlEscape, dateParser, data) => {
-        const { speedMin, speedMax } = data;
-        const kmh = translate(language, 'formatter.units.kmh');
-        if (speedMin && speedMax && speedMin === speedMax) return `~${speedMin} ${kmh}`;
-        if (speedMin && speedMax) return `${speedMin}-${speedMax} ${kmh}`;
-        if (speedMin) return `${speedMin}+ ${kmh}`;
-        if (speedMax) return translate(language, 'formatter.upToSpeed', { max: speedMax });
-        return null;
+        return formatSpeed(data.speedMin, data.speedMax, language) || null;
       }
     },
     {

@@ -1,6 +1,7 @@
 import { parseDateTimeInput } from './date-input-parser.js';
 import { parseDuration } from './duration-parser.js';
 import { normalizeCategory, DEFAULT_CATEGORY } from './category-utils.js';
+import { parseSpeedInput } from './speed-utils.js';
 
 /**
  * Utility class for processing ride field parameters
@@ -107,42 +108,19 @@ export class FieldProcessor {
       return { speedMin: null, speedMax: null };
     }
 
-    const trimmed = value.trim().replace(/^~/, '');
+    const parsed = parseSpeedInput(value);
+    if (!parsed) return {};
 
-    // Maximum: starts with "-" followed by a digit, e.g. "-28"
-    if (/^-\d/.test(trimmed)) {
-      const max = parseFloat(trimmed.slice(1));
-      if (isNaN(max)) return {};
-      const result = { speedMax: max };
-      if (isUpdate) result.speedMin = null;
-      return result;
+    const result = { ...parsed };
+
+    // On update, explicitly null out whichever bound was not specified,
+    // so switching forms (e.g. range → average) clears the old value.
+    if (isUpdate) {
+      if (!('speedMin' in result)) result.speedMin = null;
+      if (!('speedMax' in result)) result.speedMax = null;
     }
 
-    // Minimum: ends with "+" or "-", e.g. "25+" or "25-"
-    if (/\d[+-]$/.test(trimmed)) {
-      const min = parseFloat(trimmed);
-      if (isNaN(min)) return {};
-      const result = { speedMin: min };
-      if (isUpdate) result.speedMax = null;
-      return result;
-    }
-
-    // Range: two numbers separated by "-", e.g. "25-28"
-    if (/^\d/.test(trimmed) && trimmed.includes('-')) {
-      const [minStr, maxStr] = trimmed.split('-');
-      const min = parseFloat(minStr);
-      const max = parseFloat(maxStr);
-      if (isNaN(min) || isNaN(max)) return {};
-      return { speedMin: min, speedMax: max };
-    }
-
-    // Average: single number, e.g. "25" — stored as min === max
-    const avg = parseFloat(trimmed);
-    if (!isNaN(avg)) {
-      return { speedMin: avg, speedMax: avg };
-    }
-
-    return {};
+    return result;
   }
   
   /**
