@@ -1,5 +1,7 @@
 import { jest } from '@jest/globals';
 import { RouteParser } from '../../utils/route-parser.js';
+import { config } from '../../config.js';
+import { invalidateStravaTokenCache } from '../../utils/strava-token-store.js';
 import * as cheerio from 'cheerio';
 import fs from 'fs';
 import path from 'path';
@@ -67,50 +69,57 @@ describe('RouteParser', () => {
     });
   });
 
-  describe('parseStravaRoute', () => {
-    test('should parse route page with Detail_routeStat class', () => {
-      const html = `
-        <div>
-          <div class="Detail_routeStat__xyz123">
-            <svg>
-              <path d="some-path-data"></path>
-            </svg>
-            <span>94.2 km</span>
-          </div>
-        </div>
-      `;
-      const $ = cheerio.load(html);
-      const result = RouteParser.parseStravaRoute($, 'https://www.strava.com/routes/123456');
-      expect(result).toEqual({
-        distance: 94,
-        duration: 283 // ~4.7 hours at 20 km/h, Math.round((94.2 / 20) * 60)
-      });
+  describe('parseStravaViaApi', () => {
+    let origClientId, origClientSecret;
+
+    beforeEach(() => {
+      origClientId = config.strava.clientId;
+      origClientSecret = config.strava.clientSecret;
+      invalidateStravaTokenCache();
     });
 
-    test('should parse activity page with data-cy attributes', () => {
-      const html = `
-        <div>
-          <div data-cy="summary-distance">
-            <div>45.6 km</div>
-          </div>
-          <div data-cy="summary-time">
-            <div>2h 15m</div>
-          </div>
-        </div>
-      `;
-      const $ = cheerio.load(html);
-      const result = RouteParser.parseStravaRoute($, 'https://www.strava.com/activities/123456');
-      expect(result).toEqual({
-        distance: 46,
-        duration: 135 // 2h 15m in minutes
-      });
+    afterEach(() => {
+      config.strava.clientId = origClientId;
+      config.strava.clientSecret = origClientSecret;
+      invalidateStravaTokenCache();
     });
 
-    test('should return null for invalid HTML', () => {
-      const html = '<div>Invalid content</div>';
-      const $ = cheerio.load(html);
-      const result = RouteParser.parseStravaRoute($, 'https://www.strava.com/routes/123456');
+    test('returns null when clientId not configured', async () => {
+      config.strava.clientId = null;
+      const result = await RouteParser.parseStravaViaApi('https://www.strava.com/routes/123456');
       expect(result).toBeNull();
+    });
+
+    test('returns null when clientSecret not configured', async () => {
+      config.strava.clientSecret = null;
+      const result = await RouteParser.parseStravaViaApi('https://www.strava.com/routes/123456');
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('parseRoute (Strava dispatch)', () => {
+    test('delegates Strava URLs to parseStravaViaApi', async () => {
+      const spy = jest
+        .spyOn(RouteParser, 'parseStravaViaApi')
+        .mockResolvedValueOnce({ distance: 50, duration: 150 });
+
+      const result = await RouteParser.parseRoute('https://www.strava.com/routes/123456');
+
+      expect(spy).toHaveBeenCalledWith('https://www.strava.com/routes/123456');
+      expect(result).toEqual({ distance: 50, duration: 150 });
+      spy.mockRestore();
+    });
+
+    test('delegates Strava activity URLs to parseStravaViaApi', async () => {
+      const spy = jest
+        .spyOn(RouteParser, 'parseStravaViaApi')
+        .mockResolvedValueOnce({ distance: 46, duration: 135 });
+
+      const result = await RouteParser.parseRoute('https://www.strava.com/activities/789');
+
+      expect(spy).toHaveBeenCalledWith('https://www.strava.com/activities/789');
+      expect(result).toEqual({ distance: 46, duration: 135 });
+      spy.mockRestore();
     });
   });
 

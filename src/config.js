@@ -67,5 +67,10 @@ export const config = {
       ]
     }
   },
-  maxParticipantsDisplay: parseInt(process.env.MAX_PARTICIPANTS_DISPLAY, 10) || 20
+  maxParticipantsDisplay: parseInt(process.env.MAX_PARTICIPANTS_DISPLAY, 10) || 20,
+  strava: {
+    clientId:     process.env.STRAVA_CLIENT_ID     || null,
+    clientSecret: process.env.STRAVA_CLIENT_SECRET || null,
+    refreshToken: process.env.STRAVA_REFRESH_TOKEN || null,
+  }
 }; 

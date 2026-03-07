@@ -345,6 +345,7 @@ _No major refactoring areas identified at this time. The codebase is well-organi
 - [ ] Enhancement: Show preview in wizard starting from the first step and update it long with each next step
 
 ### Medium Priority
+- [x] Bug/Enhancement: Fixed routes parsing from known providers and add Garmin
 - [ ] Feature: (Rides management) Add management buttons below the ride button in private chat with the bot for ride creator
 - [ ] Feature: (Notifications) Send a private notification to the ride creator when a participant joins or leaves. There is a 30-second delay to prevent spamming from frequent toggling; if the participant's status changes again within this period, cancel the pending notification.
 - [ ] Feature: (Notifications) Remind the joined users about upcoming ride 24 hours and 1 hour before the ride (send a private message; give each user an option to unsubscribe from all notifications).

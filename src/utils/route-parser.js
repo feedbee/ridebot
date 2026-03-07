@@ -2,6 +2,7 @@ import { config } from '../config.js';
 import fetch from 'node-fetch';
 import * as cheerio from 'cheerio';
 import { t } from '../i18n/index.js';
+import { getStravaAccessToken } from './strava-token-store.js';
 
 export class RouteParser {
   static translate(language, key, params = {}) {
@@ -79,6 +80,11 @@ export class RouteParser {
       return null;
     }
 
+    // Strava requires OAuth — use API instead of HTML scraping
+    if (provider === 'strava') {
+      return await this.parseStravaViaApi(url);
+    }
+
     try {
       const response = await fetch(url);
 
@@ -92,9 +98,6 @@ export class RouteParser {
 
       let result;
       switch (provider) {
-        case 'strava':
-          result = this.parseStravaRoute($, url);
-          break;
         case 'ridewithgps':
           result = this.parseRideWithGPSRoute($, url);
           break;
@@ -156,77 +159,45 @@ export class RouteParser {
   }
 
   /**
-   * Parse Strava route/activity details
-   * @param {cheerio.Root} $ 
+   * Parse Strava route/activity via the Strava API v3 (requires OAuth credentials).
    * @param {string} url
-   * @returns {{distance?: number, duration?: number}|null}
+   * @returns {Promise<{distance?: number, duration?: number}|null>}
    */
-  static parseStravaRoute($, url) {
+  static async parseStravaViaApi(url) {
+    const { clientId, clientSecret } = config.strava;
+    if (!clientId || !clientSecret) {
+      console.warn('[RouteParser] Strava API credentials not configured. Skipping Strava URL.');
+      return null;
+    }
     try {
-      let distance, duration;
-
-      // Check if it's an activity or a route
-      const isActivity = url.includes('/activities/');
-
-      if (isActivity) {
-        // Parse activity page using stable data-cy attributes
-        const distanceContainer = $('[data-cy="summary-distance"]');
-        const timeContainer = $('[data-cy="summary-time"]');
-
-        // Get text from the last div in each container (avoiding class-based selectors)
-        const distanceText = distanceContainer.find('div').last().text().trim();
-        const durationText = timeContainer.find('div').last().text().trim();
-
-        // Extract distance (removing 'km' and converting to number)
-        const distanceMatch = distanceText.match(/(\d+(?:\.\d+)?)\s*km/);
-        if (distanceMatch) {
-          distance = parseFloat(distanceMatch[1]);
-        }
-
-        // Parse duration in format "36m 57s" or "1h 30m" or similar
-        const durationMatch = durationText.match(/(?:(\d+)h\s*)?(?:(\d+)m\s*)?(?:(\d+)s)?/);
-        if (durationMatch) {
-          const hours = parseInt(durationMatch[1] || '0');
-          const minutes = parseInt(durationMatch[2] || '0');
-          // We'll round to nearest minute if seconds are present
-          const seconds = parseInt(durationMatch[3] || '0');
-          duration = hours * 60 + minutes + (seconds >= 30 ? 1 : 0);
-        }
-      } else {
-        // Parse route page using stable selectors
-        // Find elements with class starting with Detail_routeStat
-        const routeStats = $('div[class^="Detail_routeStat"]');
-
-        // Find the distance element by looking for elements with both svg and span
-        const distanceElement = routeStats.filter(function () {
-          return $(this).find('svg').length > 0 && $(this).find('span').length > 0;
-        }).first(); // Take the first one as distance is typically the first stat
-
-        if (distanceElement.length) {
-          const distanceText = distanceElement.find('span').text().trim();
-
-          // Extract distance in kilometers
-          const distanceMatch = distanceText.match(/(\d+(?:\.\d+)?)\s*km/);
-          if (distanceMatch) {
-            distance = parseFloat(distanceMatch[1]);
-          }
-        }
-
-        // For routes, we'll estimate duration based on average speed of 20 km/h
-        if (distance) {
-          duration = Math.round((distance / 20) * 60); // Convert to minutes
-        }
+      const id = this.getRouteId(url);
+      if (!id) {
+        console.warn(`[RouteParser] Could not extract ID from Strava URL: ${url}`);
+        return null;
       }
-
-      // Return any data we were able to parse
+      const isActivity = url.includes('/activities/');
+      const token = await getStravaAccessToken(clientId, clientSecret);
+      const endpoint = isActivity
+        ? `https://www.strava.com/api/v3/activities/${id}`
+        : `https://www.strava.com/api/v3/routes/${id}`;
+      const response = await fetch(endpoint, { headers: { Authorization: `Bearer ${token}` } });
+      if (!response.ok) {
+        console.warn(`[RouteParser] Strava API error: ${response.status} ${response.statusText} for URL: ${url}`);
+        return null;
+      }
+      const data = await response.json();
+      const distanceKm = data.distance / 1000;
+      const rawDurationSeconds = isActivity ? data.moving_time : data.estimated_moving_time;
+      // Fallback to 20 km/h estimate if API field is missing/zero (can happen for some routes)
+      const durationMinutes = rawDurationSeconds
+        ? Math.round(rawDurationSeconds / 60)
+        : (distanceKm ? Math.round((distanceKm / 20) * 60) : null);
       const result = {};
-      if (distance) result.distance = Math.round(distance);
-      if (duration) result.duration = duration;
-
-      // Only return null if we couldn't parse anything
+      if (distanceKm) result.distance = Math.round(distanceKm);
+      if (durationMinutes) result.duration = durationMinutes;
       return Object.keys(result).length > 0 ? result : null;
     } catch (error) {
-      console.warn(`[RouteParser] Error parsing Strava route: ${error.message} for URL: ${url}`);
+      console.warn(`[RouteParser] Error calling Strava API: ${error.message} for URL: ${url}`);
       return null;
     }
   }
