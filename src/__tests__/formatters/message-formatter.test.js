@@ -555,11 +555,15 @@ describe('MessageFormatter', () => {
     it.each(['en', 'ru'])('should format speed range with min and max (%s)', (language) => {
       expect(messageFormatter.formatSpeedRange(25, 30, language)).toBe(`25-30 ${tr(language, 'formatter.units.kmh')}`);
     });
-    
+
+    it.each(['en', 'ru'])('should format average speed (min === max) (%s)', (language) => {
+      expect(messageFormatter.formatSpeedRange(25, 25, language)).toBe(`~25 ${tr(language, 'formatter.units.kmh')}`);
+    });
+
     it.each(['en', 'ru'])('should format speed range with only min (%s)', (language) => {
       expect(messageFormatter.formatSpeedRange(25, null, language)).toBe(`25+ ${tr(language, 'formatter.units.kmh')}`);
     });
-    
+
     it.each(['en', 'ru'])('should format speed range with only max (%s)', (language) => {
       expect(messageFormatter.formatSpeedRange(null, 30, language)).toBe(tr(language, 'formatter.upToSpeed', { max: 30 }));
     });

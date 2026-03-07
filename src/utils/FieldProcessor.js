@@ -92,8 +92,13 @@ export class FieldProcessor {
   }
   
   /**
-   * Process speed field (range)
-   * @param {string} value - Field value (e.g., "25-28")
+   * Process speed field supporting 4 input forms:
+   *   "25-28"       → range    (speedMin=25, speedMax=28)
+   *   "25+" or "25-"→ minimum  (speedMin=25, speedMax=null)
+   *   "-28"         → maximum  (speedMin=null, speedMax=28)
+   *   "25" or "~25" → average  (speedMin=25, speedMax=25)
+   *
+   * @param {string} value - Field value
    * @param {boolean} isUpdate - Whether this is an update operation
    * @returns {Object} - Object with speedMin and/or speedMax properties
    */
@@ -101,22 +106,43 @@ export class FieldProcessor {
     if (isUpdate && value === '-') {
       return { speedMin: null, speedMax: null };
     }
-    const [min, max] = value.split('-').map(s => parseFloat(s.trim()));
-    const hasMin = !isNaN(min);
-    const hasMax = !isNaN(max);
-    const result = {};
 
-    if (hasMin) result.speedMin = min;
-    if (hasMax) result.speedMax = max;
+    const trimmed = value.trim().replace(/^~/, '');
 
-    // Updates merge into the existing ride, so an omitted bound must be
-    // explicitly cleared when switching from a range to a single-bound value.
-    if (isUpdate && (hasMin || hasMax)) {
-      if (!hasMin) result.speedMin = null;
-      if (!hasMax) result.speedMax = null;
+    // Maximum: starts with "-" followed by a digit, e.g. "-28"
+    if (/^-\d/.test(trimmed)) {
+      const max = parseFloat(trimmed.slice(1));
+      if (isNaN(max)) return {};
+      const result = { speedMax: max };
+      if (isUpdate) result.speedMin = null;
+      return result;
     }
 
-    return result;
+    // Minimum: ends with "+" or "-", e.g. "25+" or "25-"
+    if (/\d[+-]$/.test(trimmed)) {
+      const min = parseFloat(trimmed);
+      if (isNaN(min)) return {};
+      const result = { speedMin: min };
+      if (isUpdate) result.speedMax = null;
+      return result;
+    }
+
+    // Range: two numbers separated by "-", e.g. "25-28"
+    if (/^\d/.test(trimmed) && trimmed.includes('-')) {
+      const [minStr, maxStr] = trimmed.split('-');
+      const min = parseFloat(minStr);
+      const max = parseFloat(maxStr);
+      if (isNaN(min) || isNaN(max)) return {};
+      return { speedMin: min, speedMax: max };
+    }
+
+    // Average: single number, e.g. "25" — stored as min === max
+    const avg = parseFloat(trimmed);
+    if (!isNaN(avg)) {
+      return { speedMin: avg, speedMax: avg };
+    }
+
+    return {};
   }
   
   /**

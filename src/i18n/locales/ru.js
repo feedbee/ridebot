@@ -46,7 +46,7 @@ meet: Meeting point (optional)
 route: Route link (optional)
 dist: Distance in km (optional)
 duration: Duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
-speed: Speed range in km/h (optional)
+speed: Speed in km/h: range (25-28), min (25+ or 25-), max (-28), avg (25 or ~25) (optional)
 info: Additional information (optional)
 </pre>
 
@@ -81,7 +81,7 @@ meet: New meeting point (optional)
 route: New route link (optional)
 dist: New distance (optional)
 duration: New duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
-speed: New speed range (optional)
+speed: New speed (optional)
 info: Additional information (optional)
 </pre>
     `.trim(),
@@ -133,7 +133,7 @@ meet: New meeting point (optional)
 route: New route link (optional)
 dist: New distance (optional)
 duration: New duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
-speed: New speed range (optional)
+speed: New speed (optional)
 info: Additional information (optional)
 </pre>
 Параметры, которые не были переданы, будут скопированы из исходной поездки.
@@ -318,7 +318,7 @@ id: abc123 (or #abc123)
       route: 'Маршрут',
       distance: 'Дистанция',
       duration: 'Длительность',
-      speed: 'Скорость',
+      speed: 'Ср. скорость',
       additionalInfo: 'Дополнительно'
     },
     participation: {
@@ -353,8 +353,6 @@ id: abc123 (or #abc123)
     }
   },
   wizard: {
-    speedMinPrefix: 'мин',
-    speedMaxPrefix: 'макс',
     messages: {
       completeOrCancelCurrent: 'Пожалуйста, завершите или отмените текущий мастер создания поездки перед запуском нового.',
       privateChatOnlyReply: '⚠️ Команды мастера доступны только в личном чате с ботом. Используйте команду с параметрами.',
@@ -376,7 +374,7 @@ id: abc123 (or #abc123)
       route: '🔗 Введите ссылку на маршрут (или пропустите):\n<i>Введите дефис (-), чтобы очистить/пропустить это поле</i>',
       distance: '📏 Введите дистанцию в километрах (или пропустите):\n<i>Введите дефис (-), чтобы очистить/пропустить это поле</i>',
       duration: '⏱ Введите длительность (например, \"2h 30m\", \"90m\", \"1.5h\"):\n<i>Введите дефис (-), чтобы очистить/пропустить это поле</i>',
-      speed: '🚴 Введите диапазон скорости в км/ч (например, 25-28) или пропустите:\n<i>Введите дефис (-), чтобы очистить/пропустить это поле</i>',
+      speed: '🚴 Ср. скорость в км/ч или пропустите:\n• 25-28 — диапазон\n• 25+ или 25- — минимум\n• -28 — максимум\n• 25 или ~25 — среднее\n<i>Введите дефис (-), чтобы очистить/пропустить это поле</i>',
       meet: '📍 Введите место встречи (или пропустите):\n<i>Введите дефис (-), чтобы очистить/пропустить это поле</i>',
       info: 'ℹ️ Введите дополнительную информацию (или пропустите):\n<i>Введите дефис (-), чтобы очистить/пропустить это поле</i>'
     },
@@ -397,7 +395,7 @@ id: abc123 (or #abc123)
         route: '🔗 Маршрут',
         distance: '📏 Дистанция',
         duration: '⏱ Длительность',
-        speed: '🚴 Скорость',
+        speed: '🚴 Ср. скорость',
         meetingPoint: '📍 Место встречи',
         additionalInfo: 'ℹ️ Дополнительно'
       }
@@ -424,7 +422,7 @@ id: abc123 (or #abc123)
     route: 'URL маршрута',
     dist: 'Дистанция в километрах',
     duration: 'Длительность в минутах',
-    speed: 'Диапазон скорости (например, 25-28)',
+    speed: 'Скорость: диапазон (25-28), мин (25+), макс (-28), ср. (25)',
     info: 'Дополнительная информация',
     id: 'ID поездки (для команд, где требуется)'
   },

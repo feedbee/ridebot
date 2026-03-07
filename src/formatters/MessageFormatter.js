@@ -293,18 +293,24 @@ export class MessageFormatter {
    * @returns {string} - Formatted speed range
    */
   formatSpeedRange(min, max, language = config.i18n.defaultLanguage) {
+    const kmh = this.translate('formatter.units.kmh', {}, language);
+
+    if (min && max && min === max) {
+      return `~${min} ${kmh}`;
+    }
+
     if (min && max) {
-      return `${min}-${max} ${this.translate('formatter.units.kmh', {}, language)}`;
+      return `${min}-${max} ${kmh}`;
     }
-    
+
     if (min) {
-      return `${min}+ ${this.translate('formatter.units.kmh', {}, language)}`;
+      return `${min}+ ${kmh}`;
     }
-    
+
     if (max) {
       return this.translate('formatter.upToSpeed', { max }, language);
     }
-    
+
     return '';
   }
 

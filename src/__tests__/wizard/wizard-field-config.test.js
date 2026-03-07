@@ -204,11 +204,11 @@ describe('wizardFieldConfig', () => {
       expect(result.value.speedMax).toBe(30);
     });
 
-    it('should validate single speed value', () => {
+    it('should validate single speed value as average (min === max)', () => {
       const result = WIZARD_FIELDS.speed.validator('25');
       expect(result.valid).toBe(true);
       expect(result.value.speedMin).toBe(25);
-      expect(result.value.speedMax).toBeNull(); // validator returns null, not undefined
+      expect(result.value.speedMax).toBe(25);
     });
 
     it('should accept any input (validation is lenient)', () => {
@@ -385,6 +385,20 @@ describe('wizardFieldConfig', () => {
       expect(message).toContain('&lt;script&gt;');
     });
 
+    it('should format average speed (min === max)', () => {
+      const wizardData = {
+        title: 'Avg speed ride',
+        category: DEFAULT_CATEGORY,
+        organizer: 'John Doe',
+        datetime: new Date('2025-10-10T18:00:00Z'),
+        speedMin: 24,
+        speedMax: 24
+      };
+
+      const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser, language);
+      expect(message).toContain(`~24 ${tr('formatter.units.kmh')}`);
+    });
+
     it('should format speed when only minimum is set', () => {
       const wizardData = {
         title: 'Min speed ride',
@@ -395,9 +409,7 @@ describe('wizardFieldConfig', () => {
       };
 
       const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser, language);
-      expect(message).toContain(
-        `${tr('wizard.speedMinPrefix')} 24 ${tr('formatter.units.kmh')}`
-      );
+      expect(message).toContain(`24+ ${tr('formatter.units.kmh')}`);
     });
 
     it('should format speed when only maximum is set', () => {
@@ -410,9 +422,7 @@ describe('wizardFieldConfig', () => {
       };
 
       const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser, language);
-      expect(message).toContain(
-        `${tr('wizard.speedMaxPrefix')} 31 ${tr('formatter.units.kmh')}`
-      );
+      expect(message).toContain(tr('formatter.upToSpeed', { max: 31 }));
     });
 
     it('should omit zero duration as an empty optional value', () => {

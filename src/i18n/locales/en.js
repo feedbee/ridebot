@@ -46,7 +46,7 @@ meet: Meeting point (optional)
 route: Route link (optional)
 dist: Distance in km (optional)
 duration: Duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
-speed: Speed range in km/h (optional)
+speed: Speed in km/h: range (25-28), min (25+ or 25-), max (-28), avg (25 or ~25) (optional)
 info: Additional information (optional)
 </pre>
 
@@ -81,7 +81,7 @@ meet: New meeting point (optional)
 route: New route link (optional)
 dist: New distance (optional)
 duration: New duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
-speed: New speed range (optional)
+speed: New speed (optional)
 info: Additional information (optional)
 </pre>
     `.trim(),
@@ -133,7 +133,7 @@ meet: New meeting point (optional)
 route: New route link (optional)
 dist: New distance (optional)
 duration: New duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
-speed: New speed range (optional)
+speed: New speed (optional)
 info: Additional information (optional)
 </pre>
 Any parameters not provided will be copied from the original ride.
@@ -318,7 +318,7 @@ Click here to start a private chat: @botname
       route: 'Route',
       distance: 'Distance',
       duration: 'Duration',
-      speed: 'Speed',
+      speed: 'Avg speed',
       additionalInfo: 'Additional info'
     },
     participation: {
@@ -353,8 +353,6 @@ Click here to start a private chat: @botname
     }
   },
   wizard: {
-    speedMinPrefix: 'min',
-    speedMaxPrefix: 'max',
     messages: {
       completeOrCancelCurrent: 'Please complete or cancel the current ride creation wizard before starting a new one.',
       privateChatOnlyReply: '⚠️ Wizard commands are only available in private chats with the bot. Please use the command with parameters instead.',
@@ -376,7 +374,7 @@ Click here to start a private chat: @botname
       route: '🔗 Please enter the route link (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
       distance: '📏 Please enter the distance in kilometers (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
       duration: '⏱ Please enter the duration (e.g., \"2h 30m\", \"90m\", \"1.5h\"):\n<i>Enter a dash (-) to clear/skip this field</i>',
-      speed: '🚴 Please enter the speed range in km/h (e.g., 25-28) or skip:\n<i>Enter a dash (-) to clear/skip this field</i>',
+      speed: '🚴 Avg speed in km/h or skip:\n• 25-28 — range\n• 25+ or 25- — minimum\n• -28 — maximum\n• 25 or ~25 — average\n<i>Enter a dash (-) to clear/skip this field</i>',
       meet: '📍 Please enter the meeting point (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
       info: 'ℹ️ Please enter any additional information (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>'
     },
@@ -397,7 +395,7 @@ Click here to start a private chat: @botname
         route: '🔗 Route',
         distance: '📏 Distance',
         duration: '⏱ Duration',
-        speed: '🚴 Speed',
+        speed: '🚴 Avg speed',
         meetingPoint: '📍 Meeting Point',
         additionalInfo: 'ℹ️ Additional Info'
       }
@@ -424,7 +422,7 @@ Click here to start a private chat: @botname
     route: 'Route URL',
     dist: 'Distance in kilometers',
     duration: 'Duration in minutes',
-    speed: 'Speed range (e.g. 25-28)',
+    speed: 'Speed: range (25-28), min (25+), max (-28), avg (25)',
     info: 'Additional information',
     id: 'Ride ID (for commands that need it)'
   },

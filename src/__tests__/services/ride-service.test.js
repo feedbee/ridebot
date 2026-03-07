@@ -688,7 +688,7 @@ describe('RideService', () => {
       expect(result.ride.speedMax).toBeNull();
     });
 
-    it('should clear stale speed max when updating a range with a single value', async () => {
+    it('should set average speed (min === max) when updating with a single value', async () => {
       const ride = await rideService.createRide({
         ...testRide,
         speedMin: 22,
@@ -696,6 +696,20 @@ describe('RideService', () => {
       });
 
       const result = await rideService.updateRideFromParams(ride.id, { speed: '29' }, 123456, 789);
+
+      expect(result.error).toBeNull();
+      expect(result.ride.speedMin).toBe(29);
+      expect(result.ride.speedMax).toBe(29);
+    });
+
+    it('should set minimum speed when updating with explicit + suffix', async () => {
+      const ride = await rideService.createRide({
+        ...testRide,
+        speedMin: 22,
+        speedMax: 25
+      });
+
+      const result = await rideService.updateRideFromParams(ride.id, { speed: '29+' }, 123456, 789);
 
       expect(result.error).toBeNull();
       expect(result.ride.speedMin).toBe(29);

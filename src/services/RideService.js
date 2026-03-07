@@ -324,13 +324,16 @@ export class RideService {
     if (params.speed !== undefined) {
       mergedParams.speed = params.speed;
     } else if (originalRide.speedMin || originalRide.speedMax) {
-      // Reconstruct speed range from original ride
-      if (originalRide.speedMin && originalRide.speedMax) {
-        mergedParams.speed = `${originalRide.speedMin}-${originalRide.speedMax}`;
-      } else if (originalRide.speedMin) {
-        mergedParams.speed = `${originalRide.speedMin}`;
-      } else if (originalRide.speedMax) {
-        mergedParams.speed = `${originalRide.speedMax}`;
+      // Reconstruct speed string from original ride, preserving the form type
+      const { speedMin, speedMax } = originalRide;
+      if (speedMin && speedMax && speedMin === speedMax) {
+        mergedParams.speed = `${speedMin}`;           // average: plain number
+      } else if (speedMin && speedMax) {
+        mergedParams.speed = `${speedMin}-${speedMax}`;
+      } else if (speedMin) {
+        mergedParams.speed = `${speedMin}+`;          // explicit min, not avg
+      } else if (speedMax) {
+        mergedParams.speed = `-${speedMax}`;          // explicit max
       }
     }
     
