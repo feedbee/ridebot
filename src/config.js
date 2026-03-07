@@ -58,6 +58,13 @@ export const config = {
       patterns: [
         /https?:\/\/(?:www\.)?komoot\.com\/tour\/\d+/
       ]
+    },
+    garmin: {
+      domain: 'connect.garmin.com',
+      patterns: [
+        /https?:\/\/connect\.garmin\.com\/app\/activity\/\d+/,
+        /https?:\/\/connect\.garmin\.com\/app\/course\/\d+/
+      ]
     }
   },
   maxParticipantsDisplay: parseInt(process.env.MAX_PARTICIPANTS_DISPLAY, 10) || 20

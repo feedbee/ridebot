@@ -29,6 +29,8 @@ describe('RouteParser', () => {
       expect(RouteParser.isKnownProvider('https://www.strava.com/activities/123456')).toBe(true);
       expect(RouteParser.isKnownProvider('http://ridewithgps.com/routes/789')).toBe(true);
       expect(RouteParser.isKnownProvider('https://www.komoot.com/tour/12345')).toBe(true);
+      expect(RouteParser.isKnownProvider('https://connect.garmin.com/app/activity/12345678')).toBe(true);
+      expect(RouteParser.isKnownProvider('https://connect.garmin.com/app/course/12345678')).toBe(true);
     });
 
     test('should return false for unsupported providers', () => {
@@ -43,6 +45,8 @@ describe('RouteParser', () => {
       expect(RouteParser.getRouteProvider('https://www.strava.com/activities/123456')).toBe('strava');
       expect(RouteParser.getRouteProvider('http://ridewithgps.com/routes/789')).toBe('ridewithgps');
       expect(RouteParser.getRouteProvider('https://www.komoot.com/tour/12345')).toBe('komoot');
+      expect(RouteParser.getRouteProvider('https://connect.garmin.com/app/activity/12345678')).toBe('garmin');
+      expect(RouteParser.getRouteProvider('https://connect.garmin.com/app/course/12345678')).toBe('garmin');
     });
 
     test('should return null for unknown providers', () => {
@@ -231,6 +235,34 @@ describe('RouteParser', () => {
         });
         parseRouteSpy.mockRestore();
       });
+    });
+  });
+
+  describe('parseGarminRoute', () => {
+    test('should parse activity details', () => {
+      const htmlPath = path.join(__dirname, '../../test-setup/html/garmin-activity.html');
+      const html = fs.readFileSync(htmlPath, 'utf8');
+      const $ = cheerio.load(html);
+      const result = RouteParser.parseGarminRoute($, 'https://connect.garmin.com/app/activity/22070080926');
+      expect(result).toEqual({
+        distance: 57.01,
+        duration: 123 // 2h 2m 59s → 123 min (59s rounds up)
+      });
+    });
+
+    test('should return null for route page with no metrics', () => {
+      const htmlPath = path.join(__dirname, '../../test-setup/html/garmin-route.html');
+      const html = fs.readFileSync(htmlPath, 'utf8');
+      const $ = cheerio.load(html);
+      const result = RouteParser.parseGarminRoute($, 'https://connect.garmin.com/app/course/12345678');
+      expect(result).toBeNull();
+    });
+
+    test('should return null for invalid HTML', () => {
+      const html = '<div>Invalid content</div>';
+      const $ = cheerio.load(html);
+      const result = RouteParser.parseGarminRoute($, 'https://connect.garmin.com/app/activity/12345678');
+      expect(result).toBeNull();
     });
   });
 });

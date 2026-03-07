@@ -101,6 +101,9 @@ export class RouteParser {
         case 'komoot':
           result = this.parseKomootRoute($);
           break;
+        case 'garmin':
+          result = this.parseGarminRoute($, url);
+          break;
         default:
           console.warn(`[RouteParser] Unsupported provider: ${provider} for URL: ${url}`);
           return null;
@@ -297,6 +300,49 @@ export class RouteParser {
       return Object.keys(result).length > 0 ? result : null;
     } catch (error) {
       console.warn(`[RouteParser] Error parsing RideWithGPS route: ${error.message} for URL: ${url}`);
+      return null;
+    }
+  }
+
+  /**
+   * Parse Garmin Connect activity/course details
+   * @param {cheerio.Root} $
+   * @param {string} url
+   * @returns {{distance?: number, duration?: number}|null}
+   */
+  static parseGarminRoute($, url) {
+    try {
+      let distance, duration;
+
+      const metaDescription = $('meta[property="og:description"]').attr('content');
+
+      if (!metaDescription) {
+        console.warn('[RouteParser] Could not find og:description tag for Garmin route');
+        return null;
+      }
+
+      // Activity: "Distance 57.01 km | Time 2:02:59 | Speed 27.8 kph | Elevation 104 m"
+      const distanceMatch = metaDescription.match(/Distance\s+([\d.]+)\s*km/);
+      if (distanceMatch) {
+        distance = parseFloat(distanceMatch[1]);
+      }
+
+      // Duration in H:MM:SS format
+      const durationMatch = metaDescription.match(/Time\s+(\d+):(\d+):(\d+)/);
+      if (durationMatch) {
+        const hours = parseInt(durationMatch[1], 10);
+        const minutes = parseInt(durationMatch[2], 10);
+        const seconds = parseInt(durationMatch[3], 10);
+        duration = hours * 60 + minutes + (seconds >= 30 ? 1 : 0);
+      }
+
+      const result = {};
+      if (distance) result.distance = distance;
+      if (duration) result.duration = duration;
+
+      return Object.keys(result).length > 0 ? result : null;
+    } catch (error) {
+      console.warn(`[RouteParser] Error parsing Garmin route: ${error.message}`);
       return null;
     }
   }
