@@ -37,3 +37,5 @@ Thumbs.db
 
 # Custom local notes and other files
 z_ignore
+
+.claude/
