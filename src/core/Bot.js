@@ -19,6 +19,8 @@ import { DuplicateRideCommandHandler } from '../commands/DuplicateRideCommandHan
 import { ShareRideCommandHandler } from '../commands/ShareRideCommandHandler.js';
 import { ResumeRideCommandHandler } from '../commands/ResumeRideCommandHandler.js';
 import { ParticipationHandlers } from '../commands/ParticipationHandlers.js';
+import { GroupCommandHandler } from '../commands/GroupCommandHandler.js';
+import { GroupManagementService } from '../services/GroupManagementService.js';
 import { replaceBotUsername } from '../utils/botUtils.js';
 import { t } from '../i18n/index.js';
 
@@ -54,8 +56,10 @@ export class Bot {
     const listParticipantsHandler = new ListParticipantsCommandHandler(rideService, messageFormatter, rideMessagesService);
     const duplicateRideHandler = new DuplicateRideCommandHandler(rideService, messageFormatter, this.wizard, rideMessagesService);
     const resumeRideHandler = new ResumeRideCommandHandler(rideService, messageFormatter, rideMessagesService);
-    const participationHandler = new ParticipationHandlers(rideService, messageFormatter, rideMessagesService);
+    const groupManagementService = new GroupManagementService();
+    const participationHandler = new ParticipationHandlers(rideService, messageFormatter, rideMessagesService, groupManagementService);
     const shareRideHandler = new ShareRideCommandHandler(rideService, messageFormatter, rideMessagesService);
+    const groupHandler = new GroupCommandHandler(rideService, messageFormatter, rideMessagesService, groupManagementService);
     
     
     return {
@@ -72,7 +76,10 @@ export class Bot {
           { command: 'dupride', descriptionKey: 'bot.commandDescriptions.dupride', handler: (ctx) => duplicateRideHandler.handle(ctx) },
           { command: 'resumeride', descriptionKey: 'bot.commandDescriptions.resumeride', handler: (ctx) => resumeRideHandler.handle(ctx) },  
         ],
-        publicOnly: [],
+        publicOnly: [
+          { command: 'attach', descriptionKey: 'bot.commandDescriptions.attach', handler: (ctx) => groupHandler.handleAttach(ctx) },
+          { command: 'detach', descriptionKey: 'bot.commandDescriptions.detach', handler: (ctx) => groupHandler.handleDetach(ctx) },
+        ],
         mixed: [
           { command: 'shareride', descriptionKey: 'bot.commandDescriptions.shareride', handler: async (ctx) => {
             // If no parameters provided in group chat, show a helpful message

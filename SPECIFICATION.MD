@@ -73,7 +73,7 @@ The codebase follows a clean, layered architecture:
 - **[memory.js](cci:7://file:///workspace/src/storage/workspace/src/storage/memory.js:0:0-0:0)**: Development storage using in-memory Map
 
 **Data Models:**
-- **Ride**: Core entity with title, date, category, route, participation states, messages
+- **Ride**: Core entity with title, date, category, route, participation states, messages, and optional `groupId` (Telegram chat ID of an attached group)
 - **Participant**: User info (userId, username, firstName, lastName, createdAt)
 - **Participation**: User participation states (joined, thinking, skipped) for each ride with three participation options: "I'm in", "Thinking", "Pass"
 - **Message**: Tracks where ride announcements are posted (chatId, messageId, messageThreadId)
@@ -92,6 +92,11 @@ The codebase follows a clean, layered architecture:
 - Cancel/resume rides
 - Parse parameters and create rides from user input
 - Handles route parsing, date parsing, duration parsing
+
+#### **GroupManagementService** ([GroupManagementService.js](cci:7://file:///workspace/src/services/GroupManagementService.js:0:0-0:0))
+- **Group membership sync** for attached Telegram groups
+- `addParticipant(api, groupId, userId, language)`: unbans the user (so previously-kicked users can re-join), then creates a single-use 24-hour invite link and DMs it to the user; silently skips for group owner; logs and swallows other errors
+- `removeParticipant(api, groupId, userId)`: bans the user so they cannot re-enter until they re-join the ride; logs and swallows errors
 
 #### **RideMessagesService** ([RideMessagesService.js](cci:7://file:///workspace/src/services/RideMessagesService.js:0:0-0:0))
 - **Message synchronization** across multiple chats
@@ -118,7 +123,8 @@ All handlers extend **[BaseCommandHandler](cci:2://file:///workspace/src/command
 - **ShareRideCommandHandler**: Share rides to other chats
 - **ListRidesCommandHandler**: Paginated list of user's rides
 - **ListParticipantsCommandHandler**: List all participants for a specific ride (shows all without truncation, organized by participation state)
-- **ParticipationHandlers**: Join/thinking/pass ride functionality
+- **ParticipationHandlers**: Join/thinking/pass ride functionality; triggers group membership sync via `GroupManagementService` when a group is attached to the ride
+- **GroupCommandHandler**: `/attach #rideId` (links a group to a ride, posts and pins the ride message, adds existing participants) and `/detach` (unlinks the group); both commands are group-chat-only
 - **StartCommandHandler**: Welcome message
 - **HelpCommandHandler**: Multi-page help system
 
@@ -341,7 +347,7 @@ _No major refactoring areas identified at this time. The codebase is well-organi
 - [x] Feature: (Ride participation) Limit the ride message to display only the first N registered participants (configurable via MAX_PARTICIPANTS_DISPLAY), and if there are more, show a label like "and X more".
 - [x] Bug: Correct dates recognition in differfent languages
 - [x] Enhancement: Clarify average speed vs minspeed vs pace
-- [ ] Feature: Creating a dedicated ride chat
+- [x] Feature: Creating a dedicated ride chat (attach/detach an existing group via `/attach #rideId` / `/detach`; participants auto-added via invite link, auto-removed on leave)
 - [ ] Feature: Creating rides with AI
 - [ ] Feature: Creating ride from Strava event
 - [ ] Enhancement: Show preview in wizard starting from the first step and update it long with each next step

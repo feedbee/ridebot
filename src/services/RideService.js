@@ -55,6 +55,15 @@ export class RideService {
   }
 
   /**
+   * Get a ride by its attached group ID
+   * @param {number} groupId - Telegram chat ID
+   * @returns {Promise<Object|null>} - Ride object or null
+   */
+  async getRideByGroupId(groupId) {
+    return await this.storage.getRideByGroupId(groupId);
+  }
+
+  /**
    * Delete a ride
    * @param {string} rideId - Ride ID
    * @returns {Promise<boolean>} - Success status
@@ -90,7 +99,7 @@ export class RideService {
     }
 
     const result = await this.storage.setParticipation(rideId, participant.userId, state, participant);
-    return { success: true, ride: result.ride };
+    return { success: true, ride: result.ride, previousState: currentState };
   }
 
   /**

@@ -37,6 +37,7 @@ const rideSchema = new mongoose.Schema({
   speedMax: Number,
   additionalInfo: String,
   cancelled: { type: Boolean, default: false },
+  groupId: { type: Number, default: null },
   createdAt: { type: Date, default: Date.now },
   createdBy: { type: Number, required: true },
   organizer: { type: String },
@@ -160,6 +161,16 @@ export class MongoDBStorage extends StorageInterface {
     return ride !== null;
   }
 
+  async getRideByGroupId(groupId) {
+    try {
+      const ride = await Ride.findOne({ groupId });
+      return this.mapRideToInterface(ride);
+    } catch (error) {
+      console.error('Error getting ride by groupId:', error);
+      return null;
+    }
+  }
+
   async setParticipation(rideId, userId, state, participant) {
     const ride = await Ride.findById(rideId);
     if (!ride) {
@@ -230,6 +241,7 @@ export class MongoDBStorage extends StorageInterface {
       speedMax: rideObj.speedMax,
       additionalInfo: rideObj.additionalInfo,
       cancelled: rideObj.cancelled,
+      groupId: rideObj.groupId || null,
       createdAt: rideObj.createdAt,
       createdBy: rideObj.createdBy,
       organizer: rideObj.organizer,

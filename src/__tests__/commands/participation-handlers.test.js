@@ -64,7 +64,7 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
       }
     };
     
-    // Create ParticipationHandlers instance with mocks
+    // Create ParticipationHandlers instance with mocks (no groupManagementService by default)
     participationHandlers = new ParticipationHandlers(mockRideService, mockMessageFormatter, mockRideMessagesService);
   });
   
@@ -265,6 +265,89 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
     });
   });
   
+  describe('group sync', () => {
+    const GROUP_ID = -100123456789;
+    const USER_ID = 456;
+    let mockGroupManagementService;
+    let handlersWithGroup;
+
+    beforeEach(() => {
+      mockGroupManagementService = {
+        addParticipant: jest.fn().mockResolvedValue({}),
+        removeParticipant: jest.fn().mockResolvedValue({})
+      };
+      mockCtx.api = {
+        editMessageText: jest.fn().mockResolvedValue({})
+      };
+      handlersWithGroup = new ParticipationHandlers(
+        mockRideService, mockMessageFormatter, mockRideMessagesService, mockGroupManagementService
+      );
+    });
+
+    it('should add user to group when joining a ride with a group', async () => {
+      const mockRide = { id: '123', cancelled: false, groupId: GROUP_ID };
+      mockRideService.getRide.mockResolvedValue(mockRide);
+      mockRideService.setParticipation.mockResolvedValue({
+        success: true, ride: mockRide, previousState: null
+      });
+      mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: true });
+      mockCtx.match = ['join:123', '123'];
+
+      await handlersWithGroup.handleJoinRide(mockCtx);
+
+      expect(mockGroupManagementService.addParticipant).toHaveBeenCalledWith(
+        mockCtx.api, GROUP_ID, USER_ID, language
+      );
+      expect(mockGroupManagementService.removeParticipant).not.toHaveBeenCalled();
+    });
+
+    it('should remove user from group when leaving (was joined)', async () => {
+      const mockRide = { id: '123', cancelled: false, groupId: GROUP_ID };
+      mockRideService.getRide.mockResolvedValue(mockRide);
+      mockRideService.setParticipation.mockResolvedValue({
+        success: true, ride: mockRide, previousState: 'joined'
+      });
+      mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: true });
+      mockCtx.match = ['skip:123', '123'];
+
+      await handlersWithGroup.handleSkipRide(mockCtx);
+
+      expect(mockGroupManagementService.removeParticipant).toHaveBeenCalledWith(
+        mockCtx.api, GROUP_ID, USER_ID
+      );
+      expect(mockGroupManagementService.addParticipant).not.toHaveBeenCalled();
+    });
+
+    it('should not touch group when thinking->skipped (was not joined)', async () => {
+      const mockRide = { id: '123', cancelled: false, groupId: GROUP_ID };
+      mockRideService.getRide.mockResolvedValue(mockRide);
+      mockRideService.setParticipation.mockResolvedValue({
+        success: true, ride: mockRide, previousState: 'thinking'
+      });
+      mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: true });
+      mockCtx.match = ['skip:123', '123'];
+
+      await handlersWithGroup.handleSkipRide(mockCtx);
+
+      expect(mockGroupManagementService.addParticipant).not.toHaveBeenCalled();
+      expect(mockGroupManagementService.removeParticipant).not.toHaveBeenCalled();
+    });
+
+    it('should not call group service when no group is attached', async () => {
+      const mockRide = { id: '123', cancelled: false, groupId: null };
+      mockRideService.getRide.mockResolvedValue(mockRide);
+      mockRideService.setParticipation.mockResolvedValue({
+        success: true, ride: mockRide, previousState: null
+      });
+      mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: true });
+      mockCtx.match = ['join:123', '123'];
+
+      await handlersWithGroup.handleJoinRide(mockCtx);
+
+      expect(mockGroupManagementService.addParticipant).not.toHaveBeenCalled();
+    });
+  });
+
   describe('updateRideMessage', () => {
     it('should not update if messages array is missing', async () => {
       const ride = {

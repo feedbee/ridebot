@@ -249,9 +249,26 @@ describe('RideService', () => {
       const ride = await rideService.createRide(testRide);
       const nonExistentParticipant = { userId: 999, username: 'nonexistent', firstName: 'Non', lastName: 'Existent' };
       const result = await rideService.setParticipation(ride.id, nonExistentParticipant, 'joined');
-      
+
       expect(result.success).toBe(true);
       expect(result.ride.participation.joined).toHaveLength(1);
+    });
+
+    it('should return previousState as null when user had no prior state', async () => {
+      const ride = await rideService.createRide(testRide);
+      const result = await rideService.setParticipation(ride.id, testParticipant, 'joined');
+
+      expect(result.success).toBe(true);
+      expect(result.previousState).toBeNull();
+    });
+
+    it('should return previousState when user changes state', async () => {
+      const ride = await rideService.createRide(testRide);
+      await rideService.setParticipation(ride.id, testParticipant, 'joined');
+      const result = await rideService.setParticipation(ride.id, testParticipant, 'thinking');
+
+      expect(result.success).toBe(true);
+      expect(result.previousState).toBe('joined');
     });
 
     it('should handle edge case with multiple participants', async () => {
