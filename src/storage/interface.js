@@ -20,6 +20,7 @@
  * @property {number} [speedMax]
  * @property {string} [additionalInfo]
  * @property {boolean} [cancelled]
+ * @property {boolean} [notifyOnParticipation]
  * @property {Participation} participation - User participation in different states
  * @property {Date} createdAt
  * @property {number} createdBy

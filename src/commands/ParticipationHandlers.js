@@ -5,6 +5,16 @@ import { BaseCommandHandler } from './BaseCommandHandler.js';
  */
 export class ParticipationHandlers extends BaseCommandHandler {
   /**
+   * @param {import('../services/RideService.js').RideService} rideService
+   * @param {import('../formatters/MessageFormatter.js').MessageFormatter} messageFormatter
+   * @param {import('../services/RideMessagesService.js').RideMessagesService} rideMessagesService
+   * @param {import('../services/NotificationService.js').NotificationService} [notificationService]
+   */
+  constructor(rideService, messageFormatter, rideMessagesService, notificationService = null) {
+    super(rideService, messageFormatter, rideMessagesService);
+    this.notificationService = notificationService;
+  }
+  /**
    * Handle join ride callback
    * @param {import('grammy').Context} ctx - Grammy context
    */
@@ -59,6 +69,9 @@ export class ParticipationHandlers extends BaseCommandHandler {
       const result = await this.rideService.setParticipation(rideId, participant, state);
       
       if (result.success) {
+        if (this.notificationService) {
+          this.notificationService.scheduleParticipationNotification(result.ride, participant, state, ctx.api);
+        }
         const result2 = await this.updateRideMessage(result.ride, ctx);
         
         if (result2.success) {

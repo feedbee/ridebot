@@ -50,7 +50,8 @@ export class DuplicateRideCommandHandler extends BaseCommandHandler {
       duration: ride.duration,
       speedMin: ride.speedMin,
       speedMax: ride.speedMax,
-      additionalInfo: ride.additionalInfo
+      additionalInfo: ride.additionalInfo,
+      notifyOnParticipation: ride.notifyOnParticipation ?? true
     };
 
     await this.wizard.startWizard(ctx, prefillData);

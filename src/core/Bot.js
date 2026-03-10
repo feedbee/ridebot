@@ -19,6 +19,7 @@ import { DuplicateRideCommandHandler } from '../commands/DuplicateRideCommandHan
 import { ShareRideCommandHandler } from '../commands/ShareRideCommandHandler.js';
 import { ResumeRideCommandHandler } from '../commands/ResumeRideCommandHandler.js';
 import { ParticipationHandlers } from '../commands/ParticipationHandlers.js';
+import { NotificationService } from '../services/NotificationService.js';
 import { replaceBotUsername } from '../utils/botUtils.js';
 import { t } from '../i18n/index.js';
 
@@ -34,8 +35,9 @@ export class Bot {
     const rideService = new RideService(storage);
     const messageFormatter = new MessageFormatter();
     const rideMessagesService = new RideMessagesService(rideService, messageFormatter);
+    const notificationService = new NotificationService();
     this.wizard = new RideWizard(storage, rideService, messageFormatter, rideMessagesService);
-    this.botConfig = this.getBotConfig(rideService, messageFormatter, rideMessagesService);
+    this.botConfig = this.getBotConfig(rideService, messageFormatter, rideMessagesService, notificationService);
     
     // Initialize bot
     this.bot = new GrammyBot(config.bot.token);
@@ -43,7 +45,7 @@ export class Bot {
     this.configureBot();
   }
 
-  getBotConfig(rideService, messageFormatter, rideMessagesService) {
+  getBotConfig(rideService, messageFormatter, rideMessagesService, notificationService) {
     const startHandler = new StartCommandHandler(rideService, messageFormatter, rideMessagesService);
     const helpHandler = new HelpCommandHandler(rideService, messageFormatter, rideMessagesService);
     const newRideHandler = new NewRideCommandHandler(rideService, messageFormatter, this.wizard, rideMessagesService);
@@ -54,7 +56,7 @@ export class Bot {
     const listParticipantsHandler = new ListParticipantsCommandHandler(rideService, messageFormatter, rideMessagesService);
     const duplicateRideHandler = new DuplicateRideCommandHandler(rideService, messageFormatter, this.wizard, rideMessagesService);
     const resumeRideHandler = new ResumeRideCommandHandler(rideService, messageFormatter, rideMessagesService);
-    const participationHandler = new ParticipationHandlers(rideService, messageFormatter, rideMessagesService);
+    const participationHandler = new ParticipationHandlers(rideService, messageFormatter, rideMessagesService, notificationService);
     const shareRideHandler = new ShareRideCommandHandler(rideService, messageFormatter, rideMessagesService);
     
     

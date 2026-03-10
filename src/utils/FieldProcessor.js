@@ -62,7 +62,13 @@ export class FieldProcessor {
     
     // Process simple text fields
     this.processTextFields(params, result.data, isUpdate);
-    
+
+    // Process notify preference
+    if (params.notify !== undefined) {
+      const v = String(params.notify).toLowerCase().trim();
+      result.data.notifyOnParticipation = v === 'yes' || v === 'true' || v === '1';
+    }
+
     return result;
   }
   

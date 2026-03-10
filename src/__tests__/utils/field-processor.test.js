@@ -5,6 +5,38 @@
 import { FieldProcessor } from '../../utils/FieldProcessor.js';
 
 describe('FieldProcessor', () => {
+  describe('processRideFields — notify param', () => {
+    it('maps notify:yes to notifyOnParticipation:true', () => {
+      const { data } = FieldProcessor.processRideFields({ notify: 'yes' });
+      expect(data.notifyOnParticipation).toBe(true);
+    });
+
+    it('maps notify:no to notifyOnParticipation:false', () => {
+      const { data } = FieldProcessor.processRideFields({ notify: 'no' });
+      expect(data.notifyOnParticipation).toBe(false);
+    });
+
+    it('maps notify:true to notifyOnParticipation:true', () => {
+      const { data } = FieldProcessor.processRideFields({ notify: 'true' });
+      expect(data.notifyOnParticipation).toBe(true);
+    });
+
+    it('maps notify:1 to notifyOnParticipation:true', () => {
+      const { data } = FieldProcessor.processRideFields({ notify: '1' });
+      expect(data.notifyOnParticipation).toBe(true);
+    });
+
+    it('maps notify:false to notifyOnParticipation:false', () => {
+      const { data } = FieldProcessor.processRideFields({ notify: 'false' });
+      expect(data.notifyOnParticipation).toBe(false);
+    });
+
+    it('does not include notifyOnParticipation when notify param absent', () => {
+      const { data } = FieldProcessor.processRideFields({ title: 'Test' });
+      expect(data).not.toHaveProperty('notifyOnParticipation');
+    });
+  });
+
   describe('processSpeedField', () => {
     // Range
     it('parses a full range', () => {

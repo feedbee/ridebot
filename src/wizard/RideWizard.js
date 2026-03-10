@@ -66,7 +66,9 @@ export class RideWizard {
         currentUser: ctx.from.id,
         // Store message thread ID if present
         messageThreadId: ctx.message?.message_thread_id,
-        ...(prefillData || {})  // Merge prefilled data if provided
+        ...(prefillData || {}),  // Merge prefilled data if provided
+        // Default notifyOnParticipation to true if not provided by prefillData
+        notifyOnParticipation: prefillData?.notifyOnParticipation ?? true
       },
       isUpdate: prefillData?.isUpdate || false,  // Flag to indicate if this is an update
       originalRideId: prefillData?.originalRideId, // Store original ride ID for updates
@@ -111,6 +113,18 @@ export class RideWizard {
           }
           break;
 
+        case 'notifyYes':
+          state.data.notifyOnParticipation = true;
+          state.step = 'confirm';
+          await this.sendWizardStep(ctx, true);
+          break;
+
+        case 'notifyNo':
+          state.data.notifyOnParticipation = false;
+          state.step = 'confirm';
+          await this.sendWizardStep(ctx, true);
+          break;
+
         case 'back':
           // Navigate to previous step using field configuration
           const currentFieldConfig = getFieldConfig(state.step, ctx.lang);
@@ -118,8 +132,8 @@ export class RideWizard {
             state.step = currentFieldConfig.previousStep;
             await this.sendWizardStep(ctx, true);
           } else if (state.step === 'confirm') {
-            // Special case: confirm step goes back to info
-            state.step = 'info';
+            // Special case: confirm step goes back to notify
+            state.step = 'notify';
             await this.sendWizardStep(ctx, true);
           }
           break;
@@ -324,24 +338,29 @@ export class RideWizard {
     let message = '';
     let keyboard = new InlineKeyboard();
 
+    if (state.step === 'confirm') {
+      // Handle confirm step separately (special case)
+      return this.sendConfirmStep(ctx, state, edit);
+    } else if (state.step === 'notify') {
+      // Handle notify step separately (special case)
+      return this.sendNotifyStep(ctx, state, edit);
+    }
+
     // Get field configuration
     const fieldConfig = getFieldConfig(state.step, ctx.lang);
-    
+
     if (fieldConfig) {
       // Build message with current value
       message = fieldConfig.prompt;
-      
+
       // Add current value if exists
       const currentValue = this.getCurrentValueDisplay(state, fieldConfig, ctx);
       if (currentValue) {
         message += `\n\n${this.translate(ctx, 'wizard.messages.currentValue')}: ${currentValue}`;
       }
-      
+
       // Build keyboard based on field type
       keyboard = this.buildFieldKeyboard(state, fieldConfig, ctx);
-    } else if (state.step === 'confirm') {
-      // Handle confirm step separately (special case)
-      return this.sendConfirmStep(ctx, state, edit);
     } else {
       console.error(`Unknown wizard step: ${state.step}`);
       return;
@@ -487,6 +506,32 @@ export class RideWizard {
       .text(this.translate(ctx, 'buttons.cancel'), 'wizard:cancel');
     
     // Send or edit the message
+    await this.sendOrEditMessage(ctx, state, message, keyboard, edit);
+  }
+
+  /**
+   * Send notify step (participation notification preference)
+   * @param {Object} ctx - Grammy context
+   * @param {Object} state - Wizard state
+   * @param {boolean} edit - Whether to edit existing message
+   */
+  async sendNotifyStep(ctx, state, edit) {
+    const currentValue = state.data.notifyOnParticipation !== false;
+    const currentLabel = currentValue
+      ? this.translate(ctx, 'common.yes')
+      : this.translate(ctx, 'common.no');
+
+    const notifyConfig = getFieldConfig('notify', ctx.lang);
+    const message = `${notifyConfig.prompt}\n\n${this.translate(ctx, 'wizard.messages.currentValue')}: ${currentLabel}`;
+
+    const keyboard = new InlineKeyboard()
+      .text(this.translate(ctx, 'common.yes'), 'wizard:notifyYes')
+      .text(this.translate(ctx, 'common.no'), 'wizard:notifyNo')
+      .row()
+      .text(this.translate(ctx, 'buttons.back'), 'wizard:back')
+      .row()
+      .text(this.translate(ctx, 'buttons.cancel'), 'wizard:cancel');
+
     await this.sendOrEditMessage(ctx, state, message, keyboard, edit);
   }
 
