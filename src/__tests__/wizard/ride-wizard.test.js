@@ -766,5 +766,19 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
       const state = wizard.wizardStates.get(stateKey);
       expect(state.data.notifyOnParticipation).toBe(false);
     });
+
+    test('text input on notify step is silently ignored — step does not advance', async () => {
+      await advanceToNotifyStep();
+
+      const stateKey = wizard.getWizardStateKey(ctx.from.id, ctx.chat.id);
+      const state = wizard.wizardStates.get(stateKey);
+      expect(state.step).toBe('notify');
+
+      ctx.message = { text: 'yes', message_id: 999 };
+      await wizard.handleWizardInput(ctx);
+
+      // Step must remain on notify — not crash or advance
+      expect(state.step).toBe('notify');
+    });
   });
 });

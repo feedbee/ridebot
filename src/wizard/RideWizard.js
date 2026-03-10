@@ -250,6 +250,16 @@ export class RideWizard {
         return;
       }
 
+      // If the step has no text validator (e.g. button-only BOOLEAN steps),
+      // silently delete the user's message and leave the prompt unchanged.
+      if (typeof fieldConfig.validator !== 'function') {
+        try {
+          await ctx.api.deleteMessage(ctx.chat.id, ctx.message.message_id);
+        } catch (e) { /* ignore if already deleted */ }
+        state.errorMessageIds.pop(); // already handled above — remove from batch
+        return;
+      }
+
       // Handle dash (-) for clearable fields
       if (fieldConfig.clearable && ctx.message.text === '-') {
         this.clearFieldValue(state, fieldConfig);
