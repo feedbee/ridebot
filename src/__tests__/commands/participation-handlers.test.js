@@ -26,6 +26,8 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
   let mockCtx;
   const tr = (key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
   
+  let mockNotificationService;
+
   beforeEach(() => {
     // Create mock RideService
     mockRideService = {
@@ -46,7 +48,12 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
     mockMessageFormatter = {
       formatRideDetails: jest.fn()
     };
-    
+
+    // Create mock NotificationService
+    mockNotificationService = {
+      scheduleParticipationNotification: jest.fn()
+    };
+
     // Create mock Grammy context
     mockCtx = {
       match: ['join:123', '123'],
@@ -63,9 +70,11 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
         editMessageText: jest.fn().mockResolvedValue({})
       }
     };
-    
-    // Create ParticipationHandlers instance with mocks (no groupManagementService by default)
-    participationHandlers = new ParticipationHandlers(mockRideService, mockMessageFormatter, mockRideMessagesService);
+
+    // Create ParticipationHandlers instance with mocks
+    participationHandlers = new ParticipationHandlers(
+      mockRideService, mockMessageFormatter, mockRideMessagesService, mockNotificationService
+    );
   });
   
   describe('handleJoinRide', () => {
@@ -131,6 +140,36 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.participation.joinedSuccess'));
     });
     
+    it('should call scheduleParticipationNotification on successful join', async () => {
+      const mockRide = {
+        id: '123',
+        cancelled: false,
+        createdBy: 999,
+        notifyOnParticipation: true
+      };
+      mockRideService.getRide.mockResolvedValue(mockRide);
+      mockRideService.setParticipation.mockResolvedValue({ success: true, ride: mockRide });
+      mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: true, updatedCount: 1, removedCount: 0 });
+
+      await participationHandlers.handleJoinRide(mockCtx);
+
+      expect(mockNotificationService.scheduleParticipationNotification).toHaveBeenCalledWith(
+        mockRide,
+        { userId: 456, username: 'testuser', firstName: 'Test', lastName: 'User' },
+        'joined',
+        mockCtx.api
+      );
+    });
+
+    it('should NOT call scheduleParticipationNotification when participation unchanged', async () => {
+      mockRideService.getRide.mockResolvedValue({ id: '123', cancelled: false });
+      mockRideService.setParticipation.mockResolvedValue({ success: false, ride: null });
+
+      await participationHandlers.handleJoinRide(mockCtx);
+
+      expect(mockNotificationService.scheduleParticipationNotification).not.toHaveBeenCalled();
+    });
+
     // Multi-chat propagation: just expect the simple reply
     it('should report join with simple reply even after multi-chat propagation', async () => {
       // Setup
@@ -280,7 +319,7 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
         editMessageText: jest.fn().mockResolvedValue({})
       };
       handlersWithGroup = new ParticipationHandlers(
-        mockRideService, mockMessageFormatter, mockRideMessagesService, mockGroupManagementService
+        mockRideService, mockMessageFormatter, mockRideMessagesService, null, mockGroupManagementService
       );
     });
 

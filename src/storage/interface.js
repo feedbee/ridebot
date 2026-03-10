@@ -20,6 +20,7 @@
  * @property {number} [speedMax]
  * @property {string} [additionalInfo]
  * @property {boolean} [cancelled]
+ * @property {boolean} [notifyOnParticipation]
  * @property {number} [groupId] - Telegram chat ID of the attached group
  * @property {Participation} participation - User participation in different states
  * @property {Date} createdAt

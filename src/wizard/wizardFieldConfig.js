@@ -27,7 +27,8 @@ export const FieldType = {
   ROUTE: 'route',
   NUMBER: 'number',
   DURATION: 'duration',
-  SPEED: 'speed'
+  SPEED: 'speed',
+  BOOLEAN: 'boolean'
 };
 
 function translate(language, key, params = {}) {
@@ -248,9 +249,25 @@ export function getWizardFields(language = config.i18n.defaultLanguage) {
       required: false,
       clearable: true,
       skippable: true,
-      nextStep: 'confirm',
+      nextStep: 'notify',
       previousStep: 'meet',
       validator: (text) => ({ valid: true, value: text })
+    },
+
+    notify: {
+      step: 'notify',
+      type: FieldType.BOOLEAN,
+      dataKey: 'notifyOnParticipation',
+      prompt: translate(language, 'wizard.prompts.notify'),
+      required: true,
+      clearable: false,
+      skippable: false,
+      nextStep: 'confirm',
+      previousStep: 'info',
+      options: [
+        { label: translate(language, 'common.yes'), value: true },
+        { label: translate(language, 'common.no'), value: false }
+      ]
     }
   };
 }
@@ -302,7 +319,8 @@ export function buildRideDataFromWizard(wizardData, metadata = {}) {
     duration: wizardData.duration,
     speedMin: wizardData.speedMin,
     speedMax: wizardData.speedMax,
-    additionalInfo: wizardData.additionalInfo
+    additionalInfo: wizardData.additionalInfo,
+    notifyOnParticipation: wizardData.notifyOnParticipation ?? true
   };
 
   if (isUpdate) {
@@ -385,6 +403,14 @@ function getConfirmationFields(language = config.i18n.defaultLanguage) {
       dataKey: 'additionalInfo',
       required: false,
       format: (value, htmlEscape) => htmlEscape(value)
+    },
+    {
+      label: translate(language, 'wizard.confirm.labels.notify'),
+      dataKey: 'notifyOnParticipation',
+      required: true,
+      format: (value) => value !== false
+        ? translate(language, 'common.yes')
+        : translate(language, 'common.no')
     }
   ];
 }

@@ -25,6 +25,7 @@ export class RideParamsHelper {
       duration: translate('params.duration'),
       speed: translate('params.speed'),
       info: translate('params.info'),
+      notify: translate('params.notify'),
       id: translate('params.id')
     };
   }

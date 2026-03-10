@@ -8,10 +8,12 @@ export class ParticipationHandlers extends BaseCommandHandler {
    * @param {import('../services/RideService.js').RideService} rideService
    * @param {import('../formatters/MessageFormatter.js').MessageFormatter} messageFormatter
    * @param {import('../services/RideMessagesService.js').RideMessagesService} rideMessagesService
+   * @param {import('../services/NotificationService.js').NotificationService} [notificationService]
    * @param {import('../services/GroupManagementService.js').GroupManagementService} [groupManagementService]
    */
-  constructor(rideService, messageFormatter, rideMessagesService, groupManagementService = null) {
+  constructor(rideService, messageFormatter, rideMessagesService, notificationService = null, groupManagementService = null) {
     super(rideService, messageFormatter, rideMessagesService);
+    this.notificationService = notificationService;
     this.groupManagementService = groupManagementService;
   }
   /**
@@ -69,6 +71,9 @@ export class ParticipationHandlers extends BaseCommandHandler {
       const result = await this.rideService.setParticipation(rideId, participant, state);
 
       if (result.success) {
+        if (this.notificationService) {
+          this.notificationService.scheduleParticipationNotification(result.ride, participant, state, ctx.api);
+        }
         // Sync group membership if a group is attached
         if (result.ride.groupId && this.groupManagementService) {
           const groupId = result.ride.groupId;
@@ -79,7 +84,6 @@ export class ParticipationHandlers extends BaseCommandHandler {
             await this.groupManagementService.removeParticipant(ctx.api, groupId, userId);
           }
         }
-
         const result2 = await this.updateRideMessage(result.ride, ctx);
         
         if (result2.success) {

@@ -284,6 +284,11 @@ Click here to start a private chat: @botname
         skipped: 'skipped'
       }
     },
+    notifications: {
+      joined: '🚴 <b>{name}</b> joined your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nnotify: no</pre>',
+      thinking: '🤔 <b>{name}</b> is thinking about your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nnotify: no</pre>',
+      skipped: '🙅 <b>{name}</b> declined your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nnotify: no</pre>'
+    },
     stateChange: {
       onlyCreator: 'Only the ride creator can {action} this ride.',
       messageUpdateError: 'Ride has been {action}, but there was an error updating the ride message. You may need to create a new ride message.'
@@ -396,7 +401,8 @@ Click here to start a private chat: @botname
       duration: '⏱ Please enter the duration (e.g., \"2h 30m\", \"90m\", \"1.5h\"):\n<i>Enter a dash (-) to clear/skip this field</i>',
       speed: '🚴 Avg speed in km/h or skip:\n• 25-28 — range\n• 25+ or 25- — minimum\n• -28 — maximum\n• 25 or ~25 — average\n<i>Enter a dash (-) to clear/skip this field</i>',
       meet: '📍 Please enter the meeting point (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
-      info: 'ℹ️ Please enter any additional information (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>'
+      info: 'ℹ️ Please enter any additional information (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
+      notify: '🔔 Notify you when participants join or leave?\n<i>You can change this later by updating the ride.</i>'
     },
     validation: {
       titleRequired: 'Title cannot be empty',
@@ -417,7 +423,8 @@ Click here to start a private chat: @botname
         duration: '⏱ Duration',
         speed: '🚴 Avg speed',
         meetingPoint: '📍 Meeting Point',
-        additionalInfo: 'ℹ️ Additional Info'
+        additionalInfo: 'ℹ️ Additional Info',
+        notify: '🔔 Participation notifications'
       }
     }
   },
@@ -444,6 +451,7 @@ Click here to start a private chat: @botname
     duration: 'Duration in minutes',
     speed: 'Speed: range (25-28), min (25+), max (-28), avg (25)',
     info: 'Additional information',
+    notify: 'Notify on participation changes (yes/no)',
     id: 'Ride ID (for commands that need it)'
   },
   utils: {

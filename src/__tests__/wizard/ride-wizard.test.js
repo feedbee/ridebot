@@ -356,59 +356,75 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
       // Set additional info
       ctx.message = { text: 'Bring lights and a jacket', message_id: 6 };
       await wizard.handleWizardInput(ctx);
-      
+
+      // Verify we're now at the notify step
+      let lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
+      expect(lastMessage.text).toContain(tr('wizard.prompts.notify'));
+
+      // Choose notify yes → advance to confirm
+      ctx.match = ['wizard:notifyYes', 'notifyYes'];
+      await wizard.handleWizardAction(ctx);
+
       // Verify we're now at the confirmation step
-      const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
+      lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
       expect(lastMessage.text).toContain(tr('wizard.confirm.header', { action: tr('wizard.confirm.rideAction') }));
       expect(lastMessage.text).toContain('Bring lights and a jacket');
-      
+
       // Confirm and create the ride
       ctx.match = ['wizard:confirm', 'confirm'];
       await wizard.handleWizardAction(ctx);
-      
+
       // Verify ride was created with additional info
       const createdRide = Array.from(storage.rides.values())[0];
       expect(createdRide).toBeDefined();
       expect(createdRide.additionalInfo).toBe('Bring lights and a jacket');
     });
-    
+
     test('should handle skipping additional info step', async () => {
       await wizard.startWizard(ctx);
-      
+
       // Fill required fields first
       ctx.message = { text: 'Test Ride', message_id: 2 };
       await wizard.handleWizardInput(ctx);
-      
+
       ctx.message = { text: 'road', message_id: 3 };
       await wizard.handleWizardInput(ctx);
-      
+
       // Set organizer
       ctx.message = { text: 'Test Organizer', message_id: 4 };
       await wizard.handleWizardInput(ctx);
-      
+
       // Set date
       ctx.message = { text: 'tomorrow at 2pm', message_id: 5 };
       await wizard.handleWizardInput(ctx);
-      
+
       // Skip to the additional info step
       for (let i = 0; i < 5; i++) {
         ctx.match = ['wizard:skip', 'skip'];
         await wizard.handleWizardAction(ctx);
       }
-      
-      // Skip additional info
+
+      // Skip additional info → now at notify step
       ctx.match = ['wizard:skip', 'skip'];
       await wizard.handleWizardAction(ctx);
-      
+
+      // Verify we're now at the notify step
+      let lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
+      expect(lastMessage.text).toContain(tr('wizard.prompts.notify'));
+
+      // Choose notify yes → advance to confirm
+      ctx.match = ['wizard:notifyYes', 'notifyYes'];
+      await wizard.handleWizardAction(ctx);
+
       // Verify we're now at the confirmation step
-      const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
+      lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
       expect(lastMessage.text).toContain(tr('wizard.confirm.header', { action: tr('wizard.confirm.rideAction') }));
       expect(lastMessage.text).not.toContain(`${tr('wizard.confirm.labels.additionalInfo')}:`);
-      
+
       // Confirm and create the ride
       ctx.match = ['wizard:confirm', 'confirm'];
       await wizard.handleWizardAction(ctx);
-      
+
       // Verify ride was created without additional info
       const createdRide = Array.from(storage.rides.values())[0];
       expect(createdRide).toBeDefined();
@@ -647,4 +663,122 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
       expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalledWith(updatedRide, ctx);
     });
   });
-}); 
+
+  describe('Notify Step', () => {
+    /**
+     * Helper: advance wizard to the notify step by filling all steps before it.
+     */
+    async function advanceToNotifyStep() {
+      await wizard.startWizard(ctx);
+      const inputs = [
+        'Test Ride',        // title
+        'road',            // category
+        'Test Organizer',  // organizer
+        'tomorrow at 6pm', // date
+      ];
+      for (const text of inputs) {
+        ctx.message = { text, message_id: ctx._test.messages.length + 2 };
+        await wizard.handleWizardInput(ctx);
+      }
+      // Skip route, distance, duration, speed, meet, info
+      for (let i = 0; i < 6; i++) {
+        ctx.match = ['wizard:skip', 'skip'];
+        await wizard.handleWizardAction(ctx);
+      }
+    }
+
+    test('notifyYes sets notifyOnParticipation:true and advances to confirm', async () => {
+      await advanceToNotifyStep();
+
+      const stateKey = wizard.getWizardStateKey(ctx.from.id, ctx.chat.id);
+      const state = wizard.wizardStates.get(stateKey);
+      expect(state.step).toBe('notify');
+
+      ctx.match = ['wizard:notifyYes', 'notifyYes'];
+      await wizard.handleWizardAction(ctx);
+
+      expect(state.step).toBe('confirm');
+      expect(state.data.notifyOnParticipation).toBe(true);
+
+      const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
+      expect(lastMessage.text).toContain(tr('wizard.confirm.header', { action: tr('wizard.confirm.rideAction') }));
+    });
+
+    test('notifyNo sets notifyOnParticipation:false and advances to confirm', async () => {
+      await advanceToNotifyStep();
+
+      ctx.match = ['wizard:notifyNo', 'notifyNo'];
+      await wizard.handleWizardAction(ctx);
+
+      const stateKey = wizard.getWizardStateKey(ctx.from.id, ctx.chat.id);
+      const state = wizard.wizardStates.get(stateKey);
+      expect(state.step).toBe('confirm');
+      expect(state.data.notifyOnParticipation).toBe(false);
+    });
+
+    test('back from confirm navigates to notify', async () => {
+      await advanceToNotifyStep();
+
+      // notifyYes → confirm
+      ctx.match = ['wizard:notifyYes', 'notifyYes'];
+      await wizard.handleWizardAction(ctx);
+
+      const stateKey = wizard.getWizardStateKey(ctx.from.id, ctx.chat.id);
+      const state = wizard.wizardStates.get(stateKey);
+      expect(state.step).toBe('confirm');
+
+      // back from confirm → notify
+      ctx.match = ['wizard:back', 'back'];
+      await wizard.handleWizardAction(ctx);
+
+      expect(state.step).toBe('notify');
+      const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
+      expect(lastMessage.text).toContain(tr('wizard.prompts.notify'));
+    });
+
+    test('back from notify navigates to info', async () => {
+      await advanceToNotifyStep();
+
+      const stateKey = wizard.getWizardStateKey(ctx.from.id, ctx.chat.id);
+      const state = wizard.wizardStates.get(stateKey);
+      expect(state.step).toBe('notify');
+
+      ctx.match = ['wizard:back', 'back'];
+      await wizard.handleWizardAction(ctx);
+
+      expect(state.step).toBe('info');
+      const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
+      expect(lastMessage.text).toContain(tr('wizard.prompts.info'));
+    });
+
+    test('fresh wizard defaults notifyOnParticipation to true in state', async () => {
+      await wizard.startWizard(ctx);
+
+      const stateKey = wizard.getWizardStateKey(ctx.from.id, ctx.chat.id);
+      const state = wizard.wizardStates.get(stateKey);
+      expect(state.data.notifyOnParticipation).toBe(true);
+    });
+
+    test('prefilled notifyOnParticipation:false is preserved in wizard state', async () => {
+      await wizard.startWizard(ctx, { notifyOnParticipation: false });
+
+      const stateKey = wizard.getWizardStateKey(ctx.from.id, ctx.chat.id);
+      const state = wizard.wizardStates.get(stateKey);
+      expect(state.data.notifyOnParticipation).toBe(false);
+    });
+
+    test('text input on notify step is silently ignored — step does not advance', async () => {
+      await advanceToNotifyStep();
+
+      const stateKey = wizard.getWizardStateKey(ctx.from.id, ctx.chat.id);
+      const state = wizard.wizardStates.get(stateKey);
+      expect(state.step).toBe('notify');
+
+      ctx.message = { text: 'yes', message_id: 999 };
+      await wizard.handleWizardInput(ctx);
+
+      // Step must remain on notify — not crash or advance
+      expect(state.step).toBe('notify');
+    });
+  });
+});

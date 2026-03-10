@@ -346,6 +346,11 @@ export class RideService {
       }
     }
     
+    // Copy notify preference from original ride if not explicitly provided
+    if (params.notify === undefined && originalRide.notifyOnParticipation !== undefined) {
+      mergedParams.notify = originalRide.notifyOnParticipation ? 'yes' : 'no';
+    }
+
     // Use existing createRideFromParams to handle all the validation and processing
     return await this.createRideFromParams(mergedParams, null, user, { language });
   }
