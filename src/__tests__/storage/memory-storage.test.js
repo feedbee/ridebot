@@ -191,4 +191,32 @@ describe('MemoryStorage', () => {
       expect(updatedRide.messages[1].chatId).toBe(444444);
     });
   });
-}); 
+
+  describe('getRideByGroupId', () => {
+    it('should return null when no ride has that groupId', async () => {
+      await storage.createRide(testRide);
+      const result = await storage.getRideByGroupId(-100999888);
+      expect(result).toBeNull();
+    });
+
+    it('should return the ride with the matching groupId', async () => {
+      const groupId = -100123456789;
+      await storage.createRide(testRide);
+      const ride = await storage.createRide({ ...testRide, title: 'Group Ride', groupId });
+
+      const found = await storage.getRideByGroupId(groupId);
+      expect(found).not.toBeNull();
+      expect(found.id).toBe(ride.id);
+      expect(found.groupId).toBe(groupId);
+    });
+
+    it('should return null after groupId is cleared', async () => {
+      const groupId = -100123456789;
+      const ride = await storage.createRide({ ...testRide, groupId });
+      await storage.updateRide(ride.id, { groupId: null });
+
+      const found = await storage.getRideByGroupId(groupId);
+      expect(found).toBeNull();
+    });
+  });
+});

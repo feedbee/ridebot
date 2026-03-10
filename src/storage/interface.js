@@ -21,6 +21,7 @@
  * @property {string} [additionalInfo]
  * @property {boolean} [cancelled]
  * @property {boolean} [notifyOnParticipation]
+ * @property {number} [groupId] - Telegram chat ID of the attached group
  * @property {Participation} participation - User participation in different states
  * @property {Date} createdAt
  * @property {number} createdBy
@@ -128,6 +129,15 @@ export class StorageInterface {
    * @returns {Promise<RidesList>}
    */
   async getRidesByCreator(userId, skip, limit) {
+    throw new Error('Not implemented');
+  }
+
+  /**
+   * Get a ride by its attached group ID
+   * @param {number} groupId - Telegram chat ID of the attached group
+   * @returns {Promise<Ride|null>}
+   */
+  async getRideByGroupId(groupId) {
     throw new Error('Not implemented');
   }
 } 

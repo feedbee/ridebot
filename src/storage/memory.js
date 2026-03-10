@@ -180,4 +180,13 @@ export class MemoryStorage extends StorageInterface {
 
     return ride.participation || { joined: [], thinking: [], skipped: [] };
   }
+
+  async getRideByGroupId(groupId) {
+    for (const ride of this.rides.values()) {
+      if (ride.groupId === groupId) {
+        return { ...ride, category: normalizeCategory(ride.category) };
+      }
+    }
+    return null;
+  }
 } 

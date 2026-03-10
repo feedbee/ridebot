@@ -157,6 +157,13 @@ The ride will be posted to the current chat and all instances will be synchroniz
 
 <b>Important:</b> The bot needs to be added to the other chat before sharing. Bot needs to be chat admin in the other chat to use the short form of /shareride, but you can always use the full form /shareride@botname.
 
+<b>📎 Attaching a Group to a Ride</b>
+Only the ride creator can attach a group:
+1. Create a Telegram group and add the bot as admin (needs "Add Members" and "Ban Users" permissions)
+2. Use /attach with the ride ID in the group chat: <code>/attach #abc123</code>
+The bot will post the ride info in the group and automatically add/remove members as participants join or leave the ride.
+To unlink the group, use /detach in the group chat.
+
     `.trim(),
 
     ride: `
@@ -285,6 +292,19 @@ Click here to start a private chat: @botname
     stateChange: {
       onlyCreator: 'Only the ride creator can {action} this ride.',
       messageUpdateError: 'Ride has been {action}, but there was an error updating the ride message. You may need to create a new ride message.'
+    },
+    group: {
+      notInGroup: 'This command must be used in a group chat.',
+      rideNotFound: 'Ride not found.',
+      notCreator: 'Only the ride creator can perform this action.',
+      alreadyAttached: 'This ride already has a group attached. Use /detach first.',
+      botNotAdmin: 'The bot is not an admin in this group. Please make it an admin and try again.',
+      botNeedsAddMembersPermission: 'The bot needs the "Add Members" admin permission. Please update the bot\'s permissions and try again.',
+      attachSuccess: 'Group attached successfully! Participants will be automatically added when they join the ride.',
+      detachSuccess: 'Group detached. Participants will no longer be auto-added.',
+      noGroupAttached: 'No ride is attached to this group.',
+      inviteLinkSent: 'You\'ve been invited to the ride group: {link}\n\nThis group is for ride coordination, pre- and post-ride discussion, and sharing photos. The link is valid for 24 hours.',
+      invalidRideIdUsage: 'Please provide a valid ride ID. Usage: /attach #rideID'
     },
     delete: {
       onlyCreator: 'Only the ride creator can delete this ride.',
@@ -451,7 +471,9 @@ Click here to start a private chat: @botname
       listparticipants: 'List all participants for a ride',
       dupride: 'Duplicate an existing ride',
       resumeride: 'Resume a cancelled ride',
-      shareride: 'Share a ride in a chat'
+      shareride: 'Share a ride in a chat',
+      attach: 'Attach a Telegram group to a ride',
+      detach: 'Detach the Telegram group from its ride'
     }
   }
 };

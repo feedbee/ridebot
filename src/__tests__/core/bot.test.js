@@ -275,7 +275,11 @@ describe('Bot', () => {
       await bot.setupBotCommands();
 
       expect(mockApiSetMyCommands).toHaveBeenCalledWith(
-        [{ command: 'shareride', description: expect.any(String) }],
+        expect.arrayContaining([
+          { command: 'attach', description: expect.any(String) },
+          { command: 'detach', description: expect.any(String) },
+          { command: 'shareride', description: expect.any(String) }
+        ]),
         { scope: { type: 'all_group_chats' } }
       );
     });

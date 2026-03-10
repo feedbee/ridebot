@@ -15,6 +15,7 @@ A Telegram bot for organizing bike rides within multiple chats. The bot allows u
   - Optional speed expectations
   - Optional additional information text
 - Join/Thinking/Pass ride functionality with synchronized participant lists
+- Automatic group sync: attach a Telegram group to a ride so participants are auto-added when they join and removed when they leave
 - Automatic route information parsing
 - Update ride announcements
 - Participant list management
@@ -212,6 +213,18 @@ Use `/listrides` to see all rides you've created with pagination support.
 ### Listing Ride Participants
 
 Use `/listparticipants rideID` to see all participants for a specific ride. This command shows all participants without the truncation limit applied to regular ride messages, organized by participation state (Joined, Thinking, Not interested).
+
+### Attaching a Group to a Ride
+
+You can link a private Telegram group to a ride so that participants are automatically added when they join and removed when they leave.
+
+1. Create a Telegram group and add the bot as admin with **"Add Members"** and **"Ban Users"** permissions
+2. In the group chat, run `/attach #rideId` (e.g. `/attach #abc123`)
+3. The bot verifies its permissions, stores the link, posts the ride message in the group, and pins it
+4. From now on, joining the ride sends participants a single-use invite link to the group (valid 24 hours); leaving removes them
+5. To unlink, run `/detach` in the group chat
+
+**Note:** Telegram does not allow bots to add users directly — participants receive a private invite link instead.
 
 ## Route Support
 

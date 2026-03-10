@@ -9,10 +9,12 @@ export class ParticipationHandlers extends BaseCommandHandler {
    * @param {import('../formatters/MessageFormatter.js').MessageFormatter} messageFormatter
    * @param {import('../services/RideMessagesService.js').RideMessagesService} rideMessagesService
    * @param {import('../services/NotificationService.js').NotificationService} [notificationService]
+   * @param {import('../services/GroupManagementService.js').GroupManagementService} [groupManagementService]
    */
-  constructor(rideService, messageFormatter, rideMessagesService, notificationService = null) {
+  constructor(rideService, messageFormatter, rideMessagesService, notificationService = null, groupManagementService = null) {
     super(rideService, messageFormatter, rideMessagesService);
     this.notificationService = notificationService;
+    this.groupManagementService = groupManagementService;
   }
   /**
    * Handle join ride callback
@@ -67,10 +69,20 @@ export class ParticipationHandlers extends BaseCommandHandler {
       };
       
       const result = await this.rideService.setParticipation(rideId, participant, state);
-      
+
       if (result.success) {
         if (this.notificationService) {
           this.notificationService.scheduleParticipationNotification(result.ride, participant, state, ctx.api);
+        }
+        // Sync group membership if a group is attached
+        if (result.ride.groupId && this.groupManagementService) {
+          const groupId = result.ride.groupId;
+          const userId = participant.userId;
+          if (state === 'joined') {
+            await this.groupManagementService.addParticipant(ctx.api, groupId, userId, ctx.lang);
+          } else if (result.previousState === 'joined') {
+            await this.groupManagementService.removeParticipant(ctx.api, groupId, userId);
+          }
         }
         const result2 = await this.updateRideMessage(result.ride, ctx);
         
