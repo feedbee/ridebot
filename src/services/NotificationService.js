@@ -70,7 +70,13 @@ export class NotificationService {
    * @returns {string}
    */
   _formatName(p) {
-    const full = `${p.firstName || ''} ${p.lastName || ''}`.trim() || p.username || 'Someone';
-    return p.username ? `${full} (@${p.username})` : full;
+    if (p.firstName || p.lastName) {
+      const full = `${p.firstName || ''} ${p.lastName || ''}`.trim();
+      return p.username ? `${full} (@${p.username})` : full;
+    }
+    if (p.username) {
+      return `${p.username} (@${p.username})`;
+    }
+    return 'Someone';
   }
 }
