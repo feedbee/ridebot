@@ -2,7 +2,7 @@
 
 ## Overview
 
-Ride creators can opt in to receive a private Telegram DM whenever a participant joins, starts thinking about, or declines their ride. Notifications are debounced: if the same participant changes status multiple times within 30 seconds, only one message is sent reflecting the final state. The preference is stored per-ride and defaults to **yes**.
+Ride creators can opt in to receive a private Telegram DM whenever a participant joins, starts thinking about, or declines their ride. Notifications are debounced: if the same participant changes status multiple times within 20 seconds, only one message is sent reflecting the final state. The preference is stored per-ride and defaults to **yes**.
 
 ---
 
@@ -12,7 +12,7 @@ Ride creators can opt in to receive a private Telegram DM whenever a participant
 2. After the "Additional info" step, a new **"Participation notifications"** step appears with Yes / No buttons (default: Yes)
 3. Creator chooses Yes or No and proceeds to the confirmation screen
 4. Confirmation screen includes a "🔔 Participation notifications" row showing the chosen value
-5. After the ride is created, whenever a participant changes their status the creator receives a DM within 30 seconds
+5. After the ride is created, whenever a participant changes their status the creator receives a DM within 20 seconds
 
 ---
 
@@ -84,9 +84,9 @@ Sent to `ride.createdBy` (the creator's Telegram user ID) as a private message.
 
 | State | Template (EN) |
 |-------|---------------|
-| `joined` | `🚴 <b>{name}</b> joined your ride "<b>{title}</b>"` |
-| `thinking` | `🤔 <b>{name}</b> is thinking about your ride "<b>{title}</b>"` |
-| `skipped` | `🙅 <b>{name}</b> declined your ride "<b>{title}</b>"` |
+| `joined` | `🚴 <b>{name}</b> joined your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nnotify: no</pre>` |
+| `thinking` | `🤔 <b>{name}</b> is thinking about your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nnotify: no</pre>` |
+| `skipped` | `🙅 <b>{name}</b> declined your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nnotify: no</pre>` |
 
 **Participant name format:** `First Last (@username)` when both name and username are available; falls back to `username (@username)`, then `First` alone with `(@username)`, then `Someone` if no data.
 
@@ -98,11 +98,11 @@ Sent to `ride.createdBy` (the creator's Telegram user ID) as a private message.
 
 - Each pending notification is keyed by `${rideId}:${participantUserId}`
 - When a notification is scheduled, any existing pending timer for the same key is cancelled and replaced
-- The 30-second timer starts fresh on each state change
+- The 20-second timer starts fresh on each state change
 - Only the **final** state within the debounce window is sent
 - On successful send the timer entry is removed from the map
 
-**Example:** Alice clicks Join, then Thinking, then Skip within 10 seconds → only one DM arrives ~30s after the last click, saying she declined.
+**Example:** Alice clicks Join, then Thinking, then Skip within 10 seconds → only one DM arrives ~20s after the last click, saying she declined.
 
 ---
 
@@ -124,11 +124,13 @@ Existing rides without this field are treated as `true` (`?? true` fallback; no 
 
 ### `commands.notifications`
 
+Each message includes a stop-notifications footer with a tappable code block.
+
 | Key | EN | RU |
 |-----|----|----|
-| `joined` | `🚴 <b>{name}</b> joined your ride "<b>{title}</b>"` | `🚴 <b>{name}</b> присоединился к вашей поездке "<b>{title}</b>"` |
-| `thinking` | `🤔 <b>{name}</b> is thinking about your ride "<b>{title}</b>"` | `🤔 <b>{name}</b> думает о вашей поездке "<b>{title}</b>"` |
-| `skipped` | `🙅 <b>{name}</b> declined your ride "<b>{title}</b>"` | `🙅 <b>{name}</b> отказался от вашей поездки "<b>{title}</b>"` |
+| `joined` | `🚴 <b>{name}</b> joined your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nnotify: no</pre>` | `🚴 <b>{name}</b> присоединился к вашей поездке "<b>{title}</b>"\n\n🔕 Отключить уведомления:\n<pre>/updateride #{rideId}\nnotify: no</pre>` |
+| `thinking` | `🤔 <b>{name}</b> is thinking about your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nnotify: no</pre>` | `🤔 <b>{name}</b> думает о вашей поездке "<b>{title}</b>"\n\n🔕 Отключить уведомления:\n<pre>/updateride #{rideId}\nnotify: no</pre>` |
+| `skipped` | `🙅 <b>{name}</b> declined your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nnotify: no</pre>` | `🙅 <b>{name}</b> отказался от вашей поездки "<b>{title}</b>"\n\n🔕 Отключить уведомления:\n<pre>/updateride #{rideId}\nnotify: no</pre>` |
 
 ### `wizard.prompts`
 

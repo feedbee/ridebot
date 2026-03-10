@@ -285,9 +285,9 @@ Click here to start a private chat: @botname
       }
     },
     notifications: {
-      joined: '🚴 <b>{name}</b> joined your ride "<b>{title}</b>"',
-      thinking: '🤔 <b>{name}</b> is thinking about your ride "<b>{title}</b>"',
-      skipped: '🙅 <b>{name}</b> declined your ride "<b>{title}</b>"'
+      joined: '🚴 <b>{name}</b> joined your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nnotify: no</pre>',
+      thinking: '🤔 <b>{name}</b> is thinking about your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nnotify: no</pre>',
+      skipped: '🙅 <b>{name}</b> declined your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nnotify: no</pre>'
     },
     stateChange: {
       onlyCreator: 'Only the ride creator can {action} this ride.',

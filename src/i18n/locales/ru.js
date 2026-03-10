@@ -285,9 +285,9 @@ id: abc123 (or #abc123)
       }
     },
     notifications: {
-      joined: '🚴 <b>{name}</b> присоединился к вашей поездке "<b>{title}</b>"',
-      thinking: '🤔 <b>{name}</b> думает о вашей поездке "<b>{title}</b>"',
-      skipped: '🙅 <b>{name}</b> отказался от вашей поездки "<b>{title}</b>"'
+      joined: '🚴 <b>{name}</b> присоединился к вашей поездке "<b>{title}</b>"\n\n🔕 Отключить уведомления:\n<pre>/updateride #{rideId}\nnotify: no</pre>',
+      thinking: '🤔 <b>{name}</b> думает о вашей поездке "<b>{title}</b>"\n\n🔕 Отключить уведомления:\n<pre>/updateride #{rideId}\nnotify: no</pre>',
+      skipped: '🙅 <b>{name}</b> отказался от вашей поездки "<b>{title}</b>"\n\n🔕 Отключить уведомления:\n<pre>/updateride #{rideId}\nnotify: no</pre>'
     },
     stateChange: {
       onlyCreator: 'Только создатель поездки может {action} эту поездку.',

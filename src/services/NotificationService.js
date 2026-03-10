@@ -1,11 +1,11 @@
 import { config } from '../config.js';
 import { t } from '../i18n/index.js';
 
-const DEBOUNCE_DELAY_MS = 30_000;
+const DEBOUNCE_DELAY_MS = 20_000;
 
 /**
  * Service for sending debounced participation notifications to ride creators.
- * When a participant's status changes, a 30-second timer is started before
+ * When a participant's status changes, a 20-second timer is started before
  * sending a DM to the creator. If the status changes again within that window,
  * the pending notification is cancelled and rescheduled with the latest state.
  */
@@ -53,7 +53,8 @@ export class NotificationService {
       const name = this._formatName(participant);
       const text = t(language, `commands.notifications.${state}`, {
         name,
-        title: ride.title
+        title: ride.title,
+        rideId: ride.id
       }, {
         fallbackLanguage: config.i18n.fallbackLanguage
       });

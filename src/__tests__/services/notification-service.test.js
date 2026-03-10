@@ -37,7 +37,7 @@ describe('NotificationService', () => {
   });
 
   describe('scheduleParticipationNotification', () => {
-    it('sends notification after 30s', async () => {
+    it('sends notification after 20s', async () => {
       service.scheduleParticipationNotification(ride, participant, 'joined', mockApi);
       expect(mockApi.sendMessage).not.toHaveBeenCalled();
 
@@ -63,7 +63,8 @@ describe('NotificationService', () => {
       // The final state was 'skipped' — the message should use the skipped template
       const expectedText = tr('commands.notifications.skipped', {
         name: 'Alice Smith (@alice)',
-        title: ride.title
+        title: ride.title,
+        rideId: ride.id
       });
       expect(sentText).toBe(expectedText);
     });
@@ -105,7 +106,8 @@ describe('NotificationService', () => {
         const sentText = mockApi.sendMessage.mock.calls[mockApi.sendMessage.mock.calls.length - 1][1];
         const expectedText = tr(`commands.notifications.${state}`, {
           name: 'Alice Smith (@alice)',
-          title: ride.title
+          title: ride.title,
+          rideId: ride.id
         });
         expect(sentText).toBe(expectedText);
       }
