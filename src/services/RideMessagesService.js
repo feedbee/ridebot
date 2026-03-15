@@ -175,8 +175,13 @@ export class RideMessagesService {
           );
           updatedCount++;
         } catch (messageError) {
+          // Silently ignore when content hasn't changed — not a real error
+          if (messageError.description?.includes('message is not modified: specified new message content and reply markup are exactly the same as a current content and reply markup of the message')) {
+            continue;
+          }
+
           console.warn(`Error updating message in chat ${messageInfo.chatId}:`, messageError);
-          
+
           // Check if the message is no longer available (deleted or bot kicked)
           if (messageError.description && (
               messageError.description.includes('message to edit not found') ||
