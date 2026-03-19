@@ -104,7 +104,7 @@ export class GroupCommandHandler extends BaseCommandHandler {
     // Add all currently joined participants (best-effort)
     const joined = ride.participation?.joined || [];
     for (const participant of joined) {
-      await this.groupManagementService.addParticipant(ctx.api, groupId, participant.userId, ctx.lang);
+      await this.groupManagementService.addParticipant(ctx.api, groupId, participant.userId, ctx.lang, ride.createdBy);
     }
 
     await ctx.reply(this.translate(ctx, 'commands.group.attachSuccess'));

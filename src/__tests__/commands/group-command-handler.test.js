@@ -161,7 +161,7 @@ describe.each(['en', 'ru'])('GroupCommandHandler (%s)', (language) => {
       await handler.handleAttach(mockCtx);
 
       expect(mockGroupManagementService.addParticipant).toHaveBeenCalledWith(
-        mockCtx.api, GROUP_ID, 201, language
+        mockCtx.api, GROUP_ID, 201, language, CREATOR_ID
       );
     });
 

@@ -79,7 +79,7 @@ export class ParticipationHandlers extends BaseCommandHandler {
           const groupId = result.ride.groupId;
           const userId = participant.userId;
           if (state === 'joined') {
-            await this.groupManagementService.addParticipant(ctx.api, groupId, userId, ctx.lang);
+            await this.groupManagementService.addParticipant(ctx.api, groupId, userId, ctx.lang, result.ride.createdBy);
           } else if (result.previousState === 'joined') {
             await this.groupManagementService.removeParticipant(ctx.api, groupId, userId);
           }

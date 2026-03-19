@@ -305,6 +305,7 @@ Click here to start a private chat: @botname
       detachSuccess: 'Group detached. Participants will no longer be auto-added.',
       noGroupAttached: 'No ride is attached to this group.',
       inviteLinkSent: 'You\'ve been invited to the ride group: {link}\n\nThis group is for ride coordination, pre- and post-ride discussion, and sharing photos. The link is valid for 24 hours.',
+      inviteLinkForCreator: 'A participant couldn\'t receive the group invite link automatically — they haven\'t started a conversation with the bot. Please forward this link to them manually: {link}',
       invalidRideIdUsage: 'Please provide a valid ride ID. Usage: /attach #rideID'
     },
     delete: {

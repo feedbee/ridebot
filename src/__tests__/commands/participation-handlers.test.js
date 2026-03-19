@@ -324,7 +324,7 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
     });
 
     it('should add user to group when joining a ride with a group', async () => {
-      const mockRide = { id: '123', cancelled: false, groupId: GROUP_ID };
+      const mockRide = { id: '123', cancelled: false, groupId: GROUP_ID, createdBy: 999 };
       mockRideService.getRide.mockResolvedValue(mockRide);
       mockRideService.setParticipation.mockResolvedValue({
         success: true, ride: mockRide, previousState: null
@@ -335,7 +335,7 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
       await handlersWithGroup.handleJoinRide(mockCtx);
 
       expect(mockGroupManagementService.addParticipant).toHaveBeenCalledWith(
-        mockCtx.api, GROUP_ID, USER_ID, language
+        mockCtx.api, GROUP_ID, USER_ID, language, 999
       );
       expect(mockGroupManagementService.removeParticipant).not.toHaveBeenCalled();
     });
