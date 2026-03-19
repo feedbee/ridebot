@@ -11,7 +11,6 @@ import {
   getFieldConfig,
   getFirstField,
   buildRideDataFromWizard,
-  buildConfirmationMessage
 } from '../../wizard/wizardFieldConfig.js';
 import { DEFAULT_CATEGORY } from '../../utils/category-utils.js';
 import { getCategoryLabel } from '../../utils/category-utils.js';
@@ -314,130 +313,6 @@ describe('wizardFieldConfig', () => {
     it('should be optional and clearable', () => {
       expect(WIZARD_FIELDS.info.required).toBe(false);
       expect(WIZARD_FIELDS.info.clearable).toBe(true);
-    });
-  });
-
-  describe.each(['en', 'ru'])('buildConfirmationMessage (%s)', (language) => {
-    const tr = (key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
-
-    it('should build message with all fields', () => {
-      const wizardData = {
-        title: 'Evening Ride',
-        category: 'road',
-        organizer: 'John Doe',
-        datetime: new Date('2025-10-10T18:00:00Z'),
-        meetingPoint: 'City Center',
-        routeLink: 'https://example.com/route',
-        distance: 50,
-        duration: 120,
-        speedMin: 25,
-        speedMax: 30,
-        additionalInfo: 'Bring lights'
-      };
-
-      const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser, language);
-
-      expect(message).toContain('Evening Ride');
-      expect(message).toContain(getCategoryLabel('road', language));
-      expect(message).toContain('John Doe');
-      expect(message).toContain('City Center');
-      expect(message).toContain('50');
-      expect(message).toContain(`2${tr('formatter.units.hour')} 0${tr('formatter.units.min')}`);
-      expect(message).toContain('25');
-      expect(message).toContain('30');
-      expect(message).toContain('Bring lights');
-    });
-
-    it('should build message with minimal fields', () => {
-      const wizardData = {
-        title: 'Quick Ride',
-        category: DEFAULT_CATEGORY,
-        datetime: new Date('2025-10-10T18:00:00Z')
-      };
-
-      const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser, language);
-
-      expect(message).toContain('Quick Ride');
-      expect(message).toContain(getCategoryLabel(DEFAULT_CATEGORY, language));
-      expect(message).toBeDefined();
-    });
-
-    it('should indicate update mode', () => {
-      const wizardData = {
-        title: 'Updated Ride',
-        category: 'road',
-        datetime: new Date('2025-10-10T18:00:00Z')
-      };
-
-      const message = buildConfirmationMessage(wizardData, true, escapeHtml, DateParser, language);
-
-      expect(message).toContain(tr('wizard.confirm.updateAction'));
-    });
-
-    it('should escape HTML in user input', () => {
-      const wizardData = {
-        title: '<script>alert("xss")</script>',
-        category: DEFAULT_CATEGORY,
-        datetime: new Date('2025-10-10T18:00:00Z')
-      };
-
-      const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser, language);
-
-      expect(message).not.toContain('<script>');
-      expect(message).toContain('&lt;script&gt;');
-    });
-
-    it('should format average speed (min === max)', () => {
-      const wizardData = {
-        title: 'Avg speed ride',
-        category: DEFAULT_CATEGORY,
-        organizer: 'John Doe',
-        datetime: new Date('2025-10-10T18:00:00Z'),
-        speedMin: 24,
-        speedMax: 24
-      };
-
-      const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser, language);
-      expect(message).toContain(`~24 ${tr('formatter.units.kmh')}`);
-    });
-
-    it('should format speed when only minimum is set', () => {
-      const wizardData = {
-        title: 'Min speed ride',
-        category: DEFAULT_CATEGORY,
-        organizer: 'John Doe',
-        datetime: new Date('2025-10-10T18:00:00Z'),
-        speedMin: 24
-      };
-
-      const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser, language);
-      expect(message).toContain(`24+ ${tr('formatter.units.kmh')}`);
-    });
-
-    it('should format speed when only maximum is set', () => {
-      const wizardData = {
-        title: 'Max speed ride',
-        category: DEFAULT_CATEGORY,
-        organizer: 'John Doe',
-        datetime: new Date('2025-10-10T18:00:00Z'),
-        speedMax: 31
-      };
-
-      const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser, language);
-      expect(message).toContain(tr('formatter.upToSpeed', { max: 31 }));
-    });
-
-    it('should omit zero duration as an empty optional value', () => {
-      const wizardData = {
-        title: 'Zero duration ride',
-        category: DEFAULT_CATEGORY,
-        organizer: 'John Doe',
-        datetime: new Date('2025-10-10T18:00:00Z'),
-        duration: 0
-      };
-
-      const message = buildConfirmationMessage(wizardData, false, escapeHtml, DateParser, language);
-      expect(message).not.toContain(tr('wizard.confirm.labels.duration'));
     });
   });
 

@@ -392,14 +392,14 @@ Click here to start a private chat: @botname
       currentValue: 'Current value'
     },
     prompts: {
-      title: '📝 Please enter the ride title:',
-      category: '🚲 Please select the ride category:',
+      title: '🚲 Please enter the ride title:',
+      category: '🚵 Please select the ride category:',
       organizer: '👤 Who is organizing this ride?\n<i>Enter a dash (-) to clear/skip this field</i>',
       date: '📅 When is the ride?\nYou can use natural language like:\n• tomorrow at 6pm\n• in 2 hours\n• this saturday 10am\n• 21 Jul 14:30',
-      route: '🔗 Please enter the route link (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
+      route: '🗺️ Please enter the route link (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
       distance: '📏 Please enter the distance in kilometers (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
       duration: '⏱ Please enter the duration (e.g., \"2h 30m\", \"90m\", \"1.5h\"):\n<i>Enter a dash (-) to clear/skip this field</i>',
-      speed: '🚴 Avg speed in km/h or skip:\n• 25-28 — range\n• 25+ or 25- — minimum\n• -28 — maximum\n• 25 or ~25 — average\n<i>Enter a dash (-) to clear/skip this field</i>',
+      speed: '⚡ Avg speed in km/h or skip:\n• 25-28 — range\n• 25+ or 25- — minimum\n• -28 — maximum\n• 25 or ~25 — average\n<i>Enter a dash (-) to clear/skip this field</i>',
       meet: '📍 Please enter the meeting point (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
       info: 'ℹ️ Please enter any additional information (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
       notify: '🔔 Notify you when participants join or leave?\n<i>You can change this later by updating the ride.</i>'
@@ -410,22 +410,10 @@ Click here to start a private chat: @botname
       distanceInvalid: 'Please enter a valid number for distance, or use a dash (-) to clear the field.'
     },
     confirm: {
-      header: 'Please confirm the {action} details:',
-      updateAction: 'update',
-      rideAction: 'ride',
-      labels: {
-        title: '📝 Title',
-        category: '🚲 Category',
-        organizer: '👤 Organizer',
-        when: '📅 When',
-        route: '🔗 Route',
-        distance: '📏 Distance',
-        duration: '⏱ Duration',
-        speed: '🚴 Avg speed',
-        meetingPoint: '📍 Meeting Point',
-        additionalInfo: 'ℹ️ Additional Info',
-        notify: '🔔 Participation notifications'
-      }
+      confirmPrompt: '👆 Review the preview above and confirm'
+    },
+    preview: {
+      placeholder: '🚲 <b>Ride preview</b>\n\n<i>Fill in the details and the preview will appear here.</i>'
     }
   },
   services: {

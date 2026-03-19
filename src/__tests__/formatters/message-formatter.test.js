@@ -568,4 +568,98 @@ describe('MessageFormatter', () => {
       expect(messageFormatter.formatSpeedRange(null, 30, language)).toBe(tr(language, 'formatter.upToSpeed', { max: 30 }));
     });
   });
+
+  describe('formatRidePreview', () => {
+    it.each(['en', 'ru'])('returns placeholder when title is null (%s)', (language) => {
+      const result = messageFormatter.formatRidePreview({ title: null }, language);
+      expect(result).toBe(tr(language, 'wizard.preview.placeholder'));
+    });
+
+    it.each(['en', 'ru'])('renders title-only header when other fields are null (%s)', (language) => {
+      const result = messageFormatter.formatRidePreview({ title: 'Evening Ride' }, language);
+      expect(result).toContain('Evening Ride');
+      expect(result).not.toContain(tr(language, 'formatter.participation.joined'));
+      expect(result).not.toContain(tr(language, 'formatter.participation.thinking'));
+    });
+
+    it.each(['en', 'ru'])('renders title, date and category when set (%s)', (language) => {
+      const result = messageFormatter.formatRidePreview({
+        title: 'Morning Ride',
+        date: new Date('2026-07-21T10:00:00Z'),
+        category: 'road'
+      }, language);
+      expect(result).toContain('Morning Ride');
+      expect(result).toContain(tr(language, 'formatter.labels.when'));
+      expect(result).toContain(tr(language, 'formatter.labels.category'));
+    });
+
+    it.each(['en', 'ru'])('skips optional fields when null (%s)', (language) => {
+      const result = messageFormatter.formatRidePreview({ title: 'Test', organizer: null, meetingPoint: null }, language);
+      expect(result).not.toContain(tr(language, 'formatter.labels.organizer'));
+      expect(result).not.toContain(tr(language, 'formatter.labels.meetingPoint'));
+    });
+
+    it.each(['en', 'ru'])('renders route as HTML anchor link (%s)', (language) => {
+      const result = messageFormatter.formatRidePreview({
+        title: 'Test',
+        routeLink: 'https://strava.com/routes/123'
+      }, language);
+      expect(result).toContain('<a href="https://strava.com/routes/123">');
+    });
+
+    it.each(['en', 'ru'])('HTML-escapes routeLink special characters in href (%s)', (language) => {
+      const result = messageFormatter.formatRidePreview({
+        title: 'Test',
+        routeLink: 'https://example.com/route?foo=1&bar=2'
+      }, language);
+      expect(result).toContain('href="https://example.com/route?foo=1&amp;bar=2"');
+      expect(result).not.toContain('href="https://example.com/route?foo=1&bar=2"');
+    });
+
+    it.each(['en', 'ru'])('renders distance with km unit (%s)', (language) => {
+      const result = messageFormatter.formatRidePreview({ title: 'Test', distance: 45 }, language);
+      expect(result).toContain('45');
+      expect(result).toContain(tr(language, 'formatter.units.km'));
+    });
+
+    it.each(['en', 'ru'])('renders duration via formatDuration (%s)', (language) => {
+      const result = messageFormatter.formatRidePreview({ title: 'Test', duration: 90 }, language);
+      expect(result).toContain(tr(language, 'formatter.labels.duration'));
+    });
+
+    it.each(['en', 'ru'])('renders speed range when speedMin and speedMax are set (%s)', (language) => {
+      const result = messageFormatter.formatRidePreview({ title: 'Test', speedMin: 25, speedMax: 28 }, language);
+      expect(result).toContain(tr(language, 'formatter.labels.speed'));
+    });
+
+    it.each(['en', 'ru'])('HTML-escapes title with special characters (%s)', (language) => {
+      const result = messageFormatter.formatRidePreview({ title: '<script>alert("XSS")</script>' }, language);
+      expect(result).not.toContain('<script>');
+      expect(result).toContain('&lt;script&gt;');
+    });
+
+    it.each(['en', 'ru'])('HTML-escapes organizer name (%s)', (language) => {
+      const result = messageFormatter.formatRidePreview({ title: 'Test', organizer: 'John & Jane' }, language);
+      expect(result).toContain('John &amp; Jane');
+    });
+
+    it.each(['en', 'ru'])('renders additionalInfo when set (%s)', (language) => {
+      const result = messageFormatter.formatRidePreview({ title: 'Test', additionalInfo: 'Bring lights' }, language);
+      expect(result).toContain('Bring lights');
+      expect(result).toContain(tr(language, 'formatter.labels.additionalInfo'));
+    });
+
+    it.each(['en', 'ru'])('does not include participation section (%s)', (language) => {
+      const result = messageFormatter.formatRidePreview({ title: 'Full Ride', date: new Date(), category: 'road', distance: 50 }, language);
+      expect(result).not.toContain(tr(language, 'formatter.participation.joined'));
+      expect(result).not.toContain(tr(language, 'formatter.participation.thinking'));
+      expect(result).not.toContain(tr(language, 'formatter.participation.notInterested'));
+    });
+
+    it.each(['en', 'ru'])('does not include #Ride ID footer (%s)', (language) => {
+      const result = messageFormatter.formatRidePreview({ title: 'Test', id: 'abc123' }, language);
+      expect(result).not.toContain('#Ride');
+      expect(result).not.toContain('abc123');
+    });
+  });
 });

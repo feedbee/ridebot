@@ -3,7 +3,7 @@ import { config } from '../config.js';
 import { DEFAULT_CATEGORY, VALID_CATEGORIES, getCategoryLabel } from '../utils/category-utils.js';
 import { escapeHtml } from '../utils/html-escape.js';
 import { DateParser } from '../utils/date-parser.js';
-import { getFieldConfig, FieldType, buildRideDataFromWizard, buildConfirmationMessage } from './wizardFieldConfig.js';
+import { getFieldConfig, FieldType, buildRideDataFromWizard } from './wizardFieldConfig.js';
 import { t } from '../i18n/index.js';
 
 export class RideWizard {
@@ -73,9 +73,23 @@ export class RideWizard {
       isUpdate: prefillData?.isUpdate || false,  // Flag to indicate if this is an update
       originalRideId: prefillData?.originalRideId, // Store original ride ID for updates
       errorMessageIds: [], // Track error message IDs
-      primaryMessageId: null // Track the primary wizard message ID
+      primaryMessageId: null, // Track the primary wizard message ID
+      previewMessageId: null // Track the live preview message ID
     };
     this.wizardStates.set(stateKey, state);
+
+    // Send live preview FIRST so it appears above the wizard question.
+    // If prefill data was provided (update/duplicate), render real content immediately.
+    const language = this.getContextLanguage(ctx);
+    const rideObj = this.buildPreviewRideObject(state);
+    const hasAnyData = Object.values(rideObj).some(v => v !== null);
+    const initialPreviewText = hasAnyData
+      ? this.messageFormatter.formatRidePreview(rideObj, language)
+      : this.translate(ctx, 'wizard.preview.placeholder');
+    const previewMsg = await ctx.reply(initialPreviewText, { parse_mode: 'HTML' });
+    if (previewMsg) {
+      state.previewMessageId = previewMsg.message_id;
+    }
 
     // Send initial wizard message and store its ID
     const message = await this.sendWizardStep(ctx);
@@ -170,6 +184,8 @@ export class RideWizard {
               console.error('Error deleting error message:', error);
             }
           }
+          // Delete preview message
+          await this._deletePreviewMessage(ctx, state);
           await ctx.deleteMessage();
           this.wizardStates.delete(stateKey);
           await ctx.reply(this.translate(ctx, 'wizard.messages.creationCancelled'));
@@ -193,6 +209,8 @@ export class RideWizard {
             // Update existing ride
             const updatedRide = await this.storage.updateRide(state.data.originalRideId, rideData);
             await this.updateRideMessage(updatedRide, ctx);
+            // Delete preview message
+            await this._deletePreviewMessage(ctx, state);
             await ctx.deleteMessage();
             this.wizardStates.delete(stateKey);
             await ctx.answerCallbackQuery(this.translate(ctx, 'wizard.messages.updatedSuccessfully'));
@@ -200,7 +218,8 @@ export class RideWizard {
             // Create new ride
             const ride = await this.storage.createRide(rideData);
 
-            // Delete the wizard message before creating the ride message
+            // Delete preview message and the wizard message before creating the ride message
+            await this._deletePreviewMessage(ctx, state);
             await ctx.deleteMessage();
             
             // Create the ride message
@@ -340,10 +359,83 @@ export class RideWizard {
     }
   }
 
+  /**
+   * Convert wizard state data into a ride-like object for preview rendering.
+   * @param {Object} state - Wizard state
+   * @returns {Object} - Ride-like object for formatRidePreview()
+   */
+  buildPreviewRideObject(state) {
+    const d = state.data;
+    return {
+      title:          d.title          ?? null,
+      category:       d.category       ?? null,
+      date:           d.datetime       ?? null,  // wizard key is 'datetime', formatter uses 'date'
+      organizer:      d.organizer      ?? null,
+      meetingPoint:   d.meetingPoint   ?? null,
+      routeLink:      d.routeLink      ?? null,
+      distance:       d.distance       ?? null,
+      duration:       d.duration       ?? null,
+      speedMin:       d.speedMin       ?? null,
+      speedMax:       d.speedMax       ?? null,
+      additionalInfo: d.additionalInfo ?? null
+    };
+  }
+
+  /**
+   * Update the live preview message above the wizard question.
+   * Edits the existing preview in-place; falls back to sending a new message if edit fails.
+   * @param {Object} ctx - Grammy context
+   * @param {Object} state - Wizard state
+   */
+  async updatePreviewMessage(ctx, state) {
+    const language = this.getContextLanguage(ctx);
+    const rideObj = this.buildPreviewRideObject(state);
+    const hasAnyData = Object.values(rideObj).some(v => v !== null);
+    const previewText = hasAnyData
+      ? this.messageFormatter.formatRidePreview(rideObj, language)
+      : this.translate(ctx, 'wizard.preview.placeholder');
+
+    if (!state.previewMessageId) {
+      try {
+        const msg = await ctx.reply(previewText, { parse_mode: 'HTML' });
+        state.previewMessageId = msg.message_id;
+      } catch (err) {
+        console.error('Error sending preview message:', err);
+      }
+      return;
+    }
+
+    try {
+      await ctx.api.editMessageText(ctx.chat.id, state.previewMessageId, previewText, {
+        parse_mode: 'HTML'
+      });
+    } catch (err) {
+      // Silently ignore "message is not modified" errors (content unchanged, e.g. back navigation)
+      if (err.description?.includes('message is not modified') ||
+          err.message?.includes('message is not modified')) {
+        return;
+      }
+      console.error('Error editing preview message, re-sending:', err);
+      try {
+        const msg = await ctx.reply(previewText, { parse_mode: 'HTML' });
+        state.previewMessageId = msg.message_id;
+      } catch (sendErr) {
+        console.error('Error re-sending preview message:', sendErr);
+      }
+    }
+  }
+
   async sendWizardStep(ctx, edit = false) {
     const stateKey = this.getWizardStateKey(ctx.from.id, ctx.chat.id);
     const state = this.wizardStates.get(stateKey);
     if (!state) return;
+
+    // Update live preview when advancing through steps (edit=true means data changed).
+    // Skipped on the initial send (edit=false) since startWizard already sent the correct preview.
+    // Confirm step handles its own preview update after organizer auto-fill.
+    if (edit && state.step !== 'confirm') {
+      await this.updatePreviewMessage(ctx, state);
+    }
 
     let message = '';
     let keyboard = new InlineKeyboard();
@@ -505,16 +597,19 @@ export class RideWizard {
       state.data.organizer = organizerName;
     }
     
-    // Build confirmation message using configuration
-    const message = buildConfirmationMessage(state.data, state.isUpdate, escapeHtml, DateParser, ctx.lang);
-    
+    // Update preview now that organizer is set (so preview shows auto-filled organizer)
+    await this.updatePreviewMessage(ctx, state);
+
+    // Simplified confirm prompt (preview above already shows all details)
+    const message = this.translate(ctx, 'wizard.confirm.confirmPrompt');
+
     // Build keyboard
     const keyboard = new InlineKeyboard()
       .text(this.translate(ctx, 'buttons.back'), 'wizard:back')
       .text(state.isUpdate ? this.translate(ctx, 'buttons.update') : this.translate(ctx, 'buttons.create'), 'wizard:confirm')
       .row()
       .text(this.translate(ctx, 'buttons.cancel'), 'wizard:cancel');
-    
+
     // Send or edit the message
     await this.sendOrEditMessage(ctx, state, message, keyboard, edit);
   }
@@ -585,6 +680,20 @@ export class RideWizard {
     } catch (error) {
       console.error('Error sending wizard step:', error);
       return null;
+    }
+  }
+
+  /**
+   * Delete the live preview message. Swallows errors (e.g., message already deleted by user).
+   * @param {Object} ctx - Grammy context
+   * @param {Object} state - Wizard state
+   */
+  async _deletePreviewMessage(ctx, state) {
+    if (!state.previewMessageId) return;
+    try {
+      await ctx.api.deleteMessage(ctx.chat.id, state.previewMessageId);
+    } catch (error) {
+      console.error('Error deleting preview message:', error);
     }
   }
 

@@ -81,7 +81,9 @@ describe.each(['en', 'ru'])('RideWizard Edge Cases (%s)', (language) => {
       createRide: jest.fn((data) => storage.createRide(data)),
       updateRide: jest.fn((id, data) => storage.updateRide(id, data))
     };
-    mockMessageFormatter = {};
+    mockMessageFormatter = {
+      formatRidePreview: jest.fn().mockReturnValue('<preview>')
+    };
     mockRideMessagesService = {
       createRideMessage: jest.fn().mockResolvedValue({ sentMessage: {}, updatedRide: {} }),
       updateRideMessages: jest.fn().mockResolvedValue({ success: true, updatedCount: 1, removedCount: 0 })

@@ -149,7 +149,7 @@ export class MessageFormatter {
       group3 += `📍 ${this.translate('formatter.labels.meetingPoint', {}, language)}: ${escapeHtml(ride.meetingPoint)}\n`;
     }
     if (ride.routeLink) {
-      group3 += `🗺️ ${this.translate('formatter.labels.route', {}, language)}: <a href="${ride.routeLink}">${this.translate('formatter.routeLinkLabel', {}, language)}</a>\n`;
+      group3 += `🗺️ ${this.translate('formatter.labels.route', {}, language)}: <a href="${escapeHtml(ride.routeLink)}">${this.translate('formatter.routeLinkLabel', {}, language)}</a>\n`;
     }
     if (group3) {
       rideDetails += `\n${group3}`;
@@ -214,6 +214,69 @@ export class MessageFormatter {
       ''
     );
     
+    return message;
+  }
+
+  /**
+   * Format a ride preview for display in the wizard live-preview message.
+   * Shows all available ride fields without participation info or keyboard.
+   * @param {Object} rideData - Ride-like object (from buildPreviewRideObject)
+   * @param {string} language - Language code
+   * @returns {string} - HTML-formatted preview string
+   */
+  formatRidePreview(rideData, language = config.i18n.defaultLanguage) {
+    // Header: show title or placeholder
+    if (!rideData.title) {
+      return this.translate('wizard.preview.placeholder', {}, language);
+    }
+    let message = `🚲 <b>${escapeHtml(rideData.title)}</b>\n\n`;
+
+    // Group 2: When and Category
+    let group2 = '';
+    if (rideData.date) {
+      const fmt = DateParser.formatDateTime(rideData.date, language);
+      group2 += `📅 ${this.translate('formatter.labels.when', {}, language)}: ${fmt.date} ${this.translate('formatter.atWord', {}, language)} ${fmt.time}\n`;
+    }
+    if (rideData.category) {
+      group2 += `🚵 ${this.translate('formatter.labels.category', {}, language)}: ${escapeHtml(getCategoryLabel(rideData.category, language))}\n`;
+    }
+    message += group2;
+
+    // Group 3: Organizer, Meeting point, Route
+    let group3 = '';
+    if (rideData.organizer) {
+      group3 += `👤 ${this.translate('formatter.labels.organizer', {}, language)}: ${escapeHtml(rideData.organizer)}\n`;
+    }
+    if (rideData.meetingPoint) {
+      group3 += `📍 ${this.translate('formatter.labels.meetingPoint', {}, language)}: ${escapeHtml(rideData.meetingPoint)}\n`;
+    }
+    if (rideData.routeLink) {
+      group3 += `🗺️ ${this.translate('formatter.labels.route', {}, language)}: <a href="${escapeHtml(rideData.routeLink)}">${this.translate('formatter.routeLinkLabel', {}, language)}</a>\n`;
+    }
+    if (group3) {
+      message += `\n${group3}`;
+    }
+
+    // Group 4: Distance, Duration, Speed
+    let group4 = '';
+    if (rideData.distance) {
+      group4 += `📏 ${this.translate('formatter.labels.distance', {}, language)}: ${rideData.distance} ${this.translate('formatter.units.km', {}, language)}\n`;
+    }
+    if (rideData.duration) {
+      group4 += `⏱ ${this.translate('formatter.labels.duration', {}, language)}: ${this.formatDuration(rideData.duration, language)}\n`;
+    }
+    if (rideData.speedMin || rideData.speedMax) {
+      group4 += `⚡ ${this.translate('formatter.labels.speed', {}, language)}: ${this.formatSpeedRange(rideData.speedMin, rideData.speedMax, language)}\n`;
+    }
+    if (group4) {
+      message += `\n${group4}`;
+    }
+
+    // Group 5: Additional info
+    if (rideData.additionalInfo) {
+      message += `\nℹ️ ${this.translate('formatter.labels.additionalInfo', {}, language)}: ${escapeHtml(rideData.additionalInfo)}\n`;
+    }
+
     return message;
   }
 

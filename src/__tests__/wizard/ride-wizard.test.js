@@ -121,7 +121,8 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
     mockRideService = {
     };
     mockMessageFormatter = {
-      formatRideMessage: jest.fn()
+      formatRideMessage: jest.fn(),
+      formatRidePreview: jest.fn().mockReturnValue('<preview>')
     };
     mockRideMessagesService = {
       createRideMessage: jest.fn().mockResolvedValue(true),
@@ -141,7 +142,8 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
   describe('Wizard State Management', () => {
     test('should start a new wizard session in private chat', async () => {
       await wizard.startWizard(ctx);
-      expect(ctx._test.messages[0].text).toContain(tr('wizard.prompts.title'));
+      // messages[0] = live preview, messages[1] = wizard question
+      expect(ctx._test.messages[1].text).toContain(tr('wizard.prompts.title'));
     });
 
     test('should prevent starting wizard in public chat', async () => {
@@ -154,15 +156,19 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
 
     test('should prevent starting multiple wizards', async () => {
       await wizard.startWizard(ctx);
+      // First startWizard sends 2 messages: [0]=preview, [1]=wizard question
       await wizard.startWizard(ctx);
-      expect(ctx._test.messages[1].text).toContain(tr('wizard.messages.completeOrCancelCurrent'));
+      // Second startWizard sends the error reply as [2]
+      expect(ctx._test.messages[2].text).toContain(tr('wizard.messages.completeOrCancelCurrent'));
     });
 
     test('should handle wizard cancellation', async () => {
       await wizard.startWizard(ctx);
+      // [0]=preview, [1]=wizard question
       ctx.match = ['wizard:cancel', 'cancel'];
       await wizard.handleWizardAction(ctx);
-      expect(ctx._test.messages[1].text).toBe(tr('wizard.messages.creationCancelled'));
+      // Cancel sends the cancelled reply as [2]
+      expect(ctx._test.messages[2].text).toBe(tr('wizard.messages.creationCancelled'));
     });
   });
 
@@ -365,10 +371,9 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
       ctx.match = ['wizard:notifyYes', 'notifyYes'];
       await wizard.handleWizardAction(ctx);
 
-      // Verify we're now at the confirmation step
+      // Verify we're now at the confirmation step (simplified prompt, details shown in preview)
       lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
-      expect(lastMessage.text).toContain(tr('wizard.confirm.header', { action: tr('wizard.confirm.rideAction') }));
-      expect(lastMessage.text).toContain('Bring lights and a jacket');
+      expect(lastMessage.text).toContain(tr('wizard.confirm.confirmPrompt'));
 
       // Confirm and create the ride
       ctx.match = ['wizard:confirm', 'confirm'];
@@ -416,10 +421,9 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
       ctx.match = ['wizard:notifyYes', 'notifyYes'];
       await wizard.handleWizardAction(ctx);
 
-      // Verify we're now at the confirmation step
+      // Verify we're now at the confirmation step (simplified prompt, details shown in preview)
       lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
-      expect(lastMessage.text).toContain(tr('wizard.confirm.header', { action: tr('wizard.confirm.rideAction') }));
-      expect(lastMessage.text).not.toContain(`${tr('wizard.confirm.labels.additionalInfo')}:`);
+      expect(lastMessage.text).toContain(tr('wizard.confirm.confirmPrompt'));
 
       // Confirm and create the ride
       ctx.match = ['wizard:confirm', 'confirm'];
@@ -482,8 +486,8 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
       ctx.message = { text: 'not a date', message_id: 5 };
       await wizard.handleWizardInput(ctx);
       
-      expect(ctx._test.messages).toHaveLength(2); // Initial message + error message
-      expect(ctx._test.messages[1].text).toContain(tr('parsers.date.invalidFormat').split('\n')[0]);
+      expect(ctx._test.messages).toHaveLength(3); // preview + wizard step + error message
+      expect(ctx._test.messages[2].text).toContain(tr('parsers.date.invalidFormat').split('\n')[0]);
     });
 
     test('should handle route link input', async () => {
@@ -701,7 +705,7 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
       expect(state.data.notifyOnParticipation).toBe(true);
 
       const lastMessage = ctx._test.editedMessages[ctx._test.editedMessages.length - 1];
-      expect(lastMessage.text).toContain(tr('wizard.confirm.header', { action: tr('wizard.confirm.rideAction') }));
+      expect(lastMessage.text).toContain(tr('wizard.confirm.confirmPrompt'));
     });
 
     test('notifyNo sets notifyOnParticipation:false and advances to confirm', async () => {

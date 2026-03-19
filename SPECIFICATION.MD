@@ -350,7 +350,7 @@ _No major refactoring areas identified at this time. The codebase is well-organi
 - [x] Feature: Creating a dedicated ride chat (attach/detach an existing group via `/attach #rideId` / `/detach`; participants auto-added via invite link, auto-removed on leave)
 - [ ] Feature: Creating rides with AI
 - [ ] Feature: Creating ride from Strava event
-- [ ] Enhancement: Show preview in wizard starting from the first step and update it long with each next step
+- [x] Enhancement: Show preview in wizard starting from the first step and update it along with each next step
 
 ### Medium Priority
 - [x] Bug/Enhancement: Fixed routes parsing from known providers and add Garmin
