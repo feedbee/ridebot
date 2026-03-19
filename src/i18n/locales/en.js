@@ -295,6 +295,7 @@ Click here to start a private chat: @botname
     },
     group: {
       notInGroup: 'This command must be used in a group chat.',
+      notSupergroup: 'This command requires a supergroup. To convert this group, enable "Chat history for new members" in the group settings — Telegram will upgrade it to a supergroup automatically. Then retry: <code>{command}</code>',
       rideNotFound: 'Ride not found.',
       notCreator: 'Only the ride creator can perform this action.',
       alreadyAttached: 'This ride already has a group attached. Use /detach first.',

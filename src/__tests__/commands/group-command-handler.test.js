@@ -85,6 +85,15 @@ describe.each(['en', 'ru'])('GroupCommandHandler (%s)', (language) => {
       expect(mockRideService.getRide).not.toHaveBeenCalled();
     });
 
+    it('should reject if called in a regular (non-super) group', async () => {
+      mockCtx.chat.type = 'group';
+
+      await handler.handleAttach(mockCtx);
+
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.group.notSupergroup', { command: `/attach #${RIDE_ID}` }), { parse_mode: 'HTML' });
+      expect(mockRideService.getRide).not.toHaveBeenCalled();
+    });
+
     it('should reply with error if ride not found', async () => {
       mockRideService.getRide.mockResolvedValue(null);
 

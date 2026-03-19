@@ -28,6 +28,12 @@ export class GroupCommandHandler extends BaseCommandHandler {
     }
 
     const { rideId, error } = this.rideMessagesService.extractRideId(ctx.message, ctx.lang ? { language: ctx.lang } : {});
+
+    if (ctx.chat?.type !== 'supergroup') {
+      const command = rideId ? `/attach #${rideId}` : '/attach';
+      await ctx.reply(this.translate(ctx, 'commands.group.notSupergroup', { command }), { parse_mode: 'HTML' });
+      return;
+    }
     if (!rideId) {
       await ctx.reply(error || this.translate(ctx, 'commands.group.invalidRideIdUsage'));
       return;
