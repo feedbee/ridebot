@@ -139,6 +139,28 @@ export class DateParser {
   }
 
   /**
+   * Format date for use in Telegram chat titles: "April 5th" (en) or "5 апреля" (ru)
+   * @param {Date} date
+   * @param {string} [language]
+   * @returns {string}
+   */
+  static formatDateForChatTitle(date, language) {
+    const displayDate = this.convertToTimezone(date, config.dateFormat.defaultTimezone);
+    const normalized = this.normalizeLanguageCode(language) || 'en';
+
+    if (normalized === 'en') {
+      const month = displayDate.toLocaleDateString('en-US', { month: 'long' });
+      const day = displayDate.getDate();
+      const pr = new Intl.PluralRules('en-US', { type: 'ordinal' });
+      const suffixes = { one: 'st', two: 'nd', few: 'rd', other: 'th' };
+      return `${month} ${day}${suffixes[pr.select(day)]}`;
+    }
+
+    const locale = this.DISPLAY_LOCALE_BY_LANGUAGE[normalized] || config.dateFormat.locale;
+    return displayDate.toLocaleDateString(locale, { day: 'numeric', month: 'long' });
+  }
+
+  /**
    * Resolve locale used for user-facing date/time formatting
    * @param {string} [language]
    * @returns {string}

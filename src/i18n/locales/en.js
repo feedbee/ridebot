@@ -319,7 +319,8 @@ Click here to start a private chat: @botname
       noGroupAttached: 'No ride is attached to this group.',
       inviteLinkSent: 'You\'ve been invited to the ride group: {link}\n\nThis group is for ride coordination, pre- and post-ride discussion, and sharing photos. The link is valid for 24 hours.',
       inviteLinkForCreator: 'A participant couldn\'t receive the group invite link automatically — they haven\'t started a conversation with the bot. Please forward this link to them manually: {link}',
-      invalidRideIdUsage: 'Please provide a valid ride ID. Usage: /attach #rideID'
+      invalidRideIdUsage: 'Please provide a valid ride ID. Usage: /attach #rideID',
+      chatTitle: 'Ride: {title} @ {date}'
     },
     delete: {
       onlyCreator: 'Only the ride creator can delete this ride.',

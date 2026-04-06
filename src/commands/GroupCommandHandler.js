@@ -1,4 +1,5 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
+import { DateParser } from '../utils/date-parser.js';
 
 /**
  * Handler for /attach and /detach commands.
@@ -86,6 +87,16 @@ export class GroupCommandHandler extends BaseCommandHandler {
 
     // Save groupId to ride
     await this.rideService.updateRide(rideId, { groupId });
+
+    // Rename the group (best-effort)
+    try {
+      const dateStr = DateParser.formatDateForChatTitle(ride.date, ctx.lang);
+      const chatTitle = this.translate(ctx, 'commands.group.chatTitle', { title: ride.title, date: dateStr })
+        .slice(0, 255);
+      await ctx.api.setChatTitle(groupId, chatTitle);
+    } catch (titleError) {
+      console.error('GroupCommandHandler: failed to set chat title:', titleError);
+    }
 
     // Post and pin the ride message in the group
     try {

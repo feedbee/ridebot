@@ -66,7 +66,8 @@ describe.each(['en', 'ru'])('GroupCommandHandler (%s)', (language) => {
       api: {
         getMe: jest.fn().mockResolvedValue({ id: BOT_ID }),
         getChatMember: jest.fn().mockResolvedValue({ status: 'administrator', can_invite_users: true }),
-        pinChatMessage: jest.fn().mockResolvedValue({})
+        pinChatMessage: jest.fn().mockResolvedValue({}),
+        setChatTitle: jest.fn().mockResolvedValue({})
       }
     };
 
@@ -168,6 +169,29 @@ describe.each(['en', 'ru'])('GroupCommandHandler (%s)', (language) => {
     it('should still succeed if pinning fails', async () => {
       mockRideService.getRide.mockResolvedValue(makeRide());
       mockCtx.api.pinChatMessage.mockRejectedValue(new Error('no pin permission'));
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      await handler.handleAttach(mockCtx);
+
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.group.attachSuccess'));
+      consoleSpy.mockRestore();
+    });
+
+    it('should set chat title with ride title and date on attach', async () => {
+      const ride = makeRide({ title: 'Morning Loop', date: new Date('2026-04-05T07:00:00Z') });
+      mockRideService.getRide.mockResolvedValue(ride);
+
+      await handler.handleAttach(mockCtx);
+
+      expect(mockCtx.api.setChatTitle).toHaveBeenCalled();
+      const [calledGroupId, calledTitle] = mockCtx.api.setChatTitle.mock.calls[0];
+      expect(calledGroupId).toBe(GROUP_ID);
+      expect(calledTitle).toContain('Morning Loop');
+    });
+
+    it('should still succeed if setChatTitle fails', async () => {
+      mockRideService.getRide.mockResolvedValue(makeRide({ date: new Date('2026-04-05T07:00:00Z') }));
+      mockCtx.api.setChatTitle.mockRejectedValue(new Error('no permission'));
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
       await handler.handleAttach(mockCtx);
