@@ -87,6 +87,7 @@ export class GroupCommandHandler extends BaseCommandHandler {
 
     // Save groupId to ride
     await this.rideService.updateRide(rideId, { groupId });
+    const rideWithGroupId = { ...ride, groupId };
 
     // Rename the group (best-effort)
     try {
@@ -100,7 +101,7 @@ export class GroupCommandHandler extends BaseCommandHandler {
 
     // Post and pin the ride message in the group
     try {
-      const { sentMessage } = await this.rideMessagesService.createRideMessage(ride, ctx, ctx.message?.message_thread_id);
+      const { sentMessage } = await this.rideMessagesService.createRideMessage(rideWithGroupId, ctx, ctx.message?.message_thread_id);
       if (sentMessage?.message_id) {
         try {
           await ctx.api.pinChatMessage(groupId, sentMessage.message_id, { disable_notification: true });
@@ -118,7 +119,50 @@ export class GroupCommandHandler extends BaseCommandHandler {
       await this.groupManagementService.addParticipant(ctx.api, groupId, participant.userId, ctx.lang, ride.createdBy);
     }
 
+    // Update all pre-existing ride messages to show the group chat line (best-effort)
+    try {
+      const latestRide = await this.rideService.getRide(rideId);
+      if (latestRide) await this.rideMessagesService.updateRideMessages(latestRide, ctx);
+    } catch (updateError) {
+      console.error('GroupCommandHandler: failed to update ride messages after attach:', updateError);
+    }
+
     await ctx.reply(this.translate(ctx, 'commands.group.attachSuccess'));
+  }
+
+  /**
+   * Handle /joinchat #rideId — sends an invite link to join the ride's group chat
+   * @param {import('grammy').Context} ctx
+   */
+  async handleJoinChat(ctx) {
+    const { rideId, error } = this.rideMessagesService.extractRideId(ctx.message, ctx.lang ? { language: ctx.lang } : {});
+    if (!rideId) {
+      await ctx.reply(error || this.translate(ctx, 'commands.group.invalidRideIdUsage'));
+      return;
+    }
+
+    let ride;
+    try {
+      ride = await this.rideService.getRide(rideId);
+    } catch (e) {
+      ride = null;
+    }
+    if (!ride) {
+      await ctx.reply(this.translate(ctx, 'commands.group.rideNotFound'));
+      return;
+    }
+    if (!ride.groupId) {
+      await ctx.reply(this.translate(ctx, 'commands.group.joinchatNoGroup'));
+      return;
+    }
+
+    const isParticipant = (ride.participation?.joined || []).some(p => p.userId === ctx.from.id);
+    if (!isParticipant) {
+      await ctx.reply(this.translate(ctx, 'commands.group.joinchatNotParticipant'));
+      return;
+    }
+
+    await this.groupManagementService.addParticipant(ctx.api, ride.groupId, ctx.from.id, ctx.lang, ride.createdBy);
   }
 
   /**
@@ -162,6 +206,11 @@ export class GroupCommandHandler extends BaseCommandHandler {
     }
 
     await this.rideService.updateRide(ride.id, { groupId: null });
+    try {
+      await this.rideMessagesService.updateRideMessages({ ...ride, groupId: null }, ctx);
+    } catch (updateError) {
+      console.error('GroupCommandHandler: failed to update ride messages after detach:', updateError);
+    }
     await ctx.reply(this.translate(ctx, 'commands.group.detachSuccess'));
   }
 }

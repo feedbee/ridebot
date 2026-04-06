@@ -138,14 +138,20 @@ describe.each(['en', 'ru'])('GroupCommandHandler (%s)', (language) => {
       expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.group.botNeedsAddMembersPermission'));
     });
 
-    it('should attach group, post message, pin it, and reply success', async () => {
+    it('should attach group, post message, pin it, update messages, and reply success', async () => {
       mockRideService.getRide.mockResolvedValue(makeRide());
 
       await handler.handleAttach(mockCtx);
 
       expect(mockRideService.updateRide).toHaveBeenCalledWith(RIDE_ID, { groupId: GROUP_ID });
-      expect(mockRideMessagesService.createRideMessage).toHaveBeenCalled();
+      expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ id: RIDE_ID, groupId: GROUP_ID }),
+        mockCtx,
+        null
+      );
       expect(mockCtx.api.pinChatMessage).toHaveBeenCalledWith(GROUP_ID, 777, { disable_notification: true });
+      expect(mockRideService.getRide).toHaveBeenCalledTimes(2);
+      expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalled();
       expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.group.attachSuccess'));
     });
 
@@ -226,6 +232,10 @@ describe.each(['en', 'ru'])('GroupCommandHandler (%s)', (language) => {
       await handler.handleDetach(mockCtx);
 
       expect(mockRideService.updateRide).toHaveBeenCalledWith(RIDE_ID, { groupId: null });
+      expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalledWith(
+        expect.objectContaining({ id: RIDE_ID, groupId: null }),
+        mockCtx
+      );
       expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.group.detachSuccess'));
     });
 
@@ -237,6 +247,10 @@ describe.each(['en', 'ru'])('GroupCommandHandler (%s)', (language) => {
       await handler.handleDetach(mockCtx);
 
       expect(mockRideService.updateRide).toHaveBeenCalledWith(RIDE_ID, { groupId: null });
+      expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalledWith(
+        expect.objectContaining({ id: RIDE_ID, groupId: null }),
+        mockCtx
+      );
       expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.group.detachSuccess'));
     });
 
@@ -249,6 +263,61 @@ describe.each(['en', 'ru'])('GroupCommandHandler (%s)', (language) => {
 
       expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.group.notCreator'));
       expect(mockRideService.updateRide).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── /joinchat tests ──────────────────────────────────────────────────────────
+
+  describe('handleJoinChat', () => {
+    beforeEach(() => {
+      mockCtx.chat.type = 'private';
+      mockCtx.message.text = `/joinchat #${RIDE_ID}`;
+    });
+
+    it('should reply if ride not found', async () => {
+      mockRideService.getRide.mockResolvedValue(null);
+
+      await handler.handleJoinChat(mockCtx);
+
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.group.rideNotFound'));
+      expect(mockGroupManagementService.addParticipant).not.toHaveBeenCalled();
+    });
+
+    it('should reply if ride has no attached group', async () => {
+      mockRideService.getRide.mockResolvedValue(makeRide({ groupId: null }));
+
+      await handler.handleJoinChat(mockCtx);
+
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.group.joinchatNoGroup'));
+      expect(mockGroupManagementService.addParticipant).not.toHaveBeenCalled();
+    });
+
+    it('should reply if user has not joined the ride', async () => {
+      mockRideService.getRide.mockResolvedValue(makeRide({ groupId: GROUP_ID }));
+
+      await handler.handleJoinChat(mockCtx);
+
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.group.joinchatNotParticipant'));
+      expect(mockGroupManagementService.addParticipant).not.toHaveBeenCalled();
+    });
+
+    it('should call addParticipant if user has joined the ride', async () => {
+      const ride = makeRide({
+        groupId: GROUP_ID,
+        participation: {
+          joined: [{ userId: CREATOR_ID, firstName: 'Creator', lastName: '', username: 'creator' }],
+          thinking: [],
+          skipped: []
+        }
+      });
+      mockRideService.getRide.mockResolvedValue(ride);
+
+      await handler.handleJoinChat(mockCtx);
+
+      expect(mockGroupManagementService.addParticipant).toHaveBeenCalledWith(
+        mockCtx.api, GROUP_ID, CREATOR_ID, language, CREATOR_ID
+      );
+      expect(mockCtx.reply).not.toHaveBeenCalled();
     });
   });
 });

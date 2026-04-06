@@ -200,6 +200,11 @@ export class MessageFormatter {
       : '';
     message = message.replace('{shareLine}', shareLine);
 
+    const groupChatLine = ride.groupId
+      ? `${this.translate('formatter.groupChatLine', { id: ride.id }, language)}\n\n`
+      : '';
+    message = message.replace('{groupChatLine}', groupChatLine);
+
     message = message.replace('{id}', ride.id);
     
     // Remove lines that contain only emoji and empty content (e.g., "🤔 Thinking (0): ")

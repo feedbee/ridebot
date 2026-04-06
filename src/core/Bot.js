@@ -82,6 +82,7 @@ export class Bot {
           { command: 'dupride', descriptionKey: 'bot.commandDescriptions.dupride', handler: (ctx) => duplicateRideHandler.handle(ctx) },
           { command: 'resumeride', descriptionKey: 'bot.commandDescriptions.resumeride', handler: (ctx) => resumeRideHandler.handle(ctx) },
           { command: 'airide', descriptionKey: 'bot.commandDescriptions.airide', handler: (ctx) => this.aiRideHandler.handle(ctx) },
+          { command: 'joinchat', descriptionKey: 'bot.commandDescriptions.joinchat', handler: (ctx) => groupHandler.handleJoinChat(ctx) },
         ],
         publicOnly: [
           { command: 'attach', descriptionKey: 'bot.commandDescriptions.attach', handler: (ctx) => groupHandler.handleAttach(ctx) },
