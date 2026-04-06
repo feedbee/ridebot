@@ -1,114 +1,130 @@
-# AI Ride Creation/Update Specification
+# AI Ride Creation/Update Specification (`/airide`)
 
 ## Overview
 
-A new `/airide` command lets users create or update rides using free-form natural language. The bot sends the input to Claude Haiku, extracts structured ride fields, shows a formatted preview, and saves the ride on confirmation.
+The `/airide` command lets users create or update rides through a **natural language dialog**. The bot uses Claude Haiku to parse each message, shows a live preview that updates after every message, and saves the ride when the user confirms.
+
+Available only in private chat with the bot. Requires `ANTHROPIC_API_KEY`.
 
 ---
 
-## Commands
+## Command Variants
 
-### Create a new ride
-```
-/airide <free-form description>
-```
-Example:
-```
-/airide Road ride this Saturday 9am, 70km, 25-28 km/h, starting from Central Park
-```
+| Command | Behaviour |
+|---------|-----------|
+| `/airide` | Start empty create dialog — bot prompts for a description |
+| `/airide <text>` | Start create dialog with first message already processed |
+| `/airide #rideId` | Start update dialog — bot prompts for what to change |
+| `/airide #rideId <text>` | Start update dialog with first message already processed |
 
-### Update an existing ride
-```
-/airide #<rideId> <what to change>
-```
-Example:
-```
-/airide #abc123 change the date to next Sunday and increase distance to 80km
-```
-
-The `#` prefix is required to distinguish a ride ID from the start of a description. Only the ride creator can update.
+The `#` prefix is required to distinguish a ride ID from a description. Only the ride creator can update.
 
 ---
 
-## Behavior
-
-### Step 1 — Parsing
-
-After the command is sent, the bot replies with a temporary "Parsing..." message while calling the Claude Haiku API.
-
-The AI extracts any ride fields it can identify:
-- `title` — ride name
-- `when` — date and time (interpreted relative to today)
-- `category` — road, gravel, mtb, mtb-xc, e-bike, virtual, mixed
-- `organizer` — organizer name
-- `meet` — meeting point
-- `route` — route URL (Strava, Komoot, RideWithGPS, Garmin)
-- `dist` — distance in km
-- `duration` — duration (e.g. "2h 30m")
-- `speed` — speed range/min/max/avg (e.g. "25-28", "25+", "~25")
-- `info` — additional notes
-
-The "Parsing..." message is deleted after the API call completes.
-
-### Step 2 — Missing required fields
-
-If `title` or `when` cannot be extracted, the bot asks a follow-up question:
-
-> ❓ What should I call this ride?
-
-or
-
-> ❓ When is the ride? (e.g. "tomorrow at 6pm", "Saturday 10am")
-
-The user's reply is combined with the original text and re-sent to the AI. This repeats up to **2 times**. After 2 failed attempts, the session ends with an error message.
-
-### Step 3 — Preview and confirmation
-
-Once all required fields are extracted, the bot sends a formatted ride preview using the same layout as the public ride announcement (but without participation buttons):
+## Dialog Flow
 
 ```
-🚲 Evening Road Ride
+/airide [#id] [text]
+  → validate (existing session check, fetch ride for update, creator check)
+  → if text provided → process immediately → show preview with Confirm/Cancel
+  → else → send start prompt, wait for messages
 
-📅 When: Sat, 21 Jun at 09:00
-🚵 Category: Road Ride
+Each user message:
+  → append to dialog history
+  → call Claude Haiku with full history
+  → update live preview in-place (edit the same message)
+  → Confirm/Cancel buttons always visible
 
-📍 Meeting point: Central Park entrance
+[Confirm] → validate required fields (title + date)
+  → if missing → show toast error, dialog stays open
+  → else → save ride, delete all dialog bot messages
 
-📏 Distance: 70 km
-⚡ Avg speed: 25–28 km/h
-
-ℹ️ Additional info: Bring lights
-
-📋 Please review the ride details above and confirm.
+[Cancel] → delete all dialog bot messages, reply "cancelled"
 ```
 
-Below the preview, two buttons are shown:
+Messages are limited to **10 per session**. After the 10th message the preview shows a limit notice; further messages are ignored.
 
-| Button | Action |
-|--------|--------|
-| ✅ Confirm | Save the ride |
-| ❌ Cancel | Discard and delete preview |
+---
 
-### Step 4 — Saving
+## Live Preview
+
+After each message the bot edits a single persistent preview message (same layout as the public ride announcement, without participation buttons):
+
+```
+🚲 Gravel Ride South of the City
+
+📅 When: Sun, 12 Apr 2026 at 09:00
+🚵 Category: Gravel
+
+👤 Organizer: Valera
+📍 Meeting point: Central Station
+
+📏 Distance: 80 km
+⏱ Duration: 3 h 30 min
+⚡ Avg speed: 22–25 km/h
+
+[❌ Cancel]  [✅ Confirm]
+```
+
+After the 10-message limit is reached:
+```
+{preview}
+
+⚠️ Message limit reached. Please confirm or cancel.
+
+[❌ Cancel]  [✅ Confirm]
+```
+
+---
+
+## Required Fields
+
+`title` and `when` (date/time) are required to confirm. If either is missing when the user taps Confirm, a toast notification lists the missing fields and the dialog stays open so the user can add them in a follow-up message.
+
+In **update mode** the existing ride's values count — e.g. if the ride already has a date, the user doesn't need to mention it.
+
+---
+
+## AI Extraction
+
+**Model:** `claude-haiku-4-5-20251001`
+
+**Mode:** The full list of user messages is sent to the AI on every turn, numbered:
+```
+[1] gravel ride Sunday 9am, 80km
+[2] speed 22-25, meeting at Central Station
+[3] organizer Valera
+```
+
+The AI returns the **current complete state** of all known fields. Later messages override earlier ones for the same field.
+
+**Extracted fields:**
+
+| Field | Description |
+|-------|-------------|
+| `title` | Ride name |
+| `when` | Date/time in natural language |
+| `category` | `road`, `gravel`, `mtb`, `mtb-xc`, `e-bike`, `virtual`, `mixed` |
+| `organizer` | Organizer name |
+| `meet` | Meeting point |
+| `route` | Route URL (Strava, Komoot, RideWithGPS, Garmin) |
+| `dist` | Distance in km |
+| `duration` | Duration (e.g. `"2h 30m"`, `"90m"`) |
+| `speed` | Speed range/min/max/avg (e.g. `"25-28"`, `"25+"`, `"~25"`) |
+| `info` | Additional notes |
+
+---
+
+## Saving
 
 **On Confirm:**
-- Create mode: ride is created and posted to chats (same as `/newride`)
-- Update mode: ride is updated and all existing ride messages are refreshed
-- Preview message is deleted
+- **Create mode:** ride is created and posted to chats (same as `/newride`)
+- **Update mode:** only the fields mentioned by the user are changed; unmentioned fields stay as-is. Passing `"-"` for a field clears it (consistent with `/updateride` behavior). All existing ride messages are refreshed.
+- All bot dialog messages are deleted after saving.
 
 **On Cancel:**
-- Session cleared
-- Preview message deleted
+- All bot dialog messages deleted
 - Bot replies: "Ride creation cancelled."
-
----
-
-## Update Mode Details
-
-- The AI is instructed to extract only the fields the user explicitly mentions
-- Fields not mentioned are left unchanged on the existing ride
-- Passing `"-"` for a field clears it (consistent with `/updateride` parameter behavior)
-- The preview shows the merged result (existing ride + AI-extracted changes)
 
 ---
 
@@ -116,36 +132,33 @@ Below the preview, two buttons are shown:
 
 | Situation | Bot response |
 |-----------|-------------|
-| No text after `/airide` | Usage hint message |
-| Active session already open | "You already have an active AI ride session..." |
-| AI API unavailable | "❌ Could not parse ride details. Please try again." |
-| AI returns unparseable response | Same as above |
+| Active session already open | "You already have an active AI ride session…" |
+| AI API unavailable / unparseable response | "❌ Could not parse ride details." — session cleared |
 | Ride ID not found (update mode) | Standard "Ride not found" error |
 | User is not ride creator (update mode) | Standard "Only the creator can update" error |
-| Date resolved to the past | Error from field validation, session ends |
-| Session expired (bot restarted, callback tapped) | "Session expired. Please use /airide again." |
+| Date resolved to the past | Error from field validation after Confirm, session cleared |
+| Session expired (bot restarted, stale callback) | "Session expired. Please use /airide again." toast |
+| Required fields missing at Confirm | Toast with missing field names, dialog stays open |
 
 ---
 
 ## Implementation Notes
 
-### AI Model
-`claude-haiku-4-5-20251001` — fast and cost-effective for structured extraction.
+### Session State
+In-memory Map keyed by `userId:chatId` (same pattern as the wizard). Sessions are lost on bot restart; tapping stale buttons returns a "session expired" toast.
 
-### API Key
-New env var: `ANTHROPIC_API_KEY`
+### Message Cleanup
+Only bot-sent messages are deleted (start prompt + preview). Bots cannot delete user messages in private chats.
+
+### Preview Update
+Uses `ctx.api.editMessageText()` to edit the preview in-place — same pattern as `RideWizard.updatePreviewMessage()`. Falls back to sending a new message if the edit fails.
 
 ### Reused Components
-- `FieldProcessor.processRideFields()` — field normalization (called internally by RideService)
 - `parseDateTimeInput()` — parse `when` for preview date display
+- `parseDuration()` — convert duration string to minutes for preview
+- `parseSpeedInput()` — parse speed string into `speedMin`/`speedMax` for preview
 - `normalizeCategory()` — normalize category string
 - `MessageFormatter.formatRidePreview()` — preview rendering
 - `RideService.createRideFromParams()` / `updateRideFromParams()` — final save
 - `RideMessagesService.createRideMessage()` — post to chats
 - `BaseCommandHandler.updateRideMessage()` — refresh existing messages
-
-### Session State
-In-memory Map keyed by `userId:chatId` (same pattern as wizard). Sessions are lost on bot restart; tapping stale buttons returns a "session expired" toast.
-
-### Text Handler Coexistence
-The AI follow-up text handler is chained after the wizard text handler. Each handler guards on its own state map and ignores messages it doesn't own.

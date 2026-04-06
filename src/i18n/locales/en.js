@@ -13,9 +13,10 @@ I am a <b>Telegram bot for organizing bike rides</b>. I will help you organize b
 
 <b>Quick Start:</b>
 1. Use /newride in this chat to create your first ride with the wizard
-2. Join your ride with the join button
-3. Share it to other chats with /shareride (bot needs to be added to the other chat before sharing; /shareride@botname to share a ride in a chat where the bot is not an admin)
-4. All participants and updates sync automatically!
+2. Or use /airide to describe a ride in plain language and let AI fill in the details
+3. Join your ride with the join button
+4. Share it to other chats with /shareride (bot needs to be added to the other chat before sharing; /shareride@botname to share a ride in a chat where the bot is not an admin)
+5. All participants and updates sync automatically!
 
 <b>More details:</b>
 • Type /help for more detailed instructions with examples
@@ -64,14 +65,26 @@ speed: 25-28
 info: Bring lights and a rain jacket
 </pre>
 
+3. Using AI in dialog mode (private chat only):
+Send /airide and describe the ride in plain language. The bot will parse the details with AI, show a live preview, and let you refine it across multiple messages before confirming.
+<pre>
+/airide
+</pre>
+Or start with an initial description:
+<pre>
+/airide Gravel ride this Sunday 9am, 80km, starting at Central Station
+</pre>
+Each follow-up message updates the preview. Confirm or cancel anytime using the buttons.
+
 <b>Managing Rides</b>
 
 <b>🔄 Updating a Ride</b>
-Only the ride creator can update. Four ways:
+Only the ride creator can update. Five ways:
 1. Reply to the ride message with /updateride without any parameters to start an interactive wizard. <i>(Note: Wizard mode is only available in private chats with the bot)</i>
 2. Reply to the ride message with /updateride and new parameters
 3. Use /updateride with ride ID directly after the command: <code>/updateride abc123</code>
 4. Use /updateride with ride ID as a parameter:
+5. Use /airide with the ride ID to update via AI dialog (private chat only): <code>/airide #abc123</code>
 <pre>
 /updateride
 id: abc123

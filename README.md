@@ -110,6 +110,29 @@ All main commands work in two modes:
 - Step-by-step wizard (interactive and beginner-friendly)
 - Parametrized mode (faster for experienced users)
 
+### Creating a New Ride with AI (dialog mode)
+
+```
+/airide
+```
+
+Start an empty AI session — the bot asks you to describe the ride. Each message you send refines the details. A live preview is shown after every message with **Confirm** and **Cancel** buttons. Up to 10 messages per session.
+
+You can also include an initial description on the same line:
+
+```
+/airide Gravel ride this Sunday 9am, 80km, 22-25 km/h, starting at Central Station
+```
+
+To update an existing ride via AI dialog:
+
+```
+/airide #rideId
+/airide #rideId move to next Saturday and add a route link
+```
+
+> **Note:** `/airide` is only available in private chat with the bot. Requires `ANTHROPIC_API_KEY` to be set.
+
 ### Creating a New Ride
 
 ```
@@ -285,6 +308,7 @@ The bot supports multiple ways to reference a ride:
 ## Environment Variables
 
 - `BOT_TOKEN`: Telegram bot token
+- `ANTHROPIC_API_KEY`: API key for Claude AI (required for `/airide`)
 - `WEBHOOK_DOMAIN`: Domain for webhook in production
 - `MONGODB_URI`: MongoDB connection string
 - `NODE_ENV`: Set to 'development' for dev mode
