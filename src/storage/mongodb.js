@@ -38,6 +38,7 @@ const rideSchema = new mongoose.Schema({
   additionalInfo: String,
   cancelled: { type: Boolean, default: false },
   notifyOnParticipation: { type: Boolean, default: true },
+  metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
   groupId: { type: Number, default: null },
   createdAt: { type: Date, default: Date.now },
   createdBy: { type: Number, required: true },
@@ -172,6 +173,16 @@ export class MongoDBStorage extends StorageInterface {
     }
   }
 
+  async getRideByStravaId(stravaId, createdBy) {
+    try {
+      const ride = await Ride.findOne({ 'metadata.stravaId': stravaId, createdBy });
+      return this.mapRideToInterface(ride);
+    } catch (error) {
+      console.error('Error getting ride by stravaId:', error);
+      return null;
+    }
+  }
+
   async setParticipation(rideId, userId, state, participant) {
     const ride = await Ride.findById(rideId);
     if (!ride) {
@@ -249,6 +260,7 @@ export class MongoDBStorage extends StorageInterface {
       organizer: rideObj.organizer,
       updatedAt: rideObj.updatedAt,
       updatedBy: rideObj.updatedBy,
+      metadata: rideObj.metadata ?? {},
       participation: {
         joined: (rideObj.participation?.joined || []).map(p => ({
           userId: p.userId,

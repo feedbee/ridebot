@@ -22,6 +22,7 @@
  * @property {boolean} [cancelled]
  * @property {boolean} [notifyOnParticipation]
  * @property {number} [groupId] - Telegram chat ID of the attached group
+ * @property {Object} [metadata] - Arbitrary metadata (e.g. { stravaId: '123' })
  * @property {Participation} participation - User participation in different states
  * @property {Date} createdAt
  * @property {number} createdBy
@@ -138,6 +139,16 @@ export class StorageInterface {
    * @returns {Promise<Ride|null>}
    */
   async getRideByGroupId(groupId) {
+    throw new Error('Not implemented');
+  }
+
+  /**
+   * Get a ride by Strava event ID and creator user ID
+   * @param {string} stravaId - Strava event ID string
+   * @param {number} createdBy - Creator's Telegram user ID
+   * @returns {Promise<Ride|null>}
+   */
+  async getRideByStravaId(stravaId, createdBy) {
     throw new Error('Not implemented');
   }
 } 

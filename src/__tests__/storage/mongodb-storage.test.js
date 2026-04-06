@@ -159,6 +159,32 @@ describe('MongoDBStorage', () => {
       expect(result.rides[0].title).toBeDefined();
     });
 
+    test('should get a ride by stravaId and creator', async () => {
+      const stravaId = '1234567890123456789';
+      const createdBy = 789;
+      await storage.createRide({ ...testRide, metadata: { stravaId }, createdBy });
+      
+      const found = await storage.getRideByStravaId(stravaId, createdBy);
+      expect(found).not.toBeNull();
+      expect(found.metadata.stravaId).toBe(stravaId);
+      expect(found.createdBy).toBe(createdBy);
+    });
+
+    test('should return null when stravaId matches but creator does not', async () => {
+      const stravaId = '1234567890123456789';
+      await storage.createRide({ ...testRide, metadata: { stravaId }, createdBy: 789 });
+      
+      const found = await storage.getRideByStravaId(stravaId, 999);
+      expect(found).toBeNull();
+    });
+
+    test('should return null when stravaId is not found', async () => {
+      await storage.createRide({ ...testRide, metadata: { stravaId: '123' }, createdBy: 789 });
+      
+      const found = await storage.getRideByStravaId('456', 789);
+      expect(found).toBeNull();
+    });
+
     test('should preserve all ride fields when saving and retrieving', async () => {
       // Create a ride with all possible fields
       const completeRide = {
