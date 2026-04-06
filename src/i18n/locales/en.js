@@ -14,7 +14,8 @@ I am a <b>Telegram bot for organizing bike rides</b>. I will help you organize b
 <b>Quick Start:</b>
 1. Use /newride in this chat to create your first ride with the wizard
 2. Or use /airide to describe a ride in plain language and let AI fill in the details
-3. Join your ride with the join button
+3. Or use /fromstrava with a Strava club event URL to import a ride automatically
+4. Join your ride with the join button
 4. Share it to other chats with /shareride (bot needs to be added to the other chat before sharing; /shareride@botname to share a ride in a chat where the bot is not an admin)
 5. All participants and updates sync automatically!
 
@@ -75,6 +76,13 @@ Or start with an initial description:
 /airide Gravel ride this Sunday 9am, 80km, starting at Central Station
 </pre>
 Each follow-up message updates the preview. Confirm or cancel anytime using the buttons.
+
+4. From a Strava group event (private chat only):
+Send /fromstrava with a Strava club event URL. The bot fetches the event details from Strava and creates a ride automatically. If you already created a ride from the same event, it will be updated instead.
+<pre>
+/fromstrava https://www.strava.com/clubs/123/group_events/456
+</pre>
+Fields populated automatically: title, date, meeting point, category, route link, distance, duration, speed range (from pace groups), organizer (club name), and additional info (event link + description + pace groups).
 
 <b>Managing Rides</b>
 
@@ -354,6 +362,12 @@ Click here to start a private chat: @botname
       dialogUpdatePrompt: '🗒 What would you like to change?',
       dialogLimitReached: '⚠️ Message limit reached. Please confirm or cancel.',
       missingFieldsError: 'Missing required fields: {fields}. Please add them in a message.'
+    },
+    fromStrava: {
+      invalidUrl: 'Please provide a valid Strava group event URL.\nExample: /fromstrava https://www.strava.com/clubs/123/group_events/456',
+      fetchError: 'Could not fetch the Strava event. Make sure the event is public and the URL is correct.',
+      created: 'Ride created from Strava event.',
+      updated: 'Ride updated from Strava event.'
     }
   },
   formatter: {
@@ -500,7 +514,8 @@ Click here to start a private chat: @botname
       attach: 'Attach a Telegram group to a ride',
       detach: 'Detach the Telegram group from its ride',
       airide: 'Create or update a ride using AI',
-      joinchat: 'Join the private group chat for a ride'
+      joinchat: 'Join the private group chat for a ride',
+      fromstrava: 'Create or update a ride from a Strava event'
     }
   }
 };

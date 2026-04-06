@@ -219,4 +219,30 @@ describe('MemoryStorage', () => {
       expect(found).toBeNull();
     });
   });
+
+  describe('getRideByStravaId', () => {
+    it('should return null when no ride has that stravaId', async () => {
+      await storage.createRide({ ...testRide, metadata: { stravaId: '123' } });
+      const result = await storage.getRideByStravaId('456', 789);
+      expect(result).toBeNull();
+    });
+
+    it('should return null when stravaId matches but createdBy does not', async () => {
+      await storage.createRide({ ...testRide, metadata: { stravaId: '123' }, createdBy: 789 });
+      const result = await storage.getRideByStravaId('123', 999);
+      expect(result).toBeNull();
+    });
+
+    it('should return the ride with the matching stravaId and createdBy', async () => {
+      const stravaId = '1234567890123456789';
+      const createdBy = 789;
+      const ride = await storage.createRide({ ...testRide, metadata: { stravaId }, createdBy });
+
+      const found = await storage.getRideByStravaId(stravaId, createdBy);
+      expect(found).not.toBeNull();
+      expect(found.id).toBe(ride.id);
+      expect(found.metadata.stravaId).toBe(stravaId);
+      expect(found.createdBy).toBe(createdBy);
+    });
+  });
 });

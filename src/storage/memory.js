@@ -189,4 +189,13 @@ export class MemoryStorage extends StorageInterface {
     }
     return null;
   }
+
+  async getRideByStravaId(stravaId, createdBy) {
+    for (const ride of this.rides.values()) {
+      if (ride.metadata?.stravaId === stravaId && ride.createdBy === createdBy) {
+        return { ...ride, category: normalizeCategory(ride.category) };
+      }
+    }
+    return null;
+  }
 } 

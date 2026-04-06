@@ -24,6 +24,7 @@ import { GroupCommandHandler } from '../commands/GroupCommandHandler.js';
 import { GroupManagementService } from '../services/GroupManagementService.js';
 import { AiRideCommandHandler } from '../commands/AiRideCommandHandler.js';
 import { AiRideService } from '../services/AiRideService.js';
+import { FromStravaCommandHandler } from '../commands/FromStravaCommandHandler.js';
 import { replaceBotUsername } from '../utils/botUtils.js';
 import { t } from '../i18n/index.js';
 
@@ -43,6 +44,7 @@ export class Bot {
     this.wizard = new RideWizard(storage, rideService, messageFormatter, rideMessagesService);
     const aiRideService = new AiRideService();
     this.aiRideHandler = new AiRideCommandHandler(rideService, messageFormatter, rideMessagesService, aiRideService);
+    this.fromStravaHandler = new FromStravaCommandHandler(rideService, messageFormatter, rideMessagesService, storage);
     this.botConfig = this.getBotConfig(rideService, messageFormatter, rideMessagesService, notificationService);
     
     // Initialize bot
@@ -83,6 +85,7 @@ export class Bot {
           { command: 'resumeride', descriptionKey: 'bot.commandDescriptions.resumeride', handler: (ctx) => resumeRideHandler.handle(ctx) },
           { command: 'airide', descriptionKey: 'bot.commandDescriptions.airide', handler: (ctx) => this.aiRideHandler.handle(ctx) },
           { command: 'joinchat', descriptionKey: 'bot.commandDescriptions.joinchat', handler: (ctx) => groupHandler.handleJoinChat(ctx) },
+          { command: 'fromstrava', descriptionKey: 'bot.commandDescriptions.fromstrava', handler: (ctx) => this.fromStravaHandler.handle(ctx) },
         ],
         publicOnly: [
           { command: 'attach', descriptionKey: 'bot.commandDescriptions.attach', handler: (ctx) => groupHandler.handleAttach(ctx) },

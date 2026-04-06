@@ -133,6 +133,25 @@ To update an existing ride via AI dialog:
 
 > **Note:** `/airide` is only available in private chat with the bot. Requires `ANTHROPIC_API_KEY` to be set.
 
+### Importing a Ride from Strava
+
+```
+/fromstrava https://www.strava.com/clubs/123/group_events/456
+```
+
+Fetches the Strava club event and creates a ride automatically. The following fields are populated from the event:
+
+- **Title, date, meeting point, category** — directly from the event
+- **Route link** — from the attached route object; falls back to the first known-provider link found in the event description (Strava, RideWithGPS, Komoot, Garmin)
+- **Distance and duration** — from the attached route (if present)
+- **Speed range** — derived from pace groups (speed-based only)
+- **Organizer** — the Strava club name
+- **Additional info** — event URL + description + pace groups detail
+
+If you call `/fromstrava` with the same event URL again, the existing ride is updated in all chats instead of creating a new one. A different user running the same URL always creates a separate ride.
+
+> **Note:** `/fromstrava` is only available in private chat with the bot. Requires Strava API credentials (`STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REFRESH_TOKEN`) to be set.
+
 ### Creating a New Ride
 
 ```
@@ -319,6 +338,9 @@ The bot supports multiple ways to reference a ride:
 
 - `BOT_TOKEN`: Telegram bot token
 - `ANTHROPIC_API_KEY`: API key for Claude AI (required for `/airide`)
+- `STRAVA_CLIENT_ID`: Strava API client ID (required for `/fromstrava`)
+- `STRAVA_CLIENT_SECRET`: Strava API client secret (required for `/fromstrava`)
+- `STRAVA_REFRESH_TOKEN`: Strava OAuth refresh token (required for `/fromstrava`)
 - `WEBHOOK_DOMAIN`: Domain for webhook in production
 - `MONGODB_URI`: MongoDB connection string
 - `NODE_ENV`: Set to 'development' for dev mode

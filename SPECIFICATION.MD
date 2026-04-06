@@ -127,6 +127,7 @@ All handlers extend **[BaseCommandHandler](cci:2://file:///workspace/src/command
 - **GroupCommandHandler**: `/attach #rideId` (links a group to a ride, posts and pins the ride message, adds existing participants, updates all existing ride messages), `/detach` (unlinks the group, updates all existing ride messages), and `/joinchat #rideId` (private-only: sends an invite link to the ride's group chat if the user has joined the ride); attach/detach are group-chat-only
 - **StartCommandHandler**: Welcome message
 - **HelpCommandHandler**: Multi-page help system
+- **FromStravaCommandHandler**: Import or update a ride from a Strava club event URL; uses `StravaEventParser` to fetch event data and maps it to ride fields; repeated calls with the same URL by the same user update the existing ride
 
 ### **6. Wizard ([/src/wizard/RideWizard.js](cci:7://file:///workspace/src/wizard/RideWizard.js:0:0-0:0))**
 
@@ -156,6 +157,7 @@ All handlers extend **[BaseCommandHandler](cci:2://file:///workspace/src/command
 - **[FieldProcessor.js](cci:7://file:///workspace/src/utils/FieldProcessor.js:0:0-0:0)**: Centralized field processing and validation for ride parameters
 - **[RideParamsHelper.js](cci:7://file:///workspace/src/utils/RideParamsHelper.js:0:0-0:0)**: Parse multi-line command parameters
 - **[route-parser.js](cci:7://file:///workspace/src/utils/workspace/src/utils/route-parser.js:0:0-0:0)**: Parse routes from Strava, RideWithGPS, Komoot
+- **[strava-event-parser.js](cci:7://file:///workspace/src/utils/strava-event-parser.js:0:0-0:0)**: Fetch and map Strava group events to ride fields; handles URL parsing, API calls, pace groups, and route enrichment
 - **[date-input-parser.js](cci:7://file:///workspace/src/utils/workspace/src/utils/date-input-parser.js:0:0-0:0)**: Natural language date parsing (chrono-node)
 - **[date-parser.js](cci:7://file:///workspace/src/utils/workspace/src/utils/date-parser.js:0:0-0:0)**: Format dates with timezone support
 - **[duration-parser.js](cci:7://file:///workspace/src/utils/workspace/src/utils/duration-parser.js:0:0-0:0)**: Parse human-readable durations (2h 30m, 90m, 1.5h)
@@ -350,7 +352,7 @@ _No major refactoring areas identified at this time. The codebase is well-organi
 - [x] Enhancement: Clarify average speed vs minspeed vs pace
 - [x] Feature: Creating a dedicated ride chat (attach/detach an existing group via `/attach #rideId` / `/detach`; participants auto-added via invite link, auto-removed on leave)
 - [X] Feature: Creating rides with AI
-- [ ] Feature: Creating ride from Strava event
+- [x] Feature: Creating ride from Strava event
 - [x] Enhancement: Show preview in wizard starting from the first step and update it along with each next step
 
 ### Medium Priority
