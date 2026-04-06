@@ -69,7 +69,7 @@ describe('Bot', () => {
       expect(bot.botConfig.callbacks).toBeInstanceOf(Array);
       
       // Check that commands are properly configured
-      expect(bot.botConfig.commands.privateOnly.length).toBe(12); // 12 private commands
+      expect(bot.botConfig.commands.privateOnly.length).toBe(13); // 13 private commands
       expect(bot.botConfig.commands.mixed.length).toBe(1); // 1 mixed command (shareride)
       expect(bot.botConfig.callbacks.length).toBe(7); // 7 callback handlers
     });

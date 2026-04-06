@@ -124,7 +124,7 @@ All handlers extend **[BaseCommandHandler](cci:2://file:///workspace/src/command
 - **ListRidesCommandHandler**: Paginated list of user's rides
 - **ListParticipantsCommandHandler**: List all participants for a specific ride (shows all without truncation, organized by participation state)
 - **ParticipationHandlers**: Join/thinking/pass ride functionality; triggers group membership sync via `GroupManagementService` when a group is attached to the ride
-- **GroupCommandHandler**: `/attach #rideId` (links a group to a ride, posts and pins the ride message, adds existing participants) and `/detach` (unlinks the group); both commands are group-chat-only
+- **GroupCommandHandler**: `/attach #rideId` (links a group to a ride, posts and pins the ride message, adds existing participants, updates all existing ride messages), `/detach` (unlinks the group, updates all existing ride messages), and `/joinchat #rideId` (private-only: sends an invite link to the ride's group chat if the user has joined the ride); attach/detach are group-chat-only
 - **StartCommandHandler**: Welcome message
 - **HelpCommandHandler**: Multi-page help system
 - **FromStravaCommandHandler**: Import or update a ride from a Strava club event URL; uses `StravaEventParser` to fetch event data and maps it to ride fields; repeated calls with the same URL by the same user update the existing ride
@@ -149,6 +149,7 @@ All handlers extend **[BaseCommandHandler](cci:2://file:///workspace/src/command
 - Formats ride lists with pagination
 - Handles date/time formatting with timezone support
 - **Share line for creators**: Shows "Share this ride: `/shareride #ID`" for ride creators in private chats
+- **Group chat line**: When a group is attached to a ride (`ride.groupId` is set), shows a notice with `/joinchat #ID` instructions in all ride messages; line is absent (no extra whitespace) when no group is attached
 - Groups ride details logically
 
 ### **8. Utilities ([/src/utils/](cci:7://file:///workspace/src/utils:0:0-0:0))**

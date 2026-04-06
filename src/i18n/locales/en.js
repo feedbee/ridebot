@@ -185,6 +185,12 @@ Only the ride creator can attach a group:
 The bot will post the ride info in the group and automatically add/remove members as participants join or leave the ride.
 To unlink the group, use /detach in the group chat.
 
+<b>💬 Joining the Ride Group Chat</b>
+Once a group is attached to a ride, the ride message shows a notice with instructions.
+Any participant who has joined the ride can request an invite link by sending the bot a private message:
+<code>/joinchat #rideId</code>
+The bot will send you a single-use invite link (valid 24 hours). The command only works if you have joined the ride.
+
     `.trim(),
 
     ride: `
@@ -195,7 +201,7 @@ To unlink the group, use /detach in the group chat.
 🤔 {thinkingLabel} ({thinkingCount}): {thinking}
 🙅 {notInterestedLabel}: {notInterestedCount}
 
-{shareLine}🎫 #Ride #{id}{cancelledInstructions}
+{groupChatLine}{shareLine}🎫 #Ride #{id}{cancelledInstructions}
     `.trim(),
 
     cancelled: '❌ CANCELLED',
@@ -328,6 +334,8 @@ Click here to start a private chat: @botname
       inviteLinkSent: 'You\'ve been invited to the ride group: {link}\n\nThis group is for ride coordination, pre- and post-ride discussion, and sharing photos. The link is valid for 24 hours.',
       inviteLinkForCreator: 'A participant couldn\'t receive the group invite link automatically — they haven\'t started a conversation with the bot. Please forward this link to them manually: {link}',
       invalidRideIdUsage: 'Please provide a valid ride ID. Usage: /attach #rideID',
+      joinchatNoGroup: 'This ride doesn\'t have an attached group chat.',
+      joinchatNotParticipant: 'You need to join the ride first.',
       chatTitle: 'Ride: {title} @ {date}'
     },
     delete: {
@@ -377,6 +385,7 @@ Click here to start a private chat: @botname
     andMoreParticipants: '{displayedList} and {count} more',
     upToSpeed: 'up to {max} km/h',
     shareLine: 'Share this ride: <code>/shareride #{id}</code>',
+    groupChatLine: '<blockquote>Join the ride\'s private group chat: send <code>/joinchat #{id}</code> to the bot in private messages (only works if you have joined the ride).</blockquote>',
     labels: {
       when: 'When',
       category: 'Category',
@@ -505,6 +514,7 @@ Click here to start a private chat: @botname
       attach: 'Attach a Telegram group to a ride',
       detach: 'Detach the Telegram group from its ride',
       airide: 'Create or update a ride using AI',
+      joinchat: 'Join the private group chat for a ride',
       fromstrava: 'Create or update a ride from a Strava event'
     }
   }

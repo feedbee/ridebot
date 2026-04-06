@@ -84,6 +84,7 @@ export class Bot {
           { command: 'dupride', descriptionKey: 'bot.commandDescriptions.dupride', handler: (ctx) => duplicateRideHandler.handle(ctx) },
           { command: 'resumeride', descriptionKey: 'bot.commandDescriptions.resumeride', handler: (ctx) => resumeRideHandler.handle(ctx) },
           { command: 'airide', descriptionKey: 'bot.commandDescriptions.airide', handler: (ctx) => this.aiRideHandler.handle(ctx) },
+          { command: 'joinchat', descriptionKey: 'bot.commandDescriptions.joinchat', handler: (ctx) => groupHandler.handleJoinChat(ctx) },
           { command: 'fromstrava', descriptionKey: 'bot.commandDescriptions.fromstrava', handler: (ctx) => this.fromStravaHandler.handle(ctx) },
         ],
         publicOnly: [

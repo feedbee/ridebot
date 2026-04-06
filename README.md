@@ -268,6 +268,16 @@ You can link a private Telegram group to a ride so that participants are automat
 
 **Note:** Telegram does not allow bots to add users directly — participants receive a private invite link instead.
 
+### Joining the Ride Group Chat
+
+Once a group is attached, the ride message displays a notice with instructions. Any participant who has joined the ride can request an invite link by sending the bot a private message:
+
+```
+/joinchat #rideId
+```
+
+The bot sends a single-use invite link valid for 24 hours. The command only works if you have joined the ride.
+
 ## Route Support
 
 The bot supports route links from:
