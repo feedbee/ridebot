@@ -385,7 +385,7 @@ Click here to start a private chat: @botname
     andMoreParticipants: '{displayedList} and {count} more',
     upToSpeed: 'up to {max} km/h',
     shareLine: 'Share this ride: <code>/shareride #{id}</code>',
-    groupChatLine: 'Join the ride\'s private group chat: send <code>/joinchat #{id}</code> to the bot in private messages (only works if you have joined the ride).',
+    groupChatLine: '<blockquote>Join the ride\'s private group chat: send <code>/joinchat #{id}</code> to the bot in private messages (only works if you have joined the ride).</blockquote>',
     labels: {
       when: 'When',
       category: 'Category',

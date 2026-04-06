@@ -385,7 +385,7 @@ id: abc123 (or #abc123)
     andMoreParticipants: '{displayedList} и еще {count}',
     upToSpeed: 'до {max} км/ч',
     shareLine: 'Поделиться поездкой: <code>/shareride #{id}</code>',
-    groupChatLine: 'Присоединяйтесь к закрытой группе поездки: напишите <code>/joinchat #{id}</code> боту в личные сообщения (работает только если вы записались в поездку).',
+    groupChatLine: '<blockquote>Присоединяйтесь к закрытой группе поездки: напишите <code>/joinchat #{id}</code> боту в личные сообщения (работает только если вы записались в поездку).</blockquote>',
     labels: {
       when: 'Когда',
       category: 'Категория',
