@@ -22,6 +22,8 @@ import { ParticipationHandlers } from '../commands/ParticipationHandlers.js';
 import { NotificationService } from '../services/NotificationService.js';
 import { GroupCommandHandler } from '../commands/GroupCommandHandler.js';
 import { GroupManagementService } from '../services/GroupManagementService.js';
+import { AiRideCommandHandler } from '../commands/AiRideCommandHandler.js';
+import { AiRideService } from '../services/AiRideService.js';
 import { replaceBotUsername } from '../utils/botUtils.js';
 import { t } from '../i18n/index.js';
 
@@ -39,6 +41,8 @@ export class Bot {
     const rideMessagesService = new RideMessagesService(rideService, messageFormatter);
     const notificationService = new NotificationService();
     this.wizard = new RideWizard(storage, rideService, messageFormatter, rideMessagesService);
+    const aiRideService = new AiRideService();
+    this.aiRideHandler = new AiRideCommandHandler(rideService, messageFormatter, rideMessagesService, aiRideService);
     this.botConfig = this.getBotConfig(rideService, messageFormatter, rideMessagesService, notificationService);
     
     // Initialize bot
@@ -76,7 +80,8 @@ export class Bot {
           { command: 'listrides', descriptionKey: 'bot.commandDescriptions.listrides', handler: (ctx) => listRidesHandler.handle(ctx) },
           { command: 'listparticipants', descriptionKey: 'bot.commandDescriptions.listparticipants', handler: (ctx) => listParticipantsHandler.handle(ctx) },
           { command: 'dupride', descriptionKey: 'bot.commandDescriptions.dupride', handler: (ctx) => duplicateRideHandler.handle(ctx) },
-          { command: 'resumeride', descriptionKey: 'bot.commandDescriptions.resumeride', handler: (ctx) => resumeRideHandler.handle(ctx) },  
+          { command: 'resumeride', descriptionKey: 'bot.commandDescriptions.resumeride', handler: (ctx) => resumeRideHandler.handle(ctx) },
+          { command: 'airide', descriptionKey: 'bot.commandDescriptions.airide', handler: (ctx) => this.aiRideHandler.handle(ctx) },
         ],
         publicOnly: [
           { command: 'attach', descriptionKey: 'bot.commandDescriptions.attach', handler: (ctx) => groupHandler.handleAttach(ctx) },
@@ -103,6 +108,7 @@ export class Bot {
         { pattern: /^delete:(\w+):(\w+)$/, handler: (ctx) => deleteRideHandler.handleConfirmation(ctx) },
         { pattern: /^list:(\d+)$/, handler: (ctx) => listRidesHandler.handleCallback(ctx) },
         { pattern: /^wizard:(\w+)(?::(.*))?$/, handler: (ctx) => this.wizard.handleWizardAction(ctx) },
+        { pattern: /^airide:(confirm|cancel):(\d+:\d+)$/, handler: (ctx) => this.aiRideHandler.handleCallback(ctx) },
       ],
     };
   }
@@ -123,8 +129,11 @@ export class Bot {
     // Callback query handlers
     this.setupCallbackQueryHandlers();
     
-    // Wizard input handler
-    this.bot.on('message:text', ctx => this.wizard.handleWizardInput(ctx));
+    // Text input handlers: wizard first, then AI ride follow-up
+    this.bot.on('message:text', async (ctx) => {
+      await this.wizard.handleWizardInput(ctx);
+      await this.aiRideHandler.handleTextInput(ctx);
+    });
   }
 
   /**

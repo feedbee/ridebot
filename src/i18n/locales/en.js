@@ -320,6 +320,21 @@ Click here to start a private chat: @botname
       failedCallback: 'Failed to delete ride',
       deletedMessages: 'Deleted {count} message(s).',
       removedMessages: 'Removed {count} unavailable message(s).'
+    },
+    airide: {
+      usageHint: 'Send /airide followed by a free-form description to create a ride.\nTo update an existing ride: /airide #rideId <what to change>',
+      sessionAlreadyActive: 'You already have an active AI ride session. Please confirm or cancel it first.',
+      sessionExpired: 'Session expired. Please use /airide again.',
+      parsing: '🤖 Parsing your ride details...',
+      parseError: '❌ Could not parse ride details. Please try again with a clearer description.',
+      tooManyRetries: '❌ Could not extract required details after several attempts. Please try /airide again.',
+      cancelled: 'Ride creation cancelled.',
+      confirmButton: '✅ Confirm',
+      confirmPrompt: '📋 Please review the ride details above and confirm.',
+      missingField: {
+        title: '❓ What should I call this ride?',
+        when: '❓ When is the ride? (e.g. "tomorrow at 6pm", "Saturday 10am")'
+      }
     }
   },
   formatter: {
@@ -463,7 +478,8 @@ Click here to start a private chat: @botname
       resumeride: 'Resume a cancelled ride',
       shareride: 'Share a ride in a chat',
       attach: 'Attach a Telegram group to a ride',
-      detach: 'Detach the Telegram group from its ride'
+      detach: 'Detach the Telegram group from its ride',
+      airide: 'Create or update a ride using AI'
     }
   }
 };

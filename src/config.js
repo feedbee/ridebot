@@ -72,5 +72,8 @@ export const config = {
     clientId:     process.env.STRAVA_CLIENT_ID     || null,
     clientSecret: process.env.STRAVA_CLIENT_SECRET || null,
     refreshToken: process.env.STRAVA_REFRESH_TOKEN || null,
+  },
+  anthropic: {
+    apiKey: process.env.ANTHROPIC_API_KEY || null,
   }
 }; 
