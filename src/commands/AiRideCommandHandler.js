@@ -5,12 +5,14 @@ import { normalizeCategory } from '../utils/category-utils.js';
 import { parseSpeedInput } from '../utils/speed-utils.js';
 import { parseDuration } from '../utils/duration-parser.js';
 
-const MAX_RETRIES = 2;
+const MAX_DIALOG_MESSAGES = 10;
 
 /**
  * Handler for the /airide command.
- * Creates or updates a ride from a free-form natural language description
- * using Claude AI to extract structured fields.
+ * Enters an iterative dialog mode: each user message refines the ride,
+ * a single preview message is kept alive (edited in-place) with Confirm/Cancel
+ * buttons. Up to 10 messages are allowed; on Confirm/Cancel all bot dialog
+ * messages are deleted (same as the wizard).
  */
 export class AiRideCommandHandler extends BaseCommandHandler {
   /**
@@ -32,12 +34,6 @@ export class AiRideCommandHandler extends BaseCommandHandler {
    */
   async handle(ctx) {
     const rawText = ctx.message.text.replace(/^\/airide\s*/i, '').trim();
-
-    if (!rawText) {
-      await ctx.reply(this.translate(ctx, 'commands.airide.usageHint'));
-      return;
-    }
-
     const stateKey = this._stateKey(ctx.from.id, ctx.chat.id);
 
     if (this.states.has(stateKey)) {
@@ -60,37 +56,31 @@ export class AiRideCommandHandler extends BaseCommandHandler {
       }
     }
 
-    const parsingMsg = await ctx.reply(this.translate(ctx, 'commands.airide.parsing'));
-    const { params, error } = await this.aiRideService.parseRideText(freeText, {
-      isUpdate: mode === 'update'
-    });
-
-    try {
-      await ctx.api.deleteMessage(ctx.chat.id, parsingMsg.message_id);
-    } catch { /* ignore if deletion fails */ }
-
-    if (error) {
-      await ctx.reply(this.translate(ctx, 'commands.airide.parseError'));
-      return;
-    }
-
     this.states.set(stateKey, {
       mode,
       rideId,
       ride,
-      originalText: freeText,
-      parsedParams: params,
-      step: null,
-      missingField: null,
-      retryCount: 0,
-      confirmMessageId: null
+      userMessages: [],
+      messageCount: 0,
+      lastParams: null,
+      previewMessageId: null,
+      botMessageIds: []
     });
 
-    await this._handleParsedParams(ctx, stateKey, params);
+    if (freeText) {
+      await this._processMessage(ctx, stateKey, freeText);
+    } else {
+      const promptKey = mode === 'update'
+        ? 'commands.airide.dialogUpdatePrompt'
+        : 'commands.airide.dialogPrompt';
+      const msg = await ctx.reply(this.translate(ctx, promptKey));
+      const state = this.states.get(stateKey);
+      if (state) state.botMessageIds.push(msg.message_id);
+    }
   }
 
   /**
-   * Handles follow-up text when a session is awaiting a missing required field.
+   * Handles each user message in the dialog.
    * @param {import('grammy').Context} ctx
    */
   async handleTextInput(ctx) {
@@ -98,31 +88,11 @@ export class AiRideCommandHandler extends BaseCommandHandler {
 
     const stateKey = this._stateKey(ctx.from.id, ctx.chat.id);
     const state = this.states.get(stateKey);
+    if (!state) return;
 
-    if (!state || state.step !== 'awaiting_followup') return;
+    if (state.messageCount >= MAX_DIALOG_MESSAGES) return;
 
-    if (state.retryCount >= MAX_RETRIES) {
-      this.states.delete(stateKey);
-      await ctx.reply(this.translate(ctx, 'commands.airide.tooManyRetries'));
-      return;
-    }
-
-    state.retryCount++;
-
-    const { params, error } = await this.aiRideService.parseRideText(state.originalText, {
-      isUpdate: state.mode === 'update',
-      originalText: state.originalText,
-      followUpText: ctx.message.text
-    });
-
-    if (error) {
-      this.states.delete(stateKey);
-      await ctx.reply(this.translate(ctx, 'commands.airide.parseError'));
-      return;
-    }
-
-    state.parsedParams = params;
-    await this._handleParsedParams(ctx, stateKey, params);
+    await this._processMessage(ctx, stateKey, ctx.message.text);
   }
 
   /**
@@ -142,15 +112,30 @@ export class AiRideCommandHandler extends BaseCommandHandler {
 
     if (action === 'cancel') {
       this.states.delete(stateKey);
-      if (state.confirmMessageId) {
-        try { await ctx.api.deleteMessage(ctx.chat.id, state.confirmMessageId); } catch { /* ignore */ }
-      }
+      await this._cleanupDialog(ctx, state);
       await ctx.answerCallbackQuery();
       await ctx.reply(this.translate(ctx, 'commands.airide.cancelled'));
       return;
     }
 
     if (action === 'confirm') {
+      // Validate required fields before saving
+      const params = state.lastParams ?? {};
+      const existingRide = state.ride;
+      const hasTitle = params.title || existingRide?.title;
+      const hasWhen = params.when || existingRide?.date;
+
+      if (!hasTitle || !hasWhen) {
+        const missing = [
+          !hasTitle ? (ctx.lang === 'ru' ? 'название' : 'title') : null,
+          !hasWhen  ? (ctx.lang === 'ru' ? 'дата'    : 'date')  : null
+        ].filter(Boolean).join(', ');
+        await ctx.answerCallbackQuery(
+          this.translate(ctx, 'commands.airide.missingFieldsError', { fields: missing })
+        );
+        return;
+      }
+
       await this._executeRideOperation(ctx, stateKey, state);
     }
   }
@@ -162,42 +147,97 @@ export class AiRideCommandHandler extends BaseCommandHandler {
   }
 
   /**
-   * Detect update mode when text starts with `#rideId`.
-   * Example: `/airide #abc123 change date to Sunday`
+   * Detect update mode when text starts with optional `#rideId`.
+   * `/airide`          → create, no freeText
+   * `/airide <text>`   → create, freeText = text
+   * `/airide #id`      → update, no freeText
+   * `/airide #id text` → update, freeText = text
    */
   _parseCommandInput(text) {
-    const match = text.match(/^#([a-zA-Z0-9]+)\s+(.+)$/s);
+    if (!text) return { mode: 'create', rideId: null, freeText: null };
+
+    const match = text.match(/^#([a-zA-Z0-9]+)(?:\s+([\s\S]+))?$/);
     if (match) {
-      return { mode: 'update', rideId: match[1], freeText: match[2].trim() };
+      return { mode: 'update', rideId: match[1], freeText: match[2]?.trim() || null };
     }
     return { mode: 'create', rideId: null, freeText: text };
   }
 
   /**
-   * After AI parsing: check for missing required fields, ask follow-up, or show preview.
+   * Process a single dialog message: call AI, update preview.
    */
-  async _handleParsedParams(ctx, stateKey, params) {
+  async _processMessage(ctx, stateKey, text) {
     const state = this.states.get(stateKey);
-    const existingRide = state.ride;
-    // In update mode, a field is only "missing" if neither the AI extracted it
-    // nor the existing ride already has it.
-    const missingTitle = state.mode === 'create'
-      ? !params.title
-      : !params.title && !existingRide?.title;
-    const missingWhen = state.mode === 'create'
-      ? !params.when
-      : !params.when && !existingRide?.date;
-    const missingField = missingTitle ? 'title' : (missingWhen ? 'when' : null);
+    if (!state) return;
 
-    if (missingField) {
-      state.step = 'awaiting_followup';
-      state.missingField = missingField;
-      await ctx.reply(this.translate(ctx, `commands.airide.missingField.${missingField}`));
+    state.userMessages.push(text);
+    state.messageCount++;
+
+    const { params, error } = await this.aiRideService.parseRideText('', {
+      dialogMessages: state.userMessages
+    });
+
+    if (error) {
+      this.states.delete(stateKey);
+      await ctx.reply(this.translate(ctx, 'commands.airide.parseError'));
       return;
     }
 
-    state.step = 'awaiting_confirmation';
-    await this._sendPreview(ctx, stateKey, params);
+    state.lastParams = params;
+
+    const previewObj = this._buildPreviewObject(params, state);
+    const previewText = this.messageFormatter.formatRidePreview(previewObj, ctx.lang);
+    const atLimit = state.messageCount >= MAX_DIALOG_MESSAGES;
+    const fullText = atLimit
+      ? `${previewText}\n\n${this.translate(ctx, 'commands.airide.dialogLimitReached')}`
+      : previewText;
+
+    const keyboard = new InlineKeyboard()
+      .text(this.translate(ctx, 'buttons.cancel'),             `airide:cancel:${stateKey}`)
+      .text(this.translate(ctx, 'commands.airide.confirmButton'), `airide:confirm:${stateKey}`);
+
+    await this._updateOrSendPreview(ctx, state, fullText, keyboard);
+  }
+
+  /**
+   * Edit the existing preview in-place, or send a new one if not yet created.
+   * Mirrors the pattern used by RideWizard.updatePreviewMessage().
+   */
+  async _updateOrSendPreview(ctx, state, text, keyboard) {
+    const opts = { parse_mode: 'HTML', reply_markup: keyboard };
+
+    if (!state.previewMessageId) {
+      const msg = await ctx.reply(text, opts);
+      state.previewMessageId = msg.message_id;
+      state.botMessageIds.push(msg.message_id);
+      return;
+    }
+
+    try {
+      await ctx.api.editMessageText(ctx.chat.id, state.previewMessageId, text, opts);
+    } catch (err) {
+      if (err.description?.includes('message is not modified') ||
+          err.message?.includes('message is not modified')) {
+        return;
+      }
+      // On any other edit error, re-send and update the tracked ID
+      const msg = await ctx.reply(text, opts);
+      // Replace old ID with new one in botMessageIds
+      const idx = state.botMessageIds.indexOf(state.previewMessageId);
+      if (idx !== -1) state.botMessageIds[idx] = msg.message_id;
+      state.previewMessageId = msg.message_id;
+    }
+  }
+
+  /**
+   * Delete all bot messages in the dialog (in reverse order).
+   */
+  async _cleanupDialog(ctx, state) {
+    for (const msgId of [...state.botMessageIds].reverse()) {
+      try {
+        await ctx.api.deleteMessage(ctx.chat.id, msgId);
+      } catch { /* ignore individual failures */ }
+    }
   }
 
   /**
@@ -262,35 +302,12 @@ export class AiRideCommandHandler extends BaseCommandHandler {
       preview.speedMax = existingRide.speedMax ?? null;
     }
 
-    // additionalInfo: only free-form notes, not speed (speed is now in its own fields)
+    // additionalInfo: only free-form notes
     if (params.info) {
       preview.additionalInfo = params.info;
     }
 
     return preview;
-  }
-
-  async _sendPreview(ctx, stateKey, params) {
-    const state = this.states.get(stateKey);
-    const previewObj = this._buildPreviewObject(params, state);
-    const previewText = this.messageFormatter.formatRidePreview(previewObj, ctx.lang);
-
-    const keyboard = new InlineKeyboard()
-      .text(
-        this.translate(ctx, 'buttons.cancel'),
-        `airide:cancel:${stateKey}`
-      )
-      .text(
-        this.translate(ctx, 'commands.airide.confirmButton'),
-        `airide:confirm:${stateKey}`
-      );
-
-    const confirmMsg = await ctx.reply(
-      `${previewText}\n\n${this.translate(ctx, 'commands.airide.confirmPrompt')}`,
-      { reply_markup: keyboard, parse_mode: 'HTML' }
-    );
-
-    state.confirmMessageId = confirmMsg.message_id;
   }
 
   async _executeRideOperation(ctx, stateKey, state) {
@@ -299,7 +316,7 @@ export class AiRideCommandHandler extends BaseCommandHandler {
 
     if (state.mode === 'create') {
       result = await this.rideService.createRideFromParams(
-        state.parsedParams,
+        state.lastParams,
         ctx.chat.id,
         ctx.from,
         options
@@ -307,17 +324,14 @@ export class AiRideCommandHandler extends BaseCommandHandler {
     } else {
       result = await this.rideService.updateRideFromParams(
         state.rideId,
-        state.parsedParams,
+        state.lastParams,
         ctx.from.id,
         options
       );
     }
 
     this.states.delete(stateKey);
-
-    if (state.confirmMessageId) {
-      try { await ctx.api.deleteMessage(ctx.chat.id, state.confirmMessageId); } catch { /* ignore */ }
-    }
+    await this._cleanupDialog(ctx, state);
 
     if (result.error) {
       await ctx.answerCallbackQuery();

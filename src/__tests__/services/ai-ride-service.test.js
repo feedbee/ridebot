@@ -147,5 +147,54 @@ describe('AiRideService', () => {
         expect.objectContaining({ model: expect.stringContaining('haiku') })
       );
     });
+
+    describe('dialog mode (dialogMessages option)', () => {
+      it('sends numbered messages as combined user message', async () => {
+        mockCreate.mockResolvedValue(
+          makeResponse('{"title":"Ride","when":"tomorrow 9am","speed":"25-28"}')
+        );
+
+        await service.parseRideText('', {
+          dialogMessages: ['road ride tomorrow 9am', 'speed 25-28']
+        });
+
+        const calledUserMessage = mockCreate.mock.calls[0][0].messages[0].content;
+        expect(calledUserMessage).toContain('[1] road ride tomorrow 9am');
+        expect(calledUserMessage).toContain('[2] speed 25-28');
+      });
+
+      it('includes multi-turn context in system prompt', async () => {
+        mockCreate.mockResolvedValue(makeResponse('{"title":"Ride","when":"tomorrow"}'));
+
+        await service.parseRideText('', {
+          dialogMessages: ['ride tomorrow']
+        });
+
+        const calledSystem = mockCreate.mock.calls[0][0].system;
+        expect(calledSystem).toContain('multi-turn');
+      });
+
+      it('does NOT include UPDATE MODE when only dialogMessages provided', async () => {
+        mockCreate.mockResolvedValue(makeResponse('{"title":"Ride","when":"tomorrow"}'));
+
+        await service.parseRideText('', {
+          dialogMessages: ['change speed']
+        });
+
+        const calledUserMessage = mockCreate.mock.calls[0][0].messages[0].content;
+        expect(calledUserMessage).not.toContain('UPDATE MODE');
+      });
+
+      it('truncates individual messages exceeding 2000 chars', async () => {
+        mockCreate.mockResolvedValue(makeResponse('{"title":"Ride","when":"tomorrow"}'));
+
+        const longMsg = 'x'.repeat(3000);
+        await service.parseRideText('', { dialogMessages: [longMsg] });
+
+        const calledUserMessage = mockCreate.mock.calls[0][0].messages[0].content;
+        // [1] prefix + 2000 chars of x
+        expect(calledUserMessage.replace('[1] ', '').length).toBeLessThanOrEqual(2000);
+      });
+    });
   });
 });

@@ -322,19 +322,16 @@ Click here to start a private chat: @botname
       removedMessages: 'Removed {count} unavailable message(s).'
     },
     airide: {
-      usageHint: 'Send /airide followed by a free-form description to create a ride.\nTo update an existing ride: /airide #rideId <what to change>',
+      usageHint: 'Use /airide to create a ride in dialog mode.\nTo update an existing ride: /airide #rideId',
       sessionAlreadyActive: 'You already have an active AI ride session. Please confirm or cancel it first.',
       sessionExpired: 'Session expired. Please use /airide again.',
-      parsing: '🤖 Parsing your ride details...',
       parseError: '❌ Could not parse ride details. Please try again with a clearer description.',
-      tooManyRetries: '❌ Could not extract required details after several attempts. Please try /airide again.',
       cancelled: 'Ride creation cancelled.',
       confirmButton: '✅ Confirm',
-      confirmPrompt: '📋 Please review the ride details above and confirm.',
-      missingField: {
-        title: '❓ What should I call this ride?',
-        when: '❓ When is the ride? (e.g. "tomorrow at 6pm", "Saturday 10am")'
-      }
+      dialogPrompt: '🗒 Describe the ride: title, date and time, route link, distance and expected duration, average speed, meeting point, and any other details.',
+      dialogUpdatePrompt: '🗒 What would you like to change?',
+      dialogLimitReached: '⚠️ Message limit reached. Please confirm or cancel.',
+      missingFieldsError: 'Missing required fields: {fields}. Please add them in a message.'
     }
   },
   formatter: {
