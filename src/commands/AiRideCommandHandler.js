@@ -4,6 +4,7 @@ import { parseDateTimeInput } from '../utils/date-input-parser.js';
 import { normalizeCategory } from '../utils/category-utils.js';
 import { parseSpeedInput } from '../utils/speed-utils.js';
 import { parseDuration } from '../utils/duration-parser.js';
+import { RouteParser } from '../utils/route-parser.js';
 
 const MAX_DIALOG_MESSAGES = 10;
 
@@ -64,7 +65,8 @@ export class AiRideCommandHandler extends BaseCommandHandler {
       messageCount: 0,
       lastParams: null,
       previewMessageId: null,
-      botMessageIds: []
+      botMessageIds: [],
+      routeInfoCache: {}
     });
 
     if (freeText) {
@@ -185,7 +187,11 @@ export class AiRideCommandHandler extends BaseCommandHandler {
 
     state.lastParams = params;
 
-    const previewObj = this._buildPreviewObject(params, state);
+    // Enrich a copy of params with route-parsed data for the preview only.
+    // state.lastParams stays as pure AI output; RideService re-parses on confirm.
+    const previewParams = await this._enrichWithRouteInfo(params, state);
+
+    const previewObj = this._buildPreviewObject(previewParams, state);
     const previewText = this.messageFormatter.formatRidePreview(previewObj, ctx.lang);
     const atLimit = state.messageCount >= MAX_DIALOG_MESSAGES;
     const fullText = atLimit
@@ -238,6 +244,39 @@ export class AiRideCommandHandler extends BaseCommandHandler {
         await ctx.api.deleteMessage(ctx.chat.id, msgId);
       } catch { /* ignore individual failures */ }
     }
+  }
+
+  /**
+   * Returns a copy of params enriched with distance/duration fetched from the route URL.
+   * Results are cached in state.routeInfoCache keyed by URL to avoid re-fetching on
+   * every dialog message. Does not mutate params or state.lastParams.
+   * @param {Object} params - AI-extracted params
+   * @param {Object} state - handler state (holds routeInfoCache)
+   */
+  async _enrichWithRouteInfo(params, state) {
+    if (!params.route) return params;
+
+    // Cache per URL to avoid re-fetching on every dialog message
+    if (!(params.route in state.routeInfoCache)) {
+      try {
+        state.routeInfoCache[params.route] = await RouteParser.processRouteInfo(params.route);
+      } catch {
+        state.routeInfoCache[params.route] = null;
+      }
+    }
+
+    const info = state.routeInfoCache[params.route];
+    if (!info || info.error) return params;
+
+    const enriched = { ...params };
+    if (info.distance && !params.dist) {
+      enriched.dist = String(info.distance);
+    }
+    if (info.duration && !params.duration) {
+      // parseDuration (used in _buildPreviewObject) accepts e.g. "90m"
+      enriched.duration = `${info.duration}m`;
+    }
+    return enriched;
   }
 
   /**

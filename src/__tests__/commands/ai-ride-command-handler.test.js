@@ -4,6 +4,7 @@
 
 import { jest } from '@jest/globals';
 import { AiRideCommandHandler } from '../../commands/AiRideCommandHandler.js';
+import { RouteParser } from '../../utils/route-parser.js';
 import { t } from '../../i18n/index.js';
 
 describe.each(['en', 'ru'])('AiRideCommandHandler (%s)', (language) => {
@@ -514,6 +515,105 @@ describe.each(['en', 'ru'])('AiRideCommandHandler (%s)', (language) => {
         expect.stringContaining(language === 'ru' ? 'дата' : 'date')
       );
       expect(mockRideService.updateRideFromParams).toHaveBeenCalled();
+    });
+  });
+
+  // ─── route info enrichment in preview ───────────────────────────────────────
+
+  describe('route info enrichment in preview', () => {
+    let routeParserSpy;
+
+    beforeEach(() => {
+      routeParserSpy = jest.spyOn(RouteParser, 'processRouteInfo');
+    });
+
+    afterEach(() => {
+      routeParserSpy.mockRestore();
+    });
+
+    const setupState = () => {
+      handler.states.set('42:100', {
+        mode: 'create', rideId: null, ride: null,
+        userMessages: [], messageCount: 0, lastParams: null,
+        previewMessageId: null, botMessageIds: [],
+        routeInfoCache: {}
+      });
+    };
+
+    it('populates distance and duration in preview from route URL when AI did not extract them', async () => {
+      routeParserSpy.mockResolvedValue({ routeLink: 'https://strava.com/routes/1', distance: 75, duration: 150 });
+      mockAiRideService.parseRideText.mockResolvedValue({
+        params: { title: 'Ride', when: 'tomorrow', route: 'https://strava.com/routes/1' }, error: null
+      });
+      setupState();
+      mockCtx.message = { text: 'Ride tomorrow https://strava.com/routes/1', message_id: 5 };
+
+      await handler.handleTextInput(mockCtx);
+
+      const preview = mockMessageFormatter.formatRidePreview.mock.calls[0][0];
+      expect(preview.distance).toBe(75);
+      expect(preview.duration).toBe(150); // 150m parsed to 150 minutes
+    });
+
+    it('does not overwrite dist/duration that AI already extracted', async () => {
+      routeParserSpy.mockResolvedValue({ routeLink: 'https://strava.com/routes/1', distance: 75, duration: 150 });
+      mockAiRideService.parseRideText.mockResolvedValue({
+        params: { title: 'Ride', when: 'tomorrow', route: 'https://strava.com/routes/1', dist: '60', duration: '2h' },
+        error: null
+      });
+      setupState();
+      mockCtx.message = { text: 'Ride tomorrow 60km 2h', message_id: 5 };
+
+      await handler.handleTextInput(mockCtx);
+
+      const preview = mockMessageFormatter.formatRidePreview.mock.calls[0][0];
+      expect(preview.distance).toBe(60);   // user-specified, not overwritten
+      expect(preview.duration).toBe(120);  // 2h = 120 min, not overwritten
+    });
+
+    it('calls processRouteInfo only once even when the same route appears in multiple messages', async () => {
+      routeParserSpy.mockResolvedValue({ routeLink: 'https://strava.com/routes/1', distance: 75, duration: 150 });
+      mockAiRideService.parseRideText.mockResolvedValue({
+        params: { title: 'Ride', when: 'tomorrow', route: 'https://strava.com/routes/1' }, error: null
+      });
+      handler.states.set('42:100', {
+        mode: 'create', rideId: null, ride: null,
+        userMessages: ['first msg'],
+        messageCount: 1, lastParams: null,
+        previewMessageId: 50, botMessageIds: [50],
+        routeInfoCache: { 'https://strava.com/routes/1': { routeLink: 'https://strava.com/routes/1', distance: 75, duration: 150 } }
+      });
+      mockCtx.message = { text: 'second msg', message_id: 6 };
+
+      await handler.handleTextInput(mockCtx);
+
+      expect(routeParserSpy).not.toHaveBeenCalled(); // served from cache
+    });
+
+    it('still renders preview without crashing when processRouteInfo throws', async () => {
+      routeParserSpy.mockRejectedValue(new Error('network error'));
+      mockAiRideService.parseRideText.mockResolvedValue({
+        params: { title: 'Ride', when: 'tomorrow', route: 'https://strava.com/routes/1' }, error: null
+      });
+      setupState();
+      mockCtx.message = { text: 'Ride tomorrow', message_id: 5 };
+
+      await expect(handler.handleTextInput(mockCtx)).resolves.not.toThrow();
+      expect(mockMessageFormatter.formatRidePreview).toHaveBeenCalled();
+    });
+
+    it('still renders preview without crashing when processRouteInfo returns error', async () => {
+      routeParserSpy.mockResolvedValue({ error: 'Invalid URL', routeLink: 'bad-url' });
+      mockAiRideService.parseRideText.mockResolvedValue({
+        params: { title: 'Ride', when: 'tomorrow', route: 'bad-url' }, error: null
+      });
+      setupState();
+      mockCtx.message = { text: 'Ride tomorrow', message_id: 5 };
+
+      await handler.handleTextInput(mockCtx);
+
+      const preview = mockMessageFormatter.formatRidePreview.mock.calls[0][0];
+      expect(preview.distance).toBeNull();
     });
   });
 
