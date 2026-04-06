@@ -348,7 +348,7 @@ _No major refactoring areas identified at this time. The codebase is well-organi
 - [x] Bug: Correct dates recognition in differfent languages
 - [x] Enhancement: Clarify average speed vs minspeed vs pace
 - [x] Feature: Creating a dedicated ride chat (attach/detach an existing group via `/attach #rideId` / `/detach`; participants auto-added via invite link, auto-removed on leave)
-- [ ] Feature: Creating rides with AI
+- [X] Feature: Creating rides with AI
 - [ ] Feature: Creating ride from Strava event
 - [x] Enhancement: Show preview in wizard starting from the first step and update it along with each next step
 
