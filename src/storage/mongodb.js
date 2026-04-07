@@ -54,7 +54,7 @@ const rideSchema = new mongoose.Schema({
 rideSchema.index({ createdBy: 1, date: -1 });
 rideSchema.index(
   { groupId: 1 },
-  { partialFilterExpression: { groupId: { $type: 'number' } } }
+  { unique: true, partialFilterExpression: { groupId: { $type: 'number' } } }
 );
 rideSchema.index(
   { 'metadata.stravaId': 1, createdBy: 1 },

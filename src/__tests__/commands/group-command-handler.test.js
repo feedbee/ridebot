@@ -130,6 +130,30 @@ describe.each(['en', 'ru'])('GroupCommandHandler (%s)', (language) => {
       expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.group.alreadyAttached'));
     });
 
+    it('should reject if group is already attached to another ride', async () => {
+      mockRideService.getRide.mockResolvedValue(makeRide());
+      mockRideService.getRideByGroupId.mockResolvedValue({ id: 'otherRide' });
+
+      await handler.handleAttach(mockCtx);
+
+      expect(mockCtx.reply).toHaveBeenCalledWith(
+        tr('commands.group.groupAlreadyAttachedToAnotherRide')
+      );
+      expect(mockRideService.updateRide).not.toHaveBeenCalled();
+    });
+
+    it('should reply with group conflict on duplicate key error during attach', async () => {
+      mockRideService.getRide.mockResolvedValue(makeRide());
+      mockRideService.getRideByGroupId.mockResolvedValue(null);
+      mockRideService.updateRide.mockRejectedValue({ code: 11000 });
+
+      await handler.handleAttach(mockCtx);
+
+      expect(mockCtx.reply).toHaveBeenCalledWith(
+        tr('commands.group.groupAlreadyAttachedToAnotherRide')
+      );
+    });
+
     it('should reject if bot is not admin', async () => {
       mockRideService.getRide.mockResolvedValue(makeRide());
       mockCtx.api.getChatMember.mockResolvedValue({ status: 'member' });

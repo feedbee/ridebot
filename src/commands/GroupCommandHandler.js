@@ -85,8 +85,23 @@ export class GroupCommandHandler extends BaseCommandHandler {
 
     const groupId = ctx.chat.id;
 
+    // Prevent attaching the same group to multiple rides
+    const existingRideForGroup = await this.rideService.getRideByGroupId(groupId);
+    if (existingRideForGroup && existingRideForGroup.id !== rideId) {
+      await ctx.reply(this.translate(ctx, 'commands.group.groupAlreadyAttachedToAnotherRide'));
+      return;
+    }
+
     // Save groupId to ride
-    await this.rideService.updateRide(rideId, { groupId });
+    try {
+      await this.rideService.updateRide(rideId, { groupId });
+    } catch (error) {
+      if (error?.code === 11000) {
+        await ctx.reply(this.translate(ctx, 'commands.group.groupAlreadyAttachedToAnotherRide'));
+        return;
+      }
+      throw error;
+    }
     const rideWithGroupId = { ...ride, groupId };
 
     // Rename the group (best-effort)

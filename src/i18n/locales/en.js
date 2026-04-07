@@ -326,6 +326,7 @@ Click here to start a private chat: @botname
       rideNotFound: 'Ride not found.',
       notCreator: 'Only the ride creator can perform this action.',
       alreadyAttached: 'This ride already has a group attached. Use /detach first.',
+      groupAlreadyAttachedToAnotherRide: 'This group is already attached to another ride. Use /detach first.',
       botNotAdmin: 'The bot is not an admin in this group. Please make it an admin and try again.',
       botNeedsAddMembersPermission: 'The bot needs the "Add Members" admin permission. Please update the bot\'s permissions and try again.',
       attachSuccess: 'Group attached successfully! Participants will be automatically added when they join the ride.',
