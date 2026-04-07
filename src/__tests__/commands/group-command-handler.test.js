@@ -103,6 +103,16 @@ describe.each(['en', 'ru'])('GroupCommandHandler (%s)', (language) => {
       expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.group.rideNotFound'));
     });
 
+    it('should show attach-specific usage when ride id is missing', async () => {
+      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: null, error: null });
+
+      await handler.handleAttach(mockCtx);
+
+      expect(mockCtx.reply).toHaveBeenCalledWith(
+        tr('commands.group.invalidRideIdUsage', { command: '/attach #rideID' })
+      );
+    });
+
     it('should reject non-creator', async () => {
       mockCtx.from.id = 999; // not creator
       mockRideService.getRide.mockResolvedValue(makeRide());
@@ -272,6 +282,17 @@ describe.each(['en', 'ru'])('GroupCommandHandler (%s)', (language) => {
     beforeEach(() => {
       mockCtx.chat.type = 'private';
       mockCtx.message.text = `/joinchat #${RIDE_ID}`;
+    });
+
+    it('should show joinchat-specific usage when ride id is missing', async () => {
+      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: null, error: null });
+
+      await handler.handleJoinChat(mockCtx);
+
+      expect(mockCtx.reply).toHaveBeenCalledWith(
+        tr('commands.group.invalidRideIdUsage', { command: '/joinchat #rideID' })
+      );
+      expect(mockGroupManagementService.addParticipant).not.toHaveBeenCalled();
     });
 
     it('should reply if ride not found', async () => {
