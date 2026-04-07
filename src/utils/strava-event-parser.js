@@ -1,15 +1,9 @@
 import fetch from 'node-fetch';
 import { config } from '../config.js';
 import { getStravaAccessToken } from './strava-token-store.js';
+import { RouteParser } from './route-parser.js';
 
 const STRAVA_EVENT_URL_PATTERN = /https?:\/\/(?:www\.)?strava\.com\/clubs\/(\d+)\/group_events\/(\d+)/;
-
-const KNOWN_ROUTE_PATTERNS = [
-  /https?:\/\/(?:www\.)?strava\.com\/(?:routes|activities)\/\d+/,
-  /https?:\/\/(?:www\.)?ridewithgps\.com\/(?:routes|trips)\/\d+/,
-  /https?:\/\/(?:www\.)?komoot\.(?:com|de)\/(?:tour|collection)\/\d+/,
-  /https?:\/\/connect\.garmin\.com\/modern\/(?:course|activity)\/\d+/,
-];
 
 const ACTIVITY_TYPE_TO_CATEGORY = {
   GravelRide: 'gravel',
@@ -84,16 +78,7 @@ export class StravaEventParser {
    * @returns {string | null}
    */
   static extractRouteFromDescription(text) {
-    if (!text) return null;
-    // Match all URLs in the text
-    const urlPattern = /https?:\/\/[^\s<>"]+/g;
-    const urls = text.match(urlPattern) || [];
-    for (const url of urls) {
-      if (KNOWN_ROUTE_PATTERNS.some(p => p.test(url))) {
-        return url;
-      }
-    }
-    return null;
+    return RouteParser.extractFirstKnownRouteUrl(text);
   }
 
   /**

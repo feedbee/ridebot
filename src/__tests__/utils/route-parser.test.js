@@ -31,6 +31,8 @@ describe('RouteParser', () => {
       expect(RouteParser.isKnownProvider('https://www.strava.com/activities/123456')).toBe(true);
       expect(RouteParser.isKnownProvider('http://ridewithgps.com/routes/789')).toBe(true);
       expect(RouteParser.isKnownProvider('https://www.komoot.com/tour/12345')).toBe(true);
+      expect(RouteParser.isKnownProvider('https://connect.garmin.com/modern/activity/12345678')).toBe(true);
+      expect(RouteParser.isKnownProvider('https://connect.garmin.com/modern/course/12345678')).toBe(true);
       expect(RouteParser.isKnownProvider('https://connect.garmin.com/app/activity/12345678')).toBe(true);
       expect(RouteParser.isKnownProvider('https://connect.garmin.com/app/course/12345678')).toBe(true);
     });
@@ -47,6 +49,8 @@ describe('RouteParser', () => {
       expect(RouteParser.getRouteProvider('https://www.strava.com/activities/123456')).toBe('strava');
       expect(RouteParser.getRouteProvider('http://ridewithgps.com/routes/789')).toBe('ridewithgps');
       expect(RouteParser.getRouteProvider('https://www.komoot.com/tour/12345')).toBe('komoot');
+      expect(RouteParser.getRouteProvider('https://connect.garmin.com/modern/activity/12345678')).toBe('garmin');
+      expect(RouteParser.getRouteProvider('https://connect.garmin.com/modern/course/12345678')).toBe('garmin');
       expect(RouteParser.getRouteProvider('https://connect.garmin.com/app/activity/12345678')).toBe('garmin');
       expect(RouteParser.getRouteProvider('https://connect.garmin.com/app/course/12345678')).toBe('garmin');
     });
@@ -66,6 +70,22 @@ describe('RouteParser', () => {
     test('should return null for invalid URLs', () => {
       expect(RouteParser.getRouteId('https://example.com/route/123')).toBeNull();
       expect(RouteParser.getRouteId('not-a-url')).toBeNull();
+    });
+  });
+
+  describe('extractFirstKnownRouteUrl', () => {
+    test('should return first supported route URL from text', () => {
+      const text = 'Random https://example.com/path then https://ridewithgps.com/routes/1 and more';
+      expect(RouteParser.extractFirstKnownRouteUrl(text)).toBe('https://ridewithgps.com/routes/1');
+    });
+
+    test('should return null when text has no supported route URLs', () => {
+      expect(RouteParser.extractFirstKnownRouteUrl('Just some text without links')).toBeNull();
+    });
+
+    test('should return null for empty input', () => {
+      expect(RouteParser.extractFirstKnownRouteUrl('')).toBeNull();
+      expect(RouteParser.extractFirstKnownRouteUrl(null)).toBeNull();
     });
   });
 

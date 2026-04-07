@@ -52,6 +52,26 @@ export class RouteParser {
   }
 
   /**
+   * Find the first supported route URL inside an arbitrary text blob.
+   * @param {string} text
+   * @returns {string|null}
+   */
+  static extractFirstKnownRouteUrl(text) {
+    if (!text) return null;
+
+    const urlPattern = /https?:\/\/[^\s<>"]+/g;
+    const urls = text.match(urlPattern) || [];
+
+    for (const url of urls) {
+      if (this.isKnownProvider(url)) {
+        return url;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Extract route ID from URL for known providers
    * @param {string} url 
    * @returns {string|null}

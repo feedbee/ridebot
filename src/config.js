@@ -62,6 +62,8 @@ export const config = {
     garmin: {
       domain: 'connect.garmin.com',
       patterns: [
+        /https?:\/\/connect\.garmin\.com\/modern\/activity\/\d+/,
+        /https?:\/\/connect\.garmin\.com\/modern\/course\/\d+/,
         /https?:\/\/connect\.garmin\.com\/app\/activity\/\d+/,
         /https?:\/\/connect\.garmin\.com\/app\/course\/\d+/
       ]
