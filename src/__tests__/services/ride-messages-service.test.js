@@ -241,20 +241,24 @@ describe('RideMessagesService', () => {
 
       mockRideService.updateRide.mockResolvedValue({
         ...mockRide,
-        messages: [{ chatId: 12345, messageId: 67890 }]
+        messages: [{ chatId: 12345, messageId: 67890, language: 'en', isForCreator: false }]
       });
 
       // Execute
       const result = await rideMessagesService.createRideMessage(mockRide, mockCtx);
 
       // Verify
-      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(mockRide, { joined: [], thinking: [], skipped: [] }, { isForCreator: false });
+      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(
+        mockRide,
+        { joined: [], thinking: [], skipped: [] },
+        { isForCreator: false, lang: 'en' }
+      );
       expect(mockCtx.reply).toHaveBeenCalledWith('Formatted ride message', {
         parse_mode: 'HTML',
         reply_markup: { inline_keyboard: [] }
       });
       expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
-        messages: [{ chatId: 12345, messageId: 67890 }]
+        messages: [{ chatId: 12345, messageId: 67890, language: 'en', isForCreator: false }]
       });
       expect(result.sentMessage).toEqual({ message_id: 67890 });
       expect(result.updatedRide.messages).toHaveLength(1);
@@ -283,7 +287,7 @@ describe('RideMessagesService', () => {
 
       mockRideService.updateRide.mockResolvedValue({
         ...mockRide,
-        messages: [{ chatId: 12345, messageId: 67890, messageThreadId: 999 }]
+        messages: [{ chatId: 12345, messageId: 67890, messageThreadId: 999, language: 'en', isForCreator: false }]
       });
 
       // Execute
@@ -296,7 +300,7 @@ describe('RideMessagesService', () => {
         message_thread_id: 999
       });
       expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
-        messages: [{ chatId: 12345, messageId: 67890, messageThreadId: 999 }]
+        messages: [{ chatId: 12345, messageId: 67890, messageThreadId: 999, language: 'en', isForCreator: false }]
       });
       expect(result.updatedRide.messages[0].messageThreadId).toBe(999);
     });
@@ -323,7 +327,7 @@ describe('RideMessagesService', () => {
 
       mockRideService.updateRide.mockResolvedValue({
         ...mockRide,
-        messages: [{ chatId: 12345, messageId: 67890, messageThreadId: 777 }]
+        messages: [{ chatId: 12345, messageId: 67890, messageThreadId: 777, language: 'en', isForCreator: false }]
       });
 
       // Execute with explicit thread ID
@@ -363,7 +367,7 @@ describe('RideMessagesService', () => {
         ...mockRide,
         messages: [
           { chatId: 11111, messageId: 22222 },
-          { chatId: 12345, messageId: 67890 }
+          { chatId: 12345, messageId: 67890, language: 'en', isForCreator: false }
         ]
       });
 
@@ -374,7 +378,7 @@ describe('RideMessagesService', () => {
       expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
         messages: [
           { chatId: 11111, messageId: 22222 },
-          { chatId: 12345, messageId: 67890 }
+          { chatId: 12345, messageId: 67890, language: 'en', isForCreator: false }
         ]
       });
       expect(result.updatedRide.messages).toHaveLength(2);
@@ -491,7 +495,7 @@ describe('RideMessagesService', () => {
       expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(
         mockRide,
         { joined: [], thinking: [], skipped: [] },
-        { isForCreator: false }
+        { isForCreator: false, lang: 'en' }
       );
     });
 
@@ -505,6 +509,7 @@ describe('RideMessagesService', () => {
       };
 
       const mockCtx = {
+        lang: 'ru',
         chat: { id: 456, type: 'private' },
         from: { id: 123 }, // Same as createdBy
         reply: jest.fn().mockResolvedValue({ message_id: 789 })
@@ -525,8 +530,11 @@ describe('RideMessagesService', () => {
       expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(
         mockRide,
         { joined: [], thinking: [], skipped: [] },
-        { isForCreator: true }
+        { isForCreator: true, lang: 'ru' }
       );
+      expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
+        messages: [{ chatId: 456, messageId: 789, language: 'ru', isForCreator: true }]
+      });
     });
 
     it('should not include share line for non-creator', async () => {
@@ -539,6 +547,7 @@ describe('RideMessagesService', () => {
       };
 
       const mockCtx = {
+        lang: 'ru',
         chat: { id: 456, type: 'private' },
         from: { id: 789 }, // Different from createdBy
         reply: jest.fn().mockResolvedValue({ message_id: 789 })
@@ -559,7 +568,7 @@ describe('RideMessagesService', () => {
       expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(
         mockRide,
         { joined: [], thinking: [], skipped: [] },
-        { isForCreator: false }
+        { isForCreator: false, lang: 'ru' }
       );
     });
 
@@ -573,6 +582,7 @@ describe('RideMessagesService', () => {
       };
 
       const mockCtx = {
+        lang: 'ru',
         chat: { id: 456, type: 'group' },
         from: { id: 123 }, // Same as createdBy but in group chat
         reply: jest.fn().mockResolvedValue({ message_id: 789 })
@@ -593,7 +603,7 @@ describe('RideMessagesService', () => {
       expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(
         mockRide,
         { joined: [], thinking: [], skipped: [] },
-        { isForCreator: false }
+        { isForCreator: false, lang: 'ru' }
       );
     });
   });
@@ -626,7 +636,7 @@ describe('RideMessagesService', () => {
         id: 'ride123',
         participants: [],
         messages: [
-          { chatId: 12345, messageId: 67890 }
+          { chatId: 12345, messageId: 67890, language: 'en', isForCreator: false }
         ]
       };
 
@@ -656,6 +666,11 @@ describe('RideMessagesService', () => {
         }
       );
       expect(result).toEqual({ success: true, updatedCount: 1, removedCount: 0 });
+      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(
+        mockRide,
+        { joined: [], thinking: [], skipped: [] },
+        { isForCreator: false, lang: 'en' }
+      );
     });
 
     it('should update multiple messages across different chats', async () => {
@@ -664,9 +679,9 @@ describe('RideMessagesService', () => {
         id: 'ride123',
         participants: [],
         messages: [
-          { chatId: 11111, messageId: 22222 },
-          { chatId: 33333, messageId: 44444 },
-          { chatId: 55555, messageId: 66666 }
+          { chatId: 11111, messageId: 22222, language: 'en', isForCreator: false },
+          { chatId: 33333, messageId: 44444, language: 'ru', isForCreator: false },
+          { chatId: 55555, messageId: 66666, language: 'en', isForCreator: false }
         ]
       };
 
@@ -690,13 +705,76 @@ describe('RideMessagesService', () => {
       expect(result).toEqual({ success: true, updatedCount: 3, removedCount: 0 });
     });
 
+    it('should render each stored message with its own audience and language', async () => {
+      const mockRide = {
+        id: 'ride123',
+        createdBy: 123,
+        participants: [],
+        messages: [
+          { chatId: 123, messageId: 1, language: 'ru', isForCreator: true },
+          { chatId: -1001, messageId: 2, language: 'en', isForCreator: false }
+        ]
+      };
+
+      const mockCtx = {
+        chat: { type: 'supergroup' },
+        from: { id: 999 },
+        lang: 'en',
+        api: {
+          editMessageText: jest.fn().mockResolvedValue({})
+        }
+      };
+
+      mockMessageFormatter.formatRideWithKeyboard
+        .mockReturnValueOnce({
+          message: 'Creator private message',
+          keyboard: { inline_keyboard: [] },
+          parseMode: 'HTML'
+        })
+        .mockReturnValueOnce({
+          message: 'Group message',
+          keyboard: { inline_keyboard: [] },
+          parseMode: 'HTML'
+        });
+
+      const result = await rideMessagesService.updateRideMessages(mockRide, mockCtx);
+
+      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenNthCalledWith(
+        1,
+        mockRide,
+        { joined: [], thinking: [], skipped: [] },
+        { isForCreator: true, lang: 'ru' }
+      );
+      expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenNthCalledWith(
+        2,
+        mockRide,
+        { joined: [], thinking: [], skipped: [] },
+        { isForCreator: false, lang: 'en' }
+      );
+      expect(mockCtx.api.editMessageText).toHaveBeenNthCalledWith(
+        1,
+        123,
+        1,
+        'Creator private message',
+        { parse_mode: 'HTML', reply_markup: { inline_keyboard: [] } }
+      );
+      expect(mockCtx.api.editMessageText).toHaveBeenNthCalledWith(
+        2,
+        -1001,
+        2,
+        'Group message',
+        { parse_mode: 'HTML', reply_markup: { inline_keyboard: [] } }
+      );
+      expect(result).toEqual({ success: true, updatedCount: 2, removedCount: 0 });
+    });
+
     it('should include thread ID in edit options when present', async () => {
       // Setup
       const mockRide = {
         id: 'ride123',
         participants: [],
         messages: [
-          { chatId: 12345, messageId: 67890, messageThreadId: 999 }
+          { chatId: 12345, messageId: 67890, messageThreadId: 999, language: 'en', isForCreator: false }
         ]
       };
 
@@ -734,8 +812,8 @@ describe('RideMessagesService', () => {
         id: 'ride123',
         participants: [],
         messages: [
-          { chatId: 11111, messageId: 22222 },
-          { chatId: 33333, messageId: 44444 }
+          { chatId: 11111, messageId: 22222, language: 'en', isForCreator: false },
+          { chatId: 33333, messageId: 44444, language: 'en', isForCreator: false }
         ]
       };
 
@@ -763,7 +841,7 @@ describe('RideMessagesService', () => {
       // Verify
       expect(result).toEqual({ success: true, updatedCount: 1, removedCount: 1 });
       expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
-        messages: [{ chatId: 11111, messageId: 22222 }]
+        messages: [{ chatId: 11111, messageId: 22222, language: 'en', isForCreator: false }]
       });
 
       consoleWarnSpy.mockRestore();
@@ -775,7 +853,7 @@ describe('RideMessagesService', () => {
         id: 'ride123',
         participants: [],
         messages: [
-          { chatId: 12345, messageId: 67890 }
+          { chatId: 12345, messageId: 67890, language: 'en', isForCreator: false }
         ]
       };
 
@@ -813,7 +891,7 @@ describe('RideMessagesService', () => {
         id: 'ride123',
         participants: [],
         messages: [
-          { chatId: 12345, messageId: 67890 }
+          { chatId: 12345, messageId: 67890, language: 'en', isForCreator: false }
         ]
       };
 
@@ -851,9 +929,9 @@ describe('RideMessagesService', () => {
         id: 'ride123',
         participants: [],
         messages: [
-          { chatId: 11111, messageId: 22222 },
-          { chatId: 33333, messageId: 44444 },
-          { chatId: 55555, messageId: 66666 }
+          { chatId: 11111, messageId: 22222, language: 'en', isForCreator: false },
+          { chatId: 33333, messageId: 44444, language: 'en', isForCreator: false },
+          { chatId: 55555, messageId: 66666, language: 'en', isForCreator: false }
         ]
       };
 
@@ -883,8 +961,8 @@ describe('RideMessagesService', () => {
       expect(result).toEqual({ success: true, updatedCount: 2, removedCount: 1 });
       expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
         messages: [
-          { chatId: 11111, messageId: 22222 },
-          { chatId: 55555, messageId: 66666 }
+          { chatId: 11111, messageId: 22222, language: 'en', isForCreator: false },
+          { chatId: 55555, messageId: 66666, language: 'en', isForCreator: false }
         ]
       });
 
@@ -897,7 +975,7 @@ describe('RideMessagesService', () => {
         id: 'ride123',
         participants: [],
         messages: [
-          { chatId: 12345, messageId: 67890 }
+          { chatId: 12345, messageId: 67890, language: 'en', isForCreator: false }
         ]
       };
 
@@ -933,7 +1011,7 @@ describe('RideMessagesService', () => {
         id: 'ride123',
         participants: [],
         messages: [
-          { chatId: 12345, messageId: 67890 }
+          { chatId: 12345, messageId: 67890, language: 'en', isForCreator: false }
         ]
       };
 
@@ -970,8 +1048,8 @@ describe('RideMessagesService', () => {
         id: 'ride123',
         participants: [],
         messages: [
-          { chatId: 11111, messageId: 22222, messageThreadId: 888 },
-          { chatId: 33333, messageId: 44444, messageThreadId: 999 }
+          { chatId: 11111, messageId: 22222, messageThreadId: 888, language: 'en', isForCreator: false },
+          { chatId: 33333, messageId: 44444, messageThreadId: 999, language: 'en', isForCreator: false }
         ]
       };
 
@@ -1000,7 +1078,7 @@ describe('RideMessagesService', () => {
       expect(result).toEqual({ success: true, updatedCount: 1, removedCount: 1 });
       expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
         messages: [
-          { chatId: 11111, messageId: 22222, messageThreadId: 888 }
+          { chatId: 11111, messageId: 22222, messageThreadId: 888, language: 'en', isForCreator: false }
         ]
       });
 
@@ -1036,13 +1114,14 @@ describe('RideMessagesService', () => {
         createdBy: 123, // Creator ID
         participants: [],
         messages: [
-          { chatId: 12345, messageId: 67890 }
+          { chatId: 12345, messageId: 67890, language: 'ru', isForCreator: true }
         ]
       };
 
       const mockCtx = {
         chat: { type: 'private' },
         from: { id: 123 }, // Same as createdBy
+        lang: 'en',
         api: {
           editMessageText: jest.fn().mockResolvedValue({})
         }
@@ -1057,11 +1136,10 @@ describe('RideMessagesService', () => {
       // Execute
       await rideMessagesService.updateRideMessages(mockRide, mockCtx);
 
-      // Verify - should pass isForCreator: true
       expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(
         mockRide,
         { joined: [], thinking: [], skipped: [] },
-        { isForCreator: true }
+        { isForCreator: true, lang: 'ru' }
       );
     });
 
@@ -1072,13 +1150,14 @@ describe('RideMessagesService', () => {
         createdBy: 123, // Creator ID
         participants: [],
         messages: [
-          { chatId: 12345, messageId: 67890 }
+          { chatId: 12345, messageId: 67890, language: 'en', isForCreator: false }
         ]
       };
 
       const mockCtx = {
         chat: { type: 'private' },
         from: { id: 789 }, // Different from createdBy
+        lang: 'ru',
         api: {
           editMessageText: jest.fn().mockResolvedValue({})
         }
@@ -1097,8 +1176,8 @@ describe('RideMessagesService', () => {
       expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(
         mockRide,
         { joined: [], thinking: [], skipped: [] },
-        { isForCreator: false }
+        { isForCreator: false, lang: 'en' }
       );
     });
   });
-}); 
+});

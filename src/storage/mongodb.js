@@ -21,7 +21,9 @@ const participationSchema = new mongoose.Schema({
 const messageSchema = new mongoose.Schema({
   messageId: { type: Number, required: true },
   chatId: { type: Number, required: true },
-  messageThreadId: { type: Number, default: null }
+  messageThreadId: { type: Number, default: null },
+  language: { type: String, default: null },
+  isForCreator: { type: Boolean, default: null }
 });
 
 const rideSchema = new mongoose.Schema({
@@ -283,7 +285,14 @@ export class MongoDBStorage extends StorageInterface {
           lastName: p.lastName || '',
           createdAt: p.createdAt
         }))
-      }
+      },
+      messages: (rideObj.messages || []).map(msg => ({
+        chatId: msg.chatId,
+        messageId: msg.messageId,
+        messageThreadId: msg.messageThreadId ?? null,
+        language: msg.language ?? undefined,
+        isForCreator: msg.isForCreator ?? undefined
+      }))
     };
 
     return result;

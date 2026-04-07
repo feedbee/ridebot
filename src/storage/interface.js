@@ -2,6 +2,9 @@
  * @typedef {Object} RideMessage
  * @property {number} messageId
  * @property {number} chatId
+ * @property {number} [messageThreadId]
+ * @property {string} [language]
+ * @property {boolean} [isForCreator]
  */
 
 /**

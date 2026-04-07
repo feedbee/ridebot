@@ -80,13 +80,18 @@ export class RideMessagesService {
     try {
       // Message thread id
       const threadId = messageThreadId || ctx.message?.message_thread_id;
+      const language = ctx?.lang || config.i18n.defaultLanguage;
 
       // Check if this message is for the ride creator in a private chat
       const isForCreator = ctx.chat?.type === 'private' && ctx.from?.id === ride.createdBy;
 
       // Get participants from the ride object and format the message
       const participation = ride.participation || { joined: [], thinking: [], skipped: [] };
-      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participation, { isForCreator });
+      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(
+        ride,
+        participation,
+        { isForCreator, lang: language }
+      );
       
       // Prepare reply options
       const replyOptions = {
@@ -105,7 +110,9 @@ export class RideMessagesService {
       // Prepare the message data for storage
       const messageData = {
         chatId: ctx.chat.id,
-        messageId: sentMessage.message_id
+        messageId: sentMessage.message_id,
+        language,
+        isForCreator
       };
       
       // Include message thread ID if present
@@ -143,18 +150,20 @@ export class RideMessagesService {
     try {
       const participation = ride.participation || { joined: [], thinking: [], skipped: [] };
       
-      // Check if the current context is for the ride creator in a private chat
-      // This will be used for all messages since we can't determine the original context for each message
-      const isForCreator = ctx?.chat?.type === 'private' && ctx?.from?.id === ride.createdBy;
-      
-      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(ride, participation, { isForCreator });
-      
       let updatedCount = 0;
       let removedCount = 0;
       const messagesToRemove = [];
       
       // Update all messages for this ride
       for (const messageInfo of ride.messages) {
+        const language = messageInfo.language || ctx?.lang || config.i18n.defaultLanguage;
+        const isForCreator = messageInfo.isForCreator ?? (messageInfo.chatId === ride.createdBy);
+        const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(
+          ride,
+          participation,
+          { isForCreator, lang: language }
+        );
+
         try {
           // Prepare options for editing the message
           const editOptions = {
