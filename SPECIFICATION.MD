@@ -44,12 +44,12 @@ The codebase follows a clean, layered architecture:
 
 ## Core Components
 
-### **1. Entry Point ([/src/index.js](cci:7://file:///workspace/src/index.js:0:0-0:0))**
+### **1. Entry Point ([src/index.js](src/index.js))**
 - Initializes storage (MongoDB for production, in-memory for development)
 - Creates and starts the Bot instance
 - Simple and clean entry point
 
-### **2. Bot Core ([/src/core/Bot.js](cci:7://file:///workspace/src/core/Bot.js:0:0-0:0))**
+### **2. Bot Core ([src/core/Bot.js](src/core/Bot.js))**
 - **Responsibilities:**
   - Initializes Grammy bot with token
   - Sets up all command handlers and middleware using centralized configuration
@@ -64,13 +64,13 @@ The codebase follows a clean, layered architecture:
   - Thread/topic support via middleware
   - Private chat mode enforcement (except `/shareride` in groups)
 
-### **3. Storage Layer ([/src/storage/](cci:7://file:///workspace/src/storage:0:0-0:0))**
+### **3. Storage Layer ([src/storage/](src/storage/))**
 
 **Interface-based design** with two implementations:
 
-- **[interface.js](cci:7://file:///workspace/src/storage/interface.js:0:0-0:0)**: Defines the contract for storage operations
-- **[mongodb.js](cci:7://file:///workspace/src/storage/mongodb.js:0:0-0:0)**: Production storage using MongoDB/Mongoose
-- **[memory.js](cci:7://file:///workspace/src/storage/workspace/src/storage/memory.js:0:0-0:0)**: Development storage using in-memory Map
+- **[interface.js](src/storage/interface.js)**: Defines the contract for storage operations
+- **[mongodb.js](src/storage/mongodb.js)**: Production storage using MongoDB/Mongoose
+- **[memory.js](src/storage/memory.js)**: Development storage using in-memory Map
 
 **Data Models:**
 - **Ride**: Core entity with title, date, category, route, participation states, messages, and optional `groupId` (Telegram chat ID of an attached group)
@@ -83,9 +83,9 @@ The codebase follows a clean, layered architecture:
 - Schema version tracking in `meta` collection as `{schemaVersion: X}`
 - Migration system with versioned updates and batch processing
 
-### **4. Services ([/src/services/](cci:7://file:///workspace/src/services:0:0-0:0))**
+### **4. Services ([src/services/](src/services/))**
 
-#### **RideService** ([RideService.js](cci:7://file:///workspace/src/services/RideService.js:0:0-0:0))
+#### **RideService** ([RideService.js](src/services/RideService.js))
 - **Core business logic** for rides
 - CRUD operations: create, update, delete, get rides
 - Participant management: join/leave rides
@@ -93,21 +93,21 @@ The codebase follows a clean, layered architecture:
 - Parse parameters and create rides from user input
 - Handles route parsing, date parsing, duration parsing
 
-#### **GroupManagementService** ([GroupManagementService.js](cci:7://file:///workspace/src/services/GroupManagementService.js:0:0-0:0))
+#### **GroupManagementService** ([GroupManagementService.js](src/services/GroupManagementService.js))
 - **Group membership sync** for attached Telegram groups
 - `addParticipant(api, groupId, userId, language)`: unbans the user (so previously-kicked users can re-join), then creates a single-use 24-hour invite link and DMs it to the user; silently skips for group owner; logs and swallows other errors
 - `removeParticipant(api, groupId, userId)`: bans the user so they cannot re-enter until they re-join the ride; logs and swallows errors
 
-#### **RideMessagesService** ([RideMessagesService.js](cci:7://file:///workspace/src/services/RideMessagesService.js:0:0-0:0))
+#### **RideMessagesService** ([RideMessagesService.js](src/services/RideMessagesService.js))
 - **Message synchronization** across multiple chats
 - Extract ride ID from messages (reply, inline, parameter)
 - Create ride messages with keyboards
 - Update all instances of a ride message across chats
 - Clean up unavailable messages (deleted, bot kicked)
 
-### **5. Command Handlers ([/src/commands/](cci:7://file:///workspace/src/commands:0:0-0:0))**
+### **5. Command Handlers ([src/commands/](src/commands/))**
 
-All handlers extend **[BaseCommandHandler](cci:2://file:///workspace/src/commands/BaseCommandHandler.js:5:0-102:1)** which provides:
+All handlers extend **[BaseCommandHandler](src/commands/BaseCommandHandler.js)** which provides:
 - Ride extraction and validation
 - Creator permission checking
 - Parameter parsing with validation
@@ -129,7 +129,7 @@ All handlers extend **[BaseCommandHandler](cci:2://file:///workspace/src/command
 - **HelpCommandHandler**: Multi-page help system
 - **FromStravaCommandHandler**: Import or update a ride from a Strava club event URL; uses `StravaEventParser` to fetch event data and maps it to ride fields; repeated calls with the same URL by the same user update the existing ride
 
-### **6. Wizard ([/src/wizard/RideWizard.js](cci:7://file:///workspace/src/wizard/RideWizard.js:0:0-0:0))**
+### **6. Wizard ([src/wizard/RideWizard.js](src/wizard/RideWizard.js))**
 
 **Interactive step-by-step UI** for creating/updating rides:
 - State management per user+chat
@@ -142,7 +142,7 @@ All handlers extend **[BaseCommandHandler](cci:2://file:///workspace/src/command
   - Error message cleanup
   - Can be restricted to private chats only
 
-### **7. Formatters ([/src/formatters/MessageFormatter.js](cci:7://file:///workspace/src/formatters/MessageFormatter.js:0:0-0:0))**
+### **7. Formatters ([src/formatters/MessageFormatter.js](src/formatters/MessageFormatter.js))**
 
 - **Formats ride messages** with proper HTML escaping
 - Creates inline keyboards (Join/Thinking/Pass buttons)
@@ -152,17 +152,17 @@ All handlers extend **[BaseCommandHandler](cci:2://file:///workspace/src/command
 - **Group chat line**: When a group is attached to a ride (`ride.groupId` is set), shows a notice with `/joinchat #ID` instructions in all ride messages; line is absent (no extra whitespace) when no group is attached
 - Groups ride details logically
 
-### **8. Utilities ([/src/utils/](cci:7://file:///workspace/src/utils:0:0-0:0))**
+### **8. Utilities ([src/utils/](src/utils/))**
 
-- **[FieldProcessor.js](cci:7://file:///workspace/src/utils/FieldProcessor.js:0:0-0:0)**: Centralized field processing and validation for ride parameters
-- **[RideParamsHelper.js](cci:7://file:///workspace/src/utils/RideParamsHelper.js:0:0-0:0)**: Parse multi-line command parameters
-- **[route-parser.js](cci:7://file:///workspace/src/utils/workspace/src/utils/route-parser.js:0:0-0:0)**: Parse routes from Strava, RideWithGPS, Komoot
-- **[strava-event-parser.js](cci:7://file:///workspace/src/utils/strava-event-parser.js:0:0-0:0)**: Fetch and map Strava group events to ride fields; handles URL parsing, API calls, pace groups, and route enrichment
-- **[date-input-parser.js](cci:7://file:///workspace/src/utils/workspace/src/utils/date-input-parser.js:0:0-0:0)**: Natural language date parsing (chrono-node)
-- **[date-parser.js](cci:7://file:///workspace/src/utils/workspace/src/utils/date-parser.js:0:0-0:0)**: Format dates with timezone support
-- **[duration-parser.js](cci:7://file:///workspace/src/utils/workspace/src/utils/duration-parser.js:0:0-0:0)**: Parse human-readable durations (2h 30m, 90m, 1.5h)
-- **[category-utils.js](cci:7://file:///workspace/src/utils/workspace/src/utils/category-utils.js:0:0-0:0)**: Normalize ride categories
-- **[html-escape.js](cci:7://file:///workspace/src/utils/workspace/src/utils/html-escape.js:0:0-0:0)**: Escape HTML for Telegram messages
+- **[FieldProcessor.js](src/utils/FieldProcessor.js)**: Centralized field processing and validation for ride parameters
+- **[RideParamsHelper.js](src/utils/RideParamsHelper.js)**: Parse multi-line command parameters
+- **[route-parser.js](src/utils/route-parser.js)**: Parse routes from Strava, RideWithGPS, Komoot
+- **[strava-event-parser.js](src/utils/strava-event-parser.js)**: Fetch and map Strava group events to ride fields; handles URL parsing, API calls, pace groups, and route enrichment
+- **[date-input-parser.js](src/utils/date-input-parser.js)**: Natural language date parsing (chrono-node)
+- **[date-parser.js](src/utils/date-parser.js)**: Format dates with timezone support
+- **[duration-parser.js](src/utils/duration-parser.js)**: Parse human-readable durations (2h 30m, 90m, 1.5h)
+- **[category-utils.js](src/utils/category-utils.js)**: Normalize ride categories
+- **[html-escape.js](src/utils/html-escape.js)**: Escape HTML for Telegram messages
 
 ---
 
@@ -219,7 +219,7 @@ info: Bring lights
 
 ---
 
-## Configuration ([/src/config.js](cci:7://file:///workspace/src/config.js:0:0-0:0))
+## Configuration ([src/config.js](src/config.js))
 
 **Environment Variables:**
 - `BOT_TOKEN`: Telegram bot token
@@ -242,18 +242,18 @@ info: Bring lights
 ## Data Flow Examples
 
 ### **Creating a Ride**
-1. User sends `/newride` → [NewRideCommandHandler](cci:2://file:///workspace/src/commands/NewRideCommandHandler.js:5:0-55:1)
+1. User sends `/newride` → [NewRideCommandHandler](src/commands/NewRideCommandHandler.js)
 2. Handler checks for parameters or starts wizard
 3. Wizard collects data step-by-step
-4. On confirm: [RideService.createRide()](cci:1://file:///workspace/src/services/RideService.js:18:2-25:3) → Storage
-5. [RideMessagesService.createRideMessage()](cci:1://file:///workspace/src/services/RideMessagesService.js:60:2-114:3) posts to chat
+4. On confirm: [RideService.createRide()](src/services/RideService.js) → Storage
+5. [RideMessagesService.createRideMessage()](src/services/RideMessagesService.js) posts to chat
 6. Message info stored in ride's `messages` array
 
 ### **Joining a Ride**
 1. User clicks "I'm in!" button → `ParticipationHandlers.handleJoinRide()`
 2. Extract ride ID from callback data
-3. [RideService.setParticipation()](cci:1://file:///workspace/src/services/RideService.js:71:2-80:3) adds participant to storage
-4. [RideMessagesService.updateRideMessages()](cci:1://file:///workspace/src/services/RideMessagesService.js:116:2-204:3) updates ALL instances
+3. [RideService.setParticipation()](src/services/RideService.js) adds participant to storage
+4. [RideMessagesService.updateRideMessages()](src/services/RideMessagesService.js) updates ALL instances
 5. All chats see updated participant list
 
 ### **Updating a Ride**
@@ -261,8 +261,8 @@ info: Bring lights
 2. Extract ride ID from replied message
 3. Validate user is creator
 4. Start wizard or parse parameters
-5. [RideService.updateRide()](cci:1://file:///workspace/src/services/RideService.js:27:2-40:3) updates storage
-6. [RideMessagesService.updateRideMessages()](cci:1://file:///workspace/src/services/RideMessagesService.js:116:2-204:3) syncs all chats
+5. [RideService.updateRide()](src/services/RideService.js) updates storage
+6. [RideMessagesService.updateRideMessages()](src/services/RideMessagesService.js) syncs all chats
 
 ---
 
