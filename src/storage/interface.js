@@ -8,6 +8,12 @@
  */
 
 /**
+ * @typedef {Object} RideRoute
+ * @property {string} url
+ * @property {string} [label]
+ */
+
+/**
  * @typedef {Object} Ride
  * @property {string} id
  * @property {RideMessage[]} messages
@@ -15,6 +21,7 @@
  * @property {string} [category]
  * @property {string} [organizer]
  * @property {Date} date
+ * @property {RideRoute[]} [routes]
  * @property {string} [routeLink]
  * @property {string} [meetingPoint]
  * @property {number} [distance]
