@@ -57,6 +57,7 @@ beforeAll(async () => {
   const mongoUri = mongoServer.getUri();
   config.mongodb.uri = mongoUri;
   storage = new MongoDBStorage();
+  await storage.ready;
 }, 60000); // Increase timeout for MongoDB download
 
 afterAll(async () => {
@@ -67,7 +68,12 @@ afterAll(async () => {
 });
 
 afterEach(async () => {
-  await mongoose.connection.dropDatabase();
+  const { collections } = mongoose.connection;
+  // Keep indexes in place between tests to avoid racing index creation
+  // against dropDatabase() during MongoMemoryServer runs.
+  await Promise.all(
+    Object.values(collections).map(collection => collection.deleteMany({}))
+  );
 });
 
 describe('MongoDBStorage', () => {

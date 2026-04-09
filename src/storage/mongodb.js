@@ -66,7 +66,7 @@ const Ride = mongoose.model('Ride', rideSchema);
 export class MongoDBStorage extends StorageInterface {
   constructor() {
     super();
-    this.connect();
+    this.ready = this.connect();
   }
 
   async connect() {
