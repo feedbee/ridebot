@@ -6,18 +6,21 @@ const mockApi = {
   getMe: jest.fn().mockResolvedValue({ username: 'testbot' }),
   setMyCommands: jest.fn().mockResolvedValue(true),
 };
-const mockGrammyBotStart = jest.fn();
+const mockGatewayUse = jest.fn();
+const mockGatewayCommand = jest.fn();
+const mockGatewayCallbackQuery = jest.fn();
+const mockGatewayOn = jest.fn();
+const mockGatewayStartPolling = jest.fn();
 const mockGrammyBotHandleUpdate = jest.fn();
-const mockWebhookCallback = jest.fn().mockImplementation(() => {
-  return (req, res) => {
-    try {
-      mockGrammyBotHandleUpdate(req.body);
-      res.sendStatus(200);
-    } catch (e) {
-      res.sendStatus(500);
-    }
-  };
+const mockWebhookMiddleware = jest.fn((req, res) => {
+  try {
+    mockGrammyBotHandleUpdate(req.body);
+    res.sendStatus(200);
+  } catch (e) {
+    res.sendStatus(500);
+  }
 });
+const mockCreateWebhookMiddleware = jest.fn(() => mockWebhookMiddleware);
 
 const mockServer = {
   listening: true,
@@ -36,18 +39,16 @@ const mockExpressJson = jest.fn(() => 'json-middleware');
 const mockExpressFactory = jest.fn(() => mockExpressApp);
 mockExpressFactory.json = mockExpressJson;
 
-await jest.unstable_mockModule('grammy', async () => ({
-  Bot: jest.fn().mockImplementation(() => ({
+await jest.unstable_mockModule('../../telegram/TelegramGateway.js', async () => ({
+  TelegramGateway: jest.fn().mockImplementation(() => ({
     api: mockApi,
-    start: mockGrammyBotStart,
-    handleUpdate: mockGrammyBotHandleUpdate,
-    use: jest.fn(),
-    command: jest.fn(),
-    callbackQuery: jest.fn(),
-    on: jest.fn(),
+    use: mockGatewayUse,
+    command: mockGatewayCommand,
+    callbackQuery: mockGatewayCallbackQuery,
+    on: mockGatewayOn,
+    startPolling: mockGatewayStartPolling,
+    createWebhookMiddleware: mockCreateWebhookMiddleware,
   })),
-  webhookCallback: mockWebhookCallback,
-  InlineKeyboard: class InlineKeyboard {},
 }));
 
 await jest.unstable_mockModule('express', async () => ({
@@ -91,18 +92,18 @@ describe('Bot Webhook Functionality', () => {
     expect(mockExpressJson).toHaveBeenCalled();
     expect(mockExpressApp.listen).toHaveBeenCalledWith(appConfig.bot.webhookPort, expect.any(Function));
     expect(mockApi.setWebhook).toHaveBeenCalledWith(expectedWebhookUrl);
-    expect(mockGrammyBotStart).not.toHaveBeenCalled();
+    expect(mockGatewayStartPolling).not.toHaveBeenCalled();
   });
 
   test('should register webhook handler on configured path', async () => {
     await botInstance.start();
     await Promise.resolve();
 
-    expect(mockWebhookCallback).toHaveBeenCalledWith(expect.any(Object), 'express');
-    expect(mockExpressApp.use).toHaveBeenCalledWith('/test-webhook', expect.any(Function));
+    expect(mockCreateWebhookMiddleware).toHaveBeenCalled();
+    expect(mockExpressApp.use).toHaveBeenCalledWith('/test-webhook', mockWebhookMiddleware);
   });
 
-  test('should pass updates from webhook middleware to bot handleUpdate', async () => {
+  test('should pass updates from webhook middleware to bot handler', async () => {
     await botInstance.start();
     await Promise.resolve();
 
@@ -127,7 +128,7 @@ describe('Bot Webhook Functionality', () => {
     await tempBot.start();
     await Promise.resolve();
 
-    expect(mockExpressApp.use).toHaveBeenCalledWith('/', expect.any(Function));
+    expect(mockExpressApp.use).toHaveBeenCalledWith('/', mockWebhookMiddleware);
     const expectedWebhookUrl = `${appConfig.bot.webhookDomain}/`;
     expect(mockApi.setWebhook).toHaveBeenCalledWith(expectedWebhookUrl);
   });

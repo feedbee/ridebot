@@ -1,6 +1,6 @@
-import { Bot as GrammyBot, webhookCallback } from 'grammy';
 import express from 'express';
 import { config } from '../config.js';
+import { TelegramGateway } from '../telegram/TelegramGateway.js';
 import { RideWizard } from '../wizard/RideWizard.js';
 import { RideService } from '../services/RideService.js';
 import { RideMessagesService } from '../services/RideMessagesService.js';
@@ -35,7 +35,7 @@ export class Bot {
   /**
    * @param {import('../storage/interface.js').StorageInterface} storage
    */
-  constructor(storage) {
+  constructor(storage, options = {}) {
     // Initialize services
     const rideService = new RideService(storage);
     const messageFormatter = new MessageFormatter();
@@ -47,8 +47,8 @@ export class Bot {
     this.fromStravaHandler = new FromStravaCommandHandler(rideService, messageFormatter, rideMessagesService, storage);
     this.botConfig = this.getBotConfig(rideService, messageFormatter, rideMessagesService, notificationService);
     
-    // Initialize bot
-    this.bot = new GrammyBot(config.bot.token);
+    // Initialize Telegram boundary
+    this.bot = options.telegramGateway || new TelegramGateway(config.bot.token);
     
     this.configureBot();
   }
@@ -224,7 +224,7 @@ export class Bot {
       app.use(express.json());
 
       const webhookPath = config.bot.webhookPath || '/';
-      app.use(webhookPath, webhookCallback(this.bot, 'express'));
+      app.use(webhookPath, this.bot.createWebhookMiddleware());
 
       app.listen(config.bot.webhookPort, async () => {
         console.log(`Webhook server listening on port ${config.bot.webhookPort}`);
@@ -235,7 +235,7 @@ export class Bot {
     } else {
       console.log('Polling mode is enabled');
       await this.bot.api.deleteWebhook();
-      this.bot.start();
+      this.bot.startPolling();
     }
   }
 }

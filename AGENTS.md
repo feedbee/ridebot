@@ -18,6 +18,7 @@
   - `./run-tests.sh --mode basic`
 - Always run only basic tests by default (no Mongo mode), because Mongo-based runs may hang.
 - Do not run `--mode mongo` unless the user explicitly asks for it.
+- Follow the project testing strategy in `docs/testing-conventions.md` when adding, updating, or reviewing tests.
 
 ## Notes
 

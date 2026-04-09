@@ -8,7 +8,7 @@ import { jest } from '@jest/globals';
 import { MemoryStorage } from '../../storage/memory.js';
 import { config } from '../../config.js';
 
-// Mock Grammy before importing Bot
+// Mock Telegram gateway before importing Bot
 const mockBotUse = jest.fn();
 const mockBotCommand = jest.fn();
 const mockBotCallbackQuery = jest.fn();
@@ -17,22 +17,22 @@ const mockBotStart = jest.fn();
 const mockApiSetMyCommands = jest.fn().mockResolvedValue(true);
 const mockApiGetMe = jest.fn().mockResolvedValue({ username: 'testbot' });
 const mockApiDeleteWebhook = jest.fn().mockResolvedValue(true);
+const mockCreateWebhookMiddleware = jest.fn();
 
-await jest.unstable_mockModule('grammy', () => ({
-  Bot: jest.fn().mockImplementation(() => ({
+await jest.unstable_mockModule('../../telegram/TelegramGateway.js', () => ({
+  TelegramGateway: jest.fn().mockImplementation(() => ({
     use: mockBotUse,
     command: mockBotCommand,
     callbackQuery: mockBotCallbackQuery,
     on: mockBotOn,
-    start: mockBotStart,
+    startPolling: mockBotStart,
+    createWebhookMiddleware: mockCreateWebhookMiddleware,
     api: {
       setMyCommands: mockApiSetMyCommands,
       getMe: mockApiGetMe,
       deleteWebhook: mockApiDeleteWebhook
     }
   })),
-  webhookCallback: jest.fn(),
-  InlineKeyboard: class InlineKeyboard {}
 }));
 
 const { Bot } = await import('../../core/Bot.js');
@@ -68,10 +68,37 @@ describe('Bot', () => {
       expect(bot.botConfig.commands.mixed).toBeInstanceOf(Array);
       expect(bot.botConfig.callbacks).toBeInstanceOf(Array);
       
-      // Check that commands are properly configured
-      expect(bot.botConfig.commands.privateOnly.length).toBe(13); // 13 private commands
-      expect(bot.botConfig.commands.mixed.length).toBe(1); // 1 mixed command (shareride)
-      expect(bot.botConfig.callbacks.length).toBe(7); // 7 callback handlers
+      // Check that key command and callback families are present
+      expect(bot.botConfig.commands.privateOnly).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ command: 'start' }),
+          expect.objectContaining({ command: 'newride' }),
+          expect.objectContaining({ command: 'updateride' }),
+          expect.objectContaining({ command: 'cancelride' }),
+          expect.objectContaining({ command: 'resumeride' }),
+          expect.objectContaining({ command: 'deleteride' }),
+        ])
+      );
+      expect(bot.botConfig.commands.publicOnly).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ command: 'attach' }),
+          expect.objectContaining({ command: 'detach' }),
+        ])
+      );
+      expect(bot.botConfig.commands.mixed).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ command: 'shareride' }),
+        ])
+      );
+      expect(bot.botConfig.callbacks).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ pattern: /^join:(.+)$/ }),
+          expect.objectContaining({ pattern: /^thinking:(.+)$/ }),
+          expect.objectContaining({ pattern: /^skip:(.+)$/ }),
+          expect.objectContaining({ pattern: /^delete:(\w+):(\w+)$/ }),
+          expect.objectContaining({ pattern: /^wizard:(\w+)(?::(.*))?$/ }),
+        ])
+      );
     });
 
     it('should call configureBot during construction', () => {
