@@ -13,12 +13,13 @@ The goals are:
 Coverage is not the goal by itself. The goal is confidence.
 
 ## Current Strategy
-The test suite is organized around four complementary layers:
+The test suite is organized around five complementary layers:
 
 1. Unit tests
 2. Component and service tests
 3. Scenario integration tests
 4. Infrastructure and contract tests
+5. Full Telegram E2E smoke tests
 
 These layers are intentionally overlapping in some areas. We allow duplication across levels when the tests answer different questions.
 
@@ -84,10 +85,10 @@ Characteristics:
 This is the preferred level for new happy-path user journeys.
 
 Current harness:
-- [`src/test-setup/scenario-harness.js`](/Users/vleontyev/Work/chatbot2/src/test-setup/scenario-harness.js)
+- [`src/test-setup/scenario-harness.js`](../src/test-setup/scenario-harness.js)
 
 Current scenario suite:
-- [`src/__tests__/integration/scenario-harness.test.js`](/Users/vleontyev/Work/chatbot2/src/__tests__/integration/scenario-harness.test.js)
+- [`src/__tests__/integration/scenario-harness.test.js`](../src/__tests__/integration/scenario-harness.test.js)
 
 ### 4. Infrastructure and Contract Tests
 Use for:
@@ -106,6 +107,24 @@ Good examples:
 - webhook start-up tests
 - `TelegramGateway` contract tests
 
+### 5. Full Telegram E2E Smoke Tests
+Use for:
+- validating a very small number of critical flows through real Telegram
+- catching regressions in real message delivery, edits, callbacks, and deletions
+- confirming that the bot still works with live Telegram behavior, not only with in-process simulation
+
+Characteristics:
+- use a real Telegram user account through MTProto
+- use the real bot and real Telegram chats
+- run manually, outside the default local and CI flow
+- stay very small and smoke-oriented
+
+Current E2E documentation:
+- [`e2e/README.md`](../e2e/README.md)
+
+Current E2E runner:
+- [`e2e/run-e2e.js`](../e2e/run-e2e.js)
+
 ## Telegram Testing Strategy
 
 ### Default Rule
@@ -117,7 +136,7 @@ Prefer:
 - contract tests for framework mapping
 
 Current Telegram boundary:
-- [`src/telegram/TelegramGateway.js`](/Users/vleontyev/Work/chatbot2/src/telegram/TelegramGateway.js)
+- [`src/telegram/TelegramGateway.js`](src/telegram/TelegramGateway.js)
 
 Use it for:
 - command registration
@@ -284,6 +303,14 @@ Use:
 
 This is the standard developer test entrypoint and excludes the slower Mongo-backed storage suite by default.
 
+### Full Telegram E2E Run
+Use manually when needed:
+- `npm run e2e:bootstrap-session`
+- `npm run e2e:telegram`
+
+These tests are intentionally excluded from the default local and CI test flow.
+That does not make them optional from a maintenance perspective: if a change affects real Telegram user behavior, the E2E smoke layer should be reviewed and updated as needed.
+
 ### Mongo / Infrastructure Run
 Use only when needed:
 - `./run-tests.sh --mode mongo`
@@ -304,6 +331,11 @@ Before merging new tests, check:
 - does it assert outcomes more than implementation details?
 - does it keep setup understandable and local?
 - does it add unique confidence rather than weak duplication?
+
+Before merging user-visible Telegram changes, also check:
+- should the manual full Telegram E2E smoke test be run for this change?
+- does the existing E2E scenario still reflect the current product flow?
+- if the flow changed materially, was the E2E scenario updated?
 
 ## Naming and Organization
 - Name tests by expected behavior, not by method names alone.

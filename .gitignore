@@ -39,3 +39,6 @@ Thumbs.db
 z_ignore
 
 .claude/
+
+# Local Telegram E2E artifacts
+.e2e/

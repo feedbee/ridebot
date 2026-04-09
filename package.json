@@ -11,6 +11,8 @@
     "test:basic": "npm run test -- --testPathIgnorePatterns=mongodb-storage.test.js",
     "test:mongo": "npm run test -- src/__tests__/storage/mongodb-storage.test.js",
     "test:coverage:basic": "npm run test:coverage -- --testPathIgnorePatterns=mongodb-storage.test.js",
+    "e2e:bootstrap-session": "node e2e/bootstrap-session.js",
+    "e2e:telegram": "node e2e/run-e2e.js",
     "migrate": "node scripts/migrate.js"
   },
   "dependencies": {
@@ -30,7 +32,8 @@
     "jest": "^29.7.0",
     "mongodb-memory-server": "^9.1.6",
     "nodemon": "^3.0.3",
-    "supertest": "^7.1.1"
+    "supertest": "^7.1.1",
+    "telegram": "^2.26.22"
   },
   "type": "module",
   "jest": {

@@ -73,6 +73,13 @@ Test shortcut:
 - Else if this repo devcontainer is running: `./scripts/devcontainer-exec.sh npm test`
 - Else: disposable `node:latest` container with `npm install && npm test`
 
+Full Telegram E2E smoke tests:
+- live under [`e2e/`](e2e)
+- do not run automatically as part of starndard automated tests
+- should be maintained when real Telegram user flows change
+- are documented in [`e2e/README.md`](e2e/README.md)
+- use `npm run e2e:bootstrap-session` and `npm run e2e:telegram`
+
 ## Production Deployment
 
 You can deploy the bot using Docker, either via Docker Compose or standalone.

@@ -278,6 +278,7 @@ Coverage includes:
 - Wizard flows and field configuration
 - Utilities (date/route/params/duration/html/category)
 - Integration tests for main user flows
+- Separate full Telegram E2E smoke coverage for real-platform verification
 
 Test scripts:
 - `npm test`: run full suite in a single pass
@@ -285,6 +286,8 @@ Test scripts:
 - `npm run test:mongo`: run MongoMemoryServer suite only
 - `npm run test:coverage`: full-suite coverage with thresholds
 - `npm run test:coverage:basic`: coverage for non-Mongo suite
+- `npm run e2e:bootstrap-session`: create or refresh the real Telegram user session for E2E
+- `npm run e2e:telegram`: run the manual real Telegram smoke test
 
 Runner helper:
 - `./run-tests.sh --mode all|basic|mongo [--coverage]`
@@ -294,6 +297,8 @@ Quality gates:
 - Jest global coverage thresholds are enforced (`statements/lines/functions/branches`).
 - CI runs the full suite on pull requests and pushes to `main`.
 - No nightly-only test dependency; regression coverage is part of standard CI signal.
+- Full Telegram E2E smoke tests are intentionally excluded from the default CI signal and are run manually.
+- Even though they are manual, they are part of the maintained testing strategy and should be updated when real Telegram behavior changes.
 
 Testing approach:
 - Recent refactor reduced implementation-coupled assertions and favors behavior checks:
@@ -301,6 +306,7 @@ Testing approach:
   - state transitions and persistence effects
   - multi-chat propagation side effects
 - Test taxonomy and conventions are documented in [`docs/testing-conventions.md`](docs/testing-conventions.md).
+- Real Telegram E2E setup and usage are documented in [`e2e/README.md`](e2e/README.md).
 
 ---
 
