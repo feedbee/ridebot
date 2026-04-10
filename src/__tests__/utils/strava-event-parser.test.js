@@ -104,6 +104,16 @@ describe('StravaEventParser', () => {
     });
   });
 
+  describe('extractRoutesFromDescription', () => {
+    it('returns all known provider links in discovery order', () => {
+      const text = 'One https://example.com/x then https://ridewithgps.com/routes/1 and https://www.komoot.com/tour/2';
+      expect(StravaEventParser.extractRoutesFromDescription(text)).toEqual([
+        'https://ridewithgps.com/routes/1',
+        'https://www.komoot.com/tour/2'
+      ]);
+    });
+  });
+
   describe('buildPaceGroupsText', () => {
     it('returns null for empty array', () => {
       expect(StravaEventParser.buildPaceGroupsText([], 'speed')).toBeNull();
@@ -208,7 +218,7 @@ describe('StravaEventParser', () => {
       expect(data.metadata).toEqual({ stravaId: eventId });
     });
 
-    it('uses attached route for routeLink/distance/duration', () => {
+    it('uses attached route for routes/routeLink/distance/duration', () => {
       const event = {
         ...baseEvent,
         route: {
@@ -219,17 +229,22 @@ describe('StravaEventParser', () => {
       };
       const data = StravaEventParser.mapToRideData(event, 101, eventUrl, eventId);
       expect(data.routeLink).toBe('https://www.strava.com/routes/9876543210');
+      expect(data.routes).toEqual([{ url: 'https://www.strava.com/routes/9876543210' }]);
       expect(data.distance).toBe(95);
       expect(data.duration).toBe(240);
     });
 
-    it('falls back to description link when no route attached', () => {
+    it('falls back to all known description links when no route attached', () => {
       const event = {
         ...baseEvent,
-        description: 'Check https://ridewithgps.com/routes/42 for the route',
+        description: 'Check https://ridewithgps.com/routes/42 and https://www.komoot.com/tour/77 for the route',
       };
       const data = StravaEventParser.mapToRideData(event, 101, eventUrl, eventId);
       expect(data.routeLink).toBe('https://ridewithgps.com/routes/42');
+      expect(data.routes).toEqual([
+        { url: 'https://ridewithgps.com/routes/42' },
+        { url: 'https://www.komoot.com/tour/77' }
+      ]);
       expect(data.distance).toBeUndefined();
     });
 

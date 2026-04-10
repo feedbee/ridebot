@@ -372,7 +372,7 @@ export class RideWizard {
       date:           d.datetime       ?? null,  // wizard key is 'datetime', formatter uses 'date'
       organizer:      d.organizer      ?? null,
       meetingPoint:   d.meetingPoint   ?? null,
-      routeLink:      d.routeLink      ?? null,
+      routes:         d.routes         ?? null,
       distance:       d.distance       ?? null,
       duration:       d.duration       ?? null,
       speedMin:       d.speedMin       ?? null,

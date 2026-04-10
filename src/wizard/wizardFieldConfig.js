@@ -11,6 +11,7 @@ import { DateParser } from '../utils/date-parser.js';
 import { config } from '../config.js';
 import { t } from '../i18n/index.js';
 import { parseSpeedInput, formatSpeed } from '../utils/speed-utils.js';
+import { getDerivedRouteLabel, parseRouteEntries } from '../utils/route-links.js';
 
 /**
  * Wizard field configuration
@@ -125,7 +126,7 @@ export function getWizardFields(language = config.i18n.defaultLanguage) {
     route: {
       step: 'route',
       type: FieldType.ROUTE,
-      dataKey: 'routeLink',
+      dataKey: 'routes',
       prompt: translate(language, 'wizard.prompts.route'),
       required: false,
       clearable: true,
@@ -133,23 +134,41 @@ export function getWizardFields(language = config.i18n.defaultLanguage) {
       nextStep: 'distance',
       previousStep: 'date',
       validator: (text) => {
-        if (!RouteParser.isValidRouteUrl(text)) {
+        const parsedRoutes = parseRouteEntries(text);
+        if (parsedRoutes.error) {
           return {
             valid: false,
             error: translate(language, 'wizard.validation.routeInvalid')
           };
         }
-        return { valid: true, value: text };
+        return { valid: true, value: parsedRoutes.routes };
+      },
+      formatter: (routes) => {
+        if (!Array.isArray(routes) || routes.length === 0) return '';
+        return routes.map(route => {
+          const label = route.label || getDerivedRouteLabel(route.url, language);
+          return `${label} | ${route.url}`;
+        }).join('\n');
       },
       async postProcess(text, state) {
-        if (RouteParser.isKnownProvider(text)) {
-          const routeInfo = await RouteParser.parseRoute(text);
+        const routes = state.data.routes || parseRouteEntries(text).routes || [];
+        let firstDistance;
+        let firstDuration;
 
-          if (routeInfo) {
-            if (routeInfo.distance) state.data.distance = routeInfo.distance;
-            if (routeInfo.duration) state.data.duration = routeInfo.duration;
+        for (const route of routes) {
+          if (RouteParser.isKnownProvider(route.url)) {
+            const routeInfo = await RouteParser.parseRoute(route.url);
+
+            if (routeInfo) {
+              if (firstDistance === undefined && routeInfo.distance) firstDistance = routeInfo.distance;
+              if (firstDuration === undefined && routeInfo.duration) firstDuration = routeInfo.duration;
+            }
           }
         }
+
+        if (firstDistance !== undefined) state.data.distance = firstDistance;
+        if (firstDuration !== undefined) state.data.duration = firstDuration;
+
         return 'distance';
       }
     },
@@ -314,7 +333,8 @@ export function buildRideDataFromWizard(wizardData, metadata = {}) {
     date: wizardData.datetime,
     organizer: wizardData.organizer,
     meetingPoint: wizardData.meetingPoint,
-    routeLink: wizardData.routeLink,
+    routes: wizardData.routes,
+    routeLink: wizardData.routes?.[0]?.url,
     distance: wizardData.distance,
     duration: wizardData.duration,
     speedMin: wizardData.speedMin,
@@ -332,4 +352,3 @@ export function buildRideDataFromWizard(wizardData, metadata = {}) {
 
   return rideData;
 }
-

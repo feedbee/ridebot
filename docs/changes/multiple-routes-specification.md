@@ -62,8 +62,12 @@ Rules:
 Soft compatibility is required.
 
 When reading a ride:
-- if `routes` exists and is non-empty, use it
+- if `routes` is present (including an empty array), use it as the source of truth
 - otherwise, if legacy `routeLink` exists, expose a derived single-item `routes` array from it
+
+Semantics:
+- `routes: []` explicitly means the ride has no routes
+- legacy fallback applies only when `routes` is missing (`undefined` / `null`), not when it is empty
 
 When writing new or updated rides:
 - write `routes`
@@ -199,7 +203,8 @@ Rules:
 
 When the wizard receives multiple routes:
 - distance and duration auto-fill must continue to come from the first route that produces parseable metrics
-- later routes do not override already derived distance or duration in the same step
+- changing the route list in the wizard should refresh stale auto-derived distance and duration from the first route that produces parseable metrics
+- if the new route list produces no metrics, existing distance and duration values remain unchanged
 
 ---
 

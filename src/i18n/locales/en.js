@@ -45,7 +45,7 @@ title: Ride title
 when: Date and time (e.g., "tomorrow at 6pm", "this saturday 10am", "21 Jul 14:30")
 category: One of: "Regular/Mixed Ride" (default), "Road Ride", "Gravel Ride", "Mountain/Enduro/Downhill Ride", "MTB-XC Ride", "E-Bike Ride", "Virtual/Indoor Ride" (optional)
 meet: Meeting point (optional)
-route: Route link (optional)
+route: Route link or "Label | URL" (repeat to add multiple routes) (optional)
 dist: Distance in km (optional)
 duration: Duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
 speed: Speed in km/h: range (25-28), min (25+ or 25-), max (-28), avg (25 or ~25) (optional)
@@ -60,14 +60,21 @@ when: tomorrow at 6pm
 category: Road Ride
 meet: Bike Shop on Main St
 route: https://www.strava.com/routes/123456
+route: Komoot | https://www.komoot.com/tour/456789
 dist: 35
 duration: 2h 30m
 speed: 25-28
 info: Bring lights and a rain jacket
 </pre>
 
+Route notes:
+• Repeat <code>route:</code> to add multiple links
+• Use <code>route: Label | URL</code> to set a custom label
+• The URL is always taken from the last <code>|</code>-separated segment, so <code>|</code> may be used inside the label
+• If a label is omitted, the bot shows <code>Strava</code>, <code>Garmin</code>, <code>Komoot</code>, <code>RideWithGPS</code>, or localized <code>Link</code>
+
 3. Using AI in dialog mode (private chat only):
-Send /airide and describe the ride in plain language. The bot will parse the details with AI, show a live preview, and let you refine it across multiple messages before confirming.
+Send /airide and describe the ride in plain language. The bot will parse the details with AI, show a live preview, and let you refine it across multiple messages before confirming. AI can extract multiple route links too.
 <pre>
 /airide
 </pre>
@@ -82,7 +89,8 @@ Send /fromstrava with a Strava club event URL. The bot fetches the event details
 <pre>
 /fromstrava https://www.strava.com/clubs/123/group_events/456
 </pre>
-Fields populated automatically: title, date, meeting point, category, route link, distance, duration, speed range (from pace groups), organizer (club name), and additional info (event link + description + pace groups).
+Fields populated automatically: title, date, meeting point, category, route links, distance, duration, speed range (from pace groups), organizer (club name), and additional info (event link + description + pace groups).
+If the Strava event has an attached route, only that route is imported. Otherwise the bot imports all known route-provider links from the description in discovery order.
 
 <b>Managing Rides</b>
 
@@ -99,12 +107,13 @@ id: abc123
 title: New title (optional)
 when: New date/time (optional)
 meet: New meeting point (optional)
-route: New route link (optional)
+route: New route link or "Label | URL" (repeat to replace the full route list) (optional)
 dist: New distance (optional)
 duration: New duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
 speed: New speed (optional)
 info: Additional information (optional)
 </pre>
+If you provide at least one <code>route:</code> line, it replaces the full route list. Use <code>route: -</code> to clear all routes.
     `.trim(),
 
     help2: `
@@ -151,7 +160,7 @@ title: New title (optional)
 when: New date/time (optional)
 category: One of: "Regular/Mixed Ride" (default), "Road Ride", "Gravel Ride", "Mountain/Enduro/Downhill Ride", "MTB-XC Ride", "E-Bike Ride", "Virtual/Indoor Ride" (optional)
 meet: New meeting point (optional)
-route: New route link (optional)
+route: New route link or "Label | URL" (repeat to replace the copied route list) (optional)
 dist: New distance (optional)
 duration: New duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
 speed: New speed (optional)
@@ -159,6 +168,7 @@ info: Additional information (optional)
 </pre>
 Any parameters not provided will be copied from the original ride.
 By default, the new ride will be scheduled for tomorrow at the same time.
+If you provide at least one <code>route:</code> line, it replaces the copied route list. Use <code>route: -</code> to clear all copied routes.
 
 <b>📋 Listing Your Rides</b>
 Use /listrides command to see all rides you've created:
@@ -359,7 +369,7 @@ Click here to start a private chat: @botname
       parseError: '❌ Could not parse ride details. Please try again with a clearer description.',
       cancelled: 'Ride creation cancelled.',
       confirmButton: '✅ Confirm',
-      dialogPrompt: '🗒 Describe the ride: title, date and time, route link, distance and expected duration, average speed, meeting point, and any other details.',
+      dialogPrompt: '🗒 Describe the ride: title, date and time, route link(s), distance and expected duration, average speed, meeting point, and any other details.',
       dialogUpdatePrompt: '🗒 What would you like to change?',
       dialogLimitReached: '⚠️ Message limit reached. Please confirm or cancel.',
       missingFieldsError: 'Missing required fields: {fields}. Please add them in a message.'

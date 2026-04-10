@@ -1,4 +1,5 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
+import { getRideRoutes } from '../utils/route-links.js';
 
 /**
  * Handler for the dupride command
@@ -45,7 +46,7 @@ export class DuplicateRideCommandHandler extends BaseCommandHandler {
       organizer: ride.organizer,
       datetime: tomorrow,
       meetingPoint: ride.meetingPoint,
-      routeLink: ride.routeLink,
+      routes: getRideRoutes(ride),
       distance: ride.distance,
       duration: ride.duration,
       speedMin: ride.speedMin,

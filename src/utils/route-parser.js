@@ -57,18 +57,21 @@ export class RouteParser {
    * @returns {string|null}
    */
   static extractFirstKnownRouteUrl(text) {
-    if (!text) return null;
+    const urls = this.extractKnownRouteUrls(text);
+    return urls[0] || null;
+  }
+
+  /**
+   * Find all supported route URLs inside an arbitrary text blob in discovery order.
+   * @param {string} text
+   * @returns {string[]}
+   */
+  static extractKnownRouteUrls(text) {
+    if (!text) return [];
 
     const urlPattern = /https?:\/\/[^\s<>"]+/g;
     const urls = text.match(urlPattern) || [];
-
-    for (const url of urls) {
-      if (this.isKnownProvider(url)) {
-        return url;
-      }
-    }
-
-    return null;
+    return urls.filter(url => this.isKnownProvider(url));
   }
 
   /**

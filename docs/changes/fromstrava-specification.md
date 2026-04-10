@@ -54,8 +54,8 @@ Both `www.strava.com` and `strava.com` variants are accepted.
 | `club.name` | `organizer` | From nested club object |
 | `route.distance` (metres) | `distance` | Divided by 1000, rounded to km |
 | `route.estimated_moving_time` (seconds) | `duration` | Divided by 60, rounded to minutes |
-| `route.id_str` (or `route.id`) | `routeLink` | `https://www.strava.com/routes/{id_str}` |
-| First known-provider URL in `description` | `routeLink` | Fallback when no route attached |
+| `route.id_str` (or `route.id`) | `routes[0]` + `routeLink` | Attached Strava route only: `https://www.strava.com/routes/{id_str}` |
+| All known-provider URLs in `description` | `routes[]` + first `routeLink` | Fallback only when no route attached; preserve discovery order |
 | Pace groups min/max (speed-type only) | `speedMin`, `speedMax` | See speed extraction below |
 | Event URL + `description` + pace groups | `additionalInfo` | Concatenated with newlines |
 | `eventId` (string from URL) | `metadata.stravaId` | Stored as string to avoid JS float precision loss |
@@ -97,7 +97,7 @@ The event `description` is scanned for URLs from known providers:
 - `komoot.com/tour/{id}` or `komoot.de/collection/{id}`
 - `connect.garmin.com/modern/course/{id}` or `/activity/{id}`
 
-The **first** matching URL becomes `routeLink`. Distance and duration are not populated in fallback mode.
+All matching known-provider URLs are stored in `routes[]` in discovery order. The first matching URL is also exposed through legacy `routeLink` for compatibility. Distance and duration are derived from the first matching route only.
 
 ---
 
@@ -169,7 +169,8 @@ Pure static class. All methods are stateless and synchronous except `fetchEvent`
 | `fetchEvent(eventId)` | Fetches the event, then fetches full route if `event.route` exists |
 | `mapToRideData(event, createdBy, eventUrl, eventId)` | Maps API response to ride fields object |
 | `mapActivityTypeToCategory(type)` | Strava activity type → bot category code |
-| `extractRouteFromDescription(text)` | Scans text for first known-provider route URL |
+| `extractRouteFromDescription(text)` | Backward-compatible helper that returns the first known-provider route URL |
+| `extractRoutesFromDescription(text)` | Scans text for all known-provider route URLs in discovery order |
 | `buildPaceGroupsText(paceGroups, paceType)` | Human-readable pace groups label string |
 | `extractSpeedRange(paceGroups, paceType)` | `{ speedMin, speedMax }` for speed-type groups only |
 | `buildAdditionalInfo(event, eventUrl)` | Combines URL + description + pace groups text |

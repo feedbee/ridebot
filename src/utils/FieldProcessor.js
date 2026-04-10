@@ -2,6 +2,9 @@ import { parseDateTimeInput } from './date-input-parser.js';
 import { parseDuration } from './duration-parser.js';
 import { normalizeCategory, DEFAULT_CATEGORY } from './category-utils.js';
 import { parseSpeedInput } from './speed-utils.js';
+import { parseRouteEntries } from './route-links.js';
+import { config } from '../config.js';
+import { t } from '../i18n/index.js';
 
 /**
  * Utility class for processing ride field parameters
@@ -49,14 +52,23 @@ export class FieldProcessor {
     }
     
     // Process route
-    if (params.route !== undefined) {
-      if (isUpdate && params.route === '-') {
+    const routeInput = params.routes !== undefined ? params.routes : params.route;
+    if (routeInput !== undefined) {
+      const routeValues = Array.isArray(routeInput) ? routeInput : [routeInput];
+      if (isUpdate && routeValues.length === 1 && routeValues[0] === '-') {
         // Clear route for updates
+        result.data.routes = [];
         result.data.routeLink = '';
       } else {
-        // Handle async route parsing separately
-        result.data._routeParam = params.route;
-        result.data._requiresRouteProcessing = true;
+        const parsedRoutes = parseRouteEntries(routeValues, { validateUrl: false });
+        if (parsedRoutes.error) {
+          return { data: null, error: this.translateRouteError(language) };
+        }
+        result.data.routes = parsedRoutes.routes;
+        if (parsedRoutes.routes.length === 0) {
+          result.data.routeLink = '';
+        }
+        result.data._requiresRouteProcessing = parsedRoutes.routes.length > 0;
       }
     }
     
@@ -163,6 +175,13 @@ export class FieldProcessor {
           }
         }
       }
+    });
+  }
+
+  static translateRouteError(language) {
+    return t(language || config.i18n.defaultLanguage, 'utils.routeParser.invalidUrl', {}, {
+      fallbackLanguage: config.i18n.fallbackLanguage,
+      withMissingMarker: config.isDev
     });
   }
 }

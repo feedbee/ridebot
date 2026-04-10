@@ -61,7 +61,7 @@ The preview renders the ride fields in the same groups as the public ride announ
 
 👤 Organizer: Jane Doe
 📍 Meeting Point: City Park
-🗺️ Route: View route
+🗺️ Route: Strava, Komoot, Short variant
 
 📏 Distance: 45 km
 ⏱ Duration: 2h 30min
@@ -71,6 +71,7 @@ The preview renders the ride fields in the same groups as the public ride announ
 ```
 
 - Fields that are `null` or `undefined` are silently omitted.
+- When several routes are present, they are rendered on one line as linked labels separated by commas.
 - No participation section (no "Joined", "Thinking", "Not interested" lines).
 - No inline keyboard on the preview message.
 - No `#Ride #id` footer.

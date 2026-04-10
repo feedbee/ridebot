@@ -73,10 +73,15 @@ The codebase follows a clean, layered architecture:
 - **[memory.js](src/storage/memory.js)**: Development storage using in-memory Map
 
 **Data Models:**
-- **Ride**: Core entity with title, date, category, route, participation states, messages, and optional `groupId` (Telegram chat ID of an attached group)
+- **Ride**: Core entity with title, date, category, ordered `routes` list (`[{ url, label? }]`), participation states, messages, and optional `groupId` (Telegram chat ID of an attached group)
 - **Participant**: User info (userId, username, firstName, lastName, createdAt)
 - **Participation**: User participation states (joined, thinking, skipped) for each ride with three participation options: "I'm in", "Thinking", "Pass"
 - **Message**: Tracks where ride announcements are posted (chatId, messageId, messageThreadId)
+
+**Route Compatibility:**
+- New rides use `routes` as the source of truth
+- Legacy `routeLink` is still read for backward compatibility when `routes` is missing
+- `routes: []` explicitly means the ride has no routes
 
 **Schema Versioning:**
 - Database migrations supported for MongoDB
@@ -92,6 +97,7 @@ The codebase follows a clean, layered architecture:
 - Cancel/resume rides
 - Parse parameters and create rides from user input
 - Handles route parsing, date parsing, duration parsing
+- Supports multiple route links with optional labels
 
 #### **GroupManagementService** ([GroupManagementService.js](src/services/GroupManagementService.js))
 - **Group membership sync** for attached Telegram groups
@@ -127,7 +133,7 @@ All handlers extend **[BaseCommandHandler](src/commands/BaseCommandHandler.js)**
 - **GroupCommandHandler**: `/attach #rideId` (links a group to a ride, posts and pins the ride message, adds existing participants, updates all existing ride messages), `/detach` (unlinks the group, updates all existing ride messages), and `/joinchat #rideId` (private-only: sends an invite link to the ride's group chat if the user has joined the ride); attach/detach are group-chat-only
 - **StartCommandHandler**: Welcome message
 - **HelpCommandHandler**: Multi-page help system
-- **FromStravaCommandHandler**: Import or update a ride from a Strava club event URL; uses `StravaEventParser` to fetch event data and maps it to ride fields; repeated calls with the same URL by the same user update the existing ride
+- **FromStravaCommandHandler**: Import or update a ride from a Strava club event URL; uses `StravaEventParser` to fetch event data and maps it to ride fields; repeated calls with the same URL by the same user update the existing ride; imports either the attached Strava route only, or all known-provider route links from the description when no attached route exists
 
 ### **6. Wizard ([src/wizard/RideWizard.js](src/wizard/RideWizard.js))**
 
@@ -137,7 +143,10 @@ All handlers extend **[BaseCommandHandler](src/commands/BaseCommandHandler.js)**
 - Features:
   - Back/Skip/Keep/Cancel buttons
   - Current value display
-  - Auto-parsing route info (distance/duration)
+  - Route step accepts one route per line
+  - Route entries support `URL` or `Label | URL`
+  - Auto-parsing route info (distance/duration) from the first route that provides metrics
+  - When routes change, stale auto-derived distance/duration are refreshed from the new route list when available
   - Admin permission checks
   - Error message cleanup
   - Can be restricted to private chats only
@@ -156,7 +165,8 @@ All handlers extend **[BaseCommandHandler](src/commands/BaseCommandHandler.js)**
 
 - **[FieldProcessor.js](src/utils/FieldProcessor.js)**: Centralized field processing and validation for ride parameters
 - **[RideParamsHelper.js](src/utils/RideParamsHelper.js)**: Parse multi-line command parameters
-- **[route-parser.js](src/utils/route-parser.js)**: Parse routes from Strava, RideWithGPS, Komoot
+- **[route-parser.js](src/utils/route-parser.js)**: Parse routes from Strava, RideWithGPS, Komoot, Garmin
+- **[route-links.js](src/utils/route-links.js)**: Shared route-list helpers: parse `Label | URL`, derive provider labels, normalize `routes`, and bridge legacy `routeLink`
 - **[strava-event-parser.js](src/utils/strava-event-parser.js)**: Fetch and map Strava group events to ride fields; handles URL parsing, API calls, pace groups, and route enrichment
 - **[date-input-parser.js](src/utils/date-input-parser.js)**: Natural language date parsing (chrono-node)
 - **[date-parser.js](src/utils/date-parser.js)**: Format dates with timezone support
@@ -186,11 +196,21 @@ when: tomorrow at 6pm
 category: Road Ride
 meet: Bike Shop
 route: https://strava.com/routes/123
+route: Komoot | https://www.komoot.com/tour/456
+route: Short variant | https://ridewithgps.com/routes/789
 dist: 35
 duration: 2h 30m
 speed: 25-28
 info: Bring lights
 ```
+
+Route parameter rules:
+- Repeat `route:` to pass multiple routes
+- Use `route: URL` for an unlabeled route
+- Use `route: Label | URL` for a labeled route
+- The URL is always parsed from the last `|`-separated segment, so `|` may be used inside labels
+- In `/updateride` and `/dupride`, any provided `route:` lines replace the full route list
+- `route: -` clears all routes in `/updateride` and `/dupride`
 
 ### **Ride ID Reference Methods**
 - Reply to ride message
@@ -199,8 +219,10 @@ info: Bring lights
 - Use `id:` parameter in multi-line commands
 
 ### **Route Parsing**
-- Supports Strava, RideWithGPS, Komoot
-- Auto-extracts distance and duration when available
+- Supports Strava, RideWithGPS, Komoot, Garmin
+- Multiple route links are supported across parameter mode, wizard mode, AI mode, and Strava import
+- Auto-extracts distance and duration from the first route that provides them
+- Derived route labels are rendered as `Strava`, `Garmin`, `Komoot`, `RideWithGPS`, or localized fallback `Link` / `Ссылка`
 
 ### **Natural Language Date Input**
 - "tomorrow at 6pm"

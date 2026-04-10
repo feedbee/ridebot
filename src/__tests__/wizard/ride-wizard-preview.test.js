@@ -96,7 +96,7 @@ describe.each(['en', 'ru'])('RideWizard — Live Preview (%s)', (language) => {
           datetime: date,        // wizard key
           organizer: 'Jane',
           meetingPoint: 'Park',
-          routeLink: 'https://strava.com/routes/1',
+          routes: [{ url: 'https://strava.com/routes/1' }],
           distance: 45,
           duration: 90,
           speedMin: 25,
@@ -117,7 +117,7 @@ describe.each(['en', 'ru'])('RideWizard — Live Preview (%s)', (language) => {
         date: date,              // mapped from 'datetime'
         organizer: 'Jane',
         meetingPoint: 'Park',
-        routeLink: 'https://strava.com/routes/1',
+        routes: [{ url: 'https://strava.com/routes/1' }],
         distance: 45,
         duration: 90,
         speedMin: 25,

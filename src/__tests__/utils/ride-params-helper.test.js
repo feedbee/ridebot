@@ -44,7 +44,7 @@ info: Bring water and snacks`;
         title: 'Sunday Morning Ride',
         when: 'Sunday 9am',
         meet: 'Coffee Shop',
-        route: 'https://example.com/route',
+        route: ['https://example.com/route'],
         speed: '25-28',
         info: 'Bring water and snacks'
       });

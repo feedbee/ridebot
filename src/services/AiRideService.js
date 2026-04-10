@@ -58,7 +58,7 @@ Use these exact field names (all optional except title and when):
   category: one of "mixed","road","gravel","mtb","mtb-xc","e-bike","virtual"
   organizer: name of the organizer
   meet: meeting point location
-  route: URL to a route (Strava, Komoot, RideWithGPS, Garmin)
+  routes: array of strings, each string either a route URL or "Label | URL"
   dist: distance in km as a string number, e.g. "70"
   duration: e.g. "2h 30m", "90m", "1.5h"
   speed: e.g. "25-28", "25+", "-28", "~25"
@@ -116,9 +116,19 @@ This is a multi-turn conversation. The user sends multiple messages, each adding
       return { params: null, error: 'invalid_response' };
     }
 
+    if (typeof parsed.routes === 'string') {
+      parsed.routes = [parsed.routes.trim()];
+    }
+
+    if (Array.isArray(parsed.routes)) {
+      parsed.routes = parsed.routes
+        .map(v => typeof v === 'string' ? v.trim() : v)
+        .filter(v => typeof v === 'string' && v !== '');
+    }
+
     // Remove null/empty-string fields so FieldProcessor isn't confused
     const params = Object.fromEntries(
-      Object.entries(parsed).filter(([, v]) => v !== null && v !== '')
+      Object.entries(parsed).filter(([, v]) => v !== null && v !== '' && (!Array.isArray(v) || v.length > 0))
     );
 
     return { params, error: null };

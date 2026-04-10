@@ -5,6 +5,7 @@ import { normalizeCategory } from '../utils/category-utils.js';
 import { parseSpeedInput } from '../utils/speed-utils.js';
 import { parseDuration } from '../utils/duration-parser.js';
 import { RouteParser } from '../utils/route-parser.js';
+import { getRideRoutes, parseRouteEntries } from '../utils/route-links.js';
 
 const MAX_DIALOG_MESSAGES = 10;
 
@@ -254,19 +255,32 @@ export class AiRideCommandHandler extends BaseCommandHandler {
    * @param {Object} state - handler state (holds routeInfoCache)
    */
   async _enrichWithRouteInfo(params, state) {
-    if (!params.route) return params;
+    const routeInputs = params.routes ?? (params.route ? [params.route] : null);
+    if (!routeInputs || routeInputs.length === 0) return params;
+    if (routeInputs.length === 1 && routeInputs[0] === '-') return params;
 
-    // Cache per URL to avoid re-fetching on every dialog message
-    if (!(params.route in state.routeInfoCache)) {
-      try {
-        state.routeInfoCache[params.route] = await RouteParser.processRouteInfo(params.route);
-      } catch {
-        state.routeInfoCache[params.route] = null;
+    const parsedRoutes = parseRouteEntries(routeInputs);
+    if (parsedRoutes.error) return params;
+
+    let info = null;
+    for (const route of parsedRoutes.routes) {
+      if (!(route.url in state.routeInfoCache)) {
+        try {
+          state.routeInfoCache[route.url] = await RouteParser.processRouteInfo(route.url);
+        } catch {
+          state.routeInfoCache[route.url] = null;
+        }
+      }
+
+      if (!info) {
+        const cachedInfo = state.routeInfoCache[route.url];
+        if (cachedInfo && !cachedInfo.error && (cachedInfo.distance || cachedInfo.duration)) {
+          info = cachedInfo;
+        }
       }
     }
 
-    const info = state.routeInfoCache[params.route];
-    if (!info || info.error) return params;
+    if (!info) return params;
 
     const enriched = { ...params };
     if (info.distance && !params.dist) {
@@ -288,6 +302,11 @@ export class AiRideCommandHandler extends BaseCommandHandler {
    */
   _buildPreviewObject(params, state = null) {
     const existingRide = state?.mode === 'update' ? state.ride : null;
+    const routeInputs = params.routes ?? (params.route ? [params.route] : null);
+    const clearsRoutes = Array.isArray(routeInputs) && routeInputs.length === 1 && routeInputs[0] === '-';
+    const parsedPreviewRoutes = routeInputs && !clearsRoutes
+      ? parseRouteEntries(routeInputs).routes
+      : null;
 
     const preview = {
       title:        params.title     || existingRide?.title       || null,
@@ -295,7 +314,7 @@ export class AiRideCommandHandler extends BaseCommandHandler {
       category:     null,
       organizer:    params.organizer || existingRide?.organizer   || null,
       meetingPoint: params.meet      || existingRide?.meetingPoint || null,
-      routeLink:    params.route     || existingRide?.routeLink   || null,
+      routes:       clearsRoutes ? [] : (routeInputs ? (parsedPreviewRoutes || null) : getRideRoutes(existingRide)),
       distance:     params.dist      ? parseFloat(params.dist)
                                      : (existingRide?.distance   ?? null),
       duration:     null, // parsed below

@@ -1019,5 +1019,20 @@ describe('RideService', () => {
       expect(maxResult.error).toBeNull();
       expect([maxResult.ride.speedMin, maxResult.ride.speedMax]).toContain(31);
     });
+
+    it('should clear routes when duplicating with route dash sentinel', async () => {
+      const originalRide = await rideService.createRide({
+        ...testRide,
+        date: new Date('2030-03-17T15:00:00Z'),
+        routes: [{ url: 'https://example.com/route', label: 'Main' }],
+        routeLink: 'https://example.com/route'
+      });
+
+      const result = await rideService.duplicateRide(originalRide.id, { route: '-' }, { id: 7, username: 'user7' });
+
+      expect(result.error).toBeNull();
+      expect(result.ride.routes).toEqual([]);
+      expect(result.ride.routeLink).toBe('');
+    });
   });
 });

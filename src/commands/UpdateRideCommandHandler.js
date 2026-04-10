@@ -1,5 +1,6 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
 import { DEFAULT_CATEGORY } from '../utils/category-utils.js';
+import { getRideRoutes } from '../utils/route-links.js';
 
 /**
  * Handler for the updateride command
@@ -48,7 +49,7 @@ export class UpdateRideCommandHandler extends BaseCommandHandler {
       organizer: ride.organizer,
       datetime: ride.date,
       meetingPoint: ride.meetingPoint,
-      routeLink: ride.routeLink,
+      routes: getRideRoutes(ride),
       distance: ride.distance,
       duration: ride.duration,
       speedMin: ride.speedMin,

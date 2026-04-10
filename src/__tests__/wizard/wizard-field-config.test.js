@@ -238,7 +238,7 @@ describe('wizardFieldConfig', () => {
     it('should validate route URLs', () => {
       const result = WIZARD_FIELDS.route.validator('https://strava.com/route/123');
       expect(result.valid).toBe(true);
-      expect(result.value).toBe('https://strava.com/route/123');
+      expect(result.value).toEqual([{ url: 'https://strava.com/route/123' }]);
     });
 
     it('should validate URLs as valid routes', () => {
@@ -255,7 +255,7 @@ describe('wizardFieldConfig', () => {
     it('should post-process known route with distance and duration and prefill distance step', async () => {
       jest.spyOn(RouteParser, 'isKnownProvider').mockReturnValueOnce(true);
       jest.spyOn(RouteParser, 'parseRoute').mockResolvedValueOnce({ distance: 60, duration: 150 });
-      const state = { data: {} };
+      const state = { data: { routes: [{ url: 'https://strava.com/routes/1' }] } };
 
       const nextStep = await WIZARD_FIELDS.route.postProcess('https://strava.com/routes/1', state);
 
@@ -267,13 +267,59 @@ describe('wizardFieldConfig', () => {
     it('should post-process known route with only distance and prefill distance step', async () => {
       jest.spyOn(RouteParser, 'isKnownProvider').mockReturnValueOnce(true);
       jest.spyOn(RouteParser, 'parseRoute').mockResolvedValueOnce({ distance: 42 });
-      const state = { data: {} };
+      const state = { data: { routes: [{ url: 'https://strava.com/routes/2' }] } };
 
       const nextStep = await WIZARD_FIELDS.route.postProcess('https://strava.com/routes/2', state);
 
       expect(state.data.distance).toBe(42);
       expect(state.data.duration).toBeUndefined();
       expect(nextStep).toBe('distance');
+    });
+
+    it('should replace stale distance and duration when route changes and new metrics are available', async () => {
+      jest.spyOn(RouteParser, 'isKnownProvider').mockReturnValueOnce(true);
+      jest.spyOn(RouteParser, 'parseRoute').mockResolvedValueOnce({ distance: 88, duration: 240 });
+      const state = {
+        data: {
+          routes: [{ url: 'https://strava.com/routes/new' }],
+          distance: 45,
+          duration: 90
+        }
+      };
+
+      const nextStep = await WIZARD_FIELDS.route.postProcess('https://strava.com/routes/new', state);
+
+      expect(state.data.distance).toBe(88);
+      expect(state.data.duration).toBe(240);
+      expect(nextStep).toBe('distance');
+    });
+
+    it('should keep existing distance and duration when new route provides no metrics', async () => {
+      jest.spyOn(RouteParser, 'isKnownProvider').mockReturnValueOnce(true);
+      jest.spyOn(RouteParser, 'parseRoute').mockResolvedValueOnce(null);
+      const state = {
+        data: {
+          routes: [{ url: 'https://strava.com/routes/new' }],
+          distance: 45,
+          duration: 90
+        }
+      };
+
+      await WIZARD_FIELDS.route.postProcess('https://strava.com/routes/new', state);
+
+      expect(state.data.distance).toBe(45);
+      expect(state.data.duration).toBe(90);
+    });
+
+    it('should format current route values as readable lines', () => {
+      const formatted = WIZARD_FIELDS.route.formatter([
+        { url: 'https://www.strava.com/routes/1' },
+        { label: 'Short option', url: 'https://ridewithgps.com/routes/2' }
+      ]);
+
+      expect(formatted).toBe(
+        'Strava | https://www.strava.com/routes/1\nShort option | https://ridewithgps.com/routes/2'
+      );
     });
   });
 

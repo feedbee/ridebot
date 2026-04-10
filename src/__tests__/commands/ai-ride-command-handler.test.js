@@ -543,7 +543,7 @@ describe.each(['en', 'ru'])('AiRideCommandHandler (%s)', (language) => {
     it('populates distance and duration in preview from route URL when AI did not extract them', async () => {
       routeParserSpy.mockResolvedValue({ routeLink: 'https://strava.com/routes/1', distance: 75, duration: 150 });
       mockAiRideService.parseRideText.mockResolvedValue({
-        params: { title: 'Ride', when: 'tomorrow', route: 'https://strava.com/routes/1' }, error: null
+        params: { title: 'Ride', when: 'tomorrow', routes: ['https://strava.com/routes/1'] }, error: null
       });
       setupState();
       mockCtx.message = { text: 'Ride tomorrow https://strava.com/routes/1', message_id: 5 };
@@ -558,7 +558,7 @@ describe.each(['en', 'ru'])('AiRideCommandHandler (%s)', (language) => {
     it('does not overwrite dist/duration that AI already extracted', async () => {
       routeParserSpy.mockResolvedValue({ routeLink: 'https://strava.com/routes/1', distance: 75, duration: 150 });
       mockAiRideService.parseRideText.mockResolvedValue({
-        params: { title: 'Ride', when: 'tomorrow', route: 'https://strava.com/routes/1', dist: '60', duration: '2h' },
+        params: { title: 'Ride', when: 'tomorrow', routes: ['https://strava.com/routes/1'], dist: '60', duration: '2h' },
         error: null
       });
       setupState();
@@ -574,7 +574,7 @@ describe.each(['en', 'ru'])('AiRideCommandHandler (%s)', (language) => {
     it('calls processRouteInfo only once even when the same route appears in multiple messages', async () => {
       routeParserSpy.mockResolvedValue({ routeLink: 'https://strava.com/routes/1', distance: 75, duration: 150 });
       mockAiRideService.parseRideText.mockResolvedValue({
-        params: { title: 'Ride', when: 'tomorrow', route: 'https://strava.com/routes/1' }, error: null
+        params: { title: 'Ride', when: 'tomorrow', routes: ['https://strava.com/routes/1'] }, error: null
       });
       handler.states.set('42:100', {
         mode: 'create', rideId: null, ride: null,

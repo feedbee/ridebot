@@ -73,12 +73,16 @@ export class StravaEventParser {
   }
 
   /**
-   * Find the first known-provider route URL in a text string.
+   * Find all known-provider route URLs in a text string in discovery order.
    * @param {string} text
-   * @returns {string | null}
+   * @returns {string[]}
    */
+  static extractRoutesFromDescription(text) {
+    return RouteParser.extractKnownRouteUrls(text);
+  }
+
   static extractRouteFromDescription(text) {
-    return RouteParser.extractFirstKnownRouteUrl(text);
+    return this.extractRoutesFromDescription(text)[0] || null;
   }
 
   /**
@@ -204,10 +208,11 @@ export class StravaEventParser {
       rideData.organizer = event.club.name;
     }
 
-    // Route: prefer attached route object, fall back to description link
+    // Route: prefer attached route object, fall back to description links
     if (event.route) {
       const routeIdStr = event.route.id_str ?? String(event.route.id);
-      rideData.routeLink = `https://www.strava.com/routes/${routeIdStr}`;
+      rideData.routes = [{ url: `https://www.strava.com/routes/${routeIdStr}` }];
+      rideData.routeLink = rideData.routes[0].url;
       if (event.route.distance) {
         rideData.distance = Math.round(event.route.distance / 1000);
       }
@@ -215,9 +220,10 @@ export class StravaEventParser {
         rideData.duration = Math.round(event.route.estimated_moving_time / 60);
       }
     } else {
-      const descriptionRouteUrl = this.extractRouteFromDescription(event.description);
-      if (descriptionRouteUrl) {
-        rideData.routeLink = descriptionRouteUrl;
+      const descriptionRouteUrls = this.extractRoutesFromDescription(event.description);
+      if (descriptionRouteUrls.length > 0) {
+        rideData.routes = descriptionRouteUrls.map(url => ({ url }));
+        rideData.routeLink = rideData.routes[0].url;
       }
     }
 

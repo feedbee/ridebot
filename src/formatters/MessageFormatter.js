@@ -5,6 +5,7 @@ import { DateParser } from '../utils/date-parser.js';
 import { getCategoryLabel } from '../utils/category-utils.js';
 import { t } from '../i18n/index.js';
 import { formatSpeed } from '../utils/speed-utils.js';
+import { getDerivedRouteLabel, getRideRoutes } from '../utils/route-links.js';
 
 /**
  * Handles formatting messages for display
@@ -24,6 +25,18 @@ export class MessageFormatter {
 
   escapeForRegex(text) {
     return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  renderRouteLinks(ride, language = config.i18n.defaultLanguage) {
+    const routes = getRideRoutes(ride);
+    if (routes.length === 0) {
+      return '';
+    }
+
+    return routes.map(route => {
+      const label = route.label || getDerivedRouteLabel(route.url, language);
+      return `<a href="${escapeHtml(route.url)}">${escapeHtml(label)}</a>`;
+    }).join(', ');
   }
 
   /**
@@ -148,8 +161,9 @@ export class MessageFormatter {
     if (ride.meetingPoint) {
       group3 += `📍 ${this.translate('formatter.labels.meetingPoint', {}, language)}: ${escapeHtml(ride.meetingPoint)}\n`;
     }
-    if (ride.routeLink) {
-      group3 += `🗺️ ${this.translate('formatter.labels.route', {}, language)}: <a href="${escapeHtml(ride.routeLink)}">${this.translate('formatter.routeLinkLabel', {}, language)}</a>\n`;
+    const rideRouteLinks = this.renderRouteLinks(ride, language);
+    if (rideRouteLinks) {
+      group3 += `🗺️ ${this.translate('formatter.labels.route', {}, language)}: ${rideRouteLinks}\n`;
     }
     if (group3) {
       rideDetails += `\n${group3}`;
@@ -255,8 +269,9 @@ export class MessageFormatter {
     if (rideData.meetingPoint) {
       group3 += `📍 ${this.translate('formatter.labels.meetingPoint', {}, language)}: ${escapeHtml(rideData.meetingPoint)}\n`;
     }
-    if (rideData.routeLink) {
-      group3 += `🗺️ ${this.translate('formatter.labels.route', {}, language)}: <a href="${escapeHtml(rideData.routeLink)}">${this.translate('formatter.routeLinkLabel', {}, language)}</a>\n`;
+    const previewRouteLinks = this.renderRouteLinks(rideData, language);
+    if (previewRouteLinks) {
+      group3 += `🗺️ ${this.translate('formatter.labels.route', {}, language)}: ${previewRouteLinks}\n`;
     }
     if (group3) {
       message += `\n${group3}`;

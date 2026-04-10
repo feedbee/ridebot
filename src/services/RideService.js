@@ -2,6 +2,7 @@ import { RouteParser } from '../utils/route-parser.js';
 import { FieldProcessor } from '../utils/FieldProcessor.js';
 import { config } from '../config.js';
 import { t } from '../i18n/index.js';
+import { getRideRoutes } from '../utils/route-links.js';
 
 /**
  * Service class for managing rides and their messages
@@ -162,28 +163,8 @@ export class RideService {
         : FieldProcessor.processRideFields(params, false);
       if (error) return { ride: null, error };
       
-      // Handle route processing (async)
-      if (data._requiresRouteProcessing) {
-        const routeOptions = language ? { language } : undefined;
-        const routeInfo = routeOptions
-          ? await RouteParser.processRouteInfo(data._routeParam, routeOptions)
-          : await RouteParser.processRouteInfo(data._routeParam);
-        if (routeInfo.error) return { ride: null, error: routeInfo.error };
-        
-        data.routeLink = routeInfo.routeLink;
-        
-        // Only use parsed details if not explicitly provided
-        if (routeInfo.distance && !params.dist) {
-          data.distance = routeInfo.distance;
-        }
-        
-        if (routeInfo.duration && !params.duration) {
-          data.duration = routeInfo.duration;
-        }
-        
-        delete data._routeParam;
-        delete data._requiresRouteProcessing;
-      }
+      const routeProcessingError = await this.processRoutesData(data, params, { language });
+      if (routeProcessingError) return { ride: null, error: routeProcessingError };
       
       // Set defaults and create ride data
       const rideData = {
@@ -246,28 +227,8 @@ export class RideService {
       
       const updates = { ...data };
       
-      // Handle route processing (async)
-      if (data._requiresRouteProcessing) {
-        const routeOptions = language ? { language } : undefined;
-        const routeInfo = routeOptions
-          ? await RouteParser.processRouteInfo(data._routeParam, routeOptions)
-          : await RouteParser.processRouteInfo(data._routeParam);
-        if (routeInfo.error) return { ride: null, error: routeInfo.error };
-        
-        updates.routeLink = routeInfo.routeLink;
-        
-        // Use parsed details if available and not explicitly provided
-        if (routeInfo.distance && !params.dist) {
-          updates.distance = routeInfo.distance;
-        }
-        
-        if (routeInfo.duration && !params.duration) {
-          updates.duration = routeInfo.duration;
-        }
-        
-        delete updates._routeParam;
-        delete updates._requiresRouteProcessing;
-      }
+      const routeProcessingError = await this.processRoutesData(updates, params, { language });
+      if (routeProcessingError) return { ride: null, error: routeProcessingError };
       
       // Field mapping is now handled by FieldProcessor
       
@@ -310,12 +271,18 @@ export class RideService {
     
     // Merge params with original ride data
     // For fields that can be cleared with '-', use 'undefined' check to distinguish between not provided and explicitly set
+    const explicitRouteClear = (Array.isArray(params.route) && params.route.length === 1 && params.route[0] === '-')
+      || params.route === '-';
     const mergedParams = {
       title: params.title !== undefined ? params.title : originalRide.title,
       category: params.category !== undefined ? params.category : originalRide.category,
       organizer: params.organizer !== undefined ? params.organizer : originalRide.organizer,
       meet: params.meet !== undefined ? params.meet : originalRide.meetingPoint,
-      route: params.route !== undefined ? params.route : originalRide.routeLink,
+      route: explicitRouteClear
+        ? []
+        : params.route !== undefined
+        ? params.route
+        : getRideRoutes(originalRide).map(route => route.label ? `${route.label} | ${route.url}` : route.url),
       dist: params.dist !== undefined ? params.dist : originalRide.distance?.toString(),
       duration: params.duration !== undefined ? params.duration : originalRide.duration?.toString(),
       info: params.info !== undefined ? params.info : originalRide.additionalInfo
@@ -353,5 +320,49 @@ export class RideService {
 
     // Use existing createRideFromParams to handle all the validation and processing
     return await this.createRideFromParams(mergedParams, null, user, { language });
+  }
+
+  async processRoutesData(data, params, options = {}) {
+    if (!data._requiresRouteProcessing) {
+      return null;
+    }
+
+    const language = options.language;
+    let firstDistance = null;
+    let firstDuration = null;
+    const processedRoutes = [];
+
+    for (const route of data.routes || []) {
+      const routeOptions = language ? { language } : undefined;
+      const routeInfo = routeOptions
+        ? await RouteParser.processRouteInfo(route.url, routeOptions)
+        : await RouteParser.processRouteInfo(route.url);
+      if (routeInfo.error) {
+        return routeInfo.error;
+      }
+
+      processedRoutes.push(route.label ? { url: routeInfo.routeLink, label: route.label } : { url: routeInfo.routeLink });
+
+      if (firstDistance === null && routeInfo.distance) {
+        firstDistance = routeInfo.distance;
+      }
+      if (firstDuration === null && routeInfo.duration) {
+        firstDuration = routeInfo.duration;
+      }
+    }
+
+    data.routes = processedRoutes;
+    data.routeLink = processedRoutes[0]?.url || '';
+
+    if (firstDistance !== null && !params.dist) {
+      data.distance = firstDistance;
+    }
+
+    if (firstDuration !== null && !params.duration) {
+      data.duration = firstDuration;
+    }
+
+    delete data._requiresRouteProcessing;
+    return null;
   }
 }

@@ -107,11 +107,17 @@ The AI returns the **current complete state** of all known fields. Later message
 | `category` | `road`, `gravel`, `mtb`, `mtb-xc`, `e-bike`, `virtual`, `mixed` |
 | `organizer` | Organizer name |
 | `meet` | Meeting point |
-| `route` | Route URL (Strava, Komoot, RideWithGPS, Garmin) |
+| `routes` | Array of route strings; each item is either `URL` or `Label | URL` |
 | `dist` | Distance in km |
 | `duration` | Duration (e.g. `"2h 30m"`, `"90m"`) |
 | `speed` | Speed range/min/max/avg (e.g. `"25-28"`, `"25+"`, `"~25"`) |
 | `info` | Additional notes |
+
+Route extraction notes:
+- AI may return multiple route links
+- each route item uses the same text format as parameter mode
+- when route labels are omitted, labels are derived at render time
+- route metrics are enriched from the first route that provides parseable distance or duration
 
 ---
 
@@ -157,6 +163,7 @@ Uses `ctx.api.editMessageText()` to edit the preview in-place — same pattern a
 - `parseDateTimeInput()` — parse `when` for preview date display
 - `parseDuration()` — convert duration string to minutes for preview
 - `parseSpeedInput()` — parse speed string into `speedMin`/`speedMax` for preview
+- `parseRouteEntries()` — parse `routes[]` items from AI output
 - `normalizeCategory()` — normalize category string
 - `MessageFormatter.formatRidePreview()` — preview rendering
 - `RideService.createRideFromParams()` / `updateRideFromParams()` — final save

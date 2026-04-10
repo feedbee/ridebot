@@ -3,6 +3,7 @@ import { StorageInterface } from './interface.js';
 import { config } from '../config.js';
 import { DEFAULT_CATEGORY, normalizeCategory } from '../utils/category-utils.js';
 import { MigrationRunner } from '../migrations/MigrationRunner.js';
+import { getRideRoutes, normalizeRoutes } from '../utils/route-links.js';
 
 const participantSchema = new mongoose.Schema({
   userId: { type: Number, required: true },
@@ -26,11 +27,17 @@ const messageSchema = new mongoose.Schema({
   isForCreator: { type: Boolean, default: null }
 });
 
+const routeSchema = new mongoose.Schema({
+  url: { type: String, required: true },
+  label: { type: String, default: undefined }
+}, { _id: false });
+
 const rideSchema = new mongoose.Schema({
   title: { type: String, required: true },
   category: { type: String, default: DEFAULT_CATEGORY },
   date: { type: Date, required: true },
   messages: [messageSchema],
+  routes: [routeSchema],
   routeLink: String,
   meetingPoint: String,
   distance: Number,
@@ -101,6 +108,9 @@ export class MongoDBStorage extends StorageInterface {
       category: normalizeCategory(ride.category),
       participation: { joined: [], thinking: [], skipped: [] }
     };
+    if (ride.routes !== undefined) {
+      rideData.routes = normalizeRoutes(ride.routes);
+    }
 
     // Ensure messages array exists
     if (!rideData.messages) {
@@ -129,6 +139,9 @@ export class MongoDBStorage extends StorageInterface {
 
     if (updatesToApply.category !== undefined) {
       updatesToApply.category = normalizeCategory(updatesToApply.category);
+    }
+    if (updatesToApply.routes !== undefined) {
+      updatesToApply.routes = normalizeRoutes(updatesToApply.routes);
     }
 
     // Apply updates
@@ -255,6 +268,7 @@ export class MongoDBStorage extends StorageInterface {
       category: normalizeCategory(rideObj.category || DEFAULT_CATEGORY),
       date: rideObj.date,
       messages: rideObj.messages || [],
+      routes: getRideRoutes(rideObj),
       routeLink: rideObj.routeLink,
       meetingPoint: rideObj.meetingPoint,
       distance: rideObj.distance,

@@ -47,7 +47,15 @@ export class RideParamsHelper {
         const normalizedKey = key.trim().toLowerCase();
         
         if (RideParamsHelper.VALID_PARAMS.hasOwnProperty(normalizedKey)) {
-          params[normalizedKey] = value.trim();
+          const trimmedValue = value.trim();
+          if (normalizedKey === 'route') {
+            if (!params.route) {
+              params.route = [];
+            }
+            params.route.push(trimmedValue);
+          } else {
+            params[normalizedKey] = trimmedValue;
+          }
         } else {
           unknownParams.push(key.trim());
         }

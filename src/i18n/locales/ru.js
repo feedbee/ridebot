@@ -45,7 +45,7 @@ title: Ride title
 when: Date and time (e.g., "tomorrow at 6pm", "this saturday 10am", "21 Jul 14:30")
 category: One of: "Regular/Mixed Ride" (default), "Road Ride", "Gravel Ride", "Mountain/Enduro/Downhill Ride", "MTB-XC Ride", "E-Bike Ride", "Virtual/Indoor Ride" (optional)
 meet: Meeting point (optional)
-route: Route link (optional)
+route: Ссылка на маршрут или "Label | URL" (повторяйте параметр для нескольких маршрутов) (optional)
 dist: Distance in km (optional)
 duration: Duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
 speed: Speed in km/h: range (25-28), min (25+ or 25-), max (-28), avg (25 or ~25) (optional)
@@ -60,14 +60,21 @@ when: tomorrow at 6pm
 category: Road Ride
 meet: Bike Shop on Main St
 route: https://www.strava.com/routes/123456
+route: Komoot | https://www.komoot.com/tour/456789
 dist: 35
 duration: 2h 30m
 speed: 25-28
 info: Bring lights and a rain jacket
 </pre>
 
+Правила для маршрутов:
+• Повторяйте <code>route:</code>, чтобы добавить несколько ссылок
+• Используйте <code>route: Label | URL</code>, чтобы задать собственный лейбл
+• URL всегда берется из последнего сегмента после <code>|</code>, поэтому символ <code>|</code> можно использовать внутри лейбла
+• Если лейбл не указан, бот покажет <code>Strava</code>, <code>Garmin</code>, <code>Komoot</code>, <code>RideWithGPS</code> или локализованное <code>Link</code>/<code>Ссылка</code>
+
 3. Через AI в режиме диалога (только в личном чате с ботом):
-Отправьте /airide и опишите поездку в свободной форме. Бот разберет детали с помощью AI, покажет живое превью и позволит уточнять информацию в нескольких сообщениях до подтверждения.
+Отправьте /airide и опишите поездку в свободной форме. Бот разберет детали с помощью AI, покажет живое превью и позволит уточнять информацию в нескольких сообщениях до подтверждения. AI также умеет извлекать несколько ссылок на маршрут.
 <pre>
 /airide
 </pre>
@@ -82,7 +89,8 @@ info: Bring lights and a rain jacket
 <pre>
 /fromstrava https://www.strava.com/clubs/123/group_events/456
 </pre>
-Поля заполняются автоматически: название, дата, место встречи, категория, ссылка на маршрут, расстояние, длительность, диапазон скоростей (из темповых групп), организатор (название клуба) и дополнительная информация (ссылка на событие + описание + темповые группы).
+Поля заполняются автоматически: название, дата, место встречи, категория, ссылки на маршрут, расстояние, длительность, диапазон скоростей (из темповых групп), организатор (название клуба) и дополнительная информация (ссылка на событие + описание + темповые группы).
+Если у события Strava есть прикрепленный маршрут, импортируется только он. Если прикрепленного маршрута нет, бот импортирует все ссылки на известных провайдеров маршрутов из описания в порядке нахождения.
 
 <b>Управление поездками</b>
 
@@ -99,12 +107,13 @@ id: abc123
 title: New title (optional)
 when: New date/time (optional)
 meet: New meeting point (optional)
-route: New route link (optional)
+route: Новая ссылка на маршрут или "Label | URL" (повторяйте, чтобы заменить весь список маршрутов) (optional)
 dist: New distance (optional)
 duration: New duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
 speed: New speed (optional)
 info: Additional information (optional)
 </pre>
+Если передан хотя бы один параметр <code>route:</code>, он заменяет весь список маршрутов. Используйте <code>route: -</code>, чтобы очистить все маршруты.
     `.trim(),
 
     help2: `
@@ -151,7 +160,7 @@ title: New title (optional)
 when: New date/time (optional)
 category: One of: "Regular/Mixed Ride" (default), "Road Ride", "Gravel Ride", "Mountain/Enduro/Downhill Ride", "MTB-XC Ride", "E-Bike Ride", "Virtual/Indoor Ride" (optional)
 meet: New meeting point (optional)
-route: New route link (optional)
+route: Новая ссылка на маршрут или "Label | URL" (повторяйте, чтобы заменить скопированный список маршрутов) (optional)
 dist: New distance (optional)
 duration: New duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
 speed: New speed (optional)
@@ -159,6 +168,7 @@ info: Additional information (optional)
 </pre>
 Параметры, которые не были переданы, будут скопированы из исходной поездки.
 По умолчанию новая поездка будет запланирована на завтра в то же время.
+Если передан хотя бы один параметр <code>route:</code>, он заменяет скопированный список маршрутов. Используйте <code>route: -</code>, чтобы очистить все скопированные маршруты.
 
 <b>📋 Список ваших поездок</b>
 Используйте /listrides, чтобы посмотреть все созданные вами поездки:
@@ -359,7 +369,7 @@ id: abc123 (or #abc123)
       parseError: '❌ Не удалось распознать детали поездки. Попробуйте снова с более понятным описанием.',
       cancelled: 'Создание поездки отменено.',
       confirmButton: '✅ Подтвердить',
-      dialogPrompt: '🗒 Опишите поездку: название, дату и время, ссылку на маршрут, расстояние и ожидаемую длительность, среднюю скорость, место встречи и другие подробности.',
+      dialogPrompt: '🗒 Опишите поездку: название, дату и время, ссылку или ссылки на маршрут, расстояние и ожидаемую длительность, среднюю скорость, место встречи и другие подробности.',
       dialogUpdatePrompt: '🗒 Что хотите изменить?',
       dialogLimitReached: '⚠️ Достигнут лимит сообщений. Подтвердите или отмените.',
       missingFieldsError: 'Не хватает обязательных полей: {fields}. Добавьте их в следующем сообщении.'

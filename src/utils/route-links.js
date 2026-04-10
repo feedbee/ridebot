@@ -72,8 +72,8 @@ export function getRideRoutes(ride) {
     return [];
   }
 
-  const normalizedRoutes = normalizeRoutes(ride.routes);
-  if (normalizedRoutes.length > 0) {
+  if (Array.isArray(ride.routes)) {
+    const normalizedRoutes = normalizeRoutes(ride.routes);
     return normalizedRoutes;
   }
 
@@ -84,7 +84,8 @@ export function getRideRoutes(ride) {
   return [];
 }
 
-export function parseRouteEntry(input) {
+export function parseRouteEntry(input, options = {}) {
+  const { validateUrl = true } = options;
   const raw = String(input ?? '').trim();
   if (!raw) {
     return { route: null, error: 'empty' };
@@ -94,7 +95,7 @@ export function parseRouteEntry(input) {
   const url = (parts.pop() || '').trim();
   const label = parts.join('|').trim();
 
-  if (!isValidUrl(url)) {
+  if (validateUrl && !isValidUrl(url)) {
     return { route: null, error: 'invalid_url' };
   }
 
@@ -104,7 +105,7 @@ export function parseRouteEntry(input) {
   };
 }
 
-export function parseRouteEntries(inputs) {
+export function parseRouteEntries(inputs, options = {}) {
   const values = Array.isArray(inputs) ? inputs : [inputs];
   const routes = [];
 
@@ -115,7 +116,7 @@ export function parseRouteEntries(inputs) {
 
     const lines = input.split('\n').map(line => line.trim()).filter(Boolean);
     for (const line of lines) {
-      const { route, error } = parseRouteEntry(line);
+      const { route, error } = parseRouteEntry(line, options);
       if (error) {
         return { routes: null, error };
       }

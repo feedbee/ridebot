@@ -1,6 +1,7 @@
 import { StorageInterface } from './interface.js';
 import { randomUUID } from 'crypto';
 import { normalizeCategory } from '../utils/category-utils.js';
+import { getRideRoutes, normalizeRoutes } from '../utils/route-links.js';
 
 const BASE62_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 
@@ -53,9 +54,12 @@ export class MemoryStorage extends StorageInterface {
       createdAt: new Date(),
       participation: { joined: [], thinking: [], skipped: [] }
     };
+    if (rideData.routes !== undefined) {
+      newRide.routes = normalizeRoutes(rideData.routes);
+    }
     
     this.rides.set(id, newRide);
-    return newRide;
+    return { ...newRide, routes: getRideRoutes(newRide) };
   }
 
   async updateRide(rideId, updates) {
@@ -82,6 +86,9 @@ export class MemoryStorage extends StorageInterface {
     if (updatesToApply.category !== undefined) {
       updatesToApply.category = normalizeCategory(updatesToApply.category);
     }
+    if (updatesToApply.routes !== undefined) {
+      updatesToApply.routes = normalizeRoutes(updatesToApply.routes);
+    }
     
     const updatedRide = {
       ...ride,
@@ -89,7 +96,7 @@ export class MemoryStorage extends StorageInterface {
     };
     
     this.rides.set(rideId, updatedRide);
-    return updatedRide;
+    return { ...updatedRide, routes: getRideRoutes(updatedRide) };
   }
 
   async getRide(rideId) {
@@ -100,6 +107,7 @@ export class MemoryStorage extends StorageInterface {
     
     return {
       ...ride,
+      routes: getRideRoutes(ride),
       category: normalizeCategory(ride.category)
     };
   }
@@ -113,6 +121,7 @@ export class MemoryStorage extends StorageInterface {
       total: userRides.length,
       rides: userRides.slice(skip, skip + limit).map(ride => ({
         ...ride,
+        routes: getRideRoutes(ride),
         category: normalizeCategory(ride.category)
       }))
     };
@@ -184,7 +193,7 @@ export class MemoryStorage extends StorageInterface {
   async getRideByGroupId(groupId) {
     for (const ride of this.rides.values()) {
       if (ride.groupId === groupId) {
-        return { ...ride, category: normalizeCategory(ride.category) };
+        return { ...ride, routes: getRideRoutes(ride), category: normalizeCategory(ride.category) };
       }
     }
     return null;
@@ -193,7 +202,7 @@ export class MemoryStorage extends StorageInterface {
   async getRideByStravaId(stravaId, createdBy) {
     for (const ride of this.rides.values()) {
       if (ride.metadata?.stravaId === stravaId && ride.createdBy === createdBy) {
-        return { ...ride, category: normalizeCategory(ride.category) };
+        return { ...ride, routes: getRideRoutes(ride), category: normalizeCategory(ride.category) };
       }
     }
     return null;

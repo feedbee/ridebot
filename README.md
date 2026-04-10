@@ -9,14 +9,14 @@ A Telegram bot for organizing bike rides within multiple chats. The bot allows u
   - Title
   - Category (Road Ride, Gravel Ride, Mountain Bike Ride, etc.)
   - Optional meeting point
-  - Optional route link (Strava, Ridewithgps, Komoot)
+  - Optional route links with optional labels (Strava, RideWithGPS, Komoot, Garmin, or any other URL)
   - Optional distance
   - Optional estimated riding time
   - Optional speed expectations
   - Optional additional information text
 - Join/Thinking/Pass ride functionality with synchronized participant lists
 - Automatic group sync: attach a Telegram group to a ride so participants are auto-added when they join and removed when they leave
-- Automatic route information parsing
+- Automatic route information parsing from the first parseable route link
 - Update ride announcements
 - Participant list management
 - Multi-chat support: post the same ride to multiple chats
@@ -135,7 +135,7 @@ To update an existing ride via AI dialog:
 
 ```
 /airide #rideId
-/airide #rideId move to next Saturday and add a route link
+/airide #rideId move to next Saturday and add route links
 ```
 
 > **Note:** `/airide` is only available in private chat with the bot. Requires `ANTHROPIC_API_KEY` to be set.
@@ -149,8 +149,8 @@ To update an existing ride via AI dialog:
 Fetches the Strava club event and creates a ride automatically. The following fields are populated from the event:
 
 - **Title, date, meeting point, category** — directly from the event
-- **Route link** — from the attached route object; falls back to the first known-provider link found in the event description (Strava, RideWithGPS, Komoot, Garmin)
-- **Distance and duration** — from the attached route (if present)
+- **Routes** — from the attached route object; if there is no attached route, all known-provider links found in the event description are imported in discovery order (Strava, RideWithGPS, Komoot, Garmin)
+- **Distance and duration** — from the attached route if present; otherwise from the first found route link
 - **Speed range** — derived from pace groups (speed-based only)
 - **Organizer** — the Strava club name
 - **Additional info** — event URL + description + pace groups detail
@@ -168,6 +168,8 @@ when: 25.03.2024 18:30
 category: Road Ride
 meet: Bike Shop on Main St
 route: https://www.strava.com/routes/123456
+route: Komoot | https://www.komoot.com/tour/456789
+route: Short variant | https://ridewithgps.com/routes/987654
 dist: 35
 time: 90
 speed: 25-28
@@ -180,11 +182,18 @@ This creates a ride with:
 - Time: 18:30
 - Category: Road Ride (optional, defaults to "Regular/Mixed Ride")
 - Meeting point: Bike Shop on Main St
-- Route: Strava route link
+- Routes: multiple route links in order; the first route is treated as primary
 - Distance: 35 km (optional if route provided)
 - Duration: 90 minutes (optional if route provided)
 - Speed: 25-28 km/h (optional)
 - Additional Info: Bring lights and a jacket (optional)
+
+Route input rules:
+- Repeat `route:` to pass multiple links.
+- Use `route: URL` for an unlabeled route.
+- Use `route: Label | URL` for a labeled route.
+- The URL is always taken from the last `|`-separated segment, so `|` can be used inside the label.
+- If a label is omitted, the bot derives one when rendering: `Strava`, `Garmin`, `Komoot`, `RideWithGPS`, otherwise localized `Link` / `Ссылка`.
 
 ### Updating a Ride
 
@@ -202,6 +211,7 @@ when: 25.03.2024 19:00
 category: Gravel Ride
 meet: New Meeting Point
 route: https://www.strava.com/routes/123456
+route: Komoot | https://www.komoot.com/tour/456789
 dist: 40
 time: 120
 speed: 26-29
@@ -209,6 +219,8 @@ info: Bring lights and a raincoat
 ```
 
 Note: Only the ride creator can update the ride.
+
+If at least one `route:` line is present in `/updateride`, it replaces the entire route list.
 
 ### Removing Field Values
 
@@ -245,6 +257,11 @@ Four ways to duplicate a ride:
 2. Reply to the ride message with `/dupride` and new parameters
 3. Use `/dupride` with ride ID directly: `/dupride abc123`
 4. Use `/dupride` with ride ID and optional parameters
+
+When duplicating with parameters:
+- repeated `route:` lines replace the copied route list
+- `route: Label | URL` sets a custom label
+- `route: -` clears all copied routes
 
 ### Posting a Ride to Another Chat
 
@@ -289,10 +306,12 @@ The bot sends a single-use invite link valid for 24 hours. The command only work
 
 The bot supports route links from:
 - Strava
-- Ridewithgps
+- RideWithGPS
 - Komoot
+- Garmin
 
-Route information (distance and estimated time) will be automatically parsed when available.
+Multiple route links are supported in command mode, wizard mode, AI mode, and Strava import. Route information (distance and estimated time) is automatically parsed from the first route link that provides those metrics.
+In the wizard, changing the route list refreshes previously auto-derived distance and duration when the new route provides those metrics.
 
 ## Ride Categories
 
