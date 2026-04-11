@@ -43,7 +43,13 @@ export class AiRideCommandHandler extends BaseCommandHandler {
       return;
     }
 
-    const { mode, rideId, freeText } = this._parseCommandInput(rawText);
+    const resolvedInput = this._resolveCommandInput(ctx, rawText);
+    if (resolvedInput.error) {
+      await ctx.reply(resolvedInput.error);
+      return;
+    }
+
+    const { mode, rideId, freeText } = resolvedInput;
 
     let ride = null;
     if (mode === 'update') {
@@ -164,6 +170,38 @@ export class AiRideCommandHandler extends BaseCommandHandler {
       return { mode: 'update', rideId: match[1], freeText: match[2]?.trim() || null };
     }
     return { mode: 'create', rideId: null, freeText: text };
+  }
+
+  /**
+   * Resolve create/update mode from command text and replied ride message.
+   * Explicit `#rideId` in the command takes precedence. If the command is sent
+   * as a reply to a ride message, reuse the same ride ID extraction logic that
+   * other ride commands already rely on.
+   * @param {import('grammy').Context} ctx
+   * @param {string} rawText
+   * @returns {{mode: string, rideId: string|null, freeText: string|null, error: string|null}}
+   */
+  _resolveCommandInput(ctx, rawText) {
+    const parsedInput = this._parseCommandInput(rawText);
+    if (parsedInput.mode === 'update' || !ctx.message?.reply_to_message) {
+      return { ...parsedInput, error: null };
+    }
+
+    const extractOptions = ctx.lang ? { language: ctx.lang } : undefined;
+    const extraction = extractOptions
+      ? this.rideMessagesService.extractRideId(ctx.message, extractOptions)
+      : this.rideMessagesService.extractRideId(ctx.message);
+
+    if (extraction.error) {
+      return { ...parsedInput, error: extraction.error };
+    }
+
+    return {
+      mode: 'update',
+      rideId: extraction.rideId,
+      freeText: parsedInput.freeText,
+      error: null
+    };
   }
 
   /**

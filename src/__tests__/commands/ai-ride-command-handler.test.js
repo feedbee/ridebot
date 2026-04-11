@@ -17,8 +17,8 @@ describe.each(['en', 'ru'])('AiRideCommandHandler (%s)', (language) => {
   let mockAiRideService;
   let mockCtx;
 
-  const makeCtx = (text = '/airide Road ride tomorrow 9am') => ({
-    message: { text, message_id: 1 },
+  const makeCtx = (text = '/airide Road ride tomorrow 9am', messageOverrides = {}) => ({
+    message: { text, message_id: 1, ...messageOverrides },
     lang: language,
     chat: { id: 100, type: 'private' },
     from: { id: 42, username: 'alice', first_name: 'Alice', last_name: 'Smith' },
@@ -46,6 +46,12 @@ describe.each(['en', 'ru'])('AiRideCommandHandler (%s)', (language) => {
     };
 
     mockRideMessagesService = {
+      extractRideId: jest.fn((message) => {
+        const match = message.reply_to_message?.text?.match(/🎫\s*#Ride\s*#(\w+)/i);
+        return match
+          ? { rideId: match[1], error: null }
+          : { rideId: null, error: tr('services.rideMessages.couldNotFindRideIdInMessage') };
+      }),
       createRideMessage: jest.fn().mockResolvedValue({}),
       updateRideMessages: jest.fn().mockResolvedValue({ success: true, updatedCount: 1, removedCount: 0 })
     };
@@ -199,6 +205,54 @@ describe.each(['en', 'ru'])('AiRideCommandHandler (%s)', (language) => {
           expect.stringContaining(tr('commands.update.onlyCreator'))
         );
         expect(mockAiRideService.parseRideText).not.toHaveBeenCalled();
+      });
+
+      it('detects update mode when replying to a ride message', async () => {
+        const ride = { id: 'abc123', createdBy: 42, title: 'Old Ride', date: new Date() };
+        mockRideService.getRide.mockResolvedValue(ride);
+        mockCtx = makeCtx('/airide', {
+          reply_to_message: { text: 'Title\n🎫 #Ride #abc123' }
+        });
+
+        await handler.handle(mockCtx);
+
+        expect(mockRideService.getRide).toHaveBeenCalledWith('abc123');
+        expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.airide.dialogUpdatePrompt'));
+        expect(handler.states.get('42:100')).toMatchObject({
+          mode: 'update',
+          rideId: 'abc123'
+        });
+      });
+
+      it('uses reply ride id and processes free text when replying to a ride message', async () => {
+        const ride = { id: 'abc123', createdBy: 42, title: 'Old Ride', date: new Date() };
+        mockRideService.getRide.mockResolvedValue(ride);
+        mockAiRideService.parseRideText.mockResolvedValue({
+          params: { speed: '25-28' }, error: null
+        });
+        mockCtx = makeCtx('/airide change speed to 25-28', {
+          reply_to_message: { text: 'Title\n🎫 #Ride #abc123' }
+        });
+
+        await handler.handle(mockCtx);
+
+        expect(mockRideService.getRide).toHaveBeenCalledWith('abc123');
+        expect(mockAiRideService.parseRideText).toHaveBeenCalledWith('', {
+          dialogMessages: ['change speed to 25-28']
+        });
+      });
+
+      it('replies with extraction error when reply does not contain a ride id', async () => {
+        mockCtx = makeCtx('/airide', {
+          reply_to_message: { text: 'Just some other message' }
+        });
+
+        await handler.handle(mockCtx);
+
+        expect(mockCtx.reply).toHaveBeenCalledWith(
+          tr('services.rideMessages.couldNotFindRideIdInMessage')
+        );
+        expect(mockRideService.getRide).not.toHaveBeenCalled();
       });
     });
   });
