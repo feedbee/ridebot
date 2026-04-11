@@ -6,6 +6,23 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function getTimestamp(value) {
+  if (value == null) {
+    return 0;
+  }
+
+  if (value instanceof Date) {
+    return value.getTime();
+  }
+
+  if (typeof value === 'number') {
+    return value < 10_000_000_000 ? value * 1000 : value;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+}
+
 function normalizePeerId(peerId) {
   return peerId == null ? null : peerId.toString();
 }
@@ -57,8 +74,9 @@ export class TelegramE2EDriver {
     botToken,
     primaryGroupId,
     userClient,
-    pollingIntervalMs = 1000,
-    defaultTimeoutMs = 30000
+    pollingIntervalMs = 1500,
+    defaultTimeoutMs = 30000,
+    userMessageDelayMs = 350
   }) {
     if (!botToken) {
       throw new Error('TelegramE2EDriver requires a bot token');
@@ -69,10 +87,12 @@ export class TelegramE2EDriver {
     this.userClient = userClient;
     this.pollingIntervalMs = pollingIntervalMs;
     this.defaultTimeoutMs = defaultTimeoutMs;
+    this.userMessageDelayMs = userMessageDelayMs;
     this.chatEntityCache = new Map();
     this.botUsername = null;
     this.botEntity = null;
     this.botPeerId = null;
+    this.lastUserMessageAt = 0;
   }
 
   async connect() {
@@ -154,13 +174,19 @@ export class TelegramE2EDriver {
   }
 
   async sendPrivateCommand(text) {
+    await this.paceUserMessage();
     return this.userClient.client.sendMessage(this.botEntity, {
       message: text,
       parseMode: undefined
     });
   }
 
+  async sendPrivateText(text) {
+    return this.sendPrivateCommand(text);
+  }
+
   async sendMessageToChat({ chatId, text, replyToMessageId }) {
+    await this.paceUserMessage();
     const entity = await this.getChatEntity(chatId);
     const sendOptions = {
       message: text,
@@ -179,6 +205,36 @@ export class TelegramE2EDriver {
     await this.userClient.client.deleteMessages(entity, [messageId], { revoke });
   }
 
+  async deletePrivateMessage({ messageId, revoke = true }) {
+    await this.userClient.client.deleteMessages(this.botEntity, [messageId], { revoke });
+  }
+
+  async getRecentPrivateMessages({ limit = 100 } = {}) {
+    const messages = await this.userClient.client.getMessages(this.botEntity, { limit });
+    return messages.filter(Boolean);
+  }
+
+  async deletePrivateMessagesSince({
+    afterMessageId = 0,
+    includeBoundary = false,
+    limit = 200,
+    batchSize = 50,
+    revoke = true
+  } = {}) {
+    const messages = await this.getRecentPrivateMessages({ limit });
+    const messageIds = messages
+      .filter(message => includeBoundary ? message.id >= afterMessageId : message.id > afterMessageId)
+      .map(message => message.id)
+      .sort((left, right) => right - left);
+
+    for (let index = 0; index < messageIds.length; index += batchSize) {
+      const batch = messageIds.slice(index, index + batchSize);
+      await this.userClient.client.deleteMessages(this.botEntity, batch, { revoke });
+    }
+
+    return messageIds.length;
+  }
+
   async waitForBotPrivateMessage({
     contains,
     predicate,
@@ -190,6 +246,65 @@ export class TelegramE2EDriver {
       contains,
       predicate,
       afterMessageId,
+      timeoutMs
+    });
+  }
+
+  async waitForEditedBotPrivateMessage({
+    messageId,
+    contains,
+    predicate,
+    afterEditTimestamp = 0,
+    timeoutMs = this.defaultTimeoutMs
+  }) {
+    return this.waitForEditedBotMessageInEntity({
+      entity: this.botEntity,
+      messageId,
+      contains,
+      predicate,
+      afterEditTimestamp,
+      timeoutMs
+    });
+  }
+
+  async waitForBotPrivateMessageState({
+    messageId,
+    contains,
+    predicate,
+    timeoutMs = this.defaultTimeoutMs
+  }) {
+    return this.waitForBotMessageStateInEntity({
+      entity: this.botEntity,
+      messageId,
+      contains,
+      predicate,
+      timeoutMs,
+      errorContext: 'private chat'
+    });
+  }
+
+  async waitForPrivateMessageDeleted({
+    messageId,
+    timeoutMs = this.defaultTimeoutMs
+  }) {
+    return this.waitForMessageDeletedInEntity({
+      entity: this.botEntity,
+      messageId,
+      timeoutMs
+    });
+  }
+
+  async assertNoBotPrivateMessage({
+    afterMessageId = 0,
+    contains,
+    predicate,
+    timeoutMs = 3000
+  } = {}) {
+    return this.assertNoBotMessageInEntity({
+      entity: this.botEntity,
+      afterMessageId,
+      contains,
+      predicate,
       timeoutMs
     });
   }
@@ -217,23 +332,19 @@ export class TelegramE2EDriver {
     messageId,
     contains,
     predicate,
+    afterEditTimestamp = 0,
     timeoutMs = this.defaultTimeoutMs
   }) {
     const entity = await this.getChatEntity(chatId);
-    const matcher = buildContainsPredicate(contains, predicate);
-    const deadline = Date.now() + timeoutMs;
-
-    while (Date.now() < deadline) {
-      const message = await this.getMessageById({ entity, messageId });
-
-      if (message && this.isFromBot(message) && message.editDate && matcher(message)) {
-        return message;
-      }
-
-      await sleep(this.pollingIntervalMs);
-    }
-
-    throw new Error(`Timed out waiting for edited bot message ${messageId} in chat ${chatId}`);
+    return this.waitForEditedBotMessageInEntity({
+      entity,
+      messageId,
+      contains,
+      predicate,
+      afterEditTimestamp,
+      timeoutMs,
+      errorContext: `chat ${chatId}`
+    });
   }
 
   async waitForMessageDeletedInChat({
@@ -242,19 +353,26 @@ export class TelegramE2EDriver {
     timeoutMs = this.defaultTimeoutMs
   }) {
     const entity = await this.getChatEntity(chatId);
-    const deadline = Date.now() + timeoutMs;
+    return this.waitForMessageDeletedInEntity({
+      entity,
+      messageId,
+      timeoutMs,
+      errorContext: `chat ${chatId}`
+    });
+  }
 
-    while (Date.now() < deadline) {
-      const message = await this.getMessageById({ entity, messageId });
-
-      if (!message) {
-        return true;
-      }
-
-      await sleep(this.pollingIntervalMs);
-    }
-
-    throw new Error(`Timed out waiting for message ${messageId} to be deleted in chat ${chatId}`);
+  async clickButtonInPrivateMessage({
+    messageId,
+    buttonText,
+    callbackDataPattern
+  }) {
+    return this.clickButtonInEntity({
+      entity: this.botEntity,
+      messageId,
+      buttonText,
+      callbackDataPattern,
+      errorContext: 'private chat'
+    });
   }
 
   async clickButtonInChat({
@@ -264,10 +382,26 @@ export class TelegramE2EDriver {
     callbackDataPattern
   }) {
     const entity = await this.getChatEntity(chatId);
+    return this.clickButtonInEntity({
+      entity,
+      messageId,
+      buttonText,
+      callbackDataPattern,
+      errorContext: `chat ${chatId}`
+    });
+  }
+
+  async clickButtonInEntity({
+    entity,
+    messageId,
+    buttonText,
+    callbackDataPattern,
+    errorContext
+  }) {
     const message = await this.getMessageById({ entity, messageId });
 
     if (!message) {
-      throw new Error(`Message ${messageId} was not found in chat ${chatId}`);
+      throw new Error(`Message ${messageId} was not found in ${errorContext}`);
     }
 
     if (buttonText) {
@@ -294,6 +428,10 @@ export class TelegramE2EDriver {
     const entity = await this.getChatEntity(chatId);
     const messages = await this.userClient.client.getMessages(entity, { limit });
     return messages[0] || null;
+  }
+
+  async getPrivateMessageById(messageId) {
+    return this.getMessageById({ entity: this.botEntity, messageId });
   }
 
   async getLatestMessageFromEntity(entity, limit = 1) {
@@ -335,6 +473,110 @@ export class TelegramE2EDriver {
     throw new Error(`Timed out waiting for bot message after message ${afterMessageId}`);
   }
 
+  async waitForEditedBotMessageInEntity({
+    entity,
+    messageId,
+    contains,
+    predicate,
+    afterEditTimestamp = 0,
+    timeoutMs = this.defaultTimeoutMs,
+    errorContext = 'entity'
+  }) {
+    const matcher = buildContainsPredicate(contains, predicate);
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+      const message = await this.getMessageById({ entity, messageId });
+      const editTimestamp = getTimestamp(message?.editDate);
+
+      if (
+        message &&
+        this.isFromBot(message) &&
+        editTimestamp > afterEditTimestamp &&
+        matcher(message)
+      ) {
+        return message;
+      }
+
+      await sleep(this.pollingIntervalMs);
+    }
+
+    throw new Error(`Timed out waiting for edited bot message ${messageId} in ${errorContext}`);
+  }
+
+  async waitForBotMessageStateInEntity({
+    entity,
+    messageId,
+    contains,
+    predicate,
+    timeoutMs = this.defaultTimeoutMs,
+    errorContext = 'entity'
+  }) {
+    const matcher = buildContainsPredicate(contains, predicate);
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+      const message = await this.getMessageById({ entity, messageId });
+
+      if (message && this.isFromBot(message) && matcher(message)) {
+        return message;
+      }
+
+      await sleep(this.pollingIntervalMs);
+    }
+
+    throw new Error(`Timed out waiting for bot message ${messageId} state in ${errorContext}`);
+  }
+
+  async waitForMessageDeletedInEntity({
+    entity,
+    messageId,
+    timeoutMs = this.defaultTimeoutMs,
+    errorContext = 'entity'
+  }) {
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+      const message = await this.getMessageById({ entity, messageId });
+
+      if (!message) {
+        return true;
+      }
+
+      await sleep(this.pollingIntervalMs);
+    }
+
+    throw new Error(`Timed out waiting for message ${messageId} to be deleted in ${errorContext}`);
+  }
+
+  async assertNoBotMessageInEntity({
+    entity,
+    contains,
+    predicate,
+    afterMessageId = 0,
+    timeoutMs = 3000
+  }) {
+    const matcher = buildContainsPredicate(contains, predicate);
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+      const messages = await this.userClient.client.getMessages(entity, { limit: 20 });
+      const matchedMessage = messages.find(message =>
+        message.id > afterMessageId &&
+        this.isFromBot(message) &&
+        matcher(message)
+      );
+
+      if (matchedMessage) {
+        throw new Error(`Unexpected bot message ${matchedMessage.id} appeared after ${afterMessageId}`);
+      }
+
+      await sleep(this.pollingIntervalMs);
+    }
+
+    return true;
+  }
+
   async getMessageById({ entity, messageId }) {
     const messages = await this.userClient.client.getMessages(entity, { ids: messageId });
     return messages[0] || null;
@@ -342,6 +584,21 @@ export class TelegramE2EDriver {
 
   isFromBot(message) {
     return normalizePeerId(message?.senderId) === this.botPeerId;
+  }
+
+  async paceUserMessage() {
+    if (!this.userMessageDelayMs) {
+      return;
+    }
+
+    const now = Date.now();
+    const waitMs = this.userMessageDelayMs - (now - this.lastUserMessageAt);
+
+    if (waitMs > 0) {
+      await sleep(waitMs);
+    }
+
+    this.lastUserMessageAt = Date.now();
   }
 }
 
