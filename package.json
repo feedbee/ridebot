@@ -13,6 +13,7 @@
     "test:coverage:basic": "npm run test:coverage -- --testPathIgnorePatterns=mongodb-storage.test.js",
     "e2e:bootstrap-session": "node e2e/bootstrap-session.js",
     "e2e:telegram": "node e2e/run-e2e.js",
+    "e2e:run": "node e2e/run-e2e-full-stack.js",
     "migrate": "node scripts/migrate.js"
   },
   "dependencies": {

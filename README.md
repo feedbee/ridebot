@@ -78,7 +78,9 @@ Full Telegram E2E smoke tests:
 - do not run automatically as part of starndard automated tests
 - should be maintained when real Telegram user flows change
 - are documented in [`e2e/README.md`](e2e/README.md)
-- use `npm run e2e:bootstrap-session` and `npm run e2e:telegram`
+- use `npm run e2e:bootstrap-session`
+- use `npm run e2e:run` for the full local bot + Telegram E2E flow
+- use `npm run e2e:telegram` only when the bot is already running
 
 ## Production Deployment
 

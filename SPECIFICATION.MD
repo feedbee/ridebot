@@ -309,6 +309,7 @@ Test scripts:
 - `npm run test:coverage`: full-suite coverage with thresholds
 - `npm run test:coverage:basic`: coverage for non-Mongo suite
 - `npm run e2e:bootstrap-session`: create or refresh the real Telegram user session for E2E
+- `npm run e2e:run`: start the local development bot, wait for readiness, and run the manual real Telegram smoke test
 - `npm run e2e:telegram`: run the manual real Telegram smoke test
 
 Runner helper:

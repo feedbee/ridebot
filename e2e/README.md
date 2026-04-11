@@ -21,6 +21,7 @@ Current smoke scenario:
 
 Current runner:
 - [`run-e2e.js`](./run-e2e.js)
+- [`run-e2e-full-stack.js`](./run-e2e-full-stack.js)
 
 Current test:
 - [`tests/ride-lifecycle.e2e.test.js`](./tests/ride-lifecycle.e2e.test.js)
@@ -83,25 +84,24 @@ npm run e2e:bootstrap-session -- --help
 
 ## Running the Smoke Test
 
-### 1. Start the bot locally
+### 1. Recommended: run the full E2E orchestrator
 
-Run the application the same way you normally run the dev bot:
-
-```bash
-node src/index.js
-```
-
-or:
+Use:
 
 ```bash
-npm run dev
+npm run e2e:run
 ```
 
-The E2E test expects the bot to be online and polling.
+This runner:
+- starts the bot in development mode without file watching
+- waits until the bot prints `Bike Ride Bot vX.X.X started in development mode`
+- runs the Telegram E2E suite
+- prints bot and test output in one console with clear prefixes
+- stops the bot process after the suite finishes
 
 ### 2. Run the Telegram E2E test
 
-In another terminal:
+If the bot is already running and you only want to execute the Telegram scenario:
 
 ```bash
 npm run e2e:telegram
@@ -179,7 +179,7 @@ Check:
 ### The test waits forever for a message or edit
 
 Check:
-- the bot is running locally
+- the bot can start locally with `NODE_ENV=development node src/index.js`
 - the bot token in `.env` matches the Telegram bot you are messaging
 - you are not using a production group by mistake
 - the user session belongs to the account you expect

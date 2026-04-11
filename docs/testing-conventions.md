@@ -306,10 +306,12 @@ This is the standard developer test entrypoint and excludes the slower Mongo-bac
 ### Full Telegram E2E Run
 Use manually when needed:
 - `npm run e2e:bootstrap-session`
+- `npm run e2e:run`
 - `npm run e2e:telegram`
 
 These tests are intentionally excluded from the default local and CI test flow.
 That does not make them optional from a maintenance perspective: if a change affects real Telegram user behavior, the E2E smoke layer should be reviewed and updated as needed.
+`npm run e2e:run` is the canonical runner for the full local flow because it starts the bot in development mode, waits for the startup log, and then launches the Telegram scenario suite in the same console.
 
 ### Mongo / Infrastructure Run
 Use only when needed:
