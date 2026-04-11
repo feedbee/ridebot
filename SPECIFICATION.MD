@@ -387,7 +387,7 @@ _No major refactoring areas identified at this time. The codebase is well-organi
 ### Medium Priority
 - [x] Bug/Enhancement: Fixed routes parsing from known providers and add Garmin
 - [x] Feature: (Notifications) Send a private notification to the ride creator when a participant joins or leaves. There is a 30-second delay to prevent spamming from frequent toggling: one final notification for all changes per user with <=30 sec between the last and previous ones; if the participant's status changes again within this period, cancel the pending notification
-- [ ] Enhancement: Allow attaching multiple track links to different services (explicitely labeling Komoot, Strava, Garmin, RideWithGPS)
+- [x] Enhancement: Allow attaching multiple track links to different services (explicitely labeling Komoot, Strava, Garmin, RideWithGPS)
 - [ ] Feature: (Rides management) Add management buttons below the ride button in private chat with the bot for ride creator
 - [ ] Feature: (Notifications) Remind the joined users about upcoming ride 24 hours and 1 hour before the ride (send a private message; give each user an option to unsubscribe from all notifications). Remind thinking that they must finilize their decision 1 hour before the ride
 - [ ] Feature: (Ride sharing) Optionally enable everyone to repost the ride via an additional field during ride creation or update
