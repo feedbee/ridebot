@@ -174,6 +174,11 @@ export class TelegramE2EDriver {
     return this.userClient.client.sendMessage(entity, sendOptions);
   }
 
+  async deleteMessageInChat({ chatId, messageId, revoke = true }) {
+    const entity = await this.getChatEntity(chatId);
+    await this.userClient.client.deleteMessages(entity, [messageId], { revoke });
+  }
+
   async waitForBotPrivateMessage({
     contains,
     predicate,
