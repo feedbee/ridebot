@@ -34,6 +34,8 @@ This document mirrors and extends the guidance from `.cursor/rules/coding-prefer
 - Follow the project layer boundaries documented in [`layer-responsibilities.md`](./layer-responsibilities.md).
 - Keep business rules in the service layer or other appropriate domain/application abstractions, not in Telegram-specific command handling.
 - Prefer extending established project conventions over creating parallel patterns for similar problems.
+- Keep service method signatures framework-agnostic. Prefer app-level DTOs such as `UserProfile` over raw Telegram objects.
+- If a service only needs identity, pass `userId` rather than a larger object.
 
 ## Testing Expectations
 

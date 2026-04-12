@@ -95,12 +95,11 @@ export class StorageInterface {
   /**
    * Set user participation state for a ride
    * @param {string} rideId - Ride ID
-   * @param {number} userId - User ID
    * @param {'joined'|'thinking'|'skipped'} state - Participation state
-   * @param {Participant} participant - Participant data
+   * @param {Participant} participantProfile - Participant data
    * @returns {Promise<{ride: Ride}>} - Updated ride
    */
-  async setParticipation(rideId, userId, state, participant) {
+  async setParticipation(rideId, state, participantProfile) {
     throw new Error('Not implemented');
   }
 

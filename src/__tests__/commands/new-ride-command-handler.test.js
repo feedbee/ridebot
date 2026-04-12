@@ -93,7 +93,7 @@ describe.each(['en', 'ru'])('NewRideCommandHandler (%s)', (language) => {
       expect(mockRideService.createRideFromParams).toHaveBeenCalledWith(
         { title: 'Test Ride', when: 'tomorrow 11:00' },
         789,
-        expect.objectContaining({ id: 101112 }),
+        expect.objectContaining({ userId: 101112, username: 'testuser', firstName: 'Test', lastName: 'User' }),
         { language }
       );
       expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(createdRide, mockCtx);

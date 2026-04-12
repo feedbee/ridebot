@@ -21,18 +21,17 @@ jest.mock('grammy', () => {
 describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
   let participationHandlers;
   let mockRideService;
+  let mockRideParticipationService;
   let mockMessageFormatter;
   let mockRideMessagesService;
   let mockCtx;
   const tr = (key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
-  
-  let mockNotificationService;
 
   beforeEach(() => {
     // Create mock RideService
-    mockRideService = {
-      getRide: jest.fn(),
-      setParticipation: jest.fn()
+    mockRideService = {};
+    mockRideParticipationService = {
+      changeParticipation: jest.fn()
     };
 
     // Create mock RideMessagesService
@@ -47,11 +46,6 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
     // Create mock MessageFormatter
     mockMessageFormatter = {
       formatRideDetails: jest.fn()
-    };
-
-    // Create mock NotificationService
-    mockNotificationService = {
-      scheduleParticipationNotification: jest.fn()
     };
 
     // Create mock Grammy context
@@ -73,38 +67,35 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
 
     // Create ParticipationHandlers instance with mocks
     participationHandlers = new ParticipationHandlers(
-      mockRideService, mockMessageFormatter, mockRideMessagesService, mockNotificationService
+      mockRideService, mockMessageFormatter, mockRideMessagesService, mockRideParticipationService
     );
   });
   
   describe('handleJoinRide', () => {
     it('should handle ride not found', async () => {
       // Setup
-      mockRideService.getRide.mockResolvedValue(null);
+      mockRideParticipationService.changeParticipation.mockResolvedValue({ status: 'ride_not_found', targetState: 'joined' });
       
       // Execute
       await participationHandlers.handleJoinRide(mockCtx);
       
       // Verify
-      expect(mockRideService.getRide).toHaveBeenCalledWith('123');
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.participation.rideNotFound'));
-      expect(mockRideService.setParticipation).not.toHaveBeenCalled();
     });
     
     it('should handle cancelled ride', async () => {
       // Setup
-      mockRideService.getRide.mockResolvedValue({
-        id: '123',
-        cancelled: true
+      mockRideParticipationService.changeParticipation.mockResolvedValue({
+        status: 'ride_cancelled',
+        ride: { id: '123', cancelled: true },
+        targetState: 'joined'
       });
       
       // Execute
       await participationHandlers.handleJoinRide(mockCtx);
       
       // Verify
-      expect(mockRideService.getRide).toHaveBeenCalledWith('123');
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.participation.rideCancelled'));
-      expect(mockRideService.setParticipation).not.toHaveBeenCalled();
     });
     
     it('should add participant successfully', async () => {
@@ -115,8 +106,12 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
         messageId: 789,
         chatId: 101112
       };
-      mockRideService.getRide.mockResolvedValue(mockRide);
-      mockRideService.setParticipation.mockResolvedValue({ success: true, ride: mockRide });
+      mockRideParticipationService.changeParticipation.mockResolvedValue({
+        status: 'changed',
+        ride: mockRide,
+        previousState: null,
+        targetState: 'joined'
+      });
       
       // Mock the dependency, not the method under test
       mockRideMessagesService.updateRideMessages.mockResolvedValue({
@@ -129,45 +124,57 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
       await participationHandlers.handleJoinRide(mockCtx);
       
       // Verify
-      expect(mockRideService.getRide).toHaveBeenCalledWith('123');
-      expect(mockRideService.setParticipation).toHaveBeenCalledWith('123', {
-        userId: 456,
-        username: 'testuser',
-        firstName: 'Test',
-        lastName: 'User'
-      }, 'joined');
+      expect(mockRideParticipationService.changeParticipation).toHaveBeenCalledWith({
+        rideId: '123',
+        participantProfile: expect.objectContaining({
+          userId: 456,
+          username: 'testuser',
+          firstName: 'Test',
+          lastName: 'User'
+        }),
+        targetState: 'joined',
+        language,
+        api: mockCtx.api
+      });
       expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalledWith(mockRide, mockCtx);
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.participation.joinedSuccess'));
     });
     
-    it('should call scheduleParticipationNotification on successful join', async () => {
+    it('should pass normalized UserProfile to participation service on successful join', async () => {
       const mockRide = {
         id: '123',
         cancelled: false,
         createdBy: 999,
         notifyOnParticipation: true
       };
-      mockRideService.getRide.mockResolvedValue(mockRide);
-      mockRideService.setParticipation.mockResolvedValue({ success: true, ride: mockRide });
+      mockRideParticipationService.changeParticipation.mockResolvedValue({
+        status: 'changed',
+        ride: mockRide,
+        previousState: null,
+        targetState: 'joined'
+      });
       mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: true, updatedCount: 1, removedCount: 0 });
 
       await participationHandlers.handleJoinRide(mockCtx);
 
-      expect(mockNotificationService.scheduleParticipationNotification).toHaveBeenCalledWith(
-        mockRide,
-        { userId: 456, username: 'testuser', firstName: 'Test', lastName: 'User' },
-        'joined',
-        mockCtx.api
+      expect(mockRideParticipationService.changeParticipation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          participantProfile: expect.objectContaining({
+            userId: 456,
+            username: 'testuser',
+            firstName: 'Test',
+            lastName: 'User'
+          })
+        })
       );
     });
 
-    it('should NOT call scheduleParticipationNotification when participation unchanged', async () => {
-      mockRideService.getRide.mockResolvedValue({ id: '123', cancelled: false });
-      mockRideService.setParticipation.mockResolvedValue({ success: false, ride: null });
+    it('should not update ride messages when participation unchanged', async () => {
+      mockRideParticipationService.changeParticipation.mockResolvedValue({ status: 'already_in_state', targetState: 'joined' });
 
       await participationHandlers.handleJoinRide(mockCtx);
 
-      expect(mockNotificationService.scheduleParticipationNotification).not.toHaveBeenCalled();
+      expect(mockRideMessagesService.updateRideMessages).not.toHaveBeenCalled();
     });
 
     // Multi-chat propagation: just expect the simple reply
@@ -177,8 +184,12 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
         id: '123',
         cancelled: false
       };
-      mockRideService.getRide.mockResolvedValue(mockRide);
-      mockRideService.setParticipation.mockResolvedValue({ success: true, ride: mockRide });
+      mockRideParticipationService.changeParticipation.mockResolvedValue({
+        status: 'changed',
+        ride: mockRide,
+        previousState: null,
+        targetState: 'joined'
+      });
       // Mock the dependency, not the method under test
       mockRideMessagesService.updateRideMessages.mockResolvedValue({
         success: true,
@@ -188,31 +199,18 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
       // Execute
       await participationHandlers.handleJoinRide(mockCtx);
       // Verify
-      expect(mockRideService.getRide).toHaveBeenCalledWith('123');
-      expect(mockRideService.setParticipation).toHaveBeenCalledWith('123', {
-        userId: 456,
-        username: 'testuser',
-        firstName: 'Test',
-        lastName: 'User'
-      }, 'joined');
       expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalledWith(mockRide, mockCtx);
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.participation.joinedSuccess'));
     });
 
     it('should handle already joined ride', async () => {
       // Setup
-      mockRideService.getRide.mockResolvedValue({
-        id: '123',
-        cancelled: false
-      });
-      mockRideService.setParticipation.mockResolvedValue({ success: false, ride: null });
+      mockRideParticipationService.changeParticipation.mockResolvedValue({ status: 'already_in_state', targetState: 'joined' });
       
       // Execute
       await participationHandlers.handleJoinRide(mockCtx);
       
       // Verify
-      expect(mockRideService.getRide).toHaveBeenCalledWith('123');
-      expect(mockRideService.setParticipation).toHaveBeenCalled();
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(
         tr('commands.participation.alreadyInState', {
           state: tr('commands.participation.states.joined')
@@ -223,7 +221,7 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
     it('should handle error during join', async () => {
       // Setup
       const dbError = new Error('Database error');
-      mockRideService.getRide.mockRejectedValue(dbError);
+      mockRideParticipationService.changeParticipation.mockRejectedValue(dbError);
       
       // Mock console.error to verify it's called with the right error
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -241,7 +239,7 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.participation.genericError'));
       
       // Verify no partial state - setParticipation should not have been called
-      expect(mockRideService.setParticipation).not.toHaveBeenCalled();
+      expect(mockRideMessagesService.updateRideMessages).not.toHaveBeenCalled();
       
       // Restore console.error
       consoleErrorSpy.mockRestore();
@@ -257,21 +255,21 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
     it('should set thinking state successfully', async () => {
       // Setup
       const mockRide = { id: '123', title: 'Test Ride', cancelled: false };
-      mockRideService.getRide.mockResolvedValue(mockRide);
-      mockRideService.setParticipation.mockResolvedValue({ success: true, ride: mockRide });
+      mockRideParticipationService.changeParticipation.mockResolvedValue({
+        status: 'changed',
+        ride: mockRide,
+        previousState: null,
+        targetState: 'thinking'
+      });
       mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: true });
 
       // Execute
       await participationHandlers.handleThinkingRide(mockCtx);
 
       // Verify
-      expect(mockRideService.getRide).toHaveBeenCalledWith('123');
-      expect(mockRideService.setParticipation).toHaveBeenCalledWith('123', {
-        userId: 456,
-        username: 'testuser',
-        firstName: 'Test',
-        lastName: 'User'
-      }, 'thinking');
+      expect(mockRideParticipationService.changeParticipation).toHaveBeenCalledWith(
+        expect.objectContaining({ rideId: '123', targetState: 'thinking' })
+      );
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.participation.thinkingSuccess'));
     });
   });
@@ -285,108 +283,25 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
     it('should set skip state successfully', async () => {
       // Setup
       const mockRide = { id: '123', title: 'Test Ride', cancelled: false };
-      mockRideService.getRide.mockResolvedValue(mockRide);
-      mockRideService.setParticipation.mockResolvedValue({ success: true, ride: mockRide });
+      mockRideParticipationService.changeParticipation.mockResolvedValue({
+        status: 'changed',
+        ride: mockRide,
+        previousState: null,
+        targetState: 'skipped'
+      });
       mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: true });
 
       // Execute
       await participationHandlers.handleSkipRide(mockCtx);
 
       // Verify
-      expect(mockRideService.getRide).toHaveBeenCalledWith('123');
-      expect(mockRideService.setParticipation).toHaveBeenCalledWith('123', {
-        userId: 456,
-        username: 'testuser',
-        firstName: 'Test',
-        lastName: 'User'
-      }, 'skipped');
+      expect(mockRideParticipationService.changeParticipation).toHaveBeenCalledWith(
+        expect.objectContaining({ rideId: '123', targetState: 'skipped' })
+      );
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.participation.skippedSuccess'));
     });
   });
   
-  describe('group sync', () => {
-    const GROUP_ID = -100123456789;
-    const USER_ID = 456;
-    let mockGroupManagementService;
-    let handlersWithGroup;
-
-    beforeEach(() => {
-      mockGroupManagementService = {
-        addParticipant: jest.fn().mockResolvedValue({}),
-        removeParticipant: jest.fn().mockResolvedValue({})
-      };
-      mockCtx.api = {
-        editMessageText: jest.fn().mockResolvedValue({})
-      };
-      handlersWithGroup = new ParticipationHandlers(
-        mockRideService, mockMessageFormatter, mockRideMessagesService, null, mockGroupManagementService
-      );
-    });
-
-    it('should add user to group when joining a ride with a group', async () => {
-      const mockRide = { id: '123', cancelled: false, groupId: GROUP_ID, createdBy: 999 };
-      mockRideService.getRide.mockResolvedValue(mockRide);
-      mockRideService.setParticipation.mockResolvedValue({
-        success: true, ride: mockRide, previousState: null
-      });
-      mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: true });
-      mockCtx.match = ['join:123', '123'];
-
-      await handlersWithGroup.handleJoinRide(mockCtx);
-
-      expect(mockGroupManagementService.addParticipant).toHaveBeenCalledWith(
-        mockCtx.api, GROUP_ID, USER_ID, language, 999
-      );
-      expect(mockGroupManagementService.removeParticipant).not.toHaveBeenCalled();
-    });
-
-    it('should remove user from group when leaving (was joined)', async () => {
-      const mockRide = { id: '123', cancelled: false, groupId: GROUP_ID };
-      mockRideService.getRide.mockResolvedValue(mockRide);
-      mockRideService.setParticipation.mockResolvedValue({
-        success: true, ride: mockRide, previousState: 'joined'
-      });
-      mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: true });
-      mockCtx.match = ['skip:123', '123'];
-
-      await handlersWithGroup.handleSkipRide(mockCtx);
-
-      expect(mockGroupManagementService.removeParticipant).toHaveBeenCalledWith(
-        mockCtx.api, GROUP_ID, USER_ID
-      );
-      expect(mockGroupManagementService.addParticipant).not.toHaveBeenCalled();
-    });
-
-    it('should not touch group when thinking->skipped (was not joined)', async () => {
-      const mockRide = { id: '123', cancelled: false, groupId: GROUP_ID };
-      mockRideService.getRide.mockResolvedValue(mockRide);
-      mockRideService.setParticipation.mockResolvedValue({
-        success: true, ride: mockRide, previousState: 'thinking'
-      });
-      mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: true });
-      mockCtx.match = ['skip:123', '123'];
-
-      await handlersWithGroup.handleSkipRide(mockCtx);
-
-      expect(mockGroupManagementService.addParticipant).not.toHaveBeenCalled();
-      expect(mockGroupManagementService.removeParticipant).not.toHaveBeenCalled();
-    });
-
-    it('should not call group service when no group is attached', async () => {
-      const mockRide = { id: '123', cancelled: false, groupId: null };
-      mockRideService.getRide.mockResolvedValue(mockRide);
-      mockRideService.setParticipation.mockResolvedValue({
-        success: true, ride: mockRide, previousState: null
-      });
-      mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: true });
-      mockCtx.match = ['join:123', '123'];
-
-      await handlersWithGroup.handleJoinRide(mockCtx);
-
-      expect(mockGroupManagementService.addParticipant).not.toHaveBeenCalled();
-    });
-  });
-
   describe('updateRideMessage', () => {
     it('should not update if messages array is missing', async () => {
       const ride = {

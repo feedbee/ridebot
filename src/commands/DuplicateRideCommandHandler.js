@@ -1,5 +1,6 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
 import { getRideRoutes } from '../utils/route-links.js';
+import { UserProfile } from '../models/UserProfile.js';
 
 /**
  * Handler for the dupride command
@@ -65,10 +66,11 @@ export class DuplicateRideCommandHandler extends BaseCommandHandler {
    * @param {Object} params - Command parameters
    */
   async handleWithParams(ctx, originalRide, params) {
+    const creatorProfile = UserProfile.fromTelegramUser(ctx.from);
     // Use the RideService duplicateRide method which handles all the logic
     const { ride, error } = ctx.lang
-      ? await this.rideService.duplicateRide(originalRide.id, params, ctx.from, { language: ctx.lang })
-      : await this.rideService.duplicateRide(originalRide.id, params, ctx.from);
+      ? await this.rideService.duplicateRide(originalRide.id, params, creatorProfile, { language: ctx.lang })
+      : await this.rideService.duplicateRide(originalRide.id, params, creatorProfile);
 
     if (error) {
       await ctx.reply(error);

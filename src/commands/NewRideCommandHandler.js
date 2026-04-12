@@ -1,4 +1,5 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
+import { UserProfile } from '../models/UserProfile.js';
 
 /**
  * Handler for the newride command
@@ -39,9 +40,10 @@ export class NewRideCommandHandler extends BaseCommandHandler {
    * @param {Object} params - Command parameters
    */
   async handleWithParams(ctx, params) {
+    const creatorProfile = UserProfile.fromTelegramUser(ctx.from);
     const { ride, error } = ctx.lang
-      ? await this.rideService.createRideFromParams(params, ctx.chat.id, ctx.from, { language: ctx.lang })
-      : await this.rideService.createRideFromParams(params, ctx.chat.id, ctx.from);
+      ? await this.rideService.createRideFromParams(params, ctx.chat.id, creatorProfile, { language: ctx.lang })
+      : await this.rideService.createRideFromParams(params, ctx.chat.id, creatorProfile);
 
     if (error) {
       await ctx.reply(error);

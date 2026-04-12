@@ -1,4 +1,5 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
+import { UserProfile } from '../models/UserProfile.js';
 
 /**
  * Handler for join/thinking/skip ride callbacks
@@ -8,13 +9,11 @@ export class ParticipationHandlers extends BaseCommandHandler {
    * @param {import('../services/RideService.js').RideService} rideService
    * @param {import('../formatters/MessageFormatter.js').MessageFormatter} messageFormatter
    * @param {import('../services/RideMessagesService.js').RideMessagesService} rideMessagesService
-   * @param {import('../services/NotificationService.js').NotificationService} [notificationService]
-   * @param {import('../services/GroupManagementService.js').GroupManagementService} [groupManagementService]
+   * @param {import('../services/RideParticipationService.js').RideParticipationService} rideParticipationService
    */
-  constructor(rideService, messageFormatter, rideMessagesService, notificationService = null, groupManagementService = null) {
+  constructor(rideService, messageFormatter, rideMessagesService, rideParticipationService) {
     super(rideService, messageFormatter, rideMessagesService);
-    this.notificationService = notificationService;
-    this.groupManagementService = groupManagementService;
+    this.rideParticipationService = rideParticipationService;
   }
   /**
    * Handle join ride callback
@@ -50,40 +49,26 @@ export class ParticipationHandlers extends BaseCommandHandler {
     const rideId = ctx.match[1];
     
     try {
-      const ride = await this.rideService.getRide(rideId);
-      if (!ride) {
+      const participantProfile = UserProfile.fromTelegramUser(ctx.from);
+      const result = await this.rideParticipationService.changeParticipation({
+        rideId,
+        participantProfile,
+        targetState: state,
+        language: ctx.lang,
+        api: ctx.api
+      });
+
+      if (result.status === 'ride_not_found') {
         await ctx.answerCallbackQuery(this.translate(ctx, 'commands.participation.rideNotFound'));
         return;
       }
-      
-      if (ride.cancelled) {
+
+      if (result.status === 'ride_cancelled') {
         await ctx.answerCallbackQuery(this.translate(ctx, 'commands.participation.rideCancelled'));
         return;
       }
-      
-      const participant = {
-        userId: ctx.from.id,
-        username: ctx.from.username || '',
-        firstName: ctx.from.first_name || '',
-        lastName: ctx.from.last_name || ''
-      };
-      
-      const result = await this.rideService.setParticipation(rideId, participant, state);
 
-      if (result.success) {
-        if (this.notificationService) {
-          this.notificationService.scheduleParticipationNotification(result.ride, participant, state, ctx.api);
-        }
-        // Sync group membership if a group is attached
-        if (result.ride.groupId && this.groupManagementService) {
-          const groupId = result.ride.groupId;
-          const userId = participant.userId;
-          if (state === 'joined') {
-            await this.groupManagementService.addParticipant(ctx.api, groupId, userId, ctx.lang, result.ride.createdBy);
-          } else if (result.previousState === 'joined') {
-            await this.groupManagementService.removeParticipant(ctx.api, groupId, userId);
-          }
-        }
+      if (result.status === 'changed') {
         const result2 = await this.updateRideMessage(result.ride, ctx);
         
         if (result2.success) {

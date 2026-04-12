@@ -33,8 +33,8 @@ describe('Concurrent Operations Edge Cases', () => {
 
     // Simulate concurrent join attempts
     const [result1, result2] = await Promise.all([
-      storage.setParticipation(ride.id, participant.userId, 'joined', participant),
-      storage.setParticipation(ride.id, participant.userId, 'joined', participant)
+      storage.setParticipation(ride.id, 'joined', participant),
+      storage.setParticipation(ride.id, 'joined', participant)
     ]);
 
     // Both should succeed (new API allows state changes)
@@ -67,12 +67,12 @@ describe('Concurrent Operations Edge Cases', () => {
     };
 
     // First add the participant
-    await storage.setParticipation(ride.id, participant.userId, 'joined', participant);
+    await storage.setParticipation(ride.id, 'joined', participant);
 
     // Simulate concurrent operations: leave and join again
     const [leaveResult, joinResult] = await Promise.all([
-      storage.setParticipation(ride.id, participant.userId, 'skipped', participant),
-      storage.setParticipation(ride.id, participant.userId, 'joined', participant)
+      storage.setParticipation(ride.id, 'skipped', participant),
+      storage.setParticipation(ride.id, 'joined', participant)
     ]);
 
     // Both operations should succeed
@@ -84,4 +84,3 @@ describe('Concurrent Operations Edge Cases', () => {
     expect(finalRide.participation.joined.length).toBeLessThanOrEqual(1);
   });
 });
-

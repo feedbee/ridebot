@@ -504,7 +504,9 @@ describe.each(['en', 'ru'])('AiRideCommandHandler (%s)', (language) => {
 
       expect(mockRideService.createRideFromParams).toHaveBeenCalledWith(
         { title: 'Road Ride', when: 'tomorrow 9am' },
-        100, mockCtx.from, { language }
+        100,
+        expect.objectContaining({ userId: 42, username: 'alice', firstName: 'Alice', lastName: 'Smith' }),
+        { language }
       );
       expect(mockCtx.api.deleteMessage).toHaveBeenCalledWith(100, 55);
       expect(mockCtx.api.deleteMessage).toHaveBeenCalledWith(100, 99);

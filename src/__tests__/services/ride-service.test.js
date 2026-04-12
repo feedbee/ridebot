@@ -7,6 +7,7 @@ import { RideService } from '../../services/RideService.js';
 import { MemoryStorage } from '../../storage/memory.js';
 import { config } from '../../config.js';
 import { t } from '../../i18n/index.js';
+import { UserProfile } from '../../models/UserProfile.js';
 
 // Import the module first, then mock its methods
 import { RouteParser } from '../../utils/route-parser.js';
@@ -41,6 +42,12 @@ describe('RideService', () => {
     firstName: 'Test',
     lastName: 'User'
   };
+  const testCreatorProfile = new UserProfile({
+    userId: 789,
+    username: 'creator',
+    firstName: 'Test',
+    lastName: 'Creator'
+  });
   const tr = (language, key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
 
   beforeEach(() => {
@@ -335,7 +342,7 @@ describe('RideService', () => {
         duration: 180
       });
       
-      const result = await rideService.createRideFromParams(params, 123456, 789);
+      const result = await rideService.createRideFromParams(params, 123456, testCreatorProfile);
       
       expect(result.error).toBeNull();
       expect(result.ride.distance).toBe(50);
@@ -359,7 +366,7 @@ describe('RideService', () => {
         duration: 180
       });
       
-      const result = await rideService.createRideFromParams(params, 123456, 789);
+      const result = await rideService.createRideFromParams(params, 123456, testCreatorProfile);
       
       expect(result.error).toBeNull();
       expect(result.ride.distance).toBe(75); // From params, not from route parser
@@ -404,7 +411,7 @@ describe('RideService', () => {
         routeLink: 'https://example.com/route'
       });
       
-      const result = await rideService.createRideFromParams(params, 123456, 789);
+      const result = await rideService.createRideFromParams(params, 123456, testCreatorProfile);
       
       expect(result.error).toBeNull();
       expect(result.ride).toHaveProperty('id');
@@ -422,7 +429,7 @@ describe('RideService', () => {
         // Missing 'when' parameter
       };
       
-      const result = await rideService.createRideFromParams(params, 123456, 789, { language });
+      const result = await rideService.createRideFromParams(params, 123456, testCreatorProfile, { language });
       
       expect(result.error).toBe(tr(language, 'services.ride.pleaseProvideTitleAndDate'));
       expect(result.ride).toBeNull();
@@ -434,7 +441,7 @@ describe('RideService', () => {
         when: 'not a valid date'
       };
       
-      const result = await rideService.createRideFromParams(params, 123456, 789, { language });
+      const result = await rideService.createRideFromParams(params, 123456, testCreatorProfile, { language });
       
       // Check that the error message contains the base error text
       expect(result.error).toContain(tr(language, 'parsers.date.invalidFormat'));
@@ -454,7 +461,7 @@ describe('RideService', () => {
         when: 'not a valid date'
       };
       
-      const result = await rideService.createRideFromParams(params, 123456, 789, { language });
+      const result = await rideService.createRideFromParams(params, 123456, testCreatorProfile, { language });
       
       // Check that the error message contains the base error text
       expect(result.error).toContain(tr(language, 'parsers.date.invalidFormat'));
@@ -479,7 +486,7 @@ describe('RideService', () => {
         duration: 180
       });
       
-      const result = await rideService.createRideFromParams(params, 123456, 789);
+      const result = await rideService.createRideFromParams(params, 123456, testCreatorProfile);
       
       expect(result.error).toBeNull();
       expect(result.ride.distance).toBe(50);
@@ -503,7 +510,7 @@ describe('RideService', () => {
         duration: 180
       });
       
-      const result = await rideService.createRideFromParams(params, 123456, 789);
+      const result = await rideService.createRideFromParams(params, 123456, testCreatorProfile);
       
       expect(result.error).toBeNull();
       expect(result.ride.distance).toBe(75); // From params, not from route parser
@@ -520,12 +527,12 @@ describe('RideService', () => {
         organizer: 'Jane Doe'
       };
       
-      const user = {
+      const user = new UserProfile({
         userId: 789,
-        first_name: 'Test',
-        last_name: 'User',
+        firstName: 'Test',
+        lastName: 'User',
         username: 'testuser'
-      };
+      });
       
       const result = await rideService.createRideFromParams(params, 123456, user);
       
@@ -539,12 +546,12 @@ describe('RideService', () => {
         when: 'tomorrow 9am'
       };
       
-      const user = {
+      const user = new UserProfile({
         userId: 789,
-        first_name: 'Test',
-        last_name: 'User',
+        firstName: 'Test',
+        lastName: 'User',
         username: 'testuser'
-      };
+      });
       
       const result = await rideService.createRideFromParams(params, 123456, user);
       
@@ -594,7 +601,7 @@ describe('RideService', () => {
         info: 'Important safety information'
       };
       
-      const result = await rideService.createRideFromParams(params, 123456, 789);
+      const result = await rideService.createRideFromParams(params, 123456, testCreatorProfile);
       
       expect(result.error).toBeNull();
       expect(result.ride.additionalInfo).toBe('Important safety information');
@@ -951,7 +958,12 @@ describe('RideService', () => {
     it.each(['en', 'ru'])('should return generic error when createRideFromParams throws unexpectedly (%s)', async (language) => {
       jest.spyOn(storage, 'createRide').mockRejectedValueOnce(new Error('DB exploded'));
 
-      const result = await rideService.createRideFromParams({ title: 'X', when: 'tomorrow 9am' }, 1, { id: 1 }, { language });
+      const result = await rideService.createRideFromParams(
+        { title: 'X', when: 'tomorrow 9am' },
+        1,
+        new UserProfile({ userId: 1 }),
+        { language }
+      );
 
       expect(result.ride).toBeNull();
       expect(result.error).toBe(tr(language, 'services.ride.errorCreatingRide'));
@@ -959,13 +971,13 @@ describe('RideService', () => {
 
     it('should cover getDefaultOrganizer fallback variants', () => {
       expect(rideService.getDefaultOrganizer(null)).toBe('');
-      expect(rideService.getDefaultOrganizer({ username: 'user_no_space' })).toBe('@user_no_space');
-      expect(rideService.getDefaultOrganizer({ username: 'name with space' })).toBe('name with space');
-      expect(rideService.getDefaultOrganizer({ first_name: 'Jane', last_name: 'Doe' })).toBe('Jane Doe');
+      expect(rideService.getDefaultOrganizer(new UserProfile({ userId: 1, username: 'user_no_space' }))).toBe('@user_no_space');
+      expect(rideService.getDefaultOrganizer(new UserProfile({ userId: 1, username: 'name with space' }))).toBe('name with space');
+      expect(rideService.getDefaultOrganizer(new UserProfile({ userId: 1, firstName: 'Jane', lastName: 'Doe' }))).toBe('Jane Doe');
     });
 
     it.each(['en', 'ru'])('should return not found error when duplicating unknown ride (%s)', async (language) => {
-      const result = await rideService.duplicateRide('missing-ride', {}, { id: 1, username: 'u' }, { language });
+      const result = await rideService.duplicateRide('missing-ride', {}, new UserProfile({ userId: 1, username: 'u' }), { language });
       expect(result).toEqual({ ride: null, error: tr(language, 'services.ride.originalRideNotFound') });
     });
 
@@ -979,7 +991,7 @@ describe('RideService', () => {
         category: 'road',
         additionalInfo: 'Info'
       });
-      const result = await rideService.duplicateRide(originalRide.id, {}, { id: 7, username: 'user7' });
+      const result = await rideService.duplicateRide(originalRide.id, {}, new UserProfile({ userId: 7, username: 'user7' }));
 
       expect(result.error).toBeNull();
       expect(result.ride).toBeDefined();
@@ -1010,12 +1022,12 @@ describe('RideService', () => {
         speedMin: null,
         speedMax: 31
       });
-      const minResult = await rideService.duplicateRide(onlyMinRide.id, {}, { id: 7 });
+      const minResult = await rideService.duplicateRide(onlyMinRide.id, {}, new UserProfile({ userId: 7 }));
       expect(minResult.error).toBeNull();
       expect(minResult.ride.speedMin).toBe(24);
       expect(minResult.ride.speedMax).toBeUndefined();
 
-      const maxResult = await rideService.duplicateRide(onlyMaxRide.id, {}, { id: 7 });
+      const maxResult = await rideService.duplicateRide(onlyMaxRide.id, {}, new UserProfile({ userId: 7 }));
       expect(maxResult.error).toBeNull();
       expect([maxResult.ride.speedMin, maxResult.ride.speedMax]).toContain(31);
     });
@@ -1028,7 +1040,7 @@ describe('RideService', () => {
         routeLink: 'https://example.com/route'
       });
 
-      const result = await rideService.duplicateRide(originalRide.id, { route: '-' }, { id: 7, username: 'user7' });
+      const result = await rideService.duplicateRide(originalRide.id, { route: '-' }, new UserProfile({ userId: 7, username: 'user7' }));
 
       expect(result.error).toBeNull();
       expect(result.ride.routes).toEqual([]);

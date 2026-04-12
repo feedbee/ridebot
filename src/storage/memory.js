@@ -137,7 +137,7 @@ export class MemoryStorage extends StorageInterface {
     return true;
   }
 
-  async setParticipation(rideId, userId, state, participant) {
+  async setParticipation(rideId, state, participantProfile) {
     const ride = this.rides.get(rideId);
     if (!ride) {
       throw new Error('Ride not found');
@@ -149,16 +149,16 @@ export class MemoryStorage extends StorageInterface {
     }
 
     // Remove user from all states first
-    ride.participation.joined = ride.participation.joined.filter(p => p.userId !== userId);
-    ride.participation.thinking = ride.participation.thinking.filter(p => p.userId !== userId);
-    ride.participation.skipped = ride.participation.skipped.filter(p => p.userId !== userId);
+    ride.participation.joined = ride.participation.joined.filter(p => p.userId !== participantProfile.userId);
+    ride.participation.thinking = ride.participation.thinking.filter(p => p.userId !== participantProfile.userId);
+    ride.participation.skipped = ride.participation.skipped.filter(p => p.userId !== participantProfile.userId);
 
     // Add user to the specified state
     const participantData = {
-      userId: participant.userId,
-      username: participant.username,
-      firstName: participant.firstName || '',
-      lastName: participant.lastName || '',
+      userId: participantProfile.userId,
+      username: participantProfile.username,
+      firstName: participantProfile.firstName || '',
+      lastName: participantProfile.lastName || '',
       createdAt: new Date()
     };
 

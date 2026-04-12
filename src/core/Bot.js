@@ -27,6 +27,7 @@ import { AiRideService } from '../services/AiRideService.js';
 import { FromStravaCommandHandler } from '../commands/FromStravaCommandHandler.js';
 import { replaceBotUsername } from '../utils/botUtils.js';
 import { t } from '../i18n/index.js';
+import { RideParticipationService } from '../services/RideParticipationService.js';
 
 /**
  * Core Bot class that coordinates all components
@@ -65,7 +66,8 @@ export class Bot {
     const duplicateRideHandler = new DuplicateRideCommandHandler(rideService, messageFormatter, this.wizard, rideMessagesService);
     const resumeRideHandler = new ResumeRideCommandHandler(rideService, messageFormatter, rideMessagesService);
     const groupManagementService = new GroupManagementService();
-    const participationHandler = new ParticipationHandlers(rideService, messageFormatter, rideMessagesService, notificationService, groupManagementService);
+    const rideParticipationService = new RideParticipationService(rideService, notificationService, groupManagementService);
+    const participationHandler = new ParticipationHandlers(rideService, messageFormatter, rideMessagesService, rideParticipationService);
     const shareRideHandler = new ShareRideCommandHandler(rideService, messageFormatter, rideMessagesService);
     const groupHandler = new GroupCommandHandler(rideService, messageFormatter, rideMessagesService, groupManagementService);
     

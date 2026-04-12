@@ -247,7 +247,7 @@ describe('MongoDBStorage', () => {
     });
 
     test('should add a participant', async () => {
-      const result = await storage.setParticipation(rideId, testParticipant.userId, 'joined', testParticipant);
+      const result = await storage.setParticipation(rideId, 'joined', testParticipant);
       expect(result.ride).toBeDefined();
       expect(result.ride.participation.joined).toHaveLength(1);
       
@@ -260,8 +260,8 @@ describe('MongoDBStorage', () => {
     });
 
     test('should not add duplicate participant', async () => {
-      await storage.setParticipation(rideId, testParticipant.userId, 'joined', testParticipant);
-      const result = await storage.setParticipation(rideId, testParticipant.userId, 'joined', testParticipant);
+      await storage.setParticipation(rideId, 'joined', testParticipant);
+      const result = await storage.setParticipation(rideId, 'joined', testParticipant);
       expect(result.ride).toBeDefined();
 
       const updatedRide = await storage.getRide(rideId);
@@ -269,8 +269,8 @@ describe('MongoDBStorage', () => {
     });
 
     test('should remove a participant', async () => {
-      await storage.setParticipation(rideId, testParticipant.userId, 'joined', testParticipant);
-      const result = await storage.setParticipation(rideId, testParticipant.userId, 'skipped', testParticipant);
+      await storage.setParticipation(rideId, 'joined', testParticipant);
+      const result = await storage.setParticipation(rideId, 'skipped', testParticipant);
       expect(result.ride).toBeDefined();
       expect(result.ride.participation.joined).toHaveLength(0);
       expect(result.ride.participation.skipped).toHaveLength(1);
@@ -278,14 +278,14 @@ describe('MongoDBStorage', () => {
 
     test('should handle removing non-existent participant', async () => {
       const nonExistentParticipant = { userId: 999, username: 'nonexistent', firstName: 'Non', lastName: 'Existent' };
-      const result = await storage.setParticipation(rideId, 999, 'skipped', nonExistentParticipant);
+      const result = await storage.setParticipation(rideId, 'skipped', nonExistentParticipant);
       expect(result.ride).toBeDefined();
       expect(result.ride.participation.skipped).toHaveLength(1);
     });
 
     test('should handle setParticipation with non-existent ride', async () => {
       const nonExistentRideId = '507f1f77bcf86cd799439011';
-      await expect(storage.setParticipation(nonExistentRideId, testParticipant.userId, 'joined', testParticipant))
+      await expect(storage.setParticipation(nonExistentRideId, 'joined', testParticipant))
         .rejects.toThrow('Ride not found');
     });
 
@@ -297,7 +297,7 @@ describe('MongoDBStorage', () => {
       });
       await ride.save();
       
-      const result = await storage.setParticipation(ride._id.toString(), testParticipant.userId, 'joined', testParticipant);
+      const result = await storage.setParticipation(ride._id.toString(), 'joined', testParticipant);
       expect(result.ride).toBeDefined();
       expect(result.ride.participation.joined).toHaveLength(1);
     });
@@ -309,7 +309,7 @@ describe('MongoDBStorage', () => {
         // firstName and lastName are missing
       };
       
-      const result = await storage.setParticipation(rideId, participantWithMissingFields.userId, 'thinking', participantWithMissingFields);
+      const result = await storage.setParticipation(rideId, 'thinking', participantWithMissingFields);
       expect(result.ride).toBeDefined();
       expect(result.ride.participation.thinking).toHaveLength(1);
       
@@ -346,19 +346,19 @@ describe('MongoDBStorage', () => {
     });
 
     test('should return correct state for joined participant', async () => {
-      await storage.setParticipation(rideId, testParticipant.userId, 'joined', testParticipant);
+      await storage.setParticipation(rideId, 'joined', testParticipant);
       const result = await storage.getParticipation(rideId, testParticipant.userId);
       expect(result).toBe('joined');
     });
 
     test('should return correct state for thinking participant', async () => {
-      await storage.setParticipation(rideId, testParticipant.userId, 'thinking', testParticipant);
+      await storage.setParticipation(rideId, 'thinking', testParticipant);
       const result = await storage.getParticipation(rideId, testParticipant.userId);
       expect(result).toBe('thinking');
     });
 
     test('should return correct state for skipped participant', async () => {
-      await storage.setParticipation(rideId, testParticipant.userId, 'skipped', testParticipant);
+      await storage.setParticipation(rideId, 'skipped', testParticipant);
       const result = await storage.getParticipation(rideId, testParticipant.userId);
       expect(result).toBe('skipped');
     });
@@ -378,9 +378,9 @@ describe('MongoDBStorage', () => {
     });
 
     test('should return all participants', async () => {
-      await storage.setParticipation(rideId, testParticipant.userId, 'joined', testParticipant);
-      await storage.setParticipation(rideId, 102, 'thinking', { userId: 102, username: 'user2' });
-      await storage.setParticipation(rideId, 103, 'skipped', { userId: 103, username: 'user3' });
+      await storage.setParticipation(rideId, 'joined', testParticipant);
+      await storage.setParticipation(rideId, 'thinking', { userId: 102, username: 'user2' });
+      await storage.setParticipation(rideId, 'skipped', { userId: 103, username: 'user3' });
       
       const result = await storage.getAllParticipants(rideId);
       expect(result.joined).toHaveLength(1);
@@ -529,7 +529,7 @@ describe('MongoDBStorage', () => {
       const ride = await storage.createRide(testRide);
       
       // Add participant with missing fields
-      await storage.setParticipation(ride.id, 102, 'joined', { 
+      await storage.setParticipation(ride.id, 'joined', { 
         userId: 102, 
         username: 'user2'
         // firstName and lastName are missing

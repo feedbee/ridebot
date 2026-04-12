@@ -66,7 +66,7 @@ describe('MemoryStorage', () => {
     });
 
     it('should throw error when setting participation for non-existent ride', async () => {
-      await expect(storage.setParticipation('non_existent', 123, 'joined', { userId: 123, username: 'test', firstName: 'Test', lastName: 'User' }))
+      await expect(storage.setParticipation('non_existent', 'joined', { userId: 123, username: 'test', firstName: 'Test', lastName: 'User' }))
         .rejects
         .toThrow('Ride not found');
     });
@@ -78,7 +78,7 @@ describe('MemoryStorage', () => {
       const ride = await storage.createRide(testRide);
       
       // Add participant
-      const result = await storage.setParticipation(ride.id, 123, 'joined', { userId: 123, username: 'test', firstName: 'Test', lastName: 'User' });
+      const result = await storage.setParticipation(ride.id, 'joined', { userId: 123, username: 'test', firstName: 'Test', lastName: 'User' });
       expect(result.ride.participation.joined).toHaveLength(1);
       
       // Update ride
@@ -103,10 +103,10 @@ describe('MemoryStorage', () => {
       const ride1 = await storage.createRide(testRide);
       const ride2 = await storage.createRide({ ...testRide, title: 'Second Ride' });
 
-      const result1 = await storage.setParticipation(ride1.id, 123, 'joined', { userId: 123, username: 'user1', firstName: 'First', lastName: 'User' });
+      const result1 = await storage.setParticipation(ride1.id, 'joined', { userId: 123, username: 'user1', firstName: 'First', lastName: 'User' });
       expect(result1.ride.participation.joined).toHaveLength(1);
 
-      const result2 = await storage.setParticipation(ride2.id, 456, 'joined', { userId: 456, username: 'user2', firstName: 'Second', lastName: 'User' });
+      const result2 = await storage.setParticipation(ride2.id, 'joined', { userId: 456, username: 'user2', firstName: 'Second', lastName: 'User' });
       expect(result2.ride.participation.joined).toHaveLength(1);
 
       const updatedRide1 = await storage.getRide(ride1.id);

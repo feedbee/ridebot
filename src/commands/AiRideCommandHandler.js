@@ -6,6 +6,7 @@ import { parseSpeedInput } from '../utils/speed-utils.js';
 import { parseDuration } from '../utils/duration-parser.js';
 import { RouteParser } from '../utils/route-parser.js';
 import { getRideRoutes, parseRouteEntries } from '../utils/route-links.js';
+import { UserProfile } from '../models/UserProfile.js';
 
 const MAX_DIALOG_MESSAGES = 10;
 
@@ -408,13 +409,14 @@ export class AiRideCommandHandler extends BaseCommandHandler {
 
   async _executeRideOperation(ctx, stateKey, state) {
     const options = { language: ctx.lang };
+    const creatorProfile = UserProfile.fromTelegramUser(ctx.from);
     let result;
 
     if (state.mode === 'create') {
       result = await this.rideService.createRideFromParams(
         state.lastParams,
         ctx.chat.id,
-        ctx.from,
+        creatorProfile,
         options
       );
     } else {

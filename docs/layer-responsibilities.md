@@ -45,6 +45,44 @@ Examples of service-owned decisions:
 - whether a participation transition should trigger creator notifications
 - whether a participation transition should add or remove a user from an attached group
 
+## Service Input Contracts
+
+Service boundaries should use application-level data contracts, not raw Telegram framework objects.
+
+Rules:
+
+- Do not pass `ctx` into services.
+- Do not pass raw Telegram user objects such as `ctx.from` into service APIs.
+- If a service only needs to know who performed an action for ownership, filtering, or audit fields, pass `userId`.
+- If a service needs user profile data, pass a normalized `UserProfile`.
+
+### `UserProfile`
+
+Use a single application-level user DTO for service methods that need user identity plus display metadata:
+
+```js
+{
+  userId,
+  username,
+  firstName,
+  lastName
+}
+```
+
+This contract intentionally differs from Telegram's raw shape:
+
+- `userId` instead of `id`
+- `firstName` instead of `first_name`
+- `lastName` instead of `last_name`
+
+Commands and other Telegram-facing entry points are responsible for mapping Telegram user objects into `UserProfile` before calling services.
+
+### Participation Inputs
+
+Participation should use the same `UserProfile` contract instead of a separate participant-specific input type when the fields are identical.
+
+If stored participation records later need extra persistence-only fields such as `createdAt`, those fields should be added by storage or persistence mapping, not required from service callers.
+
 ## Supporting Layers
 
 Some project components support a specific layer and should stay focused on that role:

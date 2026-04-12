@@ -3,6 +3,7 @@ import { FieldProcessor } from '../utils/FieldProcessor.js';
 import { config } from '../config.js';
 import { t } from '../i18n/index.js';
 import { getRideRoutes } from '../utils/route-links.js';
+import { UserProfile } from '../models/UserProfile.js';
 
 /**
  * Service class for managing rides and their messages
@@ -88,18 +89,18 @@ export class RideService {
   /**
    * Set participant state for a ride
    * @param {string} rideId - Ride ID
-   * @param {Object} participant - Participant data
+   * @param {UserProfile} participantProfile - Participant user profile
    * @param {string} state - The participation state (joined, thinking, skipped)
    * @returns {Promise<Object>} - Success status and updated ride
    */
-  async setParticipation(rideId, participant, state) {
+  async setParticipation(rideId, participantProfile, state) {
     // Check if user is already in the desired state
-    const currentState = await this.storage.getParticipation(rideId, participant.userId);
+    const currentState = await this.storage.getParticipation(rideId, participantProfile.userId);
     if (currentState === state) {
       return { success: false, ride: null };
     }
 
-    const result = await this.storage.setParticipation(rideId, participant.userId, state, participant);
+    const result = await this.storage.setParticipation(rideId, state, participantProfile);
     return { success: true, ride: result.ride, previousState: currentState };
   }
 
@@ -143,10 +144,10 @@ export class RideService {
    * Create a ride from parameters
    * @param {Object} params - Ride parameters
    * @param {number} chatId - Chat ID where the command was issued
-   * @param {Object} user - User object with id, first_name, last_name, username fields
+   * @param {UserProfile} creatorProfile - Normalized creator profile
    * @returns {Promise<Object>} - Created ride and any errors
    */
-  async createRideFromParams(params, chatId, user, options = {}) {
+  async createRideFromParams(params, chatId, creatorProfile, options = {}) {
     const language = options.language;
     if (!params.title || !params.when) {
       return { 
@@ -170,12 +171,12 @@ export class RideService {
       const rideData = {
         ...data,
         messages: [], // Initialize with empty array
-        createdBy: user.id
+        createdBy: creatorProfile.userId
       };
       
       // Set organizer name - use provided value or default to creator's name
-      if (!rideData.organizer && user) {
-        rideData.organizer = this.getDefaultOrganizer(user);
+      if (!rideData.organizer && creatorProfile) {
+        rideData.organizer = this.getDefaultOrganizer(creatorProfile);
       }
 
       const ride = await this.storage.createRide(rideData);
@@ -188,22 +189,22 @@ export class RideService {
 
   /**
    * Get default organizer name from user object
-   * @param {Object} user - User object with id, first_name, last_name, username fields
+   * @param {UserProfile} creatorProfile - Normalized creator profile
    * @returns {string} - Formatted organizer name
    */
-  getDefaultOrganizer(user) {
-    if (!user) return '';
+  getDefaultOrganizer(creatorProfile) {
+    if (!creatorProfile) return '';
     
     let organizerName = '';
-    if (user.first_name || user.last_name) {
-      const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
-      if (user.username) {
-        organizerName = `${fullName} (@${user.username})`;
+    if (creatorProfile.firstName || creatorProfile.lastName) {
+      const fullName = `${creatorProfile.firstName || ''} ${creatorProfile.lastName || ''}`.trim();
+      if (creatorProfile.username) {
+        organizerName = `${fullName} (@${creatorProfile.username})`;
       } else {
         organizerName = fullName;
       }
-    } else if (user.username) {
-      organizerName = user.username.includes(' ') ? user.username : `@${user.username}`;
+    } else if (creatorProfile.username) {
+      organizerName = creatorProfile.username.includes(' ') ? creatorProfile.username : `@${creatorProfile.username}`;
     }
     return organizerName;
   }
@@ -255,10 +256,10 @@ export class RideService {
    * Duplicate an existing ride with optional parameter overrides
    * @param {string} originalRideId - ID of the ride to duplicate
    * @param {Object} params - Optional parameters to override
-   * @param {Object} user - User object with id, first_name, last_name, username fields
+   * @param {UserProfile} creatorProfile - Normalized creator profile
    * @returns {Promise<Object>} - Created ride and any errors
    */
-  async duplicateRide(originalRideId, params, user, options = {}) {
+  async duplicateRide(originalRideId, params, creatorProfile, options = {}) {
     const language = options.language;
     const originalRide = await this.getRide(originalRideId);
     if (!originalRide) {
@@ -319,7 +320,7 @@ export class RideService {
     }
 
     // Use existing createRideFromParams to handle all the validation and processing
-    return await this.createRideFromParams(mergedParams, null, user, { language });
+    return await this.createRideFromParams(mergedParams, null, creatorProfile, { language });
   }
 
   async processRoutesData(data, params, options = {}) {

@@ -120,7 +120,7 @@ describe.each(['en', 'ru'])('DuplicateRideCommandHandler (%s)', (language) => {
       expect(mockRideService.duplicateRide).toHaveBeenCalledWith(
         '123',
         { title: 'New Ride', when: 'tomorrow 11:00' },
-        mockCtx.from,
+        expect.objectContaining({ userId: 101112, username: 'testuser', firstName: 'Test', lastName: 'User' }),
         { language }
       );
       expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith({ id: '456', title: 'New Ride' }, mockCtx);
