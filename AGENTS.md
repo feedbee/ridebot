@@ -1,5 +1,19 @@
 # Agent Execution Rules
 
+## Agent Documentation Index
+
+- Start with [`docs/README.md`](docs/README.md) for an index of project documentation intended for agents and contributors.
+- Architecture and layer boundaries are defined in [`docs/layer-responsibilities.md`](docs/layer-responsibilities.md).
+- Coding preferences and local implementation constraints are documented in [`docs/coding-preferences.md`](docs/coding-preferences.md).
+- Testing strategy and test-layer expectations are defined in [`docs/testing-conventions.md`](docs/testing-conventions.md).
+- When a task references a planned feature, refactor, or change design, check the relevant specification in [`docs/changes/`](docs/changes).
+
+## Architecture And Layering
+
+- Command handlers are Telegram-facing entry points. They should validate command-specific conditions, prepare input for services, and handle user-facing replies.
+- Reusable business rules and side effects do not belong in command handlers. Put them in the service layer or another appropriate non-Telegram abstraction.
+- Follow [`docs/layer-responsibilities.md`](docs/layer-responsibilities.md) when deciding whether code belongs in commands, services, the Telegram boundary, formatters, wizards, or utilities.
+
 ## Devcontainer-first command execution
 
 - If a VS Code devcontainer for this repo is running, execute commands in that container.
@@ -19,6 +33,12 @@
 - Always run only basic tests by default (no Mongo mode), because Mongo-based runs may hang.
 - Do not run `--mode mongo` unless the user explicitly asks for it.
 - Follow the project testing strategy in `docs/testing-conventions.md` when adding, updating, or reviewing tests.
+
+## Coding Preferences
+
+- Follow [`docs/coding-preferences.md`](docs/coding-preferences.md) for local coding style and change-scope preferences.
+- Prefer simple solutions, reuse existing patterns, and avoid duplication.
+- Keep changes narrowly focused on the task and think through adjacent code paths that may be affected.
 
 ## Notes
 

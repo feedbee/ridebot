@@ -146,6 +146,7 @@ Use it for:
 - polling start
 
 Do not move business logic into the Telegram boundary.
+For the broader command/service boundary rules, see [`docs/layer-responsibilities.md`](docs/layer-responsibilities.md).
 
 ### When Direct `grammy` Mocking Is Acceptable
 Only use direct framework mocking when:

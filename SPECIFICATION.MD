@@ -40,6 +40,8 @@ The codebase follows a clean, layered architecture:
     └──────────────────────┘
 ```
 
+Layer ownership rules for the codebase are documented in [`docs/layer-responsibilities.md`](docs/layer-responsibilities.md). That document is normative for deciding whether logic belongs in commands, services, the Telegram boundary, or utility helpers.
+
 ---
 
 ## Core Components
@@ -119,6 +121,13 @@ All handlers extend **[BaseCommandHandler](src/commands/BaseCommandHandler.js)**
 - Parameter parsing with validation
 - Message update coordination
 
+Handlers are intended to stay thin:
+- they own Telegram-facing command and callback handling
+- they validate entry conditions, prepare service input, and choose user-facing replies
+- they should not own reusable business rules such as state-transition side effects
+
+Some existing handlers predate this rule and are candidates for refactoring toward a thinner command layer.
+
 **Command Handlers:**
 - **NewRideCommandHandler**: Create new rides (wizard or parameters)
 - **UpdateRideCommandHandler**: Update existing rides
@@ -129,7 +138,7 @@ All handlers extend **[BaseCommandHandler](src/commands/BaseCommandHandler.js)**
 - **ShareRideCommandHandler**: Share rides to other chats
 - **ListRidesCommandHandler**: Paginated list of user's rides
 - **ListParticipantsCommandHandler**: List all participants for a specific ride (shows all without truncation, organized by participation state)
-- **ParticipationHandlers**: Join/thinking/pass ride functionality; triggers group membership sync via `GroupManagementService` when a group is attached to the ride
+- **ParticipationHandlers**: Join/thinking/pass ride functionality; currently includes participation-specific orchestration that should live in a dedicated participation service as the codebase is refactored
 - **GroupCommandHandler**: `/attach #rideId` (links a group to a ride, posts and pins the ride message, adds existing participants, updates all existing ride messages), `/detach` (unlinks the group, updates all existing ride messages), and `/joinchat #rideId` (private-only: sends an invite link to the ride's group chat if the user has joined the ride); attach/detach are group-chat-only
 - **StartCommandHandler**: Welcome message
 - **HelpCommandHandler**: Multi-page help system
