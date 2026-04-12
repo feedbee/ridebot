@@ -19,6 +19,7 @@ This document mirrors and extends the guidance from `.cursor/rules/coding-prefer
 - Do not add fake, stub, or demo data to runtime code paths. Mocking belongs in tests only.
 - Do not add one-off scripts unless there is a clear repeatable need for them.
 - Never overwrite `.env` or other local environment configuration without explicit user confirmation.
+- Add `/** Docblock */` comments for classes and methods. Document parameters with typed `@param` annotations, and include `@returns` where it helps clarify behavior or output.
 
 ## Scope And Maintainability
 
