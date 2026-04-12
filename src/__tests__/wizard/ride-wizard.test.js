@@ -21,7 +21,7 @@ class MockStorage {
     const newRide = { 
       ...ride, 
       id: id.toString(), 
-      participants: [],
+      participation: { joined: [], thinking: [], skipped: [] },
       category: ride.category || 'mixed' // Ensure category has a default value
     };
     this.rides.set(id.toString(), newRide);
@@ -50,7 +50,7 @@ const createMockContext = (userId = 123, chatId = 456, chatType = 'private', lan
   let lastCallbackAnswer = null;
 
   const ctx = {
-    from: { id: userId },
+    from: { id: userId, username: 'testuser', first_name: 'Test', last_name: 'User' },
     chat: { id: chatId, type: chatType },
     lang: language,
     message: { message_id: 1 },
@@ -119,6 +119,28 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
   beforeEach(() => {
     storage = new MockStorage();
     mockRideService = {
+      createRide: jest.fn(async (rideData, creatorProfile) => {
+        const ride = await storage.createRide(rideData);
+        if (!creatorProfile || creatorProfile.userId !== ride.createdBy) {
+          return ride;
+        }
+
+        const updatedRide = {
+          ...ride,
+          participation: {
+            joined: [{
+              userId: creatorProfile.userId,
+              username: creatorProfile.username,
+              firstName: creatorProfile.firstName,
+              lastName: creatorProfile.lastName
+            }],
+            thinking: [],
+            skipped: []
+          }
+        };
+        storage.rides.set(ride.id, updatedRide);
+        return updatedRide;
+      })
     };
     mockMessageFormatter = {
       formatRideMessage: jest.fn(),
@@ -622,6 +644,14 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
       expect(createdRide.title).toBe('Quick Ride');
       expect(createdRide.routeLink).toBeUndefined();
       expect(createdRide.distance).toBeUndefined();
+      expect(createdRide.participation.joined).toEqual([
+        expect.objectContaining({
+          userId: ctx.from.id,
+          username: ctx.from.username,
+          firstName: ctx.from.first_name,
+          lastName: ctx.from.last_name
+        })
+      ]);
 
       // Verify RideMessagesService was called
       expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(createdRide, ctx, undefined);

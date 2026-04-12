@@ -83,7 +83,9 @@ describe.each(['en', 'ru'])('RideWizard — Live Preview (%s)', (language) => {
       createRideMessage: jest.fn().mockResolvedValue(true),
       updateRideMessages: jest.fn().mockResolvedValue(true)
     };
-    wizard = new RideWizard(storage, {}, mockMessageFormatter, mockRideMessagesService);
+    wizard = new RideWizard(storage, {
+      createRide: jest.fn((data) => storage.createRide(data))
+    }, mockMessageFormatter, mockRideMessagesService);
   });
 
   describe('buildPreviewRideObject', () => {

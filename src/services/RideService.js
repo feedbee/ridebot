@@ -26,10 +26,18 @@ export class RideService {
   /**
    * Create a new ride
    * @param {Object} rideData - Ride data
+   * @param {UserProfile|null} [creatorProfile] - Normalized creator profile
    * @returns {Promise<Object>} - Created ride
    */
-  async createRide(rideData) {
-    return await this.storage.createRide(rideData);
+  async createRide(rideData, creatorProfile = null) {
+    const ride = await this.storage.createRide(rideData);
+
+    if (!creatorProfile || creatorProfile.userId !== ride.createdBy) {
+      return ride;
+    }
+
+    const result = await this.setParticipation(ride.id, creatorProfile, 'joined');
+    return result.success ? result.ride : ride;
   }
 
   /**
@@ -179,7 +187,7 @@ export class RideService {
         rideData.organizer = this.getDefaultOrganizer(creatorProfile);
       }
 
-      const ride = await this.storage.createRide(rideData);
+      const ride = await this.createRide(rideData, creatorProfile);
       return { ride, error: null };
     } catch (error) {
       console.error('Error creating ride:', error);

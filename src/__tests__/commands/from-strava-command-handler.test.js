@@ -5,6 +5,7 @@
 import { jest } from '@jest/globals';
 import { FromStravaCommandHandler } from '../../commands/FromStravaCommandHandler.js';
 import { t } from '../../i18n/index.js';
+import { UserProfile } from '../../models/UserProfile.js';
 
 const EVENT_URL = 'https://www.strava.com/clubs/1263108/group_events/3475149607264155570';
 const EVENT_ID = '3475149607264155570';
@@ -36,7 +37,9 @@ describe.each(['en', 'ru'])('FromStravaCommandHandler (%s)', (language) => {
       updateRide: jest.fn(),
     };
 
-    mockRideService = {};
+    mockRideService = {
+      createRide: jest.fn(),
+    };
     mockMessageFormatter = {};
 
     mockRideMessagesService = {
@@ -107,14 +110,22 @@ describe.each(['en', 'ru'])('FromStravaCommandHandler (%s)', (language) => {
       mockParser.fetchEvent.mockResolvedValue({ id: EVENT_ID, title: 'Test' });
       mockParser.mapToRideData.mockReturnValue(MOCK_RIDE_DATA);
       mockStorage.getRideByStravaId.mockResolvedValue(null);
-      mockStorage.createRide.mockResolvedValue({ ...MOCK_RIDE_DATA, id: 'abc123' });
+      mockRideService.createRide.mockResolvedValue({ ...MOCK_RIDE_DATA, id: 'abc123' });
     });
 
     it('creates a new ride when no existing ride found', async () => {
       await handler.handle(mockCtx);
 
       expect(mockStorage.getRideByStravaId).toHaveBeenCalledWith(EVENT_ID, 101);
-      expect(mockStorage.createRide).toHaveBeenCalledWith(MOCK_RIDE_DATA);
+      expect(mockRideService.createRide).toHaveBeenCalledWith(
+        MOCK_RIDE_DATA,
+        new UserProfile({
+          userId: 101,
+          username: 'tester',
+          firstName: '',
+          lastName: ''
+        })
+      );
       expect(mockRideMessagesService.createRideMessage).toHaveBeenCalled();
     });
 
@@ -177,7 +188,7 @@ describe.each(['en', 'ru'])('FromStravaCommandHandler (%s)', (language) => {
     it('does not call createRide', async () => {
       await handler.handle(mockCtx);
 
-      expect(mockStorage.createRide).not.toHaveBeenCalled();
+      expect(mockRideService.createRide).not.toHaveBeenCalled();
     });
   });
 });

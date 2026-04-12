@@ -1,5 +1,6 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
 import { StravaEventParser } from '../utils/strava-event-parser.js';
+import { UserProfile } from '../models/UserProfile.js';
 
 /**
  * Handler for the /fromstrava command.
@@ -55,7 +56,8 @@ export class FromStravaCommandHandler extends BaseCommandHandler {
       await ctx.reply(this.translate(ctx, 'commands.fromStrava.updated'));
     } else {
       // Create new ride
-      const newRide = await this.storage.createRide(rideData);
+      const creatorProfile = UserProfile.fromTelegramUser(ctx.from);
+      const newRide = await this.rideService.createRide(rideData, creatorProfile);
       await this.rideMessagesService.createRideMessage(newRide, ctx);
       await ctx.reply(this.translate(ctx, 'commands.fromStrava.created'));
     }

@@ -5,6 +5,7 @@ import { escapeHtml } from '../utils/html-escape.js';
 import { DateParser } from '../utils/date-parser.js';
 import { getFieldConfig, FieldType, buildRideDataFromWizard } from './wizardFieldConfig.js';
 import { t } from '../i18n/index.js';
+import { UserProfile } from '../models/UserProfile.js';
 
 export class RideWizard {
   /**
@@ -216,7 +217,8 @@ export class RideWizard {
             await ctx.answerCallbackQuery(this.translate(ctx, 'wizard.messages.updatedSuccessfully'));
           } else {
             // Create new ride
-            const ride = await this.storage.createRide(rideData);
+            const creatorProfile = UserProfile.fromTelegramUser(ctx.from);
+            const ride = await this.rideService.createRide(rideData, creatorProfile);
 
             // Delete preview message and the wizard message before creating the ride message
             await this._deletePreviewMessage(ctx, state);

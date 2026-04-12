@@ -76,6 +76,18 @@ describe('RideService', () => {
       expect(ride.messages).toEqual(testRide.messages);
     });
 
+    it('should add the creator as the first joined participant when creator profile is provided', async () => {
+      const ride = await rideService.createRide(testRide, testCreatorProfile);
+
+      expect(ride.participation.joined).toHaveLength(1);
+      expect(ride.participation.joined[0]).toEqual(expect.objectContaining({
+        userId: testCreatorProfile.userId,
+        username: testCreatorProfile.username,
+        firstName: testCreatorProfile.firstName,
+        lastName: testCreatorProfile.lastName
+      }));
+    });
+
     it('should get a ride by ID', async () => {
       const createdRide = await rideService.createRide(testRide);
       const retrievedRide = await rideService.getRide(createdRide.id);
@@ -538,6 +550,14 @@ describe('RideService', () => {
       
       expect(result.error).toBeNull();
       expect(result.ride.organizer).toBe('Jane Doe');
+      expect(result.ride.participation.joined).toEqual([
+        expect.objectContaining({
+          userId: user.userId,
+          username: user.username,
+          firstName: user.firstName,
+          lastName: user.lastName
+        })
+      ]);
     });
 
     it('should use creator name as default organizer when no organizer parameter is provided', async () => {

@@ -37,6 +37,14 @@ describe('Scenario Harness Integration', () => {
     expect(ride.createdBy).toBe(42);
     expect(ride.meetingPoint).toBe('River Park');
     expect(ride.messages).toHaveLength(1);
+    expect(ride.participation.joined).toEqual([
+      expect.objectContaining({
+        userId: 42,
+        username: 'alex',
+        firstName: 'Alex',
+        lastName: 'Rider',
+      }),
+    ]);
 
     expect(harness.outbox.replies).toHaveLength(1);
     expect(harness.outbox.replies[0].text).toContain('Sunrise Ride');
@@ -75,14 +83,22 @@ describe('Scenario Harness Integration', () => {
     });
 
     const updatedRide = harness.getRide(ride.id);
-    expect(updatedRide.participation.joined).toHaveLength(1);
-    expect(updatedRide.participation.joined[0]).toEqual(
-      expect.objectContaining({
-        userId: 99,
-        username: 'sam',
-        firstName: 'Sam',
-        lastName: 'Guest',
-      })
+    expect(updatedRide.participation.joined).toHaveLength(2);
+    expect(updatedRide.participation.joined).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          userId: 10,
+          username: 'mila',
+          firstName: 'Mila',
+          lastName: 'Owner',
+        }),
+        expect.objectContaining({
+          userId: 99,
+          username: 'sam',
+          firstName: 'Sam',
+          lastName: 'Guest',
+        }),
+      ])
     );
 
     expect(harness.outbox.edits).toEqual(
