@@ -223,10 +223,15 @@ export class RideWizard {
           await this._deletePreviewMessage(ctx, state);
           await ctx.deleteMessage();
           this.wizardStates.delete(stateKey);
+          const cancellationMessageKey = state.isUpdate
+            ? 'wizard.messages.updateCancelled'
+            : state.data.originalRideId
+              ? 'wizard.messages.duplicationCancelled'
+              : 'wizard.messages.creationCancelled';
           await this.sendStatus(
             ctx,
             state.responseMode,
-            this.translate(ctx, 'wizard.messages.creationCancelled'),
+            this.translate(ctx, cancellationMessageKey),
             true
           );
           return;

@@ -65,6 +65,7 @@ export class DuplicateRideCommandHandler extends BaseCommandHandler {
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     return {
+      originalRideId: ride.id,
       title: ride.title,
       category: ride.category,
       organizer: ride.organizer,

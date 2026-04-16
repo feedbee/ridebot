@@ -351,6 +351,70 @@ describe.each(['en', 'ru'])('RideWizard Edge Cases (%s)', (language) => {
       expect(ctx.answerCallbackQuery).toHaveBeenCalledWith(tr('wizard.messages.creationCancelled'));
       expect(ctx.reply).not.toHaveBeenCalledWith(tr('wizard.messages.creationCancelled'));
     });
+
+    it('should show duplicate cancellation message in chat for message-origin wizard', async () => {
+      const ctx = createMockContext(123, 456, 'private', language);
+
+      await wizard.startWizard(ctx, {
+        title: 'Original Ride',
+        originalRideId: 'ride123',
+        datetime: new Date()
+      });
+
+      ctx.match = ['wizard:cancel', 'cancel'];
+      await wizard.handleWizardAction(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith(tr('wizard.messages.duplicationCancelled'));
+    });
+
+    it('should show duplicate cancellation as popup for callback-origin wizard', async () => {
+      const ctx = createMockContext(123, 456, 'private', language);
+
+      await wizard.startWizard(ctx, {
+        title: 'Original Ride',
+        originalRideId: 'ride123',
+        datetime: new Date()
+      }, 'callback');
+
+      ctx.match = ['wizard:cancel', 'cancel'];
+      await wizard.handleWizardAction(ctx);
+
+      expect(ctx.answerCallbackQuery).toHaveBeenCalledWith(tr('wizard.messages.duplicationCancelled'));
+      expect(ctx.reply).not.toHaveBeenCalledWith(tr('wizard.messages.duplicationCancelled'));
+    });
+
+    it('should show update cancellation message in chat for message-origin wizard', async () => {
+      const ctx = createMockContext(123, 456, 'private', language);
+
+      await wizard.startWizard(ctx, {
+        isUpdate: true,
+        originalRideId: 'ride123',
+        title: 'Existing Ride',
+        datetime: new Date()
+      });
+
+      ctx.match = ['wizard:cancel', 'cancel'];
+      await wizard.handleWizardAction(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith(tr('wizard.messages.updateCancelled'));
+    });
+
+    it('should show update cancellation as popup for callback-origin wizard', async () => {
+      const ctx = createMockContext(123, 456, 'private', language);
+
+      await wizard.startWizard(ctx, {
+        isUpdate: true,
+        originalRideId: 'ride123',
+        title: 'Existing Ride',
+        datetime: new Date()
+      }, 'callback');
+
+      ctx.match = ['wizard:cancel', 'cancel'];
+      await wizard.handleWizardAction(ctx);
+
+      expect(ctx.answerCallbackQuery).toHaveBeenCalledWith(tr('wizard.messages.updateCancelled'));
+      expect(ctx.reply).not.toHaveBeenCalledWith(tr('wizard.messages.updateCancelled'));
+    });
   });
 
   describe('duplicate ride creation', () => {

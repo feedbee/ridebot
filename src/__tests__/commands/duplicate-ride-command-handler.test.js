@@ -99,6 +99,7 @@ describe.each(['en', 'ru'])('DuplicateRideCommandHandler (%s)', (language) => {
       expect(mockWizard.startWizard).toHaveBeenCalledWith(
         mockCtx,
         expect.objectContaining({
+          originalRideId: '123',
           title: 'Test Ride',
           datetime: new Date('2025-03-31T10:00:00.000Z'),
           meetingPoint: 'Test Location'
@@ -147,6 +148,7 @@ describe.each(['en', 'ru'])('DuplicateRideCommandHandler (%s)', (language) => {
       expect(mockWizard.startWizard).toHaveBeenCalledWith(
         mockCtx,
         expect.objectContaining({
+          originalRideId: '123',
           title: 'Ride',
           meetingPoint: 'Start',
           datetime: new Date('2025-03-31T10:00:00.000Z')

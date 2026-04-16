@@ -453,6 +453,8 @@ Click here to start a private chat: @botname
       sessionExpired: 'Wizard session expired',
       invalidCategory: 'Invalid category selected',
       creationCancelled: 'Ride creation cancelled',
+      updateCancelled: 'Ride editing cancelled',
+      duplicationCancelled: 'Ride duplication cancelled',
       updatedSuccessfully: 'Ride updated successfully!',
       duplicatedSuccessfully: 'Ride duplicated successfully!',
       createdSuccessfully: 'Ride created successfully!',

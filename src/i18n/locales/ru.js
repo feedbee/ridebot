@@ -453,6 +453,8 @@ id: abc123 (or #abc123)
       sessionExpired: 'Сессия мастера истекла',
       invalidCategory: 'Выбрана некорректная категория',
       creationCancelled: 'Создание поездки отменено',
+      updateCancelled: 'Редактирование поездки отменено',
+      duplicationCancelled: 'Дублирование поездки отменено',
       updatedSuccessfully: 'Поездка успешно обновлена!',
       duplicatedSuccessfully: 'Поездка успешно продублирована!',
       createdSuccessfully: 'Поездка успешно создана!',
