@@ -231,6 +231,13 @@ id: abc123 (or #abc123)
     join: 'Я в деле! 🚴',
     thinking: 'Подумаю 🤔',
     pass: 'Пас 🙅',
+    edit: 'Редактировать',
+    duplicate: 'Дублировать',
+    delete: 'Удалить',
+    cancelRide: 'Отменить',
+    resumeRide: 'Возобновить',
+    participants: 'Участники',
+    settings: 'Настройки',
     confirmDelete: 'Да, удалить ❌',
     cancelDelete: 'Нет, оставить ✅',
     back: '⬅️ Назад',
@@ -252,6 +259,9 @@ id: abc123 (or #abc123)
     generic: 'Произошла ошибка.'
   },
   commands: {
+    ownerActions: {
+      settingsComingSoon: 'Настройки поездки пока недоступны.'
+    },
     common: {
       rideNotFoundById: 'Поездка #{id} не найдена',
       rideNotFoundByIdWithDot: 'Поездка #{id} не найдена.',
@@ -351,14 +361,10 @@ id: abc123 (or #abc123)
     },
     delete: {
       onlyCreator: 'Только создатель поездки может удалить ее.',
-      cancelledMessage: 'Удаление отменено.',
-      cancelledCallback: 'Удаление отменено',
-      notFoundMessage: 'Поездка не найдена.',
-      notFoundCallback: 'Поездка не найдена',
-      successMessage: 'Поездка успешно удалена.',
-      successCallback: 'Поездка успешно удалена',
-      failedMessage: 'Не удалось удалить поездку.',
-      failedCallback: 'Не удалось удалить поездку',
+      cancelled: 'Удаление отменено.',
+      notFound: 'Поездка не найдена.',
+      success: 'Поездка успешно удалена.',
+      failed: 'Не удалось удалить поездку.',
       deletedMessages: 'Удалено сообщений: {count}.',
       removedMessages: 'Удалено недоступных сообщений: {count}.'
     },

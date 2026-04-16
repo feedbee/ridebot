@@ -22,10 +22,7 @@ export class UpdateRideCommandHandler extends BaseCommandHandler {
    * @param {import('grammy').Context} ctx - Grammy context
    */
   async handle(ctx) {
-    const { ride, error } = await this.extractRideWithCreatorCheck(
-      ctx,
-      this.translate(ctx, 'commands.update.onlyCreator')
-    );
+    const { ride, error } = await this.extractRideWithCreatorCheck(ctx, 'commands.update.onlyCreator');
     
     if (error) {
       await ctx.reply(error);
@@ -40,8 +37,31 @@ export class UpdateRideCommandHandler extends BaseCommandHandler {
       return this.handleWithParams(ctx, ride, params);
     }
 
-    // Otherwise start the wizard with prefilled data
-    const prefillData = {
+    await this.startUpdateWizard(ctx, ride);
+  }
+
+  /**
+   * Handle owner action callback for ride editing.
+   */
+  async handleCallback(ctx) {
+    const { ride, error } = await this.extractRideWithCreatorCheck(ctx, 'commands.update.onlyCreator', 'callback');
+
+    if (error) {
+      await this.replyOrAnswerCallback(ctx, 'callback', error);
+      return;
+    }
+
+    const started = await this.startUpdateWizard(ctx, ride, 'callback');
+    if (started) {
+      await ctx.answerCallbackQuery();
+    }
+  }
+
+  /**
+   * Build wizard prefill data for ride editing.
+   */
+  buildUpdatePrefillData(ride) {
+    return {
       isUpdate: true,
       originalRideId: ride.id,
       title: ride.title,
@@ -57,8 +77,13 @@ export class UpdateRideCommandHandler extends BaseCommandHandler {
       additionalInfo: ride.additionalInfo,
       notifyOnParticipation: ride.notifyOnParticipation ?? true
     };
+  }
 
-    await this.wizard.startWizard(ctx, prefillData);
+  /**
+   * Start the update wizard for an already loaded ride.
+   */
+  async startUpdateWizard(ctx, ride, responseMode = 'message') {
+    return this.wizard.startWizard(ctx, this.buildUpdatePrefillData(ride), responseMode);
   }
 
   /**

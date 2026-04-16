@@ -62,7 +62,8 @@ describe.each(['en', 'ru'])('UpdateRideCommandHandler (%s)', (language) => {
         first_name: 'Test',
         last_name: 'User'
       },
-      reply: jest.fn().mockResolvedValue({})
+      reply: jest.fn().mockResolvedValue({}),
+      answerCallbackQuery: jest.fn().mockResolvedValue({})
     };
 
     handler = new UpdateRideCommandHandler(
@@ -123,7 +124,8 @@ describe.each(['en', 'ru'])('UpdateRideCommandHandler (%s)', (language) => {
           originalRideId: '123',
           title: 'Test Ride',
           meetingPoint: 'Test Point'
-        })
+        }),
+        'message'
       );
     });
 
@@ -175,6 +177,42 @@ describe.each(['en', 'ru'])('UpdateRideCommandHandler (%s)', (language) => {
 
       expect(mockCtx.reply).toHaveBeenCalled();
       expect(mockRideService.updateRideFromParams).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleCallback', () => {
+    it('starts the wizard and acknowledges the callback for the ride creator', async () => {
+      mockCtx.match = ['rideowner:update:123', '123'];
+      mockRideService.getRide.mockResolvedValue({
+        id: '123',
+        createdBy: 101112,
+        title: 'Ride',
+        meetingPoint: 'Start',
+        date: new Date('2025-03-30T10:00:00Z')
+      });
+      mockWizard.startWizard.mockResolvedValue(true);
+
+      await handler.handleCallback(mockCtx);
+
+      expect(mockWizard.startWizard).toHaveBeenCalledWith(
+        mockCtx,
+        expect.objectContaining({
+          isUpdate: true,
+          originalRideId: '123',
+          title: 'Ride',
+          meetingPoint: 'Start'
+        }),
+        'callback'
+      );
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith();
+    });
+
+    it('propagates unexpected wizard startup errors to the callback boundary', async () => {
+      mockCtx.match = ['rideowner:update:123', '123'];
+      mockRideService.getRide.mockResolvedValue({ id: '123', createdBy: 101112, title: 'Ride' });
+      mockWizard.startWizard.mockRejectedValue(new Error('Wizard failed'));
+
+      await expect(handler.handleCallback(mockCtx)).rejects.toThrow('Wizard failed');
     });
   });
 

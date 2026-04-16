@@ -310,7 +310,7 @@ describe.each(['en', 'ru'])('RideWizard Edge Cases (%s)', (language) => {
       );
       const expectedErrorPrefix = tr('wizard.messages.errorWithMessage', { message: '' });
       expect(
-        ctx.answerCallbackQuery.mock.calls.some(
+        ctx.reply.mock.calls.some(
           ([value]) => typeof value === 'string' && value.startsWith(expectedErrorPrefix)
         )
       ).toBe(true);
@@ -339,10 +339,22 @@ describe.each(['en', 'ru'])('RideWizard Edge Cases (%s)', (language) => {
 
       consoleErrorSpy.mockRestore();
     });
+
+    it('should show cancellation as popup for callback-origin wizard', async () => {
+      const ctx = createMockContext(123, 456, 'private', language);
+
+      await wizard.startWizard(ctx, null, 'callback');
+
+      ctx.match = ['wizard:cancel', 'cancel'];
+      await wizard.handleWizardAction(ctx);
+
+      expect(ctx.answerCallbackQuery).toHaveBeenCalledWith(tr('wizard.messages.creationCancelled'));
+      expect(ctx.reply).not.toHaveBeenCalledWith(tr('wizard.messages.creationCancelled'));
+    });
   });
 
   describe('duplicate ride creation', () => {
-    it('should show duplicate success message', async () => {
+    it('should show duplicate success message in chat for message-origin wizard', async () => {
       const ctx = createMockContext(123, 456, 'private', language);
       
       // Start wizard with originalRideId (duplicate mode)
@@ -363,6 +375,29 @@ describe.each(['en', 'ru'])('RideWizard Edge Cases (%s)', (language) => {
       }
 
       // Confirm
+      ctx.match = ['wizard:confirm', 'confirm'];
+      await wizard.handleWizardAction(ctx);
+
+      expect(ctx.reply).toHaveBeenCalledWith(tr('wizard.messages.duplicatedSuccessfully'));
+    });
+
+    it('should show duplicate success popup for callback-origin wizard', async () => {
+      const ctx = createMockContext(123, 456, 'private', language);
+      
+      await wizard.startWizard(ctx, {
+        title: 'Original Ride',
+        originalRideId: 'ride123',
+        datetime: new Date()
+      }, 'callback');
+
+      ctx.message = { text: 'Duplicated Ride', message_id: 2 };
+      await wizard.handleWizardInput(ctx);
+
+      for (let i = 0; i < 8; i++) {
+        ctx.match = ['wizard:skip', 'skip'];
+        await wizard.handleWizardAction(ctx);
+      }
+
       ctx.match = ['wizard:confirm', 'confirm'];
       await wizard.handleWizardAction(ctx);
 

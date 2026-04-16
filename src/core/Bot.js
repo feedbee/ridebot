@@ -18,6 +18,7 @@ import { ListParticipantsCommandHandler } from '../commands/ListParticipantsComm
 import { DuplicateRideCommandHandler } from '../commands/DuplicateRideCommandHandler.js';
 import { ShareRideCommandHandler } from '../commands/ShareRideCommandHandler.js';
 import { ResumeRideCommandHandler } from '../commands/ResumeRideCommandHandler.js';
+import { RideSettingsCommandHandler } from '../commands/RideSettingsCommandHandler.js';
 import { ParticipationHandlers } from '../commands/ParticipationHandlers.js';
 import { NotificationService } from '../services/NotificationService.js';
 import { GroupCommandHandler } from '../commands/GroupCommandHandler.js';
@@ -65,12 +66,12 @@ export class Bot {
     const listParticipantsHandler = new ListParticipantsCommandHandler(rideService, messageFormatter, rideMessagesService);
     const duplicateRideHandler = new DuplicateRideCommandHandler(rideService, messageFormatter, this.wizard, rideMessagesService);
     const resumeRideHandler = new ResumeRideCommandHandler(rideService, messageFormatter, rideMessagesService);
+    const rideSettingsHandler = new RideSettingsCommandHandler(rideService, messageFormatter, rideMessagesService);
     const groupManagementService = new GroupManagementService();
     const rideParticipationService = new RideParticipationService(rideService, notificationService, groupManagementService);
     const participationHandler = new ParticipationHandlers(rideService, messageFormatter, rideMessagesService, rideParticipationService);
     const shareRideHandler = new ShareRideCommandHandler(rideService, messageFormatter, rideMessagesService);
     const groupHandler = new GroupCommandHandler(rideService, messageFormatter, rideMessagesService, groupManagementService);
-    
     
     return {
       commands: {
@@ -108,11 +109,18 @@ export class Bot {
         ],
       },
       callbacks: [
-        { pattern: /^join:(.+)$/, handler: (ctx) => participationHandler.handleJoinRide(ctx) },
-        { pattern: /^thinking:(.+)$/, handler: (ctx) => participationHandler.handleThinkingRide(ctx) },
-        { pattern: /^skip:(.+)$/, handler: (ctx) => participationHandler.handleSkipRide(ctx) },
-        { pattern: /^delete:(\w+):(\w+)$/, handler: (ctx) => deleteRideHandler.handleConfirmation(ctx) },
+        { pattern: /^join:(\w+)$/, handler: (ctx) => participationHandler.handleJoinRide(ctx) },
+        { pattern: /^thinking:(\w+)$/, handler: (ctx) => participationHandler.handleThinkingRide(ctx) },
+        { pattern: /^skip:(\w+)$/, handler: (ctx) => participationHandler.handleSkipRide(ctx) },
+        { pattern: /^delete:(\w+):(\w+)(?::(message|callback))?$/, handler: (ctx) => deleteRideHandler.handleConfirmation(ctx) },
         { pattern: /^list:(\d+)$/, handler: (ctx) => listRidesHandler.handleCallback(ctx) },
+        { pattern: /^rideowner:update:(\w+)$/, handler: (ctx) => updateRideHandler.handleCallback(ctx) },
+        { pattern: /^rideowner:duplicate:(\w+)$/, handler: (ctx) => duplicateRideHandler.handleCallback(ctx) },
+        { pattern: /^rideowner:delete:(\w+)$/, handler: (ctx) => deleteRideHandler.handleCallback(ctx) },
+        { pattern: /^rideowner:cancel:(\w+)$/, handler: (ctx) => cancelRideHandler.handleCallback(ctx) },
+        { pattern: /^rideowner:resume:(\w+)$/, handler: (ctx) => resumeRideHandler.handleCallback(ctx) },
+        { pattern: /^rideowner:participants:(\w+)$/, handler: (ctx) => listParticipantsHandler.handleCallback(ctx) },
+        { pattern: /^rideowner:settings:(\w+)$/, handler: (ctx) => rideSettingsHandler.handleCallback(ctx) },
         { pattern: /^wizard:(\w+)(?::(.*))?$/, handler: (ctx) => this.wizard.handleWizardAction(ctx) },
         { pattern: /^airide:(confirm|cancel):(\d+:\d+)$/, handler: (ctx) => this.aiRideHandler.handleCallback(ctx) },
       ],
@@ -140,6 +148,36 @@ export class Bot {
       await this.wizard.handleWizardInput(ctx);
       await this.aiRideHandler.handleTextInput(ctx);
     });
+  }
+
+  translateCallbackError(ctx) {
+    if (ctx?.t) {
+      return ctx.t('errors.generic');
+    }
+
+    const language = ctx?.lang || config.i18n.defaultLanguage;
+    return t(language, 'errors.generic', {}, {
+      fallbackLanguage: config.i18n.fallbackLanguage,
+      withMissingMarker: config.isDev
+    });
+  }
+
+  wrapCallbackHandler(handler) {
+    return async (ctx) => {
+      try {
+        await handler(ctx);
+      } catch (error) {
+        console.error('Error handling callback query:', error);
+
+        try {
+          if (typeof ctx.answerCallbackQuery === 'function') {
+            await ctx.answerCallbackQuery(this.translateCallbackError(ctx));
+          }
+        } catch (callbackError) {
+          console.error('Error answering callback query:', callbackError);
+        }
+      }
+    };
   }
 
   /**
@@ -173,7 +211,7 @@ export class Bot {
    */
   setupCallbackQueryHandlers() {
     this.botConfig.callbacks.forEach(({ pattern, handler }) => {
-      this.bot.callbackQuery(pattern, handler);
+      this.bot.callbackQuery(pattern, this.wrapCallbackHandler(handler));
     });
   }
 

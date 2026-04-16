@@ -12,10 +12,22 @@ import { t } from '../../i18n/index.js';
 jest.mock('grammy', () => {
   return {
     InlineKeyboard: jest.fn().mockImplementation(() => {
-      return {
-        text: jest.fn().mockReturnThis(),
-        row: jest.fn().mockReturnThis()
+      const keyboard = {
+        inline_keyboard: [[]],
+        text: jest.fn((label, callbackData) => {
+          keyboard.inline_keyboard[keyboard.inline_keyboard.length - 1].push({
+            text: label,
+            callback_data: callbackData
+          });
+          return keyboard;
+        }),
+        row: jest.fn(() => {
+          keyboard.inline_keyboard.push([]);
+          return keyboard;
+        })
       };
+
+      return keyboard;
     })
   };
 });
@@ -62,7 +74,7 @@ describe('MessageFormatter', () => {
       
       // Verify
       expect(messageFormatter.formatRideMessage).toHaveBeenCalledWith(ride, participants, {});
-      expect(messageFormatter.getRideKeyboard).toHaveBeenCalledWith(ride, 'en');
+      expect(messageFormatter.getRideKeyboard).toHaveBeenCalledWith(ride, 'en', false);
       expect(result).toEqual({
         message: 'Formatted message',
         keyboard: { inline_keyboard: [] },
@@ -100,6 +112,64 @@ describe('MessageFormatter', () => {
       
       // Verify
       expect(result).toBeDefined();
+    });
+
+    it('adds owner-only management rows for creator private messages', () => {
+      const ride = {
+        id: '123',
+        title: 'Test Ride',
+        cancelled: false
+      };
+
+      const result = messageFormatter.getRideKeyboard(ride, 'en', true);
+
+      expect(result.inline_keyboard[0]).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ callback_data: 'join:123' }),
+          expect.objectContaining({ callback_data: 'thinking:123' }),
+          expect.objectContaining({ callback_data: 'skip:123' }),
+        ])
+      );
+      expect(result.inline_keyboard[1]).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ callback_data: 'rideowner:update:123' }),
+          expect.objectContaining({ callback_data: 'rideowner:duplicate:123' }),
+          expect.objectContaining({ callback_data: 'rideowner:delete:123' }),
+        ])
+      );
+      expect(result.inline_keyboard[2]).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ callback_data: 'rideowner:cancel:123' }),
+          expect.objectContaining({ callback_data: 'rideowner:participants:123' }),
+          expect.objectContaining({ callback_data: 'rideowner:settings:123' }),
+        ])
+      );
+    });
+
+    it('shows resume action for cancelled creator ride keyboard', () => {
+      const ride = {
+        id: '123',
+        title: 'Test Ride',
+        cancelled: true
+      };
+
+      const result = messageFormatter.getRideKeyboard(ride, 'en', true);
+
+      expect(result.inline_keyboard).toHaveLength(2);
+      expect(result.inline_keyboard[0]).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ callback_data: 'rideowner:update:123' }),
+          expect.objectContaining({ callback_data: 'rideowner:duplicate:123' }),
+          expect.objectContaining({ callback_data: 'rideowner:delete:123' }),
+        ])
+      );
+      expect(result.inline_keyboard[1]).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ callback_data: 'rideowner:resume:123' }),
+          expect.objectContaining({ callback_data: 'rideowner:participants:123' }),
+          expect.objectContaining({ callback_data: 'rideowner:settings:123' }),
+        ])
+      );
     });
   });
   

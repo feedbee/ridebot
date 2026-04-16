@@ -45,18 +45,48 @@ export class RideWizard {
     return `${userId}:${chatId}`;
   }
 
-  async startWizard(ctx, prefillData = null) {
+  /**
+   * Send wizard status using the transport selected for the flow origin.
+   * Command-origin flows use chat replies; callback-origin flows use popup statuses.
+   */
+  async sendStatus(ctx, responseMode, message, acknowledgeCallback = false) {
+    if (responseMode === 'callback') {
+      await ctx.answerCallbackQuery(message);
+      return;
+    }
+
+    await ctx.reply(message);
+
+    if (acknowledgeCallback) {
+      await ctx.answerCallbackQuery();
+    }
+  }
+
+  async startWizard(ctx, prefillData = null, responseMode = 'message') {
     // Check if there's already an active wizard in this chat
     const stateKey = this.getWizardStateKey(ctx.from.id, ctx.chat.id);
     if (this.wizardStates.has(stateKey)) {
-      await ctx.reply(this.translate(ctx, 'wizard.messages.completeOrCancelCurrent'));
-      return;
+      await this.sendStatus(
+        ctx,
+        responseMode,
+        this.translate(ctx, 'wizard.messages.completeOrCancelCurrent')
+      );
+      return false;
     }
 
     // Wizards are only allowed in private chats
     if (ctx.chat.type !== 'private') {
-      await ctx.reply(this.translate(ctx, 'wizard.messages.privateChatOnlyReply'));
-      return;
+      await this.sendStatus(
+        ctx,
+        responseMode,
+        this.translate(
+          ctx,
+          responseMode === 'callback'
+            ? 'wizard.messages.privateChatOnlyCallback'
+            : 'wizard.messages.privateChatOnlyReply'
+        )
+      );
+      return false;
     }
 
     // Initialize wizard state with prefilled data if provided
@@ -73,6 +103,7 @@ export class RideWizard {
       },
       isUpdate: prefillData?.isUpdate || false,  // Flag to indicate if this is an update
       originalRideId: prefillData?.originalRideId, // Store original ride ID for updates
+      responseMode,
       errorMessageIds: [], // Track error message IDs
       primaryMessageId: null, // Track the primary wizard message ID
       previewMessageId: null // Track the live preview message ID
@@ -97,6 +128,8 @@ export class RideWizard {
     if (message) {
       state.primaryMessageId = message.message_id;
     }
+
+    return true;
   }
 
   async handleWizardAction(ctx) {
@@ -125,6 +158,7 @@ export class RideWizard {
             await this.sendWizardStep(ctx, true);
           } else {
             await ctx.answerCallbackQuery(this.translate(ctx, 'wizard.messages.invalidCategory'));
+            return;
           }
           break;
 
@@ -189,8 +223,12 @@ export class RideWizard {
           await this._deletePreviewMessage(ctx, state);
           await ctx.deleteMessage();
           this.wizardStates.delete(stateKey);
-          await ctx.reply(this.translate(ctx, 'wizard.messages.creationCancelled'));
-          await ctx.answerCallbackQuery();
+          await this.sendStatus(
+            ctx,
+            state.responseMode,
+            this.translate(ctx, 'wizard.messages.creationCancelled'),
+            true
+          );
           return;
 
         case 'confirm':
@@ -214,7 +252,12 @@ export class RideWizard {
             await this._deletePreviewMessage(ctx, state);
             await ctx.deleteMessage();
             this.wizardStates.delete(stateKey);
-            await ctx.answerCallbackQuery(this.translate(ctx, 'wizard.messages.updatedSuccessfully'));
+            await this.sendStatus(
+              ctx,
+              state.responseMode,
+              this.translate(ctx, 'wizard.messages.updatedSuccessfully'),
+              true
+            );
           } else {
             // Create new ride
             const creatorProfile = UserProfile.fromTelegramUser(ctx.from);
@@ -228,10 +271,13 @@ export class RideWizard {
             await this.rideMessagesService.createRideMessage(ride, ctx, state.data.messageThreadId);
 
             this.wizardStates.delete(stateKey);
-            await ctx.answerCallbackQuery(
+            await this.sendStatus(
+              ctx,
+              state.responseMode,
               state.data.originalRideId
                 ? this.translate(ctx, 'wizard.messages.duplicatedSuccessfully')
-                : this.translate(ctx, 'wizard.messages.createdSuccessfully')
+                : this.translate(ctx, 'wizard.messages.createdSuccessfully'),
+              true
             );
           }
           return;
@@ -240,7 +286,12 @@ export class RideWizard {
       await ctx.answerCallbackQuery();
     } catch (error) {
       console.error('Error in handleWizardAction:', error);
-      await ctx.answerCallbackQuery(this.translate(ctx, 'wizard.messages.errorWithMessage', { message: error.message }));
+      await this.sendStatus(
+        ctx,
+        state?.responseMode || 'message',
+        this.translate(ctx, 'wizard.messages.errorWithMessage', { message: error.message }),
+        true
+      );
     }
   }
 

@@ -12,9 +12,7 @@ class MockInlineKeyboard {
   }
 
   row() {
-    if (this.inline_keyboard[this.inline_keyboard.length - 1].length > 0) {
-      this.inline_keyboard.push([]);
-    }
+    this.inline_keyboard.push([]);
     return this;
   }
 }

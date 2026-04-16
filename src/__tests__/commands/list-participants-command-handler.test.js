@@ -32,6 +32,7 @@ describe.each(['en', 'ru'])('ListParticipantsCommandHandler (%s)', (language) =>
     // Create mock Grammy context
     mockCtx = {
       reply: jest.fn().mockResolvedValue({}),
+      answerCallbackQuery: jest.fn().mockResolvedValue({}),
       lang: language,
       from: { id: 123 },
       message: {
@@ -230,6 +231,45 @@ describe.each(['en', 'ru'])('ListParticipantsCommandHandler (%s)', (language) =>
 
       // Verify
       expect(result).toBe('');
+    });
+  });
+
+  describe('handleCallback', () => {
+    it('renders the participant list and acknowledges the callback', async () => {
+      mockCtx.match = ['rideowner:participants:abc123', 'abc123'];
+      mockRideService.getRide.mockResolvedValue({
+        id: 'abc123',
+        title: 'Test Ride',
+        createdBy: 123,
+        participation: {
+          joined: [{ userId: 1, firstName: 'John', lastName: 'Doe', username: 'johndoe' }],
+          thinking: [],
+          skipped: []
+        }
+      });
+      mockMessageFormatter.formatParticipant
+        .mockReturnValueOnce('<a href="tg://user?id=1">John Doe (@johndoe)</a>');
+
+      await listParticipantsHandler.handleCallback(mockCtx);
+
+      expect(mockCtx.reply).toHaveBeenCalledWith(
+        expect.stringContaining(tr('commands.listParticipants.allParticipantsTitle', { title: 'Test Ride', total: 1 })),
+        { parse_mode: 'HTML' }
+      );
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith();
+    });
+
+    it('propagates unexpected rendering errors to the callback boundary', async () => {
+      mockCtx.match = ['rideowner:participants:abc123', 'abc123'];
+      mockRideService.getRide.mockResolvedValue({
+        id: 'abc123',
+        title: 'Test Ride',
+        createdBy: 123,
+        participation: { joined: [], thinking: [], skipped: [] }
+      });
+      mockCtx.reply.mockRejectedValue(new Error('Telegram send failed'));
+
+      await expect(listParticipantsHandler.handleCallback(mockCtx)).rejects.toThrow('Telegram send failed');
     });
   });
 

@@ -82,8 +82,9 @@ describe.each(['en', 'ru'])('DeleteRideCommandHandler (%s)', (language) => {
   describe('handleConfirmation', () => {
     beforeEach(() => {
       mockCtx = {
-        match: ['delete:confirm:456', 'confirm', '456'],
-        editMessageText: jest.fn().mockResolvedValue({}),
+        match: ['delete:confirm:456:message', 'confirm', '456', 'message'],
+        reply: jest.fn().mockResolvedValue({}),
+        deleteMessage: jest.fn().mockResolvedValue({}),
         answerCallbackQuery: jest.fn().mockResolvedValue({}),
         api: {
           deleteMessage: jest.fn().mockResolvedValue({})
@@ -95,12 +96,13 @@ describe.each(['en', 'ru'])('DeleteRideCommandHandler (%s)', (language) => {
     });
 
     it('cancels deletion when cancel action is used', async () => {
-      mockCtx.match = ['delete:cancel:456', 'cancel', '456'];
+      mockCtx.match = ['delete:cancel:456:message', 'cancel', '456', 'message'];
 
       await handler.handleConfirmation(mockCtx);
 
-      expect(mockCtx.editMessageText).toHaveBeenCalledWith(tr('commands.delete.cancelledMessage'));
-      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.delete.cancelledCallback'));
+      expect(mockCtx.deleteMessage).toHaveBeenCalled();
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.delete.cancelled'));
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith();
       expect(mockRideService.getRide).not.toHaveBeenCalled();
     });
 
@@ -109,8 +111,20 @@ describe.each(['en', 'ru'])('DeleteRideCommandHandler (%s)', (language) => {
 
       await handler.handleConfirmation(mockCtx);
 
-      expect(mockCtx.editMessageText).toHaveBeenCalledWith(tr('commands.delete.notFoundMessage'));
-      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.delete.notFoundCallback'));
+      expect(mockCtx.deleteMessage).toHaveBeenCalled();
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.delete.notFound'));
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith();
+      expect(mockRideService.deleteRide).not.toHaveBeenCalled();
+    });
+
+    it('reports access errors without masking them as not found', async () => {
+      mockRideService.getRide.mockRejectedValue(new Error('Database error'));
+
+      await handler.handleConfirmation(mockCtx);
+
+      expect(mockCtx.deleteMessage).toHaveBeenCalled();
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.common.errorAccessingRideData'));
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith();
       expect(mockRideService.deleteRide).not.toHaveBeenCalled();
     });
 
@@ -119,7 +133,9 @@ describe.each(['en', 'ru'])('DeleteRideCommandHandler (%s)', (language) => {
 
       await handler.handleConfirmation(mockCtx);
 
-      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.delete.onlyCreator'));
+      expect(mockCtx.deleteMessage).toHaveBeenCalled();
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.delete.onlyCreator'));
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith();
       expect(mockRideService.deleteRide).not.toHaveBeenCalled();
     });
 
@@ -142,11 +158,11 @@ describe.each(['en', 'ru'])('DeleteRideCommandHandler (%s)', (language) => {
       await handler.handleConfirmation(mockCtx);
 
       expect(mockCtx.api.deleteMessage).toHaveBeenCalledTimes(3);
-      const text = mockCtx.editMessageText.mock.calls[0][0];
-      expect(text).toContain(tr('commands.delete.successMessage'));
-      expect(text).toContain(tr('commands.delete.deletedMessages', { count: 2 }));
-      expect(text).toContain(tr('commands.delete.removedMessages', { count: 1 }));
-      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.delete.successCallback'));
+      expect(mockCtx.deleteMessage).toHaveBeenCalled();
+      expect(mockCtx.reply).toHaveBeenCalledWith(
+        expect.stringContaining(tr('commands.delete.success'))
+      );
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith();
     });
 
     it('reports failed ride deletion', async () => {
@@ -155,8 +171,27 @@ describe.each(['en', 'ru'])('DeleteRideCommandHandler (%s)', (language) => {
 
       await handler.handleConfirmation(mockCtx);
 
-      expect(mockCtx.editMessageText).toHaveBeenCalledWith(tr('commands.delete.failedMessage'));
-      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.delete.failedCallback'));
+      expect(mockCtx.deleteMessage).toHaveBeenCalled();
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.delete.failed'));
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith();
+    });
+
+    it('uses popup-only completion for callback-origin delete confirmation', async () => {
+      mockCtx.match = ['delete:cancel:456:callback', 'cancel', '456', 'callback'];
+
+      await handler.handleConfirmation(mockCtx);
+
+      expect(mockCtx.deleteMessage).toHaveBeenCalled();
+      expect(mockCtx.reply).not.toHaveBeenCalled();
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.delete.cancelled'));
+    });
+
+    it('propagates unexpected deletion errors to the callback boundary', async () => {
+      mockCtx.match = ['delete:confirm:456:callback', 'confirm', '456', 'callback'];
+      mockRideService.getRide.mockResolvedValue({ id: '456', createdBy: 123, messages: [] });
+      mockRideService.deleteRide.mockRejectedValue(new Error('Delete failed'));
+
+      await expect(handler.handleConfirmation(mockCtx)).rejects.toThrow('Delete failed');
     });
   });
 });

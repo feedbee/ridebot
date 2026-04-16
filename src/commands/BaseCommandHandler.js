@@ -47,20 +47,13 @@ export class BaseCommandHandler {
   }
 
   /**
-   * Extract and validate ride
-   * @param {import('grammy').Context} ctx - Grammy context
+   * Load a ride by ID.
+   *
+   * @param {import('grammy').Context} ctx - Grammy context used for localization
+   * @param {string} rideId - Normalized ride ID
    * @returns {Promise<{ride: Object|null, error: string|null}>}
    */
-  async extractRide(ctx) {
-    const extractOptions = ctx.lang ? { language: ctx.lang } : undefined;
-    const { rideId, error } = extractOptions
-      ? this.rideMessagesService.extractRideId(ctx.message, extractOptions)
-      : this.rideMessagesService.extractRideId(ctx.message);
-    
-    if (error) {
-      return { ride: null, error };
-    }
-
+  async getRideById(ctx, rideId) {
     try {
       const ride = await this.rideService.getRide(rideId);
       if (!ride) {
@@ -69,9 +62,79 @@ export class BaseCommandHandler {
 
       return { ride, error: null };
     } catch (error) {
-      console.error('Error extracting ride:', error);
+      console.error('Error extracting ride by ID:', error);
       return { ride: null, error: this.translate(ctx, 'commands.common.errorAccessingRideData') };
     }
+  }
+
+  /**
+   * Extract and load a ride for the selected Telegram entry-point mode.
+   *
+   * @param {import('grammy').Context} ctx - Grammy context used for localization
+   * @param {'message'|'callback'} [mode='message'] - Telegram entry-point mode
+   * @param {number} [callbackMatchIndex=1] - Index of the regex capture group containing the ride ID
+   * @returns {Promise<{ride: Object|null, error: string|null}>}
+   */
+  async extractRide(ctx, mode = 'message', callbackMatchIndex = 1) {
+    let rideId;
+    let error;
+
+    if (mode === 'callback') {
+      rideId = ctx?.match?.[callbackMatchIndex] || null;
+      error = rideId ? null : this.translate(ctx, 'commands.common.errorAccessingRideData');
+    } else {
+      const extractOptions = ctx.lang ? { language: ctx.lang } : undefined;
+      const result = extractOptions
+        ? this.rideMessagesService.extractRideId(ctx.message, extractOptions)
+        : this.rideMessagesService.extractRideId(ctx.message);
+      rideId = result.rideId;
+      error = result.error;
+    }
+
+    if (error) {
+      return { ride: null, error };
+    }
+
+    return this.getRideById(ctx, rideId);
+  }
+
+  /**
+   * Extract and load a ride with creator ownership enforcement.
+   *
+   * @param {import('grammy').Context} ctx - Grammy context used for localization
+   * @param {string} errorMessageKey - Localization key for the ownership error
+   * @param {'message'|'callback'} [mode='message'] - Telegram entry-point mode
+   * @param {number} [callbackMatchIndex=1] - Index of the regex capture group containing the ride ID
+   * @returns {Promise<{ride: Object|null, error: string|null}>}
+   */
+  async extractRideWithCreatorCheck(ctx, errorMessageKey, mode = 'message', callbackMatchIndex = 1) {
+    const { ride, error } = await this.extractRide(ctx, mode, callbackMatchIndex);
+    if (error) {
+      return { ride: null, error };
+    }
+
+    if (!this.isRideCreator(ride, ctx.from.id)) {
+      return { ride: null, error: this.translate(ctx, errorMessageKey) };
+    }
+
+    return { ride, error: null };
+  }
+
+  /**
+   * Send a user-facing result using the transport of the current entry point.
+   *
+   * @param {import('grammy').Context} ctx - Grammy context
+   * @param {'message'|'callback'} mode - Telegram entry-point mode
+   * @param {string} message - User-facing message text
+   * @returns {Promise<void>}
+   */
+  async replyOrAnswerCallback(ctx, mode, message) {
+    if (mode === 'callback') {
+      await ctx.answerCallbackQuery(message);
+      return;
+    }
+
+    await ctx.reply(message);
   }
   
   /**
@@ -116,26 +179,6 @@ export class BaseCommandHandler {
       return { params, hasUnknownParams: true };
     }
     return { params, hasUnknownParams: false };
-  }
-
-  /**
-   * Extract ride and validate that the user is the creator
-   * @param {import('grammy').Context} ctx - Grammy context
-   * @param {string} [creatorOnlyMessage] - Custom message for non-creator users
-   * @returns {Promise<{ride: Object|null, error: string|null}>}
-   */
-  async extractRideWithCreatorCheck(ctx, creatorOnlyMessage = null) {
-    const { ride, error } = await this.extractRide(ctx);
-    
-    if (error) {
-      return { ride: null, error };
-    }
-    
-    if (!this.isRideCreator(ride, ctx.from.id)) {
-      return { ride: null, error: creatorOnlyMessage || this.translate(ctx, 'commands.common.onlyCreatorAction') };
-    }
-    
-    return { ride, error: null };
   }
 
   /**

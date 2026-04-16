@@ -118,6 +118,43 @@ describe.each(['en', 'ru'])('CancelRideCommandHandler (%s)', (language) => {
     });
   });
 
+  describe('handleCallback', () => {
+    beforeEach(() => {
+      mockCtx = {
+        answerCallbackQuery: jest.fn().mockResolvedValue({}),
+        lang: language,
+        from: { id: 123 },
+        match: ['rideowner:cancel:456', '456']
+      };
+    });
+
+    it('shows cancellation result as popup for callback flow', async () => {
+      mockRideService.getRide.mockResolvedValue({ id: '456', createdBy: 123, cancelled: false });
+      mockRideService.cancelRide.mockResolvedValue({ id: '456', cancelled: true });
+      mockRideMessagesService.updateRideMessages.mockResolvedValue({
+        success: true,
+        updatedCount: 1,
+        removedCount: 0
+      });
+
+      await handler.handleCallback(mockCtx);
+
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(
+        tr('commands.common.rideActionUpdatedMessages', {
+          action: tr('commands.common.actions.cancelled'),
+          count: 1
+        })
+      );
+    });
+
+    it('propagates unexpected state change errors to the callback boundary', async () => {
+      mockRideService.getRide.mockResolvedValue({ id: '456', createdBy: 123, cancelled: false });
+      mockRideService.cancelRide.mockRejectedValue(new Error('Update failed'));
+
+      await expect(handler.handleCallback(mockCtx)).rejects.toThrow('Update failed');
+    });
+  });
+
   describe('updateRideMessage', () => {
     it('delegates to ride message service', async () => {
       const ride = { id: '123', title: 'Test Ride' };

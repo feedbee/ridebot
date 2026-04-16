@@ -54,7 +54,8 @@ describe.each(['en', 'ru'])('DuplicateRideCommandHandler (%s)', (language) => {
         first_name: 'Test',
         last_name: 'User'
       },
-      reply: jest.fn().mockResolvedValue({})
+      reply: jest.fn().mockResolvedValue({}),
+      answerCallbackQuery: jest.fn().mockResolvedValue({})
     };
 
     handler = new DuplicateRideCommandHandler(
@@ -101,7 +102,8 @@ describe.each(['en', 'ru'])('DuplicateRideCommandHandler (%s)', (language) => {
           title: 'Test Ride',
           datetime: new Date('2025-03-31T10:00:00.000Z'),
           meetingPoint: 'Test Location'
-        })
+        }),
+        'message'
       );
     });
 
@@ -125,6 +127,46 @@ describe.each(['en', 'ru'])('DuplicateRideCommandHandler (%s)', (language) => {
       );
       expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith({ id: '456', title: 'New Ride' }, mockCtx);
       expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.duplicate.success'));
+    });
+  });
+
+  describe('handleCallback', () => {
+    it('starts the duplicate wizard and acknowledges the callback', async () => {
+      mockCtx.match = ['rideowner:duplicate:123', '123'];
+      mockRideService.getRide.mockResolvedValue({
+        id: '123',
+        createdBy: 101112,
+        title: 'Ride',
+        meetingPoint: 'Start',
+        date: new Date('2025-03-30T10:00:00Z')
+      });
+      mockWizard.startWizard.mockResolvedValue(true);
+
+      await handler.handleCallback(mockCtx);
+
+      expect(mockWizard.startWizard).toHaveBeenCalledWith(
+        mockCtx,
+        expect.objectContaining({
+          title: 'Ride',
+          meetingPoint: 'Start',
+          datetime: new Date('2025-03-31T10:00:00.000Z')
+        }),
+        'callback'
+      );
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith();
+    });
+
+    it('propagates unexpected wizard startup errors to the callback boundary', async () => {
+      mockCtx.match = ['rideowner:duplicate:123', '123'];
+      mockRideService.getRide.mockResolvedValue({
+        id: '123',
+        createdBy: 101112,
+        title: 'Ride',
+        date: new Date('2025-03-30T10:00:00Z')
+      });
+      mockWizard.startWizard.mockRejectedValue(new Error('Wizard failed'));
+
+      await expect(handler.handleCallback(mockCtx)).rejects.toThrow('Wizard failed');
     });
   });
 

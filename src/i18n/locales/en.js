@@ -231,6 +231,13 @@ Click here to start a private chat: @botname
     join: "I'm in! 🚴",
     thinking: 'Maybe 🤔',
     pass: 'Pass 🙅',
+    edit: 'Edit',
+    duplicate: 'Duplicate',
+    delete: 'Delete',
+    cancelRide: 'Cancel',
+    resumeRide: 'Resume',
+    participants: 'Participants',
+    settings: 'Settings',
     confirmDelete: 'Yes, delete ❌',
     cancelDelete: 'No, keep it ✅',
     back: '⬅️ Back',
@@ -252,6 +259,9 @@ Click here to start a private chat: @botname
     generic: 'An error occurred.'
   },
   commands: {
+    ownerActions: {
+      settingsComingSoon: 'Ride settings are not available yet.'
+    },
     common: {
       rideNotFoundById: 'Ride #{id} not found',
       rideNotFoundByIdWithDot: 'Ride #{id} not found.',
@@ -351,14 +361,10 @@ Click here to start a private chat: @botname
     },
     delete: {
       onlyCreator: 'Only the ride creator can delete this ride.',
-      cancelledMessage: 'Deletion cancelled.',
-      cancelledCallback: 'Deletion cancelled',
-      notFoundMessage: 'Ride not found.',
-      notFoundCallback: 'Ride not found',
-      successMessage: 'Ride deleted successfully.',
-      successCallback: 'Ride deleted successfully',
-      failedMessage: 'Failed to delete ride.',
-      failedCallback: 'Failed to delete ride',
+      cancelled: 'Deletion cancelled.',
+      notFound: 'Ride not found.',
+      success: 'Ride deleted successfully.',
+      failed: 'Failed to delete ride.',
       deletedMessages: 'Deleted {count} message(s).',
       removedMessages: 'Removed {count} unavailable message(s).'
     },

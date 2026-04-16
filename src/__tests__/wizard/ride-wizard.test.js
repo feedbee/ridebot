@@ -148,7 +148,7 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
     };
     mockRideMessagesService = {
       createRideMessage: jest.fn().mockResolvedValue(true),
-      updateRideMessages: jest.fn().mockResolvedValue(true)
+      updateRideMessages: jest.fn().mockResolvedValue({ success: true, updatedCount: 0, removedCount: 0 })
     };
     wizard = new RideWizard(storage, mockRideService, mockMessageFormatter, mockRideMessagesService);
     ctx = createMockContext(123, 456, 'private', language);
@@ -184,6 +184,24 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
       expect(ctx._test.messages[2].text).toContain(tr('wizard.messages.completeOrCancelCurrent'));
     });
 
+    test('should show active wizard warning as popup for callback-origin startWizard', async () => {
+      await wizard.startWizard(ctx, null, 'callback');
+
+      await wizard.startWizard(ctx, null, 'callback');
+
+      expect(ctx._test.messages).toHaveLength(2);
+      expect(ctx._test.callbackAnswers).toContain(tr('wizard.messages.completeOrCancelCurrent'));
+    });
+
+    test('should show private-chat restriction as popup for callback-origin startWizard', async () => {
+      const publicCtx = createMockContext(123, 456, 'group', language);
+
+      await wizard.startWizard(publicCtx, null, 'callback');
+
+      expect(publicCtx._test.messages).toHaveLength(0);
+      expect(publicCtx._test.callbackAnswers).toContain(tr('wizard.messages.privateChatOnlyCallback'));
+    });
+
     test('should handle wizard cancellation', async () => {
       await wizard.startWizard(ctx);
       // [0]=preview, [1]=wizard question
@@ -191,6 +209,7 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
       await wizard.handleWizardAction(ctx);
       // Cancel sends the cancelled reply as [2]
       expect(ctx._test.messages[2].text).toBe(tr('wizard.messages.creationCancelled'));
+      expect(ctx._test.callbackAnswers).toContain(undefined);
     });
   });
 

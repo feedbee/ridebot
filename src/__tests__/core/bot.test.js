@@ -92,10 +92,17 @@ describe('Bot', () => {
       );
       expect(bot.botConfig.callbacks).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ pattern: /^join:(.+)$/ }),
-          expect.objectContaining({ pattern: /^thinking:(.+)$/ }),
-          expect.objectContaining({ pattern: /^skip:(.+)$/ }),
-          expect.objectContaining({ pattern: /^delete:(\w+):(\w+)$/ }),
+          expect.objectContaining({ pattern: /^join:(\w+)$/ }),
+          expect.objectContaining({ pattern: /^thinking:(\w+)$/ }),
+          expect.objectContaining({ pattern: /^skip:(\w+)$/ }),
+          expect.objectContaining({ pattern: /^delete:(\w+):(\w+)(?::(message|callback))?$/ }),
+          expect.objectContaining({ pattern: /^rideowner:update:(\w+)$/ }),
+          expect.objectContaining({ pattern: /^rideowner:duplicate:(\w+)$/ }),
+          expect.objectContaining({ pattern: /^rideowner:delete:(\w+)$/ }),
+          expect.objectContaining({ pattern: /^rideowner:cancel:(\w+)$/ }),
+          expect.objectContaining({ pattern: /^rideowner:resume:(\w+)$/ }),
+          expect.objectContaining({ pattern: /^rideowner:participants:(\w+)$/ }),
+          expect.objectContaining({ pattern: /^rideowner:settings:(\w+)$/ }),
           expect.objectContaining({ pattern: /^wizard:(\w+)(?::(.*))?$/ }),
         ])
       );
@@ -129,23 +136,51 @@ describe('Bot', () => {
 
     it('should register callback query handlers', () => {
       expect(mockBotCallbackQuery).toHaveBeenCalledWith(
-        /^join:(.+)$/,
+        /^join:(\w+)$/,
         expect.any(Function)
       );
       expect(mockBotCallbackQuery).toHaveBeenCalledWith(
-        /^thinking:(.+)$/,
+        /^thinking:(\w+)$/,
         expect.any(Function)
       );
       expect(mockBotCallbackQuery).toHaveBeenCalledWith(
-        /^skip:(.+)$/,
+        /^skip:(\w+)$/,
         expect.any(Function)
       );
       expect(mockBotCallbackQuery).toHaveBeenCalledWith(
-        /^delete:(\w+):(\w+)$/,
+        /^delete:(\w+):(\w+)(?::(message|callback))?$/,
         expect.any(Function)
       );
       expect(mockBotCallbackQuery).toHaveBeenCalledWith(
         /^list:(\d+)$/,
+        expect.any(Function)
+      );
+      expect(mockBotCallbackQuery).toHaveBeenCalledWith(
+        /^rideowner:update:(\w+)$/,
+        expect.any(Function)
+      );
+      expect(mockBotCallbackQuery).toHaveBeenCalledWith(
+        /^rideowner:duplicate:(\w+)$/,
+        expect.any(Function)
+      );
+      expect(mockBotCallbackQuery).toHaveBeenCalledWith(
+        /^rideowner:delete:(\w+)$/,
+        expect.any(Function)
+      );
+      expect(mockBotCallbackQuery).toHaveBeenCalledWith(
+        /^rideowner:cancel:(\w+)$/,
+        expect.any(Function)
+      );
+      expect(mockBotCallbackQuery).toHaveBeenCalledWith(
+        /^rideowner:resume:(\w+)$/,
+        expect.any(Function)
+      );
+      expect(mockBotCallbackQuery).toHaveBeenCalledWith(
+        /^rideowner:participants:(\w+)$/,
+        expect.any(Function)
+      );
+      expect(mockBotCallbackQuery).toHaveBeenCalledWith(
+        /^rideowner:settings:(\w+)$/,
         expect.any(Function)
       );
       expect(mockBotCallbackQuery).toHaveBeenCalledWith(
@@ -159,6 +194,29 @@ describe('Bot', () => {
         'message:text',
         expect.any(Function)
       );
+    });
+
+    it('should answer callback query with a generic error when a callback handler throws', async () => {
+      const failingHandler = jest.fn().mockRejectedValue(new Error('Boom'));
+      const callbackCtx = {
+        t: jest.fn((key) => key === 'errors.generic' ? 'Something went wrong' : key),
+        answerCallbackQuery: jest.fn().mockResolvedValue({})
+      };
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      bot.botConfig.callbacks = [{ pattern: /^test$/, handler: failingHandler }];
+      bot.setupCallbackQueryHandlers();
+
+      const wrappedHandler = mockBotCallbackQuery.mock.calls.at(-1)[1];
+
+      try {
+        await wrappedHandler(callbackCtx);
+      } finally {
+        consoleErrorSpy.mockRestore();
+      }
+
+      expect(failingHandler).toHaveBeenCalledWith(callbackCtx);
+      expect(callbackCtx.answerCallbackQuery).toHaveBeenCalledWith('Something went wrong');
     });
   });
 

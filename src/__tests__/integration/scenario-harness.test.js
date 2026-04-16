@@ -56,6 +56,135 @@ describe('Scenario Harness Integration', () => {
         expect.objectContaining({ callback_data: `skip:${ride.id}` }),
       ])
     );
+    expect(harness.outbox.replies[0].options.reply_markup.inline_keyboard[1]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ callback_data: `rideowner:update:${ride.id}` }),
+        expect.objectContaining({ callback_data: `rideowner:duplicate:${ride.id}` }),
+        expect.objectContaining({ callback_data: `rideowner:delete:${ride.id}` }),
+      ])
+    );
+    expect(harness.outbox.replies[0].options.reply_markup.inline_keyboard[2]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ callback_data: `rideowner:cancel:${ride.id}` }),
+        expect.objectContaining({ callback_data: `rideowner:participants:${ride.id}` }),
+        expect.objectContaining({ callback_data: `rideowner:settings:${ride.id}` }),
+      ])
+    );
+  });
+
+  it('starts the update wizard from creator owner button callback', async () => {
+    const harness = await createScenarioHarness();
+    const owner = { id: 42, first_name: 'Alex', last_name: 'Rider', username: 'alex' };
+    const chat = { id: 501, type: 'private' };
+
+    await harness.dispatchMessage({
+      text: '/newride\ntitle: Sunrise Ride\nwhen: tomorrow 11:00',
+      chat,
+      from: owner,
+    });
+
+    const [ride] = harness.listRides();
+    const trackedMessage = ride.messages[0];
+
+    await harness.dispatchCallback({
+      data: `rideowner:update:${ride.id}`,
+      chat,
+      from: owner,
+      message: {
+        message_id: trackedMessage.messageId,
+        text: harness.outbox.replies[0].text,
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' },
+      },
+    });
+
+    expect(harness.outbox.replies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          chatId: chat.id,
+          text: expect.stringContaining('Sunrise Ride'),
+          options: expect.objectContaining({ parse_mode: 'HTML' }),
+        }),
+      ])
+    );
+    expect(harness.outbox.callbackAnswers).toContainEqual({ text: null });
+  });
+
+  it('shows participants list and swaps cancel button to resume after owner callback cancellation', async () => {
+    const harness = await createScenarioHarness();
+    const owner = { id: 88, first_name: 'Ira', last_name: 'Owner', username: 'ira' };
+    const guest = { id: 99, first_name: 'Sam', last_name: 'Guest', username: 'sam' };
+    const chat = { id: 1201, type: 'private' };
+
+    await harness.dispatchMessage({
+      text: '/newride\ntitle: Owner Ride\nwhen: tomorrow 08:00',
+      chat,
+      from: owner,
+    });
+
+    const [ride] = harness.listRides();
+    const trackedMessage = ride.messages[0];
+
+    await harness.dispatchCallback({
+      data: `join:${ride.id}`,
+      chat,
+      from: guest,
+      message: {
+        message_id: trackedMessage.messageId,
+        text: harness.outbox.replies[0].text,
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' },
+      },
+    });
+
+    await harness.dispatchCallback({
+      data: `rideowner:participants:${ride.id}`,
+      chat,
+      from: owner,
+      message: {
+        message_id: trackedMessage.messageId,
+        text: harness.outbox.replies[0].text,
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' },
+      },
+    });
+
+    expect(harness.outbox.replies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          chatId: chat.id,
+          text: expect.stringContaining('Sam Guest (@sam)'),
+        }),
+      ])
+    );
+
+    await harness.dispatchCallback({
+      data: `rideowner:cancel:${ride.id}`,
+      chat,
+      from: owner,
+      message: {
+        message_id: trackedMessage.messageId,
+        text: harness.outbox.replies[0].text,
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' },
+      },
+    });
+
+    const latestEdit = harness.outbox.edits[harness.outbox.edits.length - 1];
+    expect(latestEdit.options.reply_markup.inline_keyboard[0]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ callback_data: `rideowner:update:${ride.id}` }),
+        expect.objectContaining({ callback_data: `rideowner:duplicate:${ride.id}` }),
+        expect.objectContaining({ callback_data: `rideowner:delete:${ride.id}` }),
+      ])
+    );
+    expect(latestEdit.options.reply_markup.inline_keyboard[1]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ callback_data: `rideowner:resume:${ride.id}` }),
+        expect.objectContaining({ callback_data: `rideowner:participants:${ride.id}` }),
+        expect.objectContaining({ callback_data: `rideowner:settings:${ride.id}` }),
+      ])
+    );
   });
 
   it('handles a join callback through real bot wiring and updates the stored ride message', async () => {
@@ -249,13 +378,13 @@ describe('Scenario Harness Integration', () => {
     const confirmationReply = harness.outbox.replies[harness.outbox.replies.length - 1];
     expect(confirmationReply.options.reply_markup.inline_keyboard[0]).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ callback_data: `delete:confirm:${ride.id}` }),
-        expect.objectContaining({ callback_data: `delete:cancel:${ride.id}` }),
+        expect.objectContaining({ callback_data: `delete:confirm:${ride.id}:message` }),
+        expect.objectContaining({ callback_data: `delete:cancel:${ride.id}:message` }),
       ])
     );
 
     await harness.dispatchCallback({
-      data: `delete:confirm:${ride.id}`,
+      data: `delete:confirm:${ride.id}:message`,
       chat,
       from: owner,
       message: {
@@ -271,17 +400,20 @@ describe('Scenario Harness Integration', () => {
       chatId: trackedMessage.chatId,
       messageId: trackedMessage.messageId,
     });
-    expect(harness.outbox.edits).toEqual(
+    expect(harness.outbox.deletes).toContainEqual({
+      chatId: chat.id,
+      messageId: confirmationReply.messageId,
+    });
+    expect(harness.outbox.replies).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          via: 'ctx.editMessageText',
-          messageId: confirmationReply.messageId,
-          text: expect.stringContaining(tr('commands.delete.successMessage')),
+          chatId: chat.id,
+          text: expect.stringContaining(tr('commands.delete.success')),
         }),
       ])
     );
     expect(harness.outbox.callbackAnswers).toContainEqual({
-      text: tr('commands.delete.successCallback'),
+      text: null,
     });
   });
 
@@ -291,7 +423,7 @@ describe('Scenario Harness Integration', () => {
     const user = { id: 333, first_name: 'Kai', last_name: 'User', username: 'kai' };
 
     await harness.dispatchCallback({
-      data: 'join:missing-ride-id',
+      data: 'join:missingRideId',
       chat,
       from: user,
       message: {

@@ -105,7 +105,7 @@ export async function runRideLifecycleE2ETest(driver) {
     await driver.clickButtonInChat({
       chatId: deleteConfirmationMessage.chatId,
       messageId: deleteConfirmationMessage.id,
-      callbackDataPattern: new RegExp(`^delete:confirm:${rideId}$`)
+      callbackDataPattern: new RegExp(`^delete:confirm:${rideId}:message$`)
     });
 
     await driver.waitForMessageDeletedInChat({

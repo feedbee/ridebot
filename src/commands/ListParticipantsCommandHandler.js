@@ -28,51 +28,72 @@ export class ListParticipantsCommandHandler extends BaseCommandHandler {
         return;
       }
 
-      // Format and send the participants list by category
-      const participation = ride.participation || { joined: [], thinking: [], skipped: [] };
-      const joinedCount = participation.joined.length;
-      const thinkingCount = participation.thinking.length;
-      const skippedCount = participation.skipped.length;
-      const totalCount = joinedCount + thinkingCount + skippedCount;
-      
-      let message = `👥 <b>${this.translate(ctx, 'commands.listParticipants.allParticipantsTitle', {
-        title: escapeHtml(ride.title),
-        total: totalCount
-      })}</b>\n\n`;
-      
-      // Always show joined participants
-      message += `🚴 <b>${this.translate(ctx, 'commands.listParticipants.joinedLabel', { count: joinedCount })}:</b>\n`;
-      if (joinedCount > 0) {
-        message += this.formatParticipantsByCategory(participation.joined);
-      } else {
-        message += this.translate(ctx, 'commands.listParticipants.noOneJoinedYet');
-      }
-      
-      // Always add empty line after joined section
-      message += '\n\n';
-      
-      // Show thinking participants if any
-      if (thinkingCount > 0) {
-        message += `🤔 <b>${this.translate(ctx, 'commands.listParticipants.thinkingLabel', { count: thinkingCount })}:</b>\n`;
-        message += this.formatParticipantsByCategory(participation.thinking);
-        message += '\n\n';
-      }
-      
-      // Show skipped participants if any
-      if (skippedCount > 0) {
-        message += `🙅 <b>${this.translate(ctx, 'commands.listParticipants.notInterestedLabel', { count: skippedCount })}:</b>\n`;
-        message += this.formatParticipantsByCategory(participation.skipped);
-        message += '\n\n';
-      }
-      
-      // Remove trailing newlines
-      message = message.trim();
-      
-      await ctx.reply(message, { parse_mode: 'HTML' });
+      await this.showParticipants(ctx, ride);
     } catch (error) {
       console.error('Error listing participants:', error);
       await ctx.reply(this.translate(ctx, 'commands.listParticipants.retrieveError'));
     }
+  }
+
+  /**
+   * Handle owner action callback for listing participants.
+   */
+  async handleCallback(ctx) {
+    const { ride, error } = await this.extractRideWithCreatorCheck(ctx, 'commands.common.onlyCreatorAction', 'callback');
+
+    if (error) {
+      await this.replyOrAnswerCallback(ctx, 'callback', error);
+      return;
+    }
+
+    await this.showParticipants(ctx, ride);
+    await ctx.answerCallbackQuery();
+  }
+
+  /**
+   * Send the formatted participants list for a loaded ride.
+   */
+  async showParticipants(ctx, ride) {
+    await ctx.reply(this.buildParticipantsMessage(ctx, ride), { parse_mode: 'HTML' });
+  }
+
+  /**
+   * Build the participants list message body.
+   */
+  buildParticipantsMessage(ctx, ride) {
+    const participation = ride.participation || { joined: [], thinking: [], skipped: [] };
+    const joinedCount = participation.joined.length;
+    const thinkingCount = participation.thinking.length;
+    const skippedCount = participation.skipped.length;
+    const totalCount = joinedCount + thinkingCount + skippedCount;
+
+    let message = `👥 <b>${this.translate(ctx, 'commands.listParticipants.allParticipantsTitle', {
+      title: escapeHtml(ride.title),
+      total: totalCount
+    })}</b>\n\n`;
+
+    message += `🚴 <b>${this.translate(ctx, 'commands.listParticipants.joinedLabel', { count: joinedCount })}:</b>\n`;
+    if (joinedCount > 0) {
+      message += this.formatParticipantsByCategory(participation.joined);
+    } else {
+      message += this.translate(ctx, 'commands.listParticipants.noOneJoinedYet');
+    }
+
+    message += '\n\n';
+
+    if (thinkingCount > 0) {
+      message += `🤔 <b>${this.translate(ctx, 'commands.listParticipants.thinkingLabel', { count: thinkingCount })}:</b>\n`;
+      message += this.formatParticipantsByCategory(participation.thinking);
+      message += '\n\n';
+    }
+
+    if (skippedCount > 0) {
+      message += `🙅 <b>${this.translate(ctx, 'commands.listParticipants.notInterestedLabel', { count: skippedCount })}:</b>\n`;
+      message += this.formatParticipantsByCategory(participation.skipped);
+      message += '\n\n';
+    }
+
+    return message.trim();
   }
 
   /**

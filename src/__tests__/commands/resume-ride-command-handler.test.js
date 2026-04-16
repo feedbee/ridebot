@@ -137,4 +137,41 @@ describe.each(['en', 'ru'])('ResumeRideCommandHandler (%s)', (language) => {
       expect(replyText).toContain(tr('commands.common.removedUnavailableMessages', { count: 1 }));
     });
   });
+
+  describe('handleCallback', () => {
+    beforeEach(() => {
+      mockCtx = {
+        answerCallbackQuery: jest.fn().mockResolvedValue({}),
+        lang: language,
+        from: { id: 123 },
+        match: ['rideowner:resume:456', '456']
+      };
+    });
+
+    it('shows resume result as popup for callback flow', async () => {
+      mockRideService.getRide.mockResolvedValue({ id: '456', createdBy: 123, cancelled: true });
+      mockRideService.resumeRide.mockResolvedValue({ id: '456', cancelled: false });
+      mockRideMessagesService.updateRideMessages.mockResolvedValue({
+        success: true,
+        updatedCount: 1,
+        removedCount: 0
+      });
+
+      await handler.handleCallback(mockCtx);
+
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(
+        tr('commands.common.rideActionUpdatedMessages', {
+          action: tr('commands.common.actions.resumed'),
+          count: 1
+        })
+      );
+    });
+
+    it('propagates unexpected state change errors to the callback boundary', async () => {
+      mockRideService.getRide.mockResolvedValue({ id: '456', createdBy: 123, cancelled: true });
+      mockRideService.resumeRide.mockRejectedValue(new Error('Update failed'));
+
+      await expect(handler.handleCallback(mockCtx)).rejects.toThrow('Update failed');
+    });
+  });
 });

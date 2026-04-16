@@ -126,16 +126,15 @@ async function cleanupRideInPrivate(driver, rideId, rideMessageId, cleanupMessag
 
   await driver.clickButtonInPrivateMessage({
     messageId: confirmationMessage.id,
-    callbackDataPattern: new RegExp(`^delete:confirm:${rideId}$`)
+    callbackDataPattern: new RegExp(`^delete:confirm:${rideId}:message$`)
   });
 
   await driver.waitForPrivateMessageDeleted({
     messageId: rideMessageId
   });
 
-  await driver.waitForBotPrivateMessageState({
-    messageId: confirmationMessage.id,
-    predicate: message => !message.replyMarkup
+  await driver.waitForPrivateMessageDeleted({
+    messageId: confirmationMessage.id
   });
 
   cleanupMessageIds.push(confirmationMessage.id);

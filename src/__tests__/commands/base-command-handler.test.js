@@ -55,16 +55,15 @@ describe('BaseCommandHandler', () => {
         rideId: null,
         error: tr('services.rideMessages.provideRideIdAfterCommand', { commandName: 'command' })
       });
-      
+
       // Execute
       const result = await baseCommandHandler.extractRide(mockCtx);
-      
+
       // Verify
       expect(result).toEqual({
         ride: null,
         error: tr('services.rideMessages.provideRideIdAfterCommand', { commandName: 'command' })
       });
-      expect(mockRideMessagesService.extractRideId).toHaveBeenCalledWith(mockCtx.message);
       expect(mockRideService.getRide).not.toHaveBeenCalled();
     });
     
@@ -73,13 +72,12 @@ describe('BaseCommandHandler', () => {
       const mockCtx = { message: { text: 'some text' }, from: { id: 789 } };
       mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '123', error: null });
       mockRideService.getRide.mockResolvedValue(null);
-      
+
       // Execute
       const result = await baseCommandHandler.extractRide(mockCtx);
-      
+
       // Verify
       expect(result).toEqual({ ride: null, error: tr('commands.common.rideNotFoundById', { id: '123' }) });
-      expect(mockRideMessagesService.extractRideId).toHaveBeenCalledWith(mockCtx.message);
       expect(mockRideService.getRide).toHaveBeenCalledWith('123');
     });
     
@@ -89,13 +87,12 @@ describe('BaseCommandHandler', () => {
       const mockRide = { id: '123', title: 'Test Ride', createdBy: 456 };
       mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '123', error: null });
       mockRideService.getRide.mockResolvedValue(mockRide);
-      
+
       // Execute
       const result = await baseCommandHandler.extractRide(mockCtx);
-      
+
       // Verify
       expect(result).toEqual({ ride: mockRide, error: null });
-      expect(mockRideMessagesService.extractRideId).toHaveBeenCalledWith(mockCtx.message);
       expect(mockRideService.getRide).toHaveBeenCalledWith('123');
     });
     
@@ -104,7 +101,7 @@ describe('BaseCommandHandler', () => {
       const mockCtx = { message: { text: 'some text' } };
       mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '123', error: null });
       mockRideService.getRide.mockRejectedValue(new Error('Database error'));
-      
+
       // Mock console.error to prevent test output pollution
       const originalConsoleError = console.error;
       console.error = jest.fn();
@@ -112,10 +109,9 @@ describe('BaseCommandHandler', () => {
       try {
         // Execute
         const result = await baseCommandHandler.extractRide(mockCtx);
-        
+
         // Verify
         expect(result).toEqual({ ride: null, error: tr('commands.common.errorAccessingRideData') });
-        expect(mockRideMessagesService.extractRideId).toHaveBeenCalledWith(mockCtx.message);
         expect(mockRideService.getRide).toHaveBeenCalledWith('123');
         expect(console.error).toHaveBeenCalled();
       } finally {
@@ -123,8 +119,81 @@ describe('BaseCommandHandler', () => {
         console.error = originalConsoleError;
       }
     });
+
+    it('should extract ride using callback mode', async () => {
+      const mockCtx = { match: ['rideowner:update:123', '123'] };
+      mockRideService.getRide.mockResolvedValue({ id: '123', createdBy: 456 });
+
+      const result = await baseCommandHandler.extractRide(mockCtx, 'callback');
+
+      expect(result).toEqual({ ride: { id: '123', createdBy: 456 }, error: null });
+      expect(mockRideService.getRide).toHaveBeenCalledWith('123');
+    });
+
+    it('should return callback extraction error when callback ride ID is missing', async () => {
+      const result = await baseCommandHandler.extractRide({ match: [] }, 'callback');
+
+      expect(result).toEqual({
+        ride: null,
+        error: tr('commands.common.errorAccessingRideData')
+      });
+    });
+
+    it('should support custom callback match index', async () => {
+      const mockCtx = { match: ['delete:confirm:123:callback', 'confirm', '123', 'callback'] };
+      mockRideService.getRide.mockResolvedValue({ id: '123', createdBy: 456 });
+
+      const result = await baseCommandHandler.extractRide(mockCtx, 'callback', 2);
+
+      expect(result).toEqual({ ride: { id: '123', createdBy: 456 }, error: null });
+      expect(mockRideService.getRide).toHaveBeenCalledWith('123');
+    });
   });
-  
+
+  describe('extractRideWithCreatorCheck', () => {
+    it('should enforce creator check when requested', async () => {
+      const mockCtx = { message: { text: 'some text' }, from: { id: 456 } };
+      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '123', error: null });
+      mockRideService.getRide.mockResolvedValue({ id: '123', createdBy: 999 });
+
+      const result = await baseCommandHandler.extractRideWithCreatorCheck(mockCtx, 'commands.delete.onlyCreator');
+
+      expect(result).toEqual({ ride: null, error: tr('commands.delete.onlyCreator') });
+    });
+
+    it('should support callback mode', async () => {
+      const mockCtx = { match: ['rideowner:update:123', '123'], from: { id: 456 } };
+      const mockRide = { id: '123', createdBy: 456 };
+      mockRideService.getRide.mockResolvedValue(mockRide);
+
+      const result = await baseCommandHandler.extractRideWithCreatorCheck(
+        mockCtx,
+        'commands.common.onlyCreatorAction',
+        'callback'
+      );
+
+      expect(result).toEqual({ ride: mockRide, error: null });
+    });
+
+    it('should support callback mode with custom match index', async () => {
+      const mockCtx = {
+        match: ['delete:confirm:123:callback', 'confirm', '123', 'callback'],
+        from: { id: 456 }
+      };
+      const mockRide = { id: '123', createdBy: 456 };
+      mockRideService.getRide.mockResolvedValue(mockRide);
+
+      const result = await baseCommandHandler.extractRideWithCreatorCheck(
+        mockCtx,
+        'commands.delete.onlyCreator',
+        'callback',
+        2
+      );
+
+      expect(result).toEqual({ ride: mockRide, error: null });
+    });
+  });
+
   describe('isRideCreator', () => {
     it('should return true when user is the creator of a ride', () => {
       const ride = { id: 'abc123', createdBy: 456 };

@@ -37,11 +37,34 @@ export class DuplicateRideCommandHandler extends BaseCommandHandler {
       return this.handleWithParams(ctx, ride, params);
     }
 
-    // Otherwise start the wizard with prefilled data from the original ride
+    await this.startDuplicateWizard(ctx, ride);
+  }
+
+  /**
+   * Handle owner action callback for ride duplication.
+   */
+  async handleCallback(ctx) {
+    const { ride, error } = await this.extractRideWithCreatorCheck(ctx, 'commands.common.onlyCreatorAction', 'callback');
+
+    if (error) {
+      await this.replyOrAnswerCallback(ctx, 'callback', error);
+      return;
+    }
+
+    const started = await this.startDuplicateWizard(ctx, ride, 'callback');
+    if (started) {
+      await ctx.answerCallbackQuery();
+    }
+  }
+
+  /**
+   * Build wizard prefill data for ride duplication.
+   */
+  buildDuplicatePrefillData(ride) {
     const tomorrow = new Date(ride.date);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const prefillData = {
+    return {
       title: ride.title,
       category: ride.category,
       organizer: ride.organizer,
@@ -55,8 +78,13 @@ export class DuplicateRideCommandHandler extends BaseCommandHandler {
       additionalInfo: ride.additionalInfo,
       notifyOnParticipation: ride.notifyOnParticipation ?? true
     };
+  }
 
-    await this.wizard.startWizard(ctx, prefillData);
+  /**
+   * Start the duplicate wizard for an already loaded ride.
+   */
+  async startDuplicateWizard(ctx, ride, responseMode = 'message') {
+    return this.wizard.startWizard(ctx, this.buildDuplicatePrefillData(ride), responseMode);
   }
 
   /**

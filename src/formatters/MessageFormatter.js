@@ -58,7 +58,7 @@ export class MessageFormatter {
       message = message.substring(0, maxLength) + truncateMarker;
     }
     
-    const keyboard = this.getRideKeyboard(ride, language);
+    const keyboard = this.getRideKeyboard(ride, language, options.isForCreator === true);
     
     return {
       message,
@@ -72,7 +72,7 @@ export class MessageFormatter {
    * @param {Object} ride - Ride object
    * @returns {InlineKeyboard} - Keyboard markup
    */
-  getRideKeyboard(ride, language = config.i18n.defaultLanguage) {
+  getRideKeyboard(ride, language = config.i18n.defaultLanguage, isForCreator = false) {
     const keyboard = new InlineKeyboard();
     
     // Don't add participation buttons for cancelled rides
@@ -81,6 +81,25 @@ export class MessageFormatter {
       keyboard.text(this.translate('buttons.join', {}, language), `join:${ride.id}`);
       keyboard.text(this.translate('buttons.thinking', {}, language), `thinking:${ride.id}`);
       keyboard.text(this.translate('buttons.pass', {}, language), `skip:${ride.id}`);
+    }
+
+    if (isForCreator) {
+      if (!ride.cancelled) {
+        keyboard.row();
+      }
+
+      keyboard
+        .text(this.translate('buttons.edit', {}, language), `rideowner:update:${ride.id}`)
+        .text(this.translate('buttons.duplicate', {}, language), `rideowner:duplicate:${ride.id}`)
+        .text(this.translate('buttons.delete', {}, language), `rideowner:delete:${ride.id}`);
+
+      keyboard.row()
+        .text(
+          this.translate(ride.cancelled ? 'buttons.resumeRide' : 'buttons.cancelRide', {}, language),
+          `rideowner:${ride.cancelled ? 'resume' : 'cancel'}:${ride.id}`
+        )
+        .text(this.translate('buttons.participants', {}, language), `rideowner:participants:${ride.id}`)
+        .text(this.translate('buttons.settings', {}, language), `rideowner:settings:${ride.id}`);
     }
     
     return keyboard;
