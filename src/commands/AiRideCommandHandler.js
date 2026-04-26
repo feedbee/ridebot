@@ -231,7 +231,11 @@ export class AiRideCommandHandler extends BaseCommandHandler {
     // state.lastParams stays as pure AI output; RideService re-parses on confirm.
     const previewParams = await this._enrichWithRouteInfo(params, state);
 
-    const previewObj = this._buildPreviewObject(previewParams, state);
+    const creatorProfile = UserProfile.fromTelegramUser(ctx.from);
+    const previewObj = this._buildPreviewObject(previewParams, state, {
+      creatorProfile,
+      language: ctx.lang
+    });
     const previewText = this.messageFormatter.formatRidePreview(previewObj, ctx.lang);
     const atLimit = state.messageCount >= MAX_DIALOG_MESSAGES;
     const fullText = atLimit
@@ -338,8 +342,9 @@ export class AiRideCommandHandler extends BaseCommandHandler {
    * reflects the full final state (existing + changes).
    * @param {Object} params - AI-extracted params
    * @param {Object|null} state - handler state (used to access existing ride in update mode)
+   * @param {{creatorProfile?: UserProfile|null, language?: string}} options
    */
-  _buildPreviewObject(params, state = null) {
+  _buildPreviewObject(params, state = null, options = {}) {
     const existingRide = state?.mode === 'update' ? state.ride : null;
     const routeInputs = params.routes ?? (params.route ? [params.route] : null);
     const clearsRoutes = Array.isArray(routeInputs) && routeInputs.length === 1 && routeInputs[0] === '-';
@@ -351,7 +356,7 @@ export class AiRideCommandHandler extends BaseCommandHandler {
       title:        params.title     || existingRide?.title       || null,
       date:         null,
       category:     null,
-      organizer:    params.organizer || existingRide?.organizer   || null,
+      organizer:    this._resolvePreviewOrganizer(params, state, options),
       meetingPoint: params.meet      || existingRide?.meetingPoint || null,
       routes:       clearsRoutes ? [] : (routeInputs ? (parsedPreviewRoutes || null) : getRideRoutes(existingRide)),
       distance:     params.dist      ? parseFloat(params.dist)
@@ -405,6 +410,26 @@ export class AiRideCommandHandler extends BaseCommandHandler {
     }
 
     return preview;
+  }
+
+  /**
+   * Resolve organizer for preview using the same creator fallback as ride creation.
+   * @param {Object} params
+   * @param {Object|null} state
+   * @param {{creatorProfile?: UserProfile|null, language?: string}} options
+   * @returns {string|null}
+   */
+  _resolvePreviewOrganizer(params, state = null, options = {}) {
+    const existingRide = state?.mode === 'update' ? state.ride : null;
+    if (existingRide) {
+      return params.organizer || existingRide.organizer || null;
+    }
+
+    return this.rideService.resolveCreateOrganizer(
+      params.organizer,
+      options.creatorProfile || null,
+      { language: options.language }
+    ) || null;
   }
 
   async _executeRideOperation(ctx, stateKey, state) {

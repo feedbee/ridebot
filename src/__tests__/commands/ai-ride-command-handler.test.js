@@ -38,7 +38,11 @@ describe.each(['en', 'ru'])('AiRideCommandHandler (%s)', (language) => {
     mockRideService = {
       getRide: jest.fn(),
       createRideFromParams: jest.fn(),
-      updateRideFromParams: jest.fn()
+      updateRideFromParams: jest.fn(),
+      resolveCreateOrganizer: jest.fn((organizer, profile) => {
+        if (organizer === 'Bob') return organizer;
+        return `${profile.firstName} ${profile.lastName} (@${profile.username})`;
+      })
     };
 
     mockMessageFormatter = {
@@ -604,6 +608,47 @@ describe.each(['en', 'ru'])('AiRideCommandHandler (%s)', (language) => {
         expect.stringContaining(language === 'ru' ? 'дата' : 'date')
       );
       expect(mockRideService.updateRideFromParams).toHaveBeenCalled();
+    });
+  });
+
+  describe('preview organizer', () => {
+    const setupAndProcess = async (params) => {
+      mockAiRideService.parseRideText.mockResolvedValue({ params, error: null });
+      mockCtx.message = { text: 'some text', message_id: 5 };
+      handler.states.set('42:100', {
+        mode: 'create', rideId: null, ride: null,
+        userMessages: [], messageCount: 0, lastParams: null,
+        previewMessageId: null, botMessageIds: [],
+        routeInfoCache: {}
+      });
+
+      await handler.handleTextInput(mockCtx);
+
+      return mockMessageFormatter.formatRidePreview.mock.calls[0]?.[0];
+    };
+
+    it('shows the creator as organizer in create preview when organizer is empty', async () => {
+      const preview = await setupAndProcess({ title: 'Ride', when: 'tomorrow' });
+
+      expect(preview.organizer).toBe('Alice Smith (@alice)');
+      expect(mockRideService.resolveCreateOrganizer).toHaveBeenCalledWith(
+        undefined,
+        expect.objectContaining({ userId: 42, username: 'alice', firstName: 'Alice', lastName: 'Smith' }),
+        { language }
+      );
+    });
+
+    it('shows the creator as organizer in create preview when organizer refers to self', async () => {
+      const selfOrganizer = language === 'ru' ? 'я' : 'me';
+      const preview = await setupAndProcess({ title: 'Ride', when: 'tomorrow', organizer: selfOrganizer });
+
+      expect(preview.organizer).toBe('Alice Smith (@alice)');
+    });
+
+    it('keeps explicit organizer in create preview when organizer is someone else', async () => {
+      const preview = await setupAndProcess({ title: 'Ride', when: 'tomorrow', organizer: 'Bob' });
+
+      expect(preview.organizer).toBe('Bob');
     });
   });
 

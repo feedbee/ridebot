@@ -206,12 +206,7 @@ export class RideService {
       };
       
       // Set organizer name - use provided value or default to creator's name
-      if (this.isSelfOrganizerReference(rideData.organizer, language)) {
-        rideData.organizer = '';
-      }
-      if (!rideData.organizer && creatorProfile) {
-        rideData.organizer = this.getDefaultOrganizer(creatorProfile);
-      }
+      rideData.organizer = this.resolveCreateOrganizer(rideData.organizer, creatorProfile, { language });
 
       const ride = await this.createRide(rideData, creatorProfile);
       return { ride, error: null };
@@ -244,16 +239,15 @@ export class RideService {
   }
 
   /**
-   * Detect organizer values that mean "the creator".
+   * Resolve organizer value for a newly created ride.
    * @param {string} organizer
-   * @param {string} language
-   * @returns {boolean}
+   * @param {UserProfile|null} creatorProfile
+   * @param {{language?: string}} options
+   * @returns {string}
    */
-  isSelfOrganizerReference(organizer, language) {
-    if (typeof organizer !== 'string') return false;
-
+  resolveCreateOrganizer(organizer, creatorProfile, options = {}) {
     const references = t(
-      language || config.i18n.defaultLanguage,
+      options.language || config.i18n.defaultLanguage,
       'services.ride.selfOrganizerReferences',
       {},
       {
@@ -261,10 +255,16 @@ export class RideService {
         withMissingMarker: false
       }
     );
-    if (!Array.isArray(references)) return false;
+    const normalized = typeof organizer === 'string'
+      ? organizer.trim().toLowerCase().replace(/[.!?]+$/g, '')
+      : '';
+    const refersToCreator = Array.isArray(references) && references.includes(normalized);
 
-    const normalized = organizer.trim().toLowerCase().replace(/[.!?]+$/g, '');
-    return references.includes(normalized);
+    if (!organizer || refersToCreator) {
+      return creatorProfile ? this.getDefaultOrganizer(creatorProfile) : '';
+    }
+
+    return organizer;
   }
 
   /**

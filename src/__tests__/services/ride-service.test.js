@@ -717,6 +717,19 @@ describe('RideService', () => {
       expect(result.ride.organizer).toBe('me');
     });
 
+    it('should resolve create organizer consistently for preview and persistence', () => {
+      const user = new UserProfile({
+        userId: 789,
+        firstName: 'Test',
+        lastName: 'User',
+        username: 'testuser'
+      });
+
+      expect(rideService.resolveCreateOrganizer(undefined, user, { language: 'ru' })).toBe('Test User (@testuser)');
+      expect(rideService.resolveCreateOrganizer('я', user, { language: 'ru' })).toBe('Test User (@testuser)');
+      expect(rideService.resolveCreateOrganizer('Bob', user, { language: 'ru' })).toBe('Bob');
+    });
+
     it('should handle organizer field when updating a ride', async () => {
       // First create a ride
       const ride = await rideService.createRide(testRide);
