@@ -672,6 +672,51 @@ describe('RideService', () => {
       expect(result.ride.organizer).toBe('Test User (@testuser)');
     });
 
+    it.each([
+      ['ru', 'я'],
+      ['ru', 'я сам'],
+      ['en', 'me'],
+      ['en', 'myself']
+    ])('should use creator name as default organizer when organizer refers to self (%s: %s)', async (language, organizer) => {
+      const params = {
+        title: 'Self Organizer Test Ride',
+        when: 'tomorrow 9am',
+        organizer
+      };
+
+      const user = new UserProfile({
+        userId: 789,
+        firstName: 'Test',
+        lastName: 'User',
+        username: 'testuser'
+      });
+
+      const result = await rideService.createRideFromParams(params, 123456, user, { language });
+
+      expect(result.error).toBeNull();
+      expect(result.ride.organizer).toBe('Test User (@testuser)');
+    });
+
+    it('should not treat another language self-reference as default organizer', async () => {
+      const params = {
+        title: 'Cross Language Organizer Test Ride',
+        when: 'tomorrow 9am',
+        organizer: 'me'
+      };
+
+      const user = new UserProfile({
+        userId: 789,
+        firstName: 'Test',
+        lastName: 'User',
+        username: 'testuser'
+      });
+
+      const result = await rideService.createRideFromParams(params, 123456, user, { language: 'ru' });
+
+      expect(result.error).toBeNull();
+      expect(result.ride.organizer).toBe('me');
+    });
+
     it('should handle organizer field when updating a ride', async () => {
       // First create a ride
       const ride = await rideService.createRide(testRide);

@@ -502,7 +502,8 @@ Click here to start a private chat: @botname
       pleaseProvideTitleAndDate: 'Please provide at least title and date/time.',
       errorCreatingRide: 'An error occurred while creating the ride.',
       errorUpdatingRide: 'An error occurred while updating the ride.',
-      originalRideNotFound: 'Original ride not found'
+      originalRideNotFound: 'Original ride not found',
+      selfOrganizerReferences: ['i', 'me', 'myself']
     },
     rideMessages: {
       couldNotFindRideIdInMessage: 'Could not find ride ID in the message. Please make sure you are replying to a ride message or provide a ride ID.',

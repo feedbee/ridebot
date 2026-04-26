@@ -206,6 +206,9 @@ export class RideService {
       };
       
       // Set organizer name - use provided value or default to creator's name
+      if (this.isSelfOrganizerReference(rideData.organizer, language)) {
+        rideData.organizer = '';
+      }
       if (!rideData.organizer && creatorProfile) {
         rideData.organizer = this.getDefaultOrganizer(creatorProfile);
       }
@@ -238,6 +241,30 @@ export class RideService {
       organizerName = creatorProfile.username.includes(' ') ? creatorProfile.username : `@${creatorProfile.username}`;
     }
     return organizerName;
+  }
+
+  /**
+   * Detect organizer values that mean "the creator".
+   * @param {string} organizer
+   * @param {string} language
+   * @returns {boolean}
+   */
+  isSelfOrganizerReference(organizer, language) {
+    if (typeof organizer !== 'string') return false;
+
+    const references = t(
+      language || config.i18n.defaultLanguage,
+      'services.ride.selfOrganizerReferences',
+      {},
+      {
+        fallbackLanguage: config.i18n.fallbackLanguage,
+        withMissingMarker: false
+      }
+    );
+    if (!Array.isArray(references)) return false;
+
+    const normalized = organizer.trim().toLowerCase().replace(/[.!?]+$/g, '');
+    return references.includes(normalized);
   }
 
   /**
