@@ -17,6 +17,7 @@ describe('RideParamsHelper', () => {
       expect(Object.keys(RideParamsHelper.VALID_PARAMS)).toContain('speed');
       expect(Object.keys(RideParamsHelper.VALID_PARAMS)).toContain('info');
       expect(Object.keys(RideParamsHelper.VALID_PARAMS)).toContain('category');
+      expect(Object.keys(RideParamsHelper.VALID_PARAMS)).toContain('settings.notifyParticipation');
       expect(Object.keys(RideParamsHelper.VALID_PARAMS)).toContain('id');
     });
 
@@ -123,5 +124,17 @@ Meet: Coffee Shop`;
         meet: 'Coffee Shop'
       });
     });
+
+    it('should parse dotted settings keys using their canonical casing', () => {
+      const text = `/updateride
+settings.notifyParticipation: no`;
+
+      const { params, unknownParams } = RideParamsHelper.parseRideParams(text);
+
+      expect(params).toEqual({
+        'settings.notifyParticipation': 'no'
+      });
+      expect(unknownParams).toHaveLength(0);
+    });
   });
-}); 
+});

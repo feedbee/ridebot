@@ -75,13 +75,31 @@ export class FieldProcessor {
     // Process simple text fields
     this.processTextFields(params, result.data, isUpdate);
 
-    // Process notify preference
-    if (params.notify !== undefined) {
-      const v = String(params.notify).toLowerCase().trim();
-      result.data.notifyOnParticipation = v === 'yes' || v === 'true' || v === '1';
+    const notifyParticipation = params.settings?.notifyParticipation
+      ?? params['settings.notifyParticipation'];
+    if (notifyParticipation !== undefined) {
+      result.data.settings = {
+        ...(result.data.settings || {}),
+        notifyParticipation: this.parseBooleanSetting(notifyParticipation)
+      };
     }
 
     return result;
+  }
+
+  /**
+   * Parse boolean-like setting inputs from text or structured values.
+   *
+   * @param {string|boolean|number} value
+   * @returns {boolean}
+   */
+  static parseBooleanSetting(value) {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+
+    const normalized = String(value).toLowerCase().trim();
+    return normalized === 'yes' || normalized === 'true' || normalized === '1';
   }
   
   /**

@@ -14,6 +14,11 @@
  */
 
 /**
+ * @typedef {Object} RideSettings
+ * @property {boolean} notifyParticipation
+ */
+
+/**
  * @typedef {Object} Ride
  * @property {string} id
  * @property {RideMessage[]} messages
@@ -30,7 +35,7 @@
  * @property {number} [speedMax]
  * @property {string} [additionalInfo]
  * @property {boolean} [cancelled]
- * @property {boolean} [notifyOnParticipation]
+ * @property {RideSettings} [settings]
  * @property {number} [groupId] - Telegram chat ID of the attached group
  * @property {Object} [metadata] - Arbitrary metadata (e.g. { stravaId: '123' })
  * @property {Participation} participation - User participation in different states
@@ -60,6 +65,23 @@
  * @typedef {Object} RidesList
  * @property {number} total - Total number of rides
  * @property {Array<Ride>} rides - Array of rides for current page
+ */
+
+/**
+ * @typedef {Object} UserSettings
+ * @property {Object} rideDefaults
+ * @property {boolean} rideDefaults.notifyParticipation
+ */
+
+/**
+ * @typedef {Object} UserEntity
+ * @property {number} userId
+ * @property {string} [username]
+ * @property {string} [firstName]
+ * @property {string} [lastName]
+ * @property {UserSettings} settings
+ * @property {Date} createdAt
+ * @property {Date} updatedAt
  */
 
 export class StorageInterface {
@@ -158,6 +180,24 @@ export class StorageInterface {
    * @returns {Promise<Ride|null>}
    */
   async getRideByStravaId(stravaId, createdBy) {
+    throw new Error('Not implemented');
+  }
+
+  /**
+   * Get a persisted user by Telegram user ID.
+   * @param {number} userId
+   * @returns {Promise<UserEntity|null>}
+   */
+  async getUser(userId) {
+    throw new Error('Not implemented');
+  }
+
+  /**
+   * Create or update a persisted user record.
+   * @param {Partial<UserEntity> & { userId: number }} user
+   * @returns {Promise<UserEntity>}
+   */
+  async upsertUser(user) {
     throw new Error('Not implemented');
   }
 } 

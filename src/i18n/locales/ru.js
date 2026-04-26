@@ -262,6 +262,17 @@ id: abc123 (or #abc123)
     ownerActions: {
       settingsComingSoon: 'Настройки поездки пока недоступны.'
     },
+    settings: {
+      userTitle: 'Настройки по умолчанию для новых поездок',
+      userHint: 'Эти значения будут копироваться в каждую новую поездку, которую вы создаете.',
+      rideTitle: 'Настройки поездки',
+      rideHint: 'Эти настройки влияют только на эту поездку.',
+      notifyParticipationLabel: 'Уведомлять меня об изменениях участия',
+      enableNotifyOnParticipationChange: 'Включить уведомления об участии',
+      disableNotifyOnParticipationChange: 'Выключить уведомления об участии',
+      updated: 'Настройки по умолчанию обновлены.',
+      rideUpdated: 'Настройки поездки обновлены.'
+    },
     common: {
       rideNotFoundById: 'Поездка #{id} не найдена',
       rideNotFoundByIdWithDot: 'Поездка #{id} не найдена.',
@@ -332,9 +343,9 @@ id: abc123 (or #abc123)
       }
     },
     notifications: {
-      joined: '🚴 <b>{name}</b> присоединился к вашей поездке "<b>{title}</b>"\n\n🔕 Отключить уведомления:\n<pre>/updateride #{rideId}\nnotify: no</pre>',
-      thinking: '🤔 <b>{name}</b> думает о вашей поездке "<b>{title}</b>"\n\n🔕 Отключить уведомления:\n<pre>/updateride #{rideId}\nnotify: no</pre>',
-      skipped: '🙅 <b>{name}</b> отказался от вашей поездки "<b>{title}</b>"\n\n🔕 Отключить уведомления:\n<pre>/updateride #{rideId}\nnotify: no</pre>'
+      joined: '🚴 <b>{name}</b> присоединился к вашей поездке "<b>{title}</b>"\n\n🔕 Отключить уведомления:\n<pre>/updateride #{rideId}\nsettings.notifyParticipation: no</pre>',
+      thinking: '🤔 <b>{name}</b> думает о вашей поездке "<b>{title}</b>"\n\n🔕 Отключить уведомления:\n<pre>/updateride #{rideId}\nsettings.notifyParticipation: no</pre>',
+      skipped: '🙅 <b>{name}</b> отказался от вашей поездки "<b>{title}</b>"\n\n🔕 Отключить уведомления:\n<pre>/updateride #{rideId}\nsettings.notifyParticipation: no</pre>'
     },
     stateChange: {
       onlyCreator: 'Только создатель поездки может {action} эту поездку.',
@@ -509,7 +520,7 @@ id: abc123 (or #abc123)
     duration: 'Длительность в минутах',
     speed: 'Скорость: диапазон (25-28), мин (25+), макс (-28), ср. (25)',
     info: 'Дополнительная информация',
-    notify: 'Уведомлять об изменениях участников (yes/no)',
+    settingsNotifyParticipation: 'Настройка поездки: уведомлять об изменениях участников (yes/no)',
     id: 'ID поездки (для команд, где требуется)'
   },
   utils: {
@@ -534,7 +545,8 @@ id: abc123 (or #abc123)
       detach: 'Отвязать Telegram-группу от поездки',
       airide: 'Создать или обновить поездку с помощью AI',
       joinchat: 'Войти в закрытую группу поездки',
-      fromstrava: 'Создать или обновить поездку из события Strava'
+      fromstrava: 'Создать или обновить поездку из события Strava',
+      settings: 'Управлять настройками поездок и дефолтами'
     }
   }
 };

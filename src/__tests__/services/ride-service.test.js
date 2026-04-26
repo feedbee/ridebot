@@ -8,6 +8,7 @@ import { MemoryStorage } from '../../storage/memory.js';
 import { config } from '../../config.js';
 import { t } from '../../i18n/index.js';
 import { UserProfile } from '../../models/UserProfile.js';
+import { SettingsService } from '../../services/SettingsService.js';
 
 // Import the module first, then mock its methods
 import { RouteParser } from '../../utils/route-parser.js';
@@ -74,6 +75,7 @@ describe('RideService', () => {
       expect(ride.title).toBe(testRide.title);
       expect(ride.date).toEqual(testRide.date);
       expect(ride.messages).toEqual(testRide.messages);
+      expect(ride.settings).toEqual(SettingsService.getSystemRideDefaults());
     });
 
     it('should add the creator as the first joined participant when creator profile is provided', async () => {
@@ -528,6 +530,97 @@ describe('RideService', () => {
       expect(result.ride.distance).toBe(75); // From params, not from route parser
       expect(result.ride.duration).toBe(210); // From params (3h 30m = 210 minutes), not from route parser
       expect(RouteParser.processRouteInfo).toHaveBeenCalledWith('https://example.com/route');
+    });
+
+    it('should materialize a user on first createRideFromParams call and snapshot system defaults', async () => {
+      const creator = new UserProfile({ userId: 501, username: 'u501' });
+
+      const result = await rideService.createRideFromParams(
+        { title: 'Morning Ride', when: 'tomorrow 9am' },
+        1,
+        creator
+      );
+
+      expect(result.error).toBeNull();
+      expect(result.ride.settings).toEqual(SettingsService.getSystemRideDefaults());
+
+      const storedUser = await storage.getUser(501);
+      expect(storedUser).not.toBeNull();
+      expect(storedUser.settings.rideDefaults).toEqual(SettingsService.getSystemRideDefaults());
+    });
+
+    it('should snapshot existing user defaults into a newly created ride', async () => {
+      await storage.upsertUser({
+        userId: 502,
+        username: 'u502',
+        settings: {
+          rideDefaults: {
+            notifyParticipation: false
+          }
+        }
+      });
+
+      const result = await rideService.createRideFromParams(
+        { title: 'Quiet Ride', when: 'tomorrow 9am' },
+        1,
+        new UserProfile({ userId: 502, username: 'u502' })
+      );
+
+      expect(result.error).toBeNull();
+      expect(result.ride.settings.notifyParticipation).toBe(false);
+    });
+
+    it('should merge text-based settings updates through the service update path', async () => {
+      const ride = await rideService.createRide({
+        ...testRide,
+        settings: {
+          notifyParticipation: true,
+          futureSetting: 'preserved'
+        }
+      });
+
+      const result = await rideService.updateRideFromParams(
+        ride.id,
+        { 'settings.notifyParticipation': 'no' },
+        502
+      );
+
+      expect(result.error).toBeNull();
+      expect(result.ride.settings).toEqual({
+        notifyParticipation: false,
+        futureSetting: 'preserved'
+      });
+      expect(result.ride.updatedBy).toBe(502);
+    });
+
+    it('should not retroactively change existing rides when user defaults change later', async () => {
+      const creator = new UserProfile({ userId: 503, username: 'u503' });
+
+      const firstResult = await rideService.createRideFromParams(
+        { title: 'First Ride', when: 'tomorrow 9am' },
+        1,
+        creator
+      );
+
+      await storage.upsertUser({
+        userId: 503,
+        settings: {
+          rideDefaults: {
+            notifyParticipation: false
+          }
+        }
+      });
+
+      const secondResult = await rideService.createRideFromParams(
+        { title: 'Second Ride', when: 'next friday 9am' },
+        1,
+        creator
+      );
+
+      expect(firstResult.error).toBeNull();
+      expect(secondResult.error).toBeNull();
+      expect(firstResult.ride.settings.notifyParticipation).toBe(true);
+      expect(secondResult.ride.settings.notifyParticipation).toBe(false);
     });
   });
 
@@ -1026,6 +1119,53 @@ describe('RideService', () => {
       expect(result.ride.speedMin).toBe(26);
       expect(result.ride.speedMax).toBe(30);
       expect(result.ride.additionalInfo).toBe(originalRide.additionalInfo);
+    });
+
+    it('should duplicate your own ride using the original ride settings snapshot', async () => {
+      const creator = new UserProfile({ userId: 7, username: 'user7' });
+      const originalRide = await rideService.createRide({
+        ...testRide,
+        date: new Date('2030-04-01T10:00:00Z'),
+        createdBy: creator.userId,
+        settings: {
+          notifyParticipation: false
+        }
+      }, creator);
+
+      const result = await rideService.duplicateRide(originalRide.id, {}, creator);
+
+      expect(result.error).toBeNull();
+      expect(result.ride.settings.notifyParticipation).toBe(false);
+    });
+
+    it('should duplicate another user\'s ride using the current user defaults', async () => {
+      const originalRide = await rideService.createRide({
+        ...testRide,
+        date: new Date('2030-04-02T10:00:00Z'),
+        createdBy: 999,
+        settings: {
+          notifyParticipation: true
+        }
+      });
+
+      await storage.upsertUser({
+        userId: 7,
+        username: 'user7',
+        settings: {
+          rideDefaults: {
+            notifyParticipation: false
+          }
+        }
+      });
+
+      const result = await rideService.duplicateRide(
+        originalRide.id,
+        {},
+        new UserProfile({ userId: 7, username: 'user7' })
+      );
+
+      expect(result.error).toBeNull();
+      expect(result.ride.settings.notifyParticipation).toBe(false);
     });
 
     it('should duplicate ride with single-bound speed values', async () => {

@@ -1,6 +1,7 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
 import { getRideRoutes } from '../utils/route-links.js';
 import { UserProfile } from '../models/UserProfile.js';
+import { SettingsService } from '../services/SettingsService.js';
 
 /**
  * Handler for the dupride command
@@ -77,7 +78,7 @@ export class DuplicateRideCommandHandler extends BaseCommandHandler {
       speedMin: ride.speedMin,
       speedMax: ride.speedMax,
       additionalInfo: ride.additionalInfo,
-      notifyOnParticipation: ride.notifyOnParticipation ?? true
+      settings: SettingsService.getRideSettingsSnapshot(ride)
     };
   }
 

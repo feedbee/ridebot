@@ -514,6 +514,39 @@ describe.each(['en', 'ru'])('AiRideCommandHandler (%s)', (language) => {
       expect(handler.states.has('42:100')).toBe(false);
     });
 
+    it('confirm create: passes parsed settings through to RideService', async () => {
+      const mockRide = { id: 'new2', title: 'Quiet Ride' };
+      mockRideService.createRideFromParams.mockResolvedValue({ ride: mockRide, error: null });
+      handler.states.set('42:100', {
+        mode: 'create', rideId: null, ride: null,
+        userMessages: ['quiet ride tomorrow 9am without participation notifications'], messageCount: 1,
+        lastParams: {
+          title: 'Quiet Ride',
+          when: 'tomorrow 9am',
+          settings: {
+            notifyParticipation: false
+          }
+        },
+        previewMessageId: 55, botMessageIds: [55]
+      });
+      mockCtx.match = ['airide:confirm:42:100', 'confirm', '42:100'];
+
+      await handler.handleCallback(mockCtx);
+
+      expect(mockRideService.createRideFromParams).toHaveBeenCalledWith(
+        {
+          title: 'Quiet Ride',
+          when: 'tomorrow 9am',
+          settings: {
+            notifyParticipation: false
+          }
+        },
+        100,
+        expect.objectContaining({ userId: 42 }),
+        { language }
+      );
+    });
+
     it('confirm update: saves ride, cleans up dialog, updates messages', async () => {
       const existingRide = { id: 'abc123', createdBy: 42, title: 'Old Ride', date: new Date() };
       const mockUpdatedRide = { id: 'abc123', title: 'Old Ride' };

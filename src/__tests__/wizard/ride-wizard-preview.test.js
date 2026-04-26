@@ -106,8 +106,7 @@ describe.each(['en', 'ru'])('RideWizard — Live Preview (%s)', (language) => {
           additionalInfo: 'Bring lights',
           // extra wizard-only keys that should NOT appear in result
           chatId: 456,
-          currentUser: 123,
-          notifyOnParticipation: true
+          currentUser: 123
         }
       };
 
@@ -245,8 +244,6 @@ describe.each(['en', 'ru'])('RideWizard — Live Preview (%s)', (language) => {
         ctx.match = ['wizard:skip', 'skip'];
         await wizard.handleWizardAction(ctx);
       }
-      ctx.match = ['wizard:notifyYes', 'notifyYes'];
-      await wizard.handleWizardAction(ctx); // advance to confirm
     }
 
     it('shows simplified confirmPrompt at confirm step', async () => {

@@ -31,6 +31,7 @@ The codebase follows a clean, layered architecture:
     │      Services        │
     │  - RideService       │
     │  - RideMessagesService│
+    │  - SettingsService   │
     └──────────┬───────────┘
                │
     ┌──────────▼───────────┐
@@ -75,15 +76,23 @@ Layer ownership rules for the codebase are documented in [`docs/layer-responsibi
 - **[memory.js](src/storage/memory.js)**: Development storage using in-memory Map
 
 **Data Models:**
-- **Ride**: Core entity with title, date, category, ordered `routes` list (`[{ url, label? }]`), participation states, messages, and optional `groupId` (Telegram chat ID of an attached group)
+- **Ride**: Core entity with title, date, category, ordered `routes` list (`[{ url, label? }]`), participation states, messages, settings, and optional `groupId` (Telegram chat ID of an attached group)
 - **Participant**: User info (userId, username, firstName, lastName, createdAt)
 - **Participation**: User participation states (joined, thinking, skipped) for each ride with three participation options: "I'm in", "Thinking", "Pass"
 - **Message**: Tracks where ride announcements are posted (chatId, messageId, messageThreadId)
+- **User settings**: Per-user settings including `rideDefaults`, which are applied to newly created rides when explicit ride settings are not provided
 
 **Route Compatibility:**
 - New rides use `routes` as the source of truth
 - Legacy `routeLink` is still read for backward compatibility when `routes` is missing
 - `routes: []` explicitly means the ride has no routes
+
+**Settings:**
+- `ride.settings.notifyParticipation` controls whether the ride creator receives private participation-change notifications for that ride
+- `user.settings.rideDefaults.notifyParticipation` is the user's default for newly created rides
+- The system default for `notifyParticipation` is enabled
+- Ride settings are materialized on create and merged on update, so updating one settings field does not erase other settings fields
+- Duplicating your own ride copies the original ride settings snapshot; duplicating another user's ride uses the current user's defaults
 
 **Schema Versioning:**
 - Database migrations supported for MongoDB
@@ -113,6 +122,13 @@ Layer ownership rules for the codebase are documented in [`docs/layer-responsibi
 - Update all instances of a ride message across chats
 - Clean up unavailable messages (deleted, bot kicked)
 
+#### **SettingsService** ([SettingsService.js](src/services/SettingsService.js))
+- **Settings resolution and merge logic**
+- Provides system defaults for ride settings
+- Resolves ride settings from explicit ride input, user defaults, and existing ride state
+- Updates user ride defaults
+- Keeps settings merge behavior centralized outside Telegram command handlers
+
 ### **5. Command Handlers ([src/commands/](src/commands/))**
 
 All handlers extend **[BaseCommandHandler](src/commands/BaseCommandHandler.js)** which provides:
@@ -136,6 +152,7 @@ Some existing handlers predate this rule and are candidates for refactoring towa
 - **DeleteRideCommandHandler**: Delete rides with confirmation
 - **DuplicateRideCommandHandler**: Duplicate rides with modifications
 - **ShareRideCommandHandler**: Share rides to other chats
+- **RideSettingsCommandHandler**: `/settings` for user defaults and `/settings #rideId` for ride-specific settings; supports idempotent callback actions that set an explicit state instead of toggling stale message state
 - **ListRidesCommandHandler**: Paginated list of user's rides
 - **ListParticipantsCommandHandler**: List all participants for a specific ride (shows all without truncation, organized by participation state)
 - **ParticipationHandlers**: Join/thinking/pass ride functionality; currently includes participation-specific orchestration that should live in a dedicated participation service as the codebase is refactored
@@ -211,6 +228,7 @@ dist: 35
 duration: 2h 30m
 speed: 25-28
 info: Bring lights
+settings.notifyParticipation: no
 ```
 
 Route parameter rules:
@@ -220,6 +238,20 @@ Route parameter rules:
 - The URL is always parsed from the last `|`-separated segment, so `|` may be used inside labels
 - In `/updateride` and `/dupride`, any provided `route:` lines replace the full route list
 - `route: -` clears all routes in `/updateride` and `/dupride`
+- `settings.notifyParticipation: yes|no` sets participation-change notification behavior for the ride
+- `/newride` applies the current user's default ride settings when no explicit ride settings are provided
+- `/updateride` merges provided ride settings into the existing ride settings
+- `/dupride` copies the original ride settings when duplicating your own ride, unless an explicit settings parameter overrides them; duplicating another user's ride uses your defaults
+
+### **Settings Management**
+- `/settings` opens the user's default ride settings in private chat
+- `/settings #rideId` opens settings for a specific ride owned by the current user
+- User default settings apply only to future ride creation
+- Ride settings apply immediately to that ride
+- Settings buttons set an explicit target state (`on` or `off`) instead of toggling based on the current persisted value, so old inline keyboards are safe to click
+- Clicking a stale settings button for the already-current state is treated as a successful no-op
+- Current setting:
+  - `notifyParticipation`: whether participation changes on a ride send a private notification to the ride creator
 
 ### **Ride ID Reference Methods**
 - Reply to ride message
@@ -286,6 +318,7 @@ Route parameter rules:
 3. [RideService.setParticipation()](src/services/RideService.js) adds participant to storage
 4. [RideMessagesService.updateRideMessages()](src/services/RideMessagesService.js) updates ALL instances
 5. All chats see updated participant list
+6. If `ride.settings.notifyParticipation` is enabled, the ride creator receives a debounced private notification about the participation change
 
 ### **Updating a Ride**
 1. User replies to ride with `/updateride` → `UpdateRideCommandHandler`
@@ -294,6 +327,14 @@ Route parameter rules:
 4. Start wizard or parse parameters
 5. [RideService.updateRide()](src/services/RideService.js) updates storage
 6. [RideMessagesService.updateRideMessages()](src/services/RideMessagesService.js) syncs all chats
+
+### **Updating Settings**
+1. User sends `/settings` or `/settings #rideId` → `RideSettingsCommandHandler`
+2. Handler renders the relevant user-default or ride-specific settings view
+3. User clicks an explicit `on`/`off` callback button
+4. Handler validates ownership for ride-scoped settings
+5. `SettingsService` resolves and merges the updated settings
+6. The settings message is edited when needed; Telegram "message is not modified" responses for already-current stale buttons are ignored as successful no-ops
 
 ---
 
@@ -305,6 +346,7 @@ Coverage includes:
 - Command handlers
 - Core bot setup and webhook/polling flows
 - Services (`RideService`, `RideMessagesService`)
+- Settings resolution and merge behavior (`SettingsService`)
 - Storage (`memory`, `mongodb`)
 - Wizard flows and field configuration
 - Utilities (date/route/params/duration/html/category)
@@ -401,6 +443,7 @@ _No major refactoring areas identified at this time. The codebase is well-organi
 - [ ] Feature: (Notifications) Remind the joined users about upcoming ride 24 hours and 1 hour before the ride (send a private message; give each user an option to unsubscribe from all notifications). Remind thinking that they must finilize their decision 1 hour before the ride
 - [ ] Feature: (Ride sharing) Optionally enable everyone to repost the ride via an additional field during ride creation or update
 - [ ] Feature: (Notifications) Sending messages to all participants who joined the ride or thinking (either one category or both together) via bot command
+- [ ] Extract ride type from track if possible in AI mode
 
 ### Low Priority
 - [x] Bug: Better testing and fixes of setting nummeric ride attributes, like setting interval 22-25 and updating with a single value (29) gives 29-25

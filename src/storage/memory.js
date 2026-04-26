@@ -9,6 +9,7 @@ export class MemoryStorage extends StorageInterface {
   constructor() {
     super();
     this.rides = new Map();
+    this.users = new Map();
   }
 
   /**
@@ -59,7 +60,7 @@ export class MemoryStorage extends StorageInterface {
     }
     
     this.rides.set(id, newRide);
-    return { ...newRide, routes: getRideRoutes(newRide) };
+    return this.mapRideToInterface(newRide);
   }
 
   async updateRide(rideId, updates) {
@@ -89,14 +90,13 @@ export class MemoryStorage extends StorageInterface {
     if (updatesToApply.routes !== undefined) {
       updatesToApply.routes = normalizeRoutes(updatesToApply.routes);
     }
-    
     const updatedRide = {
       ...ride,
       ...updatesToApply
     };
     
     this.rides.set(rideId, updatedRide);
-    return { ...updatedRide, routes: getRideRoutes(updatedRide) };
+    return this.mapRideToInterface(updatedRide);
   }
 
   async getRide(rideId) {
@@ -104,12 +104,8 @@ export class MemoryStorage extends StorageInterface {
     if (!ride) {
       return null;
     }
-    
-    return {
-      ...ride,
-      routes: getRideRoutes(ride),
-      category: normalizeCategory(ride.category)
-    };
+
+    return this.mapRideToInterface(ride);
   }
 
   async getRidesByCreator(userId, skip, limit) {
@@ -119,11 +115,7 @@ export class MemoryStorage extends StorageInterface {
 
     return {
       total: userRides.length,
-      rides: userRides.slice(skip, skip + limit).map(ride => ({
-        ...ride,
-        routes: getRideRoutes(ride),
-        category: normalizeCategory(ride.category)
-      }))
+      rides: userRides.slice(skip, skip + limit).map(ride => this.mapRideToInterface(ride))
     };
   }
 
@@ -193,7 +185,7 @@ export class MemoryStorage extends StorageInterface {
   async getRideByGroupId(groupId) {
     for (const ride of this.rides.values()) {
       if (ride.groupId === groupId) {
-        return { ...ride, routes: getRideRoutes(ride), category: normalizeCategory(ride.category) };
+        return this.mapRideToInterface(ride);
       }
     }
     return null;
@@ -202,9 +194,57 @@ export class MemoryStorage extends StorageInterface {
   async getRideByStravaId(stravaId, createdBy) {
     for (const ride of this.rides.values()) {
       if (ride.metadata?.stravaId === stravaId && ride.createdBy === createdBy) {
-        return { ...ride, routes: getRideRoutes(ride), category: normalizeCategory(ride.category) };
+        return this.mapRideToInterface(ride);
       }
     }
     return null;
+  }
+
+  async getUser(userId) {
+    const user = this.users.get(userId);
+    if (!user) {
+      return null;
+    }
+
+    return this.mapUserToInterface(user);
+  }
+
+  async upsertUser(userData) {
+    const existing = this.users.get(userData.userId);
+    const now = new Date();
+    const nextUser = {
+      userId: userData.userId,
+      username: userData.username ?? existing?.username ?? '',
+      firstName: userData.firstName ?? existing?.firstName ?? '',
+      lastName: userData.lastName ?? existing?.lastName ?? '',
+      settings: userData.settings !== undefined
+        ? { ...(existing?.settings || {}), ...userData.settings }
+        : existing?.settings,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now
+    };
+
+    this.users.set(userData.userId, nextUser);
+    return this.mapUserToInterface(nextUser);
+  }
+
+  /**
+   * @param {Object} ride
+   * @returns {import('./interface.js').Ride}
+   */
+  mapRideToInterface(ride) {
+    return {
+      ...ride,
+      routes: getRideRoutes(ride),
+      category: normalizeCategory(ride.category)
+    };
+  }
+
+  /**
+   * @param {Object} user
+   * @returns {import('./interface.js').UserEntity}
+   */
+  mapUserToInterface(user) {
+    return { ...user };
   }
 } 

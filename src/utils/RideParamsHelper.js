@@ -25,9 +25,16 @@ export class RideParamsHelper {
       duration: translate('params.duration'),
       speed: translate('params.speed'),
       info: translate('params.info'),
-      notify: translate('params.notify'),
+      'settings.notifyParticipation': translate('params.settingsNotifyParticipation'),
       id: translate('params.id')
     };
+  }
+
+  static normalizeParamKey(rawKey) {
+    const normalizedKey = rawKey.trim().toLowerCase();
+    return Object.keys(RideParamsHelper.VALID_PARAMS).find(
+      key => key.toLowerCase() === normalizedKey
+    ) || null;
   }
 
   /**
@@ -41,20 +48,20 @@ export class RideParamsHelper {
     const unknownParams = [];
 
     for (const line of lines) {
-      const match = line.match(/^\s*(\w+)\s*:\s*(.+)$/);
+      const match = line.match(/^\s*([\w.]+)\s*:\s*(.+)$/);
       if (match) {
         const [_, key, value] = match;
-        const normalizedKey = key.trim().toLowerCase();
+        const canonicalKey = RideParamsHelper.normalizeParamKey(key);
         
-        if (RideParamsHelper.VALID_PARAMS.hasOwnProperty(normalizedKey)) {
+        if (canonicalKey) {
           const trimmedValue = value.trim();
-          if (normalizedKey === 'route') {
+          if (canonicalKey === 'route') {
             if (!params.route) {
               params.route = [];
             }
             params.route.push(trimmedValue);
           } else {
-            params[normalizedKey] = trimmedValue;
+            params[canonicalKey] = trimmedValue;
           }
         } else {
           unknownParams.push(key.trim());

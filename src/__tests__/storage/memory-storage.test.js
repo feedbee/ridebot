@@ -117,6 +117,62 @@ describe('MemoryStorage', () => {
       expect(updatedRide1.participation.joined[0].username).toBe('user1');
       expect(updatedRide2.participation.joined[0].username).toBe('user2');
     });
+
+    it('should preserve explicitly provided ride settings', async () => {
+      const ride = await storage.createRide({
+        ...testRide,
+        settings: {
+          notifyParticipation: false
+        }
+      });
+
+      expect(ride.settings).toEqual({
+        notifyParticipation: false
+      });
+    });
+  });
+
+  describe('User Persistence', () => {
+    it('should return null for an unknown user', async () => {
+      await expect(storage.getUser(999)).resolves.toBeNull();
+    });
+
+    it('should not materialize user defaults on first upsert without explicit settings', async () => {
+      const user = await storage.upsertUser({
+        userId: 123,
+        username: 'alice'
+      });
+
+      expect(user.userId).toBe(123);
+      expect(user.username).toBe('alice');
+      expect(user.settings).toBeUndefined();
+      expect(user.createdAt).toBeInstanceOf(Date);
+      expect(user.updatedAt).toBeInstanceOf(Date);
+    });
+
+    it('should update persisted ride defaults without losing the existing profile', async () => {
+      const created = await storage.upsertUser({
+        userId: 123,
+        username: 'alice',
+        firstName: 'Alice'
+      });
+
+      const updated = await storage.upsertUser({
+        userId: 123,
+        settings: {
+          rideDefaults: {
+            notifyParticipation: false
+          }
+        }
+      });
+
+      expect(updated.userId).toBe(123);
+      expect(updated.username).toBe('alice');
+      expect(updated.firstName).toBe('Alice');
+      expect(updated.settings.rideDefaults.notifyParticipation).toBe(false);
+      expect(updated.createdAt).toEqual(created.createdAt);
+      expect(updated.updatedAt.getTime()).toBeGreaterThanOrEqual(created.updatedAt.getTime());
+    });
   });
 
   describe('Ride Listing', () => {

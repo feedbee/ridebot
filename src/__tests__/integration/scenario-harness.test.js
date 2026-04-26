@@ -438,4 +438,112 @@ describe('Scenario Harness Integration', () => {
       text: tr('commands.participation.rideNotFound'),
     });
   });
+
+  it('applies user defaults to new rides, allows ride-level override, and gates participation notifications', async () => {
+    const harness = await createScenarioHarness();
+    const owner = { id: 42, first_name: 'Alex', last_name: 'Rider', username: 'alex' };
+    const guestOne = { id: 77, first_name: 'Sam', last_name: 'Guest', username: 'sam' };
+    const guestTwo = { id: 78, first_name: 'Mia', last_name: 'Guest', username: 'mia' };
+    const chat = { id: 501, type: 'private' };
+
+    await harness.dispatchMessage({
+      text: '/settings',
+      chat,
+      from: owner,
+    });
+
+    expect(harness.storage.users.has(owner.id)).toBe(false);
+
+    const userSettingsMessage = harness.outbox.replies[harness.outbox.replies.length - 1];
+    await harness.dispatchCallback({
+      data: 'settings:user:set:notifyParticipation:off',
+      chat,
+      from: owner,
+      message: {
+        message_id: userSettingsMessage.messageId,
+        text: userSettingsMessage.text,
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' },
+      },
+    });
+
+    expect(harness.storage.users.get(owner.id).settings.rideDefaults.notifyParticipation).toBe(false);
+
+    await harness.dispatchMessage({
+      text: '/newride\ntitle: Quiet Ride\nwhen: tomorrow 11:00',
+      chat,
+      from: owner,
+    });
+
+    const [ride] = harness.listRides();
+    expect(ride.settings.notifyParticipation).toBe(false);
+
+    const trackedMessage = ride.messages[0];
+    const trackedReply = harness.outbox.replies.find((msg) => msg.messageId === trackedMessage.messageId);
+    const repliesBeforeFirstJoin = harness.outbox.replies.length;
+
+    await harness.dispatchCallback({
+      data: `join:${ride.id}`,
+      chat,
+      from: guestOne,
+      message: {
+        message_id: trackedMessage.messageId,
+        text: trackedReply?.text || '',
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' },
+      },
+    });
+    await jest.advanceTimersByTimeAsync(20_000);
+
+    expect(harness.outbox.replies).toHaveLength(repliesBeforeFirstJoin);
+
+    await harness.dispatchCallback({
+      data: `rideowner:settings:${ride.id}`,
+      chat,
+      from: owner,
+      message: {
+        message_id: trackedMessage.messageId,
+        text: trackedReply?.text || '',
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' },
+      },
+    });
+
+    const rideSettingsMessage = harness.outbox.replies[harness.outbox.replies.length - 1];
+    await harness.dispatchCallback({
+      data: `settings:ride:set:notifyParticipation:on:${ride.id}`,
+      chat,
+      from: owner,
+      message: {
+        message_id: rideSettingsMessage.messageId,
+        text: rideSettingsMessage.text,
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' },
+      },
+    });
+
+    expect(harness.getRide(ride.id).settings.notifyParticipation).toBe(true);
+
+    await harness.dispatchCallback({
+      data: `join:${ride.id}`,
+      chat,
+      from: guestTwo,
+      message: {
+        message_id: trackedMessage.messageId,
+        text: trackedReply?.text || '',
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' },
+      },
+    });
+    await jest.advanceTimersByTimeAsync(20_000);
+
+    expect(harness.outbox.replies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          chatId: owner.id,
+          text: expect.stringContaining('joined your ride'),
+        }),
+      ])
+    );
+  });
 });

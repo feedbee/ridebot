@@ -77,6 +77,7 @@ describe('Bot', () => {
           expect.objectContaining({ command: 'cancelride' }),
           expect.objectContaining({ command: 'resumeride' }),
           expect.objectContaining({ command: 'deleteride' }),
+          expect.objectContaining({ command: 'settings' }),
         ])
       );
       expect(bot.botConfig.commands.publicOnly).toEqual(
@@ -103,6 +104,8 @@ describe('Bot', () => {
           expect.objectContaining({ pattern: /^rideowner:resume:(\w+)$/ }),
           expect.objectContaining({ pattern: /^rideowner:participants:(\w+)$/ }),
           expect.objectContaining({ pattern: /^rideowner:settings:(\w+)$/ }),
+          expect.objectContaining({ pattern: /^settings:user:np:(on|off)$/ }),
+          expect.objectContaining({ pattern: /^settings:ride:np:(on|off):(\w+)$/ }),
           expect.objectContaining({ pattern: /^wizard:(\w+)(?::(.*))?$/ }),
         ])
       );
@@ -181,6 +184,14 @@ describe('Bot', () => {
       );
       expect(mockBotCallbackQuery).toHaveBeenCalledWith(
         /^rideowner:settings:(\w+)$/,
+        expect.any(Function)
+      );
+      expect(mockBotCallbackQuery).toHaveBeenCalledWith(
+        /^settings:user:np:(on|off)$/,
+        expect.any(Function)
+      );
+      expect(mockBotCallbackQuery).toHaveBeenCalledWith(
+        /^settings:ride:np:(on|off):(\w+)$/,
         expect.any(Function)
       );
       expect(mockBotCallbackQuery).toHaveBeenCalledWith(

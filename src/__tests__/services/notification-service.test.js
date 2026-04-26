@@ -17,7 +17,9 @@ describe('NotificationService', () => {
     id: 'ride-1',
     title: 'Morning Ride',
     createdBy: 100,
-    notifyOnParticipation: true
+    settings: {
+      notifyParticipation: true
+    }
   };
   const participant = {
     userId: 200,
@@ -69,8 +71,13 @@ describe('NotificationService', () => {
       expect(sentText).toBe(expectedText);
     });
 
-    it('does not send when notifyOnParticipation is false', async () => {
-      const silentRide = { ...ride, notifyOnParticipation: false };
+    it('does not send when notifyParticipation is false', async () => {
+      const silentRide = {
+        ...ride,
+        settings: {
+          notifyParticipation: false
+        }
+      };
       service.scheduleParticipationNotification(silentRide, participant, 'joined', mockApi);
 
       await jest.runAllTimersAsync();
@@ -128,15 +135,6 @@ describe('NotificationService', () => {
       consoleErrorSpy.mockRestore();
     });
 
-    it('defaults notifyOnParticipation to true when undefined', async () => {
-      const rideWithoutFlag = { ...ride };
-      delete rideWithoutFlag.notifyOnParticipation;
-      service.scheduleParticipationNotification(rideWithoutFlag, participant, 'joined', mockApi);
-
-      await jest.runAllTimersAsync();
-
-      expect(mockApi.sendMessage).toHaveBeenCalledTimes(1);
-    });
   });
 
   describe('_formatName', () => {

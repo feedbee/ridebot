@@ -528,7 +528,7 @@ describe.each(['en', 'ru'])('RideWizard Edge Cases (%s)', (language) => {
   });
 
   describe('additional branch coverage', () => {
-    it('should navigate back from confirm to notify step', async () => {
+    it('should navigate back from confirm to info step', async () => {
       const ctx = createMockContext(123, 456, 'private', language);
       await wizard.startWizard(ctx);
       const stateKey = wizard.getWizardStateKey(ctx.from.id, ctx.chat.id);
@@ -538,7 +538,7 @@ describe.each(['en', 'ru'])('RideWizard Edge Cases (%s)', (language) => {
       ctx.match = ['wizard:back', 'back'];
       await wizard.handleWizardAction(ctx);
 
-      expect(state.step).toBe('notify');
+      expect(state.step).toBe('info');
       expect(ctx.api.editMessageText).toHaveBeenCalled();
     });
 

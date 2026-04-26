@@ -23,7 +23,7 @@ export class NotificationService {
    * @param {Object} api - Grammy bot API object
    */
   scheduleParticipationNotification(ride, participant, newState, api) {
-    if (ride.notifyOnParticipation === false) return;
+    if (!ride.settings.notifyParticipation) return;
     if (ride.createdBy === participant.userId) return;
 
     const key = `${ride.id}:${participant.userId}`;

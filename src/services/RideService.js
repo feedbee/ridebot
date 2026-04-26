@@ -4,6 +4,7 @@ import { config } from '../config.js';
 import { t } from '../i18n/index.js';
 import { getRideRoutes } from '../utils/route-links.js';
 import { UserProfile } from '../models/UserProfile.js';
+import { SettingsService } from './SettingsService.js';
 
 /**
  * Service class for managing rides and their messages
@@ -11,9 +12,11 @@ import { UserProfile } from '../models/UserProfile.js';
 export class RideService {
   /**
    * @param {import('../storage/interface.js').StorageInterface} storage
+   * @param {SettingsService} [settingsService]
    */
-  constructor(storage) {
+  constructor(storage, settingsService = new SettingsService(storage)) {
     this.storage = storage;
+    this.settingsService = settingsService;
   }
 
   translate(language, key, params = {}) {
@@ -30,7 +33,14 @@ export class RideService {
    * @returns {Promise<Object>} - Created ride
    */
   async createRide(rideData, creatorProfile = null) {
-    const ride = await this.storage.createRide(rideData);
+    const settings = await this.settingsService.resolveCreateRideSettings({
+      creatorProfile,
+      input: rideData
+    });
+    const ride = await this.storage.createRide({
+      ...rideData,
+      settings
+    });
 
     if (!creatorProfile || creatorProfile.userId !== ride.createdBy) {
       return ride;
@@ -48,11 +58,24 @@ export class RideService {
    * @returns {Promise<Object>} - Updated ride
    */
   async updateRide(rideId, updates, userId = null) {
-    // Only set updatedBy if userId is provided and there are other updates
-    if (userId !== null && Object.keys(updates).length > 0) {
-      updates.updatedBy = userId;
+    let updatesToApply = { ...updates };
+
+    if (
+      updatesToApply.settings !== undefined
+    ) {
+      const existingRide = await this.storage.getRide(rideId);
+      if (!existingRide) {
+        throw new Error('Ride not found');
+      }
+
+      updatesToApply.settings = SettingsService.resolveUpdatedRideSettings(existingRide, updatesToApply);
     }
-    return await this.storage.updateRide(rideId, updates);
+
+    // Only set updatedBy if userId is provided and there are other updates
+    if (userId !== null && Object.keys(updatesToApply).length > 0) {
+      updatesToApply.updatedBy = userId;
+    }
+    return await this.storage.updateRide(rideId, updatesToApply);
   }
 
   /**
@@ -239,20 +262,13 @@ export class RideService {
       const routeProcessingError = await this.processRoutesData(updates, params, { language });
       if (routeProcessingError) return { ride: null, error: routeProcessingError };
       
-      // Field mapping is now handled by FieldProcessor
-      
-      // Only set updatedBy if there are other updates
-      if (Object.keys(updates).length > 0 && userId !== null) {
-        updates.updatedBy = userId;
-      }
-      
       if (Object.keys(updates).length === 0) {
         // No updates to make, return the current ride
         const ride = await this.storage.getRide(rideId);
         return { ride, error: null };
       }
       
-      const ride = await this.storage.updateRide(rideId, updates);
+      const ride = await this.updateRide(rideId, updates, userId);
       return { ride, error: null };
     } catch (error) {
       console.error('Error updating ride:', error);
@@ -323,14 +339,15 @@ export class RideService {
     }
     
     // Copy notify preference from original ride if not explicitly provided
-    if (params.notify === undefined && originalRide.notifyOnParticipation !== undefined) {
-      mergedParams.notify = originalRide.notifyOnParticipation ? 'yes' : 'no';
+    if (params['settings.notifyParticipation'] === undefined && originalRide.createdBy === creatorProfile.userId) {
+      mergedParams['settings.notifyParticipation'] = originalRide.settings.notifyParticipation
+        ? 'yes'
+        : 'no';
     }
 
     // Use existing createRideFromParams to handle all the validation and processing
     return await this.createRideFromParams(mergedParams, null, creatorProfile, { language });
   }
-
   async processRoutesData(data, params, options = {}) {
     if (!data._requiresRouteProcessing) {
       return null;

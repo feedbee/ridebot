@@ -63,6 +63,8 @@ Use these exact field names (all optional except title and when):
   duration: e.g. "2h 30m", "90m", "1.5h"
   speed: e.g. "25-28", "25+", "-28", "~25"
   info: additional notes
+  settings: optional object
+  settings.notifyParticipation: boolean
 
 Today: ${currentDate} (${timezone})
 Return ONLY valid JSON, no markdown, no explanation. Omit fields that are not mentioned.`;

@@ -98,6 +98,23 @@ describe('AiRideService', () => {
       expect(params).not.toHaveProperty('meet');
     });
 
+    it('preserves nested settings from AI output', async () => {
+      mockCreate.mockResolvedValue(
+        makeResponse('{"title":"Ride","when":"tomorrow","settings":{"notifyParticipation":false}}')
+      );
+
+      const { params, error } = await service.parseRideText('Ride tomorrow without participation notifications');
+
+      expect(error).toBeNull();
+      expect(params).toMatchObject({
+        title: 'Ride',
+        when: 'tomorrow',
+        settings: {
+          notifyParticipation: false
+        }
+      });
+    });
+
     it('truncates input longer than 2000 chars before sending to API', async () => {
       mockCreate.mockResolvedValue(
         makeResponse('{"title":"Ride","when":"tomorrow"}')

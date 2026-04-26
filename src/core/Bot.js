@@ -29,6 +29,7 @@ import { FromStravaCommandHandler } from '../commands/FromStravaCommandHandler.j
 import { replaceBotUsername } from '../utils/botUtils.js';
 import { t } from '../i18n/index.js';
 import { RideParticipationService } from '../services/RideParticipationService.js';
+import { SettingsService } from '../services/SettingsService.js';
 
 /**
  * Core Bot class that coordinates all components
@@ -39,7 +40,8 @@ export class Bot {
    */
   constructor(storage, options = {}) {
     // Initialize services
-    const rideService = new RideService(storage);
+    const settingsService = new SettingsService(storage);
+    const rideService = new RideService(storage, settingsService);
     const messageFormatter = new MessageFormatter();
     const rideMessagesService = new RideMessagesService(rideService, messageFormatter);
     const notificationService = new NotificationService();
@@ -47,7 +49,13 @@ export class Bot {
     const aiRideService = new AiRideService();
     this.aiRideHandler = new AiRideCommandHandler(rideService, messageFormatter, rideMessagesService, aiRideService);
     this.fromStravaHandler = new FromStravaCommandHandler(rideService, messageFormatter, rideMessagesService, storage);
-    this.botConfig = this.getBotConfig(rideService, messageFormatter, rideMessagesService, notificationService);
+    this.botConfig = this.getBotConfig(
+      rideService,
+      settingsService,
+      messageFormatter,
+      rideMessagesService,
+      notificationService
+    );
     
     // Initialize Telegram boundary
     this.bot = options.telegramGateway || new TelegramGateway(config.bot.token);
@@ -55,7 +63,7 @@ export class Bot {
     this.configureBot();
   }
 
-  getBotConfig(rideService, messageFormatter, rideMessagesService, notificationService) {
+  getBotConfig(rideService, settingsService, messageFormatter, rideMessagesService, notificationService) {
     const startHandler = new StartCommandHandler(rideService, messageFormatter, rideMessagesService);
     const helpHandler = new HelpCommandHandler(rideService, messageFormatter, rideMessagesService);
     const newRideHandler = new NewRideCommandHandler(rideService, messageFormatter, this.wizard, rideMessagesService);
@@ -66,7 +74,7 @@ export class Bot {
     const listParticipantsHandler = new ListParticipantsCommandHandler(rideService, messageFormatter, rideMessagesService);
     const duplicateRideHandler = new DuplicateRideCommandHandler(rideService, messageFormatter, this.wizard, rideMessagesService);
     const resumeRideHandler = new ResumeRideCommandHandler(rideService, messageFormatter, rideMessagesService);
-    const rideSettingsHandler = new RideSettingsCommandHandler(rideService, messageFormatter, rideMessagesService);
+    const rideSettingsHandler = new RideSettingsCommandHandler(rideService, messageFormatter, rideMessagesService, settingsService);
     const groupManagementService = new GroupManagementService();
     const rideParticipationService = new RideParticipationService(rideService, notificationService, groupManagementService);
     const participationHandler = new ParticipationHandlers(rideService, messageFormatter, rideMessagesService, rideParticipationService);
@@ -86,6 +94,7 @@ export class Bot {
           { command: 'listparticipants', descriptionKey: 'bot.commandDescriptions.listparticipants', handler: (ctx) => listParticipantsHandler.handle(ctx) },
           { command: 'dupride', descriptionKey: 'bot.commandDescriptions.dupride', handler: (ctx) => duplicateRideHandler.handle(ctx) },
           { command: 'resumeride', descriptionKey: 'bot.commandDescriptions.resumeride', handler: (ctx) => resumeRideHandler.handle(ctx) },
+          { command: 'settings', descriptionKey: 'bot.commandDescriptions.settings', handler: (ctx) => rideSettingsHandler.handle(ctx) },
           { command: 'airide', descriptionKey: 'bot.commandDescriptions.airide', handler: (ctx) => this.aiRideHandler.handle(ctx) },
           { command: 'joinchat', descriptionKey: 'bot.commandDescriptions.joinchat', handler: (ctx) => groupHandler.handleJoinChat(ctx) },
           { command: 'fromstrava', descriptionKey: 'bot.commandDescriptions.fromstrava', handler: (ctx) => this.fromStravaHandler.handle(ctx) },
@@ -121,6 +130,8 @@ export class Bot {
         { pattern: /^rideowner:resume:(\w+)$/, handler: (ctx) => resumeRideHandler.handleCallback(ctx) },
         { pattern: /^rideowner:participants:(\w+)$/, handler: (ctx) => listParticipantsHandler.handleCallback(ctx) },
         { pattern: /^rideowner:settings:(\w+)$/, handler: (ctx) => rideSettingsHandler.handleCallback(ctx) },
+        { pattern: /^settings:user:np:(on|off)$/, handler: (ctx) => rideSettingsHandler.handleUserCallback(ctx) },
+        { pattern: /^settings:ride:np:(on|off):(\w+)$/, handler: (ctx) => rideSettingsHandler.handleRideCallback(ctx) },
         { pattern: /^wizard:(\w+)(?::(.*))?$/, handler: (ctx) => this.wizard.handleWizardAction(ctx) },
         { pattern: /^airide:(confirm|cancel):(\d+:\d+)$/, handler: (ctx) => this.aiRideHandler.handleCallback(ctx) },
       ],

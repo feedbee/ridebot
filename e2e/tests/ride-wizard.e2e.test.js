@@ -5,7 +5,7 @@ Telegram E2E wizard test cases
 - Start /newride without inline params in private chat.
 - Complete the wizard with a compact but high-coverage field mix:
   category selection via callback, organizer text, parsed date, numeric distance,
-  parsed duration, speed range, meeting point, additional info, and notify toggle.
+  parsed duration, speed range, meeting point, and additional info.
 - Confirm the preview and verify that the resulting ride message contains the created ride ID
   and the wizard-entered values.
 - Verify wizard cleanup after success by sending an ordinary private message and ensuring
@@ -23,7 +23,7 @@ Telegram E2E wizard test cases
 - Cover a compact update mix with different field behaviors:
   change title, change category via callback, clear organizer with "-", keep the existing date,
   skip route, change distance, keep duration, change speed, clear meeting point, change info,
-  and switch notify to "No".
+  and confirm the content-only wizard.
 - Confirm the update and verify that the existing ride message is edited in place with the new values
   and without the cleared values.
 - Verify wizard cleanup after success by sending an ordinary private message and ensuring
@@ -54,7 +54,6 @@ const DURATION_PROMPT_MARKER = /(?:Please enter the duration|Введите дл
 const SPEED_PROMPT_MARKER = /(?:Avg speed in km\/h|Ср\. скорость в км\/ч)/i;
 const MEET_PROMPT_MARKER = /(?:Please enter the meeting point|Введите место встречи)/i;
 const INFO_PROMPT_MARKER = /(?:Please enter any additional information|Введите дополнительную информацию)/i;
-const NOTIFY_PROMPT_MARKER = /(?:Notify you when participants join or leave|Уведомлять вас, когда участники присоединяются или выходят)/i;
 
 async function deletePrivateMessages(driver, messageIds) {
   const uniqueMessageIds = [...new Set(messageIds.filter(Boolean))];
@@ -161,8 +160,7 @@ export async function runRideWizardCreateE2ETest(driver) {
     wizardMessage = await advanceWizardWithText(driver, wizardMessage, fixture.duration, SPEED_PROMPT_MARKER);
     wizardMessage = await advanceWizardWithText(driver, wizardMessage, fixture.speed, MEET_PROMPT_MARKER);
     wizardMessage = await advanceWizardWithText(driver, wizardMessage, fixture.meetingPoint, INFO_PROMPT_MARKER);
-    wizardMessage = await advanceWizardWithText(driver, wizardMessage, fixture.info, NOTIFY_PROMPT_MARKER);
-    wizardMessage = await advanceWizardWithCallback(driver, wizardMessage, /^wizard:notifyNo$/, CONFIRM_PROMPT_MARKER);
+    wizardMessage = await advanceWizardWithText(driver, wizardMessage, fixture.info, CONFIRM_PROMPT_MARKER);
 
     assert.match(wizardMessage.message || '', CONFIRM_PROMPT_MARKER);
 
@@ -282,8 +280,7 @@ export async function runRideWizardUpdateE2ETest(driver) {
     wizardMessage = await advanceWizardWithCallback(driver, wizardMessage, /^wizard:keep$/, SPEED_PROMPT_MARKER);
     wizardMessage = await advanceWizardWithText(driver, wizardMessage, fixture.updatedSpeed, MEET_PROMPT_MARKER);
     wizardMessage = await advanceWizardWithText(driver, wizardMessage, '-', INFO_PROMPT_MARKER);
-    wizardMessage = await advanceWizardWithText(driver, wizardMessage, fixture.updatedInfo, NOTIFY_PROMPT_MARKER);
-    wizardMessage = await advanceWizardWithCallback(driver, wizardMessage, /^wizard:notifyNo$/, CONFIRM_PROMPT_MARKER);
+    wizardMessage = await advanceWizardWithText(driver, wizardMessage, fixture.updatedInfo, CONFIRM_PROMPT_MARKER);
 
     assert.match(wizardMessage.message || '', CONFIRM_PROMPT_MARKER);
 

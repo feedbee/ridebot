@@ -5,35 +5,44 @@
 import { FieldProcessor } from '../../utils/FieldProcessor.js';
 
 describe('FieldProcessor', () => {
-  describe('processRideFields — notify param', () => {
-    it('maps notify:yes to notifyOnParticipation:true', () => {
-      const { data } = FieldProcessor.processRideFields({ notify: 'yes' });
-      expect(data.notifyOnParticipation).toBe(true);
+  describe('processRideFields — settings.notifyParticipation', () => {
+    it('maps settings.notifyParticipation:yes to nested settings', () => {
+      const { data } = FieldProcessor.processRideFields({
+        'settings.notifyParticipation': 'yes'
+      });
+      expect(data.settings).toEqual({ notifyParticipation: true });
     });
 
-    it('maps notify:no to notifyOnParticipation:false', () => {
-      const { data } = FieldProcessor.processRideFields({ notify: 'no' });
-      expect(data.notifyOnParticipation).toBe(false);
+    it('maps settings.notifyParticipation:no to nested settings', () => {
+      const { data } = FieldProcessor.processRideFields({
+        'settings.notifyParticipation': 'no'
+      });
+      expect(data.settings).toEqual({ notifyParticipation: false });
     });
 
-    it('maps notify:true to notifyOnParticipation:true', () => {
-      const { data } = FieldProcessor.processRideFields({ notify: 'true' });
-      expect(data.notifyOnParticipation).toBe(true);
+    it('accepts structured settings objects from AI parsing', () => {
+      const { data } = FieldProcessor.processRideFields({
+        settings: {
+          notifyParticipation: false
+        }
+      });
+      expect(data.settings).toEqual({ notifyParticipation: false });
     });
 
-    it('maps notify:1 to notifyOnParticipation:true', () => {
-      const { data } = FieldProcessor.processRideFields({ notify: '1' });
-      expect(data.notifyOnParticipation).toBe(true);
+    it('maps boolean-like values to true', () => {
+      expect(FieldProcessor.parseBooleanSetting('true')).toBe(true);
+      expect(FieldProcessor.parseBooleanSetting('1')).toBe(true);
+      expect(FieldProcessor.parseBooleanSetting(true)).toBe(true);
     });
 
-    it('maps notify:false to notifyOnParticipation:false', () => {
-      const { data } = FieldProcessor.processRideFields({ notify: 'false' });
-      expect(data.notifyOnParticipation).toBe(false);
+    it('maps other values to false', () => {
+      expect(FieldProcessor.parseBooleanSetting('false')).toBe(false);
+      expect(FieldProcessor.parseBooleanSetting('no')).toBe(false);
     });
 
-    it('does not include notifyOnParticipation when notify param absent', () => {
+    it('does not include settings when the param is absent', () => {
       const { data } = FieldProcessor.processRideFields({ title: 'Test' });
-      expect(data).not.toHaveProperty('notifyOnParticipation');
+      expect(data).not.toHaveProperty('settings');
     });
   });
 

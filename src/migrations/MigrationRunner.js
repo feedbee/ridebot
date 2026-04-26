@@ -128,6 +128,14 @@ export class MigrationRunner {
           const { migrateCategoryToCodes } = await import('./migrations/002_category_codes.js');
           await migrateCategoryToCodes(db);
         }
+      },
+      {
+        version: 3,
+        name: 'Move legacy ride notification field into ride.settings',
+        up: async (db) => {
+          const { migrateRideNotificationSettings } = await import('./migrations/003_ride_settings.js');
+          await migrateRideNotificationSettings(db);
+        }
       }
       // Future migrations can be added here
     ];

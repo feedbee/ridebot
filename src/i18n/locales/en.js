@@ -262,6 +262,17 @@ Click here to start a private chat: @botname
     ownerActions: {
       settingsComingSoon: 'Ride settings are not available yet.'
     },
+    settings: {
+      userTitle: 'Default settings for new rides',
+      userHint: 'These defaults will be copied into each new ride you create.',
+      rideTitle: 'Ride settings',
+      rideHint: 'These settings affect only this ride.',
+      notifyParticipationLabel: 'Notify me when participation changes',
+      enableNotifyOnParticipationChange: 'Enable participation notifications',
+      disableNotifyOnParticipationChange: 'Disable participation notifications',
+      updated: 'Default settings updated.',
+      rideUpdated: 'Ride settings updated.'
+    },
     common: {
       rideNotFoundById: 'Ride #{id} not found',
       rideNotFoundByIdWithDot: 'Ride #{id} not found.',
@@ -332,9 +343,9 @@ Click here to start a private chat: @botname
       }
     },
     notifications: {
-      joined: '🚴 <b>{name}</b> joined your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nnotify: no</pre>',
-      thinking: '🤔 <b>{name}</b> is thinking about your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nnotify: no</pre>',
-      skipped: '🙅 <b>{name}</b> declined your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nnotify: no</pre>'
+      joined: '🚴 <b>{name}</b> joined your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nsettings.notifyParticipation: no</pre>',
+      thinking: '🤔 <b>{name}</b> is thinking about your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nsettings.notifyParticipation: no</pre>',
+      skipped: '🙅 <b>{name}</b> declined your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nsettings.notifyParticipation: no</pre>'
     },
     stateChange: {
       onlyCreator: 'Only the ride creator can {action} this ride.',
@@ -509,7 +520,7 @@ Click here to start a private chat: @botname
     duration: 'Duration in minutes',
     speed: 'Speed: range (25-28), min (25+), max (-28), avg (25)',
     info: 'Additional information',
-    notify: 'Notify on participation changes (yes/no)',
+    settingsNotifyParticipation: 'Ride setting: notify on participation changes (yes/no)',
     id: 'Ride ID (for commands that need it)'
   },
   utils: {
@@ -534,7 +545,8 @@ Click here to start a private chat: @botname
       detach: 'Detach the Telegram group from its ride',
       airide: 'Create or update a ride using AI',
       joinchat: 'Join the private group chat for a ride',
-      fromstrava: 'Create or update a ride from a Strava event'
+      fromstrava: 'Create or update a ride from a Strava event',
+      settings: 'Manage ride settings and defaults'
     }
   }
 };

@@ -46,7 +46,6 @@ describe('wizardFieldConfig', () => {
       expect(WIZARD_FIELDS.speed).toBeDefined();
       expect(WIZARD_FIELDS.meet).toBeDefined();
       expect(WIZARD_FIELDS.info).toBeDefined();
-      expect(WIZARD_FIELDS.notify).toBeDefined();
     });
 
     it('should have required properties for each field', () => {
@@ -392,8 +391,7 @@ describe('wizardFieldConfig', () => {
       expect(WIZARD_FIELDS.organizer.nextStep).toBe('date');
       expect(WIZARD_FIELDS.date.nextStep).toBe('route');
       expect(WIZARD_FIELDS.meet.nextStep).toBe('info');
-      expect(WIZARD_FIELDS.info.nextStep).toBe('notify');
-      expect(WIZARD_FIELDS.notify.nextStep).toBe('confirm');
+      expect(WIZARD_FIELDS.info.nextStep).toBe('confirm');
     });
 
     it('should define correct previous steps', () => {
@@ -401,40 +399,14 @@ describe('wizardFieldConfig', () => {
       expect(WIZARD_FIELDS.category.previousStep).toBe('title');
       expect(WIZARD_FIELDS.organizer.previousStep).toBe('category');
       expect(WIZARD_FIELDS.date.previousStep).toBe('organizer');
-      expect(WIZARD_FIELDS.notify.previousStep).toBe('info');
     });
   });
 
-  describe('notify field', () => {
-    it('should be required, not skippable, not clearable', () => {
-      expect(WIZARD_FIELDS.notify.required).toBe(true);
-      expect(WIZARD_FIELDS.notify.skippable).toBe(false);
-      expect(WIZARD_FIELDS.notify.clearable).toBe(false);
-    });
-
-    it('should have BOOLEAN type', () => {
-      expect(WIZARD_FIELDS.notify.type).toBe(FieldType.BOOLEAN);
-    });
-
-    it('should have two options (yes/no)', () => {
-      expect(WIZARD_FIELDS.notify.options).toHaveLength(2);
-      expect(WIZARD_FIELDS.notify.options[0].value).toBe(true);
-      expect(WIZARD_FIELDS.notify.options[1].value).toBe(false);
-    });
-  });
-
-  describe('buildRideDataFromWizard — notifyOnParticipation', () => {
-    it('defaults notifyOnParticipation to true when not set', () => {
+  describe('buildRideDataFromWizard', () => {
+    it('does not include ride settings in wizard output', () => {
       const data = buildRideDataFromWizard({ title: 'Ride', datetime: new Date() }, {});
-      expect(data.notifyOnParticipation).toBe(true);
-    });
-
-    it('preserves notifyOnParticipation:false from wizard data', () => {
-      const data = buildRideDataFromWizard(
-        { title: 'Ride', datetime: new Date(), notifyOnParticipation: false },
-        {}
-      );
-      expect(data.notifyOnParticipation).toBe(false);
+      expect(data).not.toHaveProperty('notifyOnParticipation');
+      expect(data).not.toHaveProperty('settings');
     });
   });
 });

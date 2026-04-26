@@ -32,6 +32,10 @@ const routeSchema = new mongoose.Schema({
   label: { type: String, default: undefined }
 }, { _id: false });
 
+const rideSettingsSchema = new mongoose.Schema({
+  notifyParticipation: { type: Boolean }
+}, { _id: false });
+
 const rideSchema = new mongoose.Schema({
   title: { type: String, required: true },
   category: { type: String, default: DEFAULT_CATEGORY },
@@ -45,8 +49,8 @@ const rideSchema = new mongoose.Schema({
   speedMin: Number,
   speedMax: Number,
   additionalInfo: String,
+  settings: { type: rideSettingsSchema, default: undefined },
   cancelled: { type: Boolean, default: false },
-  notifyOnParticipation: { type: Boolean, default: true },
   metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
   groupId: { type: Number, default: null },
   createdAt: { type: Date, default: Date.now },
@@ -70,6 +74,22 @@ rideSchema.index(
 
 const Ride = mongoose.model('Ride', rideSchema);
 
+const userSettingsSchema = new mongoose.Schema({
+  rideDefaults: { type: rideSettingsSchema, default: undefined }
+}, { _id: false });
+
+const userSchema = new mongoose.Schema({
+  userId: { type: Number, required: true, unique: true },
+  username: { type: String, default: '' },
+  firstName: { type: String, default: '' },
+  lastName: { type: String, default: '' },
+  settings: { type: userSettingsSchema, default: undefined },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+const User = mongoose.models.User || mongoose.model('User', userSchema);
+
 export class MongoDBStorage extends StorageInterface {
   constructor() {
     super();
@@ -82,6 +102,8 @@ export class MongoDBStorage extends StorageInterface {
       console.log('Connected to MongoDB');
       await Ride.createIndexes();
       console.log('Ride indexes ensured');
+      await User.createIndexes();
+      console.log('User indexes ensured');
 
       // Skip schema validation in test environment
       if (process.env.NODE_ENV !== 'test') {
@@ -143,7 +165,6 @@ export class MongoDBStorage extends StorageInterface {
     if (updatesToApply.routes !== undefined) {
       updatesToApply.routes = normalizeRoutes(updatesToApply.routes);
     }
-
     // Apply updates
     Object.assign(ride, updatesToApply);
     await ride.save();
@@ -257,6 +278,36 @@ export class MongoDBStorage extends StorageInterface {
     return ride.participation || { joined: [], thinking: [], skipped: [] };
   }
 
+  async getUser(userId) {
+    try {
+      const user = await User.findOne({ userId });
+      return this.mapUserToInterface(user);
+    } catch (error) {
+      console.error('Error getting user:', error);
+      return null;
+    }
+  }
+
+  async upsertUser(userData) {
+    const existingUser = await User.findOne({ userId: userData.userId });
+    const now = new Date();
+    const nextUser = existingUser || new User({
+      userId: userData.userId,
+      createdAt: now
+    });
+
+    nextUser.username = userData.username ?? nextUser.username ?? '';
+    nextUser.firstName = userData.firstName ?? nextUser.firstName ?? '';
+    nextUser.lastName = userData.lastName ?? nextUser.lastName ?? '';
+    nextUser.settings = userData.settings !== undefined
+      ? { ...(nextUser.settings || {}), ...userData.settings }
+      : nextUser.settings;
+    nextUser.updatedAt = now;
+
+    await nextUser.save();
+    return this.mapUserToInterface(nextUser);
+  }
+
   mapRideToInterface(ride) {
     if (!ride) return null;
     const rideObj = ride.toObject ? ride.toObject() : ride;
@@ -276,8 +327,8 @@ export class MongoDBStorage extends StorageInterface {
       speedMin: rideObj.speedMin,
       speedMax: rideObj.speedMax,
       additionalInfo: rideObj.additionalInfo,
+      settings: rideObj.settings,
       cancelled: rideObj.cancelled,
-      notifyOnParticipation: rideObj.notifyOnParticipation ?? true,
       groupId: rideObj.groupId || null,
       createdAt: rideObj.createdAt,
       createdBy: rideObj.createdBy,
@@ -318,5 +369,20 @@ export class MongoDBStorage extends StorageInterface {
     };
 
     return result;
+  }
+
+  mapUserToInterface(user) {
+    if (!user) return null;
+    const userObj = user.toObject ? user.toObject() : user;
+
+    return {
+      userId: userObj.userId,
+      username: userObj.username ?? '',
+      firstName: userObj.firstName ?? '',
+      lastName: userObj.lastName ?? '',
+      settings: userObj.settings,
+      createdAt: userObj.createdAt,
+      updatedAt: userObj.updatedAt
+    };
   }
 } 

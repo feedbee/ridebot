@@ -145,7 +145,9 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
         id: '123',
         cancelled: false,
         createdBy: 999,
-        notifyOnParticipation: true
+        settings: {
+          notifyParticipation: true
+        }
       };
       mockRideParticipationService.changeParticipation.mockResolvedValue({
         status: 'changed',

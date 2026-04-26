@@ -94,6 +94,7 @@ describe('MongoDBStorage', () => {
       expect(ride.messages).toHaveLength(1);
       expect(ride.messages[0].chatId).toBe(testRide.messages[0].chatId);
       expect(ride.messages[0].messageId).toBe(testRide.messages[0].messageId);
+      expect(ride.settings).toBeUndefined();
     });
 
     test('should get a ride by id', async () => {
@@ -235,6 +236,49 @@ describe('MongoDBStorage', () => {
       expect(retrieved.messages[0].chatId).toBe(completeRide.messages[0].chatId);
       expect(retrieved.messages[0].messageId).toBe(completeRide.messages[0].messageId);
       expect(retrieved.messages[0].messageThreadId).toBe(completeRide.messages[0].messageThreadId);
+    });
+  });
+
+  describe('User Persistence', () => {
+    test('should return null for an unknown user', async () => {
+      await expect(storage.getUser(999)).resolves.toBeNull();
+    });
+
+    test('should not materialize user defaults on first upsert without explicit settings', async () => {
+      const user = await storage.upsertUser({
+        userId: 123,
+        username: 'alice'
+      });
+
+      expect(user.userId).toBe(123);
+      expect(user.username).toBe('alice');
+      expect(user.settings).toBeUndefined();
+      expect(user.createdAt).toBeInstanceOf(Date);
+      expect(user.updatedAt).toBeInstanceOf(Date);
+    });
+
+    test('should update persisted ride defaults without losing the existing profile', async () => {
+      const created = await storage.upsertUser({
+        userId: 123,
+        username: 'alice',
+        firstName: 'Alice'
+      });
+
+      const updated = await storage.upsertUser({
+        userId: 123,
+        settings: {
+          rideDefaults: {
+            notifyParticipation: false
+          }
+        }
+      });
+
+      expect(updated.userId).toBe(123);
+      expect(updated.username).toBe('alice');
+      expect(updated.firstName).toBe('Alice');
+      expect(updated.settings.rideDefaults.notifyParticipation).toBe(false);
+      expect(updated.createdAt.getTime()).toBe(created.createdAt.getTime());
+      expect(updated.updatedAt.getTime()).toBeGreaterThanOrEqual(created.updatedAt.getTime());
     });
   });
 

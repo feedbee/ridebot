@@ -91,7 +91,10 @@ describe.each(['en', 'ru'])('DuplicateRideCommandHandler (%s)', (language) => {
         distance: 50,
         duration: 180,
         speedMin: 25,
-        speedMax: 30
+        speedMax: 30,
+        settings: {
+          notifyParticipation: false
+        }
       });
 
       await handler.handle(mockCtx);
@@ -102,7 +105,10 @@ describe.each(['en', 'ru'])('DuplicateRideCommandHandler (%s)', (language) => {
           originalRideId: '123',
           title: 'Test Ride',
           datetime: new Date('2025-03-31T10:00:00.000Z'),
-          meetingPoint: 'Test Location'
+          meetingPoint: 'Test Location',
+          settings: {
+            notifyParticipation: false
+          }
         }),
         'message'
       );
