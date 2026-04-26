@@ -456,7 +456,7 @@ describe('Scenario Harness Integration', () => {
 
     const userSettingsMessage = harness.outbox.replies[harness.outbox.replies.length - 1];
     await harness.dispatchCallback({
-      data: 'settings:user:set:notifyParticipation:off',
+      data: 'settings:user:np:off',
       chat,
       from: owner,
       message: {
@@ -511,7 +511,7 @@ describe('Scenario Harness Integration', () => {
 
     const rideSettingsMessage = harness.outbox.replies[harness.outbox.replies.length - 1];
     await harness.dispatchCallback({
-      data: `settings:ride:set:notifyParticipation:on:${ride.id}`,
+      data: `settings:ride:np:on:${ride.id}`,
       chat,
       from: owner,
       message: {
