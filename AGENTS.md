@@ -6,7 +6,7 @@
 - Architecture and layer boundaries are defined in [`docs/layer-responsibilities.md`](docs/layer-responsibilities.md).
 - Coding preferences and local implementation constraints are documented in [`docs/coding-preferences.md`](docs/coding-preferences.md).
 - Testing strategy and test-layer expectations are defined in [`docs/testing-conventions.md`](docs/testing-conventions.md).
-- When a task references a planned feature, refactor, or change design, check the relevant specification in [`docs/changes/`](docs/changes).
+- When a task references a planned feature, refactor, or change design, check the relevant specification in [`docs/changes/`](docs/changes) for historical context only. Documents in `docs/changes/` are immutable after the related change lands and must not be edited to reflect later behavior; update living documentation elsewhere instead.
 
 ## Architecture And Layering
 
