@@ -104,8 +104,8 @@ describe('Bot', () => {
           expect.objectContaining({ pattern: /^rideowner:resume:(\w+)$/ }),
           expect.objectContaining({ pattern: /^rideowner:participants:(\w+)$/ }),
           expect.objectContaining({ pattern: /^rideowner:settings:(\w+)$/ }),
-          expect.objectContaining({ pattern: /^settings:user:np:(on|off)$/ }),
-          expect.objectContaining({ pattern: /^settings:ride:np:(on|off):(\w+)$/ }),
+          expect.objectContaining({ pattern: /^settings:user:bool:(\w+):(on|off)$/ }),
+          expect.objectContaining({ pattern: /^settings:ride:bool:(\w+):(on|off):(\w+)$/ }),
           expect.objectContaining({ pattern: /^wizard:(\w+)(?::(.*))?$/ }),
         ])
       );
@@ -187,11 +187,11 @@ describe('Bot', () => {
         expect.any(Function)
       );
       expect(mockBotCallbackQuery).toHaveBeenCalledWith(
-        /^settings:user:np:(on|off)$/,
+        /^settings:user:bool:(\w+):(on|off)$/,
         expect.any(Function)
       );
       expect(mockBotCallbackQuery).toHaveBeenCalledWith(
-        /^settings:ride:np:(on|off):(\w+)$/,
+        /^settings:ride:bool:(\w+):(on|off):(\w+)$/,
         expect.any(Function)
       );
       expect(mockBotCallbackQuery).toHaveBeenCalledWith(

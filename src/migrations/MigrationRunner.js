@@ -136,6 +136,14 @@ export class MigrationRunner {
           const { migrateRideNotificationSettings } = await import('./migrations/003_ride_settings.js');
           await migrateRideNotificationSettings(db);
         }
+      },
+      {
+        version: 4,
+        name: 'Add ride repost permission settings defaults',
+        up: async (db) => {
+          const { migrateRideRepostSettings } = await import('./migrations/004_ride_repost_settings.js');
+          await migrateRideRepostSettings(db);
+        }
       }
       // Future migrations can be added here
     ];

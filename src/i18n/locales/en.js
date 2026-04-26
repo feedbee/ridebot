@@ -268,8 +268,11 @@ Click here to start a private chat: @botname
       rideTitle: 'Ride settings',
       rideHint: 'These settings affect only this ride.',
       notifyParticipationLabel: 'Notify me when participation changes',
+      allowRepostsLabel: 'Allow other users to repost with <code>/shareride</code>',
       enableNotifyOnParticipationChange: 'Enable participation notifications',
       disableNotifyOnParticipationChange: 'Disable participation notifications',
+      enableReposts: 'Allow reposts',
+      disableReposts: 'Forbid reposts',
       updated: 'Default settings updated.',
       rideUpdated: 'Ride settings updated.'
     },

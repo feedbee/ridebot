@@ -1,4 +1,5 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
+import { SettingsService } from '../services/SettingsService.js';
 
 /**
  * Handler for the shareride command
@@ -37,8 +38,10 @@ export class ShareRideCommandHandler extends BaseCommandHandler {
         return;
       }
 
-      // Only allow the ride creator to repost
-      if (!this.isRideCreator(ride, ctx.from.id)) {
+      const rideSettings = SettingsService.getRideSettingsSnapshot(ride);
+
+      // Only allow non-creators to repost when the ride explicitly permits it.
+      if (!this.isRideCreator(ride, ctx.from.id) && !rideSettings.allowReposts) {
         await ctx.reply(this.translate(ctx, 'commands.share.onlyCreatorRepost'));
         return;
       }

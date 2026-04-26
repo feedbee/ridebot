@@ -588,6 +588,7 @@ describe('RideService', () => {
       expect(result.error).toBeNull();
       expect(result.ride.settings).toEqual({
         notifyParticipation: false,
+        allowReposts: false,
         futureSetting: 'preserved'
       });
       expect(result.ride.updatedBy).toBe(502);
@@ -1186,7 +1187,8 @@ describe('RideService', () => {
         date: new Date('2030-04-01T10:00:00Z'),
         createdBy: creator.userId,
         settings: {
-          notifyParticipation: false
+          notifyParticipation: false,
+          allowReposts: true
         }
       }, creator);
 
@@ -1194,6 +1196,7 @@ describe('RideService', () => {
 
       expect(result.error).toBeNull();
       expect(result.ride.settings.notifyParticipation).toBe(false);
+      expect(result.ride.settings.allowReposts).toBe(true);
     });
 
     it('should duplicate another user\'s ride using the current user defaults', async () => {
@@ -1211,7 +1214,8 @@ describe('RideService', () => {
         username: 'user7',
         settings: {
           rideDefaults: {
-            notifyParticipation: false
+            notifyParticipation: false,
+            allowReposts: false
           }
         }
       });
@@ -1224,6 +1228,7 @@ describe('RideService', () => {
 
       expect(result.error).toBeNull();
       expect(result.ride.settings.notifyParticipation).toBe(false);
+      expect(result.ride.settings.allowReposts).toBe(false);
     });
 
     it('should duplicate ride with single-bound speed values', async () => {

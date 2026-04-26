@@ -365,11 +365,15 @@ export class RideService {
       }
     }
     
-    // Copy notify preference from original ride if not explicitly provided
-    if (params['settings.notifyParticipation'] === undefined && originalRide.createdBy === creatorProfile.userId) {
-      mergedParams['settings.notifyParticipation'] = originalRide.settings.notifyParticipation
-        ? 'yes'
-        : 'no';
+    // Copy ride settings from the original ride when duplicating your own ride.
+    if (originalRide.createdBy === creatorProfile.userId) {
+      const originalSettings = SettingsService.getRideSettingsSnapshot(originalRide);
+      ['notifyParticipation', 'allowReposts'].forEach(settingName => {
+        const paramName = `settings.${settingName}`;
+        if (params[paramName] === undefined) {
+          mergedParams[paramName] = originalSettings[settingName] ? 'yes' : 'no';
+        }
+      });
     }
 
     // Use existing createRideFromParams to handle all the validation and processing

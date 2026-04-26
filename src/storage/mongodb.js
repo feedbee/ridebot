@@ -33,7 +33,8 @@ const routeSchema = new mongoose.Schema({
 }, { _id: false });
 
 const rideSettingsSchema = new mongoose.Schema({
-  notifyParticipation: { type: Boolean }
+  notifyParticipation: { type: Boolean },
+  allowReposts: { type: Boolean }
 }, { _id: false });
 
 const rideSchema = new mongoose.Schema({

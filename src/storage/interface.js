@@ -16,6 +16,7 @@
 /**
  * @typedef {Object} RideSettings
  * @property {boolean} notifyParticipation
+ * @property {boolean} allowReposts
  */
 
 /**
@@ -71,6 +72,7 @@
  * @typedef {Object} UserSettings
  * @property {Object} rideDefaults
  * @property {boolean} rideDefaults.notifyParticipation
+ * @property {boolean} rideDefaults.allowReposts
  */
 
 /**

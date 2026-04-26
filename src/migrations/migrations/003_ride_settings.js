@@ -2,8 +2,6 @@
  * Migration 003: Move legacy ride notification data into ride.settings
  */
 
-import { SettingsService } from '../../services/SettingsService.js';
-
 export async function migrateRideNotificationSettings(db) {
   console.log('Starting migration: Move legacy ride notification field into ride.settings');
 
@@ -47,9 +45,10 @@ export async function migrateRideNotificationSettings(db) {
       const resolvedNotify = typeof ride.notifyOnParticipation === 'boolean'
         ? ride.notifyOnParticipation
         : true;
-      const settings = SettingsService.buildRideSettingsSnapshot(ride.settings, {
+      const settings = {
+        ...(ride.settings || {}),
         notifyParticipation: resolvedNotify
-      });
+      };
 
       bulkOps.push({
         updateOne: {

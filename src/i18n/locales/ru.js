@@ -268,8 +268,11 @@ id: abc123 (or #abc123)
       rideTitle: 'Настройки поездки',
       rideHint: 'Эти настройки влияют только на эту поездку.',
       notifyParticipationLabel: 'Уведомлять меня об изменениях участия',
+      allowRepostsLabel: 'Разрешить другим пользователям репост через <code>/shareride</code>',
       enableNotifyOnParticipationChange: 'Включить уведомления об участии',
       disableNotifyOnParticipationChange: 'Выключить уведомления об участии',
+      enableReposts: 'Разрешить репосты',
+      disableReposts: 'Запретить репосты',
       updated: 'Настройки по умолчанию обновлены.',
       rideUpdated: 'Настройки поездки обновлены.'
     },

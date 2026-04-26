@@ -4,6 +4,11 @@ import { UserProfile } from '../models/UserProfile.js';
 import { escapeHtml } from '../utils/html-escape.js';
 import { SettingsService } from '../services/SettingsService.js';
 
+const BOOLEAN_SETTING_CALLBACK_KEYS = {
+  np: 'notifyParticipation',
+  repost: 'allowReposts'
+};
+
 /**
  * Settings handler for user defaults and ride-scoped settings.
  */
@@ -60,21 +65,25 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
   }
 
   /**
-   * Handle user-default toggle callbacks.
-   *
    * @param {import('grammy').Context} ctx
    * @returns {Promise<void>}
    */
-  async handleUserCallback(ctx) {
-    const desiredValue = this.parseNotifyCallbackValue(ctx.match?.[1]);
+  async handleUserBooleanCallback(ctx) {
+    const settingName = this.getBooleanSettingName(ctx.match?.[1]);
+    if (!settingName) {
+      await ctx.answerCallbackQuery(this.translate(ctx, 'errors.generic'));
+      return;
+    }
+
+    const desiredValue = this.parseBooleanCallbackValue(ctx.match?.[2]);
     const currentDefaults = await this.settingsService.getUserRideDefaults(ctx.from.id);
     let defaults = currentDefaults;
 
-    if (currentDefaults.notifyParticipation !== desiredValue) {
+    if (currentDefaults[settingName] !== desiredValue) {
       const updatedUser = await this.settingsService.updateUserRideDefaults(
         UserProfile.fromTelegramUser(ctx.from),
         {
-          notifyParticipation: desiredValue
+          [settingName]: desiredValue
         }
       );
       defaults = updatedUser.settings.rideDefaults;
@@ -85,33 +94,37 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
   }
 
   /**
-   * Handle ride-scoped toggle callbacks.
-   *
    * @param {import('grammy').Context} ctx
    * @returns {Promise<void>}
    */
-  async handleRideCallback(ctx) {
+  async handleRideBooleanCallback(ctx) {
+    const settingName = this.getBooleanSettingName(ctx.match?.[1]);
+    if (!settingName) {
+      await ctx.answerCallbackQuery(this.translate(ctx, 'errors.generic'));
+      return;
+    }
+
     const { ride, error } = await this.extractRideWithCreatorCheck(
       ctx,
       'commands.common.onlyCreatorAction',
       'callback',
-      2
+      3
     );
     if (error) {
       await ctx.answerCallbackQuery(error);
       return;
     }
 
-    const desiredValue = this.parseNotifyCallbackValue(ctx.match?.[1]);
+    const desiredValue = this.parseBooleanCallbackValue(ctx.match?.[2]);
     const currentSettings = SettingsService.getRideSettingsSnapshot(ride);
     let rideToRender = ride;
 
-    if (currentSettings.notifyParticipation !== desiredValue) {
+    if (currentSettings[settingName] !== desiredValue) {
       rideToRender = await this.rideService.updateRide(
         ride.id,
         {
           settings: {
-            notifyParticipation: desiredValue
+            [settingName]: desiredValue
           }
         },
         ctx.from.id
@@ -178,14 +191,11 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
    * @returns {string}
    */
   buildUserSettingsText(ctx, defaults) {
-    const enabledLabel = defaults.notifyParticipation
-      ? this.translate(ctx, 'common.yes')
-      : this.translate(ctx, 'common.no');
-
     return [
       `<b>${this.translate(ctx, 'commands.settings.userTitle')}</b>`,
       '',
-      `${this.translate(ctx, 'commands.settings.notifyParticipationLabel')}: <b>${enabledLabel}</b>`,
+      this.buildSettingLine(ctx, 'commands.settings.notifyParticipationLabel', defaults.notifyParticipation),
+      this.buildSettingLine(ctx, 'commands.settings.allowRepostsLabel', defaults.allowReposts),
       this.translate(ctx, 'commands.settings.userHint')
     ].join('\n');
   }
@@ -196,13 +206,22 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
    * @returns {InlineKeyboard}
    */
   buildUserSettingsKeyboard(ctx, defaults) {
-    const toggleLabel = defaults.notifyParticipation
-      ? this.translate(ctx, 'commands.settings.disableNotifyOnParticipationChange')
-      : this.translate(ctx, 'commands.settings.enableNotifyOnParticipationChange');
-    const desiredValue = defaults.notifyParticipation ? 'off' : 'on';
-
     return new InlineKeyboard()
-      .text(toggleLabel, `settings:user:np:${desiredValue}`);
+      .text(
+        this.getSettingToggleLabel(ctx, defaults.notifyParticipation, {
+          enableKey: 'commands.settings.enableNotifyOnParticipationChange',
+          disableKey: 'commands.settings.disableNotifyOnParticipationChange'
+        }),
+        `settings:user:bool:np:${defaults.notifyParticipation ? 'off' : 'on'}`
+      )
+      .row()
+      .text(
+        this.getSettingToggleLabel(ctx, defaults.allowReposts, {
+          enableKey: 'commands.settings.enableReposts',
+          disableKey: 'commands.settings.disableReposts'
+        }),
+        `settings:user:bool:repost:${defaults.allowReposts ? 'off' : 'on'}`
+      );
   }
 
   /**
@@ -212,15 +231,12 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
    * @returns {string}
    */
   buildRideSettingsText(ctx, ride, settings) {
-    const enabledLabel = settings.notifyParticipation
-      ? this.translate(ctx, 'common.yes')
-      : this.translate(ctx, 'common.no');
-
     return [
       `<b>${this.translate(ctx, 'commands.settings.rideTitle')}</b>`,
       `${escapeHtml(ride.title)} (#${ride.id})`,
       '',
-      `${this.translate(ctx, 'commands.settings.notifyParticipationLabel')}: <b>${enabledLabel}</b>`,
+      this.buildSettingLine(ctx, 'commands.settings.notifyParticipationLabel', settings.notifyParticipation),
+      this.buildSettingLine(ctx, 'commands.settings.allowRepostsLabel', settings.allowReposts),
       this.translate(ctx, 'commands.settings.rideHint')
     ].join('\n');
   }
@@ -232,21 +248,63 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
    * @returns {InlineKeyboard}
    */
   buildRideSettingsKeyboard(ctx, rideId, settings) {
-    const toggleLabel = settings.notifyParticipation
-      ? this.translate(ctx, 'commands.settings.disableNotifyOnParticipationChange')
-      : this.translate(ctx, 'commands.settings.enableNotifyOnParticipationChange');
-    const desiredValue = settings.notifyParticipation ? 'off' : 'on';
-
     return new InlineKeyboard()
-      .text(toggleLabel, `settings:ride:np:${desiredValue}:${rideId}`);
+      .text(
+        this.getSettingToggleLabel(ctx, settings.notifyParticipation, {
+          enableKey: 'commands.settings.enableNotifyOnParticipationChange',
+          disableKey: 'commands.settings.disableNotifyOnParticipationChange'
+        }),
+        `settings:ride:bool:np:${settings.notifyParticipation ? 'off' : 'on'}:${rideId}`
+      )
+      .row()
+      .text(
+        this.getSettingToggleLabel(ctx, settings.allowReposts, {
+          enableKey: 'commands.settings.enableReposts',
+          disableKey: 'commands.settings.disableReposts'
+        }),
+        `settings:ride:bool:repost:${settings.allowReposts ? 'off' : 'on'}:${rideId}`
+      );
   }
 
   /**
    * @param {string} value
    * @returns {boolean}
    */
-  parseNotifyCallbackValue(value) {
+  parseBooleanCallbackValue(value) {
     return value === 'on';
+  }
+
+  /**
+   * @param {string} callbackKey
+   * @returns {'notifyParticipation'|'allowReposts'|null}
+   */
+  getBooleanSettingName(callbackKey) {
+    return BOOLEAN_SETTING_CALLBACK_KEYS[callbackKey] || null;
+  }
+
+  /**
+   * @param {import('grammy').Context} ctx
+   * @param {string} labelKey
+   * @param {boolean} value
+   * @returns {string}
+   */
+  buildSettingLine(ctx, labelKey, value) {
+    const valueLabel = value
+      ? this.translate(ctx, 'common.yes')
+      : this.translate(ctx, 'common.no');
+    return `${this.translate(ctx, labelKey)}: <b>${valueLabel}</b>`;
+  }
+
+  /**
+   * @param {import('grammy').Context} ctx
+   * @param {boolean} currentValue
+   * @param {{enableKey: string, disableKey: string}} keys
+   * @returns {string}
+   */
+  getSettingToggleLabel(ctx, currentValue, keys) {
+    return currentValue
+      ? this.translate(ctx, keys.disableKey)
+      : this.translate(ctx, keys.enableKey);
   }
 
   /**

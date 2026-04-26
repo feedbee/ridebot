@@ -107,7 +107,8 @@ describe.each(['en', 'ru'])('DuplicateRideCommandHandler (%s)', (language) => {
           datetime: new Date('2025-03-31T10:00:00.000Z'),
           meetingPoint: 'Test Location',
           settings: {
-            notifyParticipation: false
+            notifyParticipation: false,
+            allowReposts: false
           }
         }),
         'message'

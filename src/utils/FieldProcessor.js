@@ -75,16 +75,27 @@ export class FieldProcessor {
     // Process simple text fields
     this.processTextFields(params, result.data, isUpdate);
 
-    const notifyParticipation = params.settings?.notifyParticipation
-      ?? params['settings.notifyParticipation'];
-    if (notifyParticipation !== undefined) {
-      result.data.settings = {
-        ...(result.data.settings || {}),
-        notifyParticipation: this.parseBooleanSetting(notifyParticipation)
-      };
-    }
+    this.processBooleanSettings(params, result.data);
 
     return result;
+  }
+
+  /**
+   * Process supported boolean ride settings from dotted and structured inputs.
+   *
+   * @param {Object} params
+   * @param {Object} data
+   */
+  static processBooleanSettings(params, data) {
+    ['notifyParticipation', 'allowReposts'].forEach(settingName => {
+      const value = params.settings?.[settingName] ?? params[`settings.${settingName}`];
+      if (value !== undefined) {
+        data.settings = {
+          ...(data.settings || {}),
+          [settingName]: this.parseBooleanSetting(value)
+        };
+      }
+    });
   }
 
   /**

@@ -56,8 +56,15 @@ describe('SettingsService', () => {
       expect(user.username).toBe('alice');
       expect(user.firstName).toBe('Alice');
       expect(user.settings.rideDefaults).toEqual({
-        notifyParticipation: false
+        notifyParticipation: false,
+        allowReposts: false
       });
+    });
+
+    it('uses a deny-by-default repost setting for user defaults', async () => {
+      const defaults = await service.getUserRideDefaults(123);
+
+      expect(defaults.allowReposts).toBe(false);
     });
   });
 
@@ -81,7 +88,8 @@ describe('SettingsService', () => {
       });
 
       expect(settings).toEqual({
-        notifyParticipation: false
+        notifyParticipation: false,
+        allowReposts: false
       });
     });
 
@@ -95,7 +103,8 @@ describe('SettingsService', () => {
       });
 
       expect(settings).toEqual({
-        notifyParticipation: false
+        notifyParticipation: false,
+        allowReposts: false
       });
     });
 
@@ -103,18 +112,21 @@ describe('SettingsService', () => {
       const updatedSettings = SettingsService.resolveUpdatedRideSettings(
         {
           settings: {
-            notifyParticipation: true
+            notifyParticipation: true,
+            allowReposts: false
           }
         },
         {
           settings: {
-            notifyParticipation: false
+            notifyParticipation: false,
+            allowReposts: true
           }
         }
       );
 
       expect(updatedSettings).toEqual({
-        notifyParticipation: false
+        notifyParticipation: false,
+        allowReposts: true
       });
     });
   });

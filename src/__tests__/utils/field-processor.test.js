@@ -23,10 +23,18 @@ describe('FieldProcessor', () => {
     it('accepts structured settings objects from AI parsing', () => {
       const { data } = FieldProcessor.processRideFields({
         settings: {
-          notifyParticipation: false
+          notifyParticipation: false,
+          allowReposts: true
         }
       });
-      expect(data.settings).toEqual({ notifyParticipation: false });
+      expect(data.settings).toEqual({ notifyParticipation: false, allowReposts: true });
+    });
+
+    it('maps settings.allowReposts to nested settings', () => {
+      const { data } = FieldProcessor.processRideFields({
+        'settings.allowReposts': 'yes'
+      });
+      expect(data.settings).toEqual({ allowReposts: true });
     });
 
     it('maps boolean-like values to true', () => {

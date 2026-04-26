@@ -80,6 +80,29 @@ describe.each(['en', 'ru'])('ShareRideCommandHandler (%s)', (language) => {
       expect(mockRideMessagesService.createRideMessage).not.toHaveBeenCalled();
     });
 
+    it('allows repost by non-creator when ride settings allow reposts', async () => {
+      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '123', error: null });
+      mockRideService.getRide.mockResolvedValue({
+        id: '123',
+        createdBy: 456,
+        cancelled: false,
+        messages: [],
+        settings: {
+          allowReposts: true
+        }
+      });
+      mockRideMessagesService.createRideMessage.mockResolvedValue({ sentMessage: { message_id: 42 } });
+
+      await handler.handle(mockCtx);
+
+      expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ id: '123' }),
+        mockCtx,
+        null
+      );
+      expect(mockCtx.reply).not.toHaveBeenCalledWith(tr('commands.share.onlyCreatorRepost'));
+    });
+
     it('blocks repost for cancelled ride', async () => {
       mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '123', error: null });
       mockRideService.getRide.mockResolvedValue({ id: '123', createdBy: 789, cancelled: true, messages: [] });

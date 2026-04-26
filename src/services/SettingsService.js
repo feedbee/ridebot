@@ -10,18 +10,19 @@ export class SettingsService {
   }
 
   /**
-   * @returns {{notifyParticipation: boolean}}
+   * @returns {{notifyParticipation: boolean, allowReposts: boolean}}
    */
   static getSystemRideDefaults() {
     return {
-      notifyParticipation: true
+      notifyParticipation: true,
+      allowReposts: false
     };
   }
 
   /**
    * @param {Object} [baseSettings={}]
    * @param {Object} [overrideSettings={}]
-   * @returns {{notifyParticipation: boolean}}
+   * @returns {{notifyParticipation: boolean, allowReposts: boolean}}
    */
   static buildRideSettingsSnapshot(baseSettings = {}, overrideSettings = {}) {
     return {
@@ -33,7 +34,7 @@ export class SettingsService {
 
   /**
    * @param {Object|null} user
-   * @returns {{notifyParticipation: boolean}}
+   * @returns {{notifyParticipation: boolean, allowReposts: boolean}}
    */
   static getEffectiveUserRideDefaults(user) {
     return SettingsService.buildRideSettingsSnapshot(user?.settings?.rideDefaults);
@@ -41,7 +42,7 @@ export class SettingsService {
 
   /**
    * @param {Object} [input={}]
-   * @returns {{notifyParticipation?: boolean}}
+   * @returns {{notifyParticipation?: boolean, allowReposts?: boolean}}
    */
   static extractExplicitRideSettings(input = {}) {
     return { ...(input.settings || {}) };
@@ -51,7 +52,7 @@ export class SettingsService {
    * Resolve effective ride settings from a ride-like object.
    *
    * @param {Object} [ride={}]
-   * @returns {{notifyParticipation: boolean}}
+   * @returns {{notifyParticipation: boolean, allowReposts: boolean}}
    */
   static getRideSettingsSnapshot(ride = {}) {
     const explicitSettings = SettingsService.extractExplicitRideSettings(ride);
@@ -63,7 +64,7 @@ export class SettingsService {
    *
    * @param {Object} currentRide
    * @param {Object} [updates={}]
-   * @returns {{notifyParticipation: boolean}}
+   * @returns {{notifyParticipation: boolean, allowReposts: boolean}}
    */
   static resolveUpdatedRideSettings(currentRide, updates = {}) {
     return SettingsService.buildRideSettingsSnapshot(
@@ -74,7 +75,7 @@ export class SettingsService {
 
   /**
    * @param {number} userId
-   * @returns {Promise<{notifyParticipation: boolean}>}
+   * @returns {Promise<{notifyParticipation: boolean, allowReposts: boolean}>}
    */
   async getUserRideDefaults(userId) {
     const existingUser = await this.storage.getUser(userId);
@@ -135,7 +136,7 @@ export class SettingsService {
    * @param {Object} params
    * @param {import('../models/UserProfile.js').UserProfile|null} [params.creatorProfile]
    * @param {Object} [params.input]
-   * @returns {Promise<{notifyParticipation: boolean}>}
+   * @returns {Promise<{notifyParticipation: boolean, allowReposts: boolean}>}
    */
   async resolveCreateRideSettings({ creatorProfile = null, input = {} } = {}) {
     const explicitRideSettings = SettingsService.extractExplicitRideSettings(input);
