@@ -9,6 +9,8 @@ I am a <b>Telegram bot for organizing bike rides</b>. I will help you organize b
 • Create and schedule rides
 • Share rides across multiple chats
 • Track participants with join/leave buttons
+• Manage ride defaults and per-ride settings
+• Attach private group chats to rides
 • Keep everyone updated automatically
 
 <b>Quick Start:</b>
@@ -16,8 +18,9 @@ I am a <b>Telegram bot for organizing bike rides</b>. I will help you organize b
 2. Or use /airide to describe a ride in plain language and let AI fill in the details
 3. Or use /fromstrava with a Strava club event URL to import a ride automatically
 4. Join your ride with the join button
-4. Share it to other chats with /shareride (bot needs to be added to the other chat before sharing; /shareride@botname to share a ride in a chat where the bot is not an admin)
-5. All participants and updates sync automatically!
+5. Tune defaults with /settings when you want different behavior for future rides
+6. Share it to other chats with /shareride (bot needs to be added to the other chat before sharing; /shareride@botname works when short commands are not available)
+7. All participants and updates sync automatically!
 
 <b>More details:</b>
 • Type /help for more detailed instructions with examples
@@ -50,6 +53,8 @@ dist: Distance in km (optional)
 duration: Duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
 speed: Speed in km/h: range (25-28), min (25+ or 25-), max (-28), avg (25 or ~25) (optional)
 info: Additional information (optional)
+settings.notifyParticipation: yes/no — notify the creator when participants change status (optional)
+settings.allowReposts: yes/no — allow other users to repost this ride with /shareride (optional)
 </pre>
 
 Example:
@@ -91,7 +96,9 @@ Send /fromstrava with a Strava club event URL. The bot fetches the event details
 </pre>
 Fields populated automatically: title, date, meeting point, category, route links, distance, duration, speed range (from pace groups), organizer (club name), and additional info (event link + description + pace groups).
 If the Strava event has an attached route, only that route is imported. Otherwise the bot imports all known route-provider links from the description in discovery order.
+    `.trim(),
 
+    help2: `
 <b>Managing Rides</b>
 
 <b>🔄 Updating a Ride</b>
@@ -112,11 +119,12 @@ dist: New distance (optional)
 duration: New duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
 speed: New speed (optional)
 info: Additional information (optional)
+settings.notifyParticipation: yes/no (optional)
+settings.allowReposts: yes/no (optional)
 </pre>
 If you provide at least one <code>route:</code> line, it replaces the full route list. Use <code>route: -</code> to clear all routes.
-    `.trim(),
+Ride settings passed here are merged into the existing ride settings.
 
-    help2: `
 <b>❌ Cancelling a Ride</b>
 Only the ride creator can cancel:
 1. Reply to the ride message with /cancelride
@@ -148,7 +156,7 @@ id: abc123
 </pre>
 
 <b>🔄 Duplicating a Ride</b>
-Only the ride creator can duplicate. Four ways:
+You can duplicate an existing ride in four ways:
 1. Reply to the ride message with /dupride without any parameters to start an interactive wizard. <i>(Note: Wizard mode is only available in private chats with the bot)</i>
 2. Reply to the ride message with /dupride and new parameters
 3. Use /dupride with ride ID directly after the command: <code>/dupride abc123</code>
@@ -165,18 +173,34 @@ dist: New distance (optional)
 duration: New duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
 speed: New speed (optional)
 info: Additional information (optional)
+settings.notifyParticipation: yes/no (optional)
+settings.allowReposts: yes/no (optional)
 </pre>
 Any parameters not provided will be copied from the original ride.
 By default, the new ride will be scheduled for tomorrow at the same time.
 If you provide at least one <code>route:</code> line, it replaces the copied route list. Use <code>route: -</code> to clear all copied routes.
+When duplicating your own ride, its ride settings are copied. When duplicating someone else's ride, your current defaults are used.
 
 <b>📋 Listing Your Rides</b>
 Use /listrides command to see all rides you've created:
 • Rides are sorted by date (newest first)
 • Use navigation buttons to browse pages
+    `.trim(),
+
+    help3: `
+<b>⚙️ Ride Settings</b>
+Use /settings in private chat to manage defaults for rides you create in the future.
+Use /settings #rideId, reply to a ride message with /settings, or press the Settings button on your private creator copy to manage one ride.
+Available settings:
+• Participation notifications — whether the creator gets private notifications when people join, think, or pass.
+• Repost permission — whether users other than the creator can repost the ride with /shareride.
+Defaults apply only to newly created rides. Ride-specific settings affect only that ride.
+
+<b>🧭 Private Creator Buttons</b>
+In your private ride message, owner-only buttons let you edit, duplicate, delete, cancel/resume, list participants, and open settings without typing the full commands.
 
 <b>📢 Sharing a Ride</b>
-Only the ride creator can repost a ride to another chat:
+By default, only the ride creator can repost a ride to another chat. The creator can allow reposts by other users in /settings.
 1. Go to the target chat where you want to post the ride
 2. Use /shareride (or /shareride@botname) with the ride ID directly after the command: <code>/shareride@botname abc123</code>
 3. Or use /shareride (or /shareride@botname) with ride ID as a parameter:
@@ -192,7 +216,8 @@ The ride will be posted to the current chat and all instances will be synchroniz
 Only the ride creator can attach a group:
 1. Create a Telegram group and add the bot as admin (needs "Add Members" and "Ban Users" permissions)
 2. Use /attach with the ride ID in the group chat: <code>/attach #abc123</code>
-The bot will post the ride info in the group and automatically add/remove members as participants join or leave the ride.
+The bot will rename the group to the ride title and date, post and pin the ride info, and automatically add/remove members as participants join or leave the ride.
+One group can be attached to only one ride at a time.
 To unlink the group, use /detach in the group chat.
 
 <b>💬 Joining the Ride Group Chat</b>
@@ -525,6 +550,7 @@ Click here to start a private chat: @botname
     speed: 'Speed: range (25-28), min (25+), max (-28), avg (25)',
     info: 'Additional information',
     settingsNotifyParticipation: 'Ride setting: notify on participation changes (yes/no)',
+    settingsAllowReposts: 'Ride setting: allow other users to repost with /shareride (yes/no)',
     id: 'Ride ID (for commands that need it)'
   },
   utils: {

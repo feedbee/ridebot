@@ -18,6 +18,7 @@ describe('RideParamsHelper', () => {
       expect(Object.keys(RideParamsHelper.VALID_PARAMS)).toContain('info');
       expect(Object.keys(RideParamsHelper.VALID_PARAMS)).toContain('category');
       expect(Object.keys(RideParamsHelper.VALID_PARAMS)).toContain('settings.notifyParticipation');
+      expect(Object.keys(RideParamsHelper.VALID_PARAMS)).toContain('settings.allowReposts');
       expect(Object.keys(RideParamsHelper.VALID_PARAMS)).toContain('id');
     });
 
@@ -127,12 +128,14 @@ Meet: Coffee Shop`;
 
     it('should parse dotted settings keys using their canonical casing', () => {
       const text = `/updateride
-settings.notifyParticipation: no`;
+settings.notifyParticipation: no
+settings.allowReposts: yes`;
 
       const { params, unknownParams } = RideParamsHelper.parseRideParams(text);
 
       expect(params).toEqual({
-        'settings.notifyParticipation': 'no'
+        'settings.notifyParticipation': 'no',
+        'settings.allowReposts': 'yes'
       });
       expect(unknownParams).toHaveLength(0);
     });

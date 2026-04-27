@@ -10,8 +10,13 @@ export class HelpCommandHandler extends BaseCommandHandler {
    * @param {import('grammy').Context} ctx - Grammy context
    */
   async handle(ctx) {
-    // Send both parts of the help message to avoid Telegram's message size limit
-    await ctx.reply(await replaceBotUsername(ctx.t('templates.help1'), ctx), { parse_mode: 'HTML' });
-    await ctx.reply(await replaceBotUsername(ctx.t('templates.help2'), ctx), { parse_mode: 'HTML' });
+    const helpParts = ['templates.help1', 'templates.help2', 'templates.help3'];
+
+    for (const key of helpParts) {
+      const text = ctx.t(key);
+      if (text !== key) {
+        await ctx.reply(await replaceBotUsername(text, ctx), { parse_mode: 'HTML' });
+      }
+    }
   }
 }
