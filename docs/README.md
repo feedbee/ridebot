@@ -10,6 +10,8 @@ This directory contains the project documents that agents and contributors shoul
   - Defines what belongs in command handlers, services, the Telegram boundary, and utility/helper layers.
 - [`testing-conventions.md`](./testing-conventions.md)
   - Defines the testing strategy, test layering, and expectations for new and changed behavior.
+- [`changelog.md`](./changelog.md)
+  - Product-facing release history grouped by version, using Git tag creation dates.
 
 ## Specifications And Change Design
 
