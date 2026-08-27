@@ -9,9 +9,11 @@ import { config } from '../../config.js';
 describe('DateParser', () => {
   // Save original config
   const originalTimezone = config.dateFormat.defaultTimezone;
+  const originalProcessTimezone = process.env.TZ;
   
   afterEach(() => {
     jest.useRealTimers();
+    process.env.TZ = originalProcessTimezone;
   });
 
   // Restore original config after all tests
@@ -128,6 +130,53 @@ describe('DateParser', () => {
       const result = DateParser.parseDateTime('not a valid date');
       expect(result).toBeNull();
     });
+
+    it.each(['UTC', 'Europe/Warsaw', 'America/New_York'])(
+      'should parse the same Warsaw instant when the process timezone is %s',
+      (processTimezone) => {
+        process.env.TZ = processTimezone;
+        config.dateFormat.defaultTimezone = 'Europe/Warsaw';
+
+        const result = DateParser.parseDateTime('August 30 2026 at 10:00', { language: 'en' });
+
+        expect(result.date.toISOString()).toBe('2026-08-30T08:00:00.000Z');
+        expect(DateParser.formatDateTime(result.date, 'en').time).toBe('10:00');
+      }
+    );
+
+    it.each([
+      ['August 30 2026 at 10:00', '2026-08-30T08:00:00.000Z'],
+      ['October 26 2026 at 10:00', '2026-10-26T09:00:00.000Z']
+    ])('should apply the Warsaw offset in effect on the parsed date: %s', (input, expectedIso) => {
+      process.env.TZ = 'America/New_York';
+      config.dateFormat.defaultTimezone = 'Europe/Warsaw';
+
+      const result = DateParser.parseDateTime(input, { language: 'en' });
+
+      expect(result.date.toISOString()).toBe(expectedIso);
+      expect(DateParser.formatDateTime(result.date, 'en').time).toBe('10:00');
+    });
+
+    it('should resolve relative dates from the current day in the configured timezone', () => {
+      process.env.TZ = 'America/New_York';
+      config.dateFormat.defaultTimezone = 'Europe/Warsaw';
+      jest.useFakeTimers().setSystemTime(new Date('2026-08-26T22:30:00.000Z'));
+
+      const result = DateParser.parseDateTime('tomorrow at 10:00', { language: 'en' });
+
+      expect(result.date.toISOString()).toBe('2026-08-28T08:00:00.000Z');
+    });
+
+    it('should reject a local time that does not exist during the DST transition', () => {
+      process.env.TZ = 'UTC';
+      config.dateFormat.defaultTimezone = 'Europe/Warsaw';
+
+      const result = DateParser.parseDateTime('March 28 2027 at 02:30', { language: 'en' });
+
+      expect(result).toBeNull();
+      expect(DateParser.parseDateTime('March 28 2027 at 01:30', { language: 'en' })).not.toBeNull();
+      expect(DateParser.parseDateTime('March 28 2027 at 03:30', { language: 'en' })).not.toBeNull();
+    });
   });
 
   describe('isPast', () => {
@@ -159,6 +208,15 @@ describe('DateParser', () => {
       expect(DateParser.getDisplayLocale('ru-RU')).toBe('ru-RU');
       expect(DateParser.getDisplayLocale('en')).toBe('en-GB');
       expect(DateParser.getDisplayLocale('unknown')).toBe(config.dateFormat.locale);
+    });
+
+    it('should format chat titles using the configured timezone day', () => {
+      process.env.TZ = 'America/New_York';
+      config.dateFormat.defaultTimezone = 'Europe/Warsaw';
+      const date = new Date('2026-08-27T22:30:00.000Z');
+
+      expect(DateParser.formatDateForChatTitle(date, 'en')).toBe('August 28th');
+      expect(DateParser.formatDateForChatTitle(date, 'ru')).toContain('28');
     });
   });
 });

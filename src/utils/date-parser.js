@@ -80,12 +80,15 @@ export class DateParser {
       const normalizedText = text.trim();
       if (!normalizedText) return null;
 
-      // For relative dates (like "tomorrow"), the reference date needs to be in the target timezone
-      const convertedRefDate = this.convertToTimezone(new Date(), config.dateFormat.defaultTimezone);
+      // Relative expressions must use the current calendar date in the configured timezone.
+      const parserReferenceDate = this.createParserReferenceDate(
+        new Date(),
+        config.dateFormat.defaultTimezone
+      );
 
       let bestResult = null;
       for (const parser of this.getChronoParsers(options.language)) {
-        const results = parser.parse(normalizedText, convertedRefDate, { forwardDate: true });
+        const results = parser.parse(normalizedText, parserReferenceDate, { forwardDate: true });
         if (results.length > 0) {
           const candidate = results[0];
           if (
@@ -100,7 +103,7 @@ export class DateParser {
 
       let parsedResult = bestResult;
       if (!parsedResult) {
-        const fallbackResults = chrono.parse(normalizedText, convertedRefDate, { forwardDate: true });
+        const fallbackResults = chrono.parse(normalizedText, parserReferenceDate, { forwardDate: true });
         if (fallbackResults.length === 0) {
           return null;
         }
@@ -115,8 +118,8 @@ export class DateParser {
         return null;
       }
 
-      // We expect input in local timezone
-      const date = this.convertFromTimezone(parsedResult.start.date(), config.dateFormat.defaultTimezone);
+      const date = this.componentsToDate(parsedResult.start, config.dateFormat.defaultTimezone);
+      if (!date) return null;
       
       // Return both the parsed date and the text that was recognized
       return {
@@ -136,12 +139,18 @@ export class DateParser {
    * @returns {{date: string, time: string}} Formatted date and time strings
    */
   static formatDateTime(date, language) {
-    // Convert the date from the configured timezone for display
-    const displayDate = this.convertToTimezone(date, config.dateFormat.defaultTimezone);
     const displayLocale = this.getDisplayLocale(language);
-    
-    const dateStr = displayDate.toLocaleDateString(displayLocale, config.dateFormat.date);
-    const timeStr = displayDate.toLocaleTimeString(displayLocale, config.dateFormat.time);
+    const timezoneOptions = config.dateFormat.defaultTimezone
+      ? { timeZone: config.dateFormat.defaultTimezone }
+      : {};
+    const dateStr = date.toLocaleDateString(displayLocale, {
+      ...config.dateFormat.date,
+      ...timezoneOptions
+    });
+    const timeStr = date.toLocaleTimeString(displayLocale, {
+      ...config.dateFormat.time,
+      ...timezoneOptions
+    });
 
     return {
       date: dateStr,
@@ -156,19 +165,25 @@ export class DateParser {
    * @returns {string}
    */
   static formatDateForChatTitle(date, language) {
-    const displayDate = this.convertToTimezone(date, config.dateFormat.defaultTimezone);
     const normalized = this.normalizeLanguageCode(language) || 'en';
+    const timezoneOptions = config.dateFormat.defaultTimezone
+      ? { timeZone: config.dateFormat.defaultTimezone }
+      : {};
 
     if (normalized === 'en') {
-      const month = displayDate.toLocaleDateString('en-US', { month: 'long' });
-      const day = displayDate.getDate();
+      const month = date.toLocaleDateString('en-US', { month: 'long', ...timezoneOptions });
+      const day = Number(date.toLocaleDateString('en-US', { day: 'numeric', ...timezoneOptions }));
       const pr = new Intl.PluralRules('en-US', { type: 'ordinal' });
       const suffixes = { one: 'st', two: 'nd', few: 'rd', other: 'th' };
       return `${month} ${day}${suffixes[pr.select(day)]}`;
     }
 
     const locale = this.DISPLAY_LOCALE_BY_LANGUAGE[normalized] || config.dateFormat.locale;
-    return displayDate.toLocaleDateString(locale, { day: 'numeric', month: 'long' });
+    return date.toLocaleDateString(locale, {
+      day: 'numeric',
+      month: 'long',
+      ...timezoneOptions
+    });
   }
 
   /**
@@ -185,57 +200,123 @@ export class DateParser {
   }
 
   /**
-   * Convert a date from local timezone to the specified timezone
-   * @param {Date} date - The date to convert
-   * @param {string} timezone - The target timezone (e.g., 'Europe/London')
-   * @returns {Date} The converted date
+   * Build a local Date whose calendar fields match an instant in the target timezone.
+   * Chrono reads these fields when resolving relative expressions.
+   * @param {Date} date
+   * @param {string|null} timezone
+   * @returns {Date}
    */
-  static convertToTimezone(date, timezone) {
-    // If no timezone is configured, return the original date
+  static createParserReferenceDate(date, timezone) {
     if (!timezone) return date;
-    
-    try {
-      // Get the date in the target timezone
-      const options = { timeZone: timezone };
-      const targetDate = new Date(date.toLocaleString('en-US', options));
-      
-      // Calculate the time difference between local and target timezone
-      const localOffset = date.getTimezoneOffset();
-      const targetOffset = (date.getTime() - targetDate.getTime()) / 60000;
-      
-      // Apply the offset to get the correct time in the target timezone
-      return new Date(date.getTime() + (localOffset - targetOffset) * 60000);
-    } catch (error) {
-      console.error(`Error converting date to timezone ${timezone}:`, error);
-      return date; // Return original date if conversion fails
-    }
+    const parts = this.getTimezoneParts(date, timezone);
+    return new Date(
+      parts.year,
+      parts.month - 1,
+      parts.day,
+      parts.hour,
+      parts.minute,
+      parts.second,
+      date.getMilliseconds()
+    );
   }
 
   /**
-   * Convert a date from the specified timezone to local timezone
-   * @param {Date} date - The date to convert
-   * @param {string} timezone - The source timezone (e.g., 'Europe/London')
-   * @returns {Date} The converted date
+   * Convert Chrono calendar components in a configured timezone to a UTC instant.
+   * @param {import('chrono-node').ParsedComponents} components
+   * @param {string|null} timezone
+   * @returns {Date|null}
    */
-  static convertFromTimezone(date, timezone) {
-    // If no timezone is configured, return the original date
-    if (!timezone) return date;
-    
-    try {
-      // Get the date in the source timezone
-      const options = { timeZone: timezone };
-      const sourceDate = new Date(date.toLocaleString('en-US', options));
-      
-      // Calculate the time difference between local and source timezone
-      const localOffset = date.getTimezoneOffset();
-      const sourceOffset = (date.getTime() - sourceDate.getTime()) / 60000;
-      
-      // Apply the offset to get the correct time in the local timezone
-      return new Date(date.getTime() - (localOffset - sourceOffset) * 60000);
-    } catch (error) {
-      console.error(`Error converting date from timezone ${timezone}:`, error);
-      return date; // Return original date if conversion fails
+  static componentsToDate(components, timezone) {
+    if (!timezone) return components.date();
+    return this.zonedDateTimeToDate({
+      year: components.get('year'),
+      month: components.get('month'),
+      day: components.get('day'),
+      hour: components.get('hour'),
+      minute: components.get('minute'),
+      second: components.get('second'),
+      millisecond: components.get('millisecond')
+    }, timezone);
+  }
+
+  /**
+   * Convert wall-clock fields in an IANA timezone to the corresponding UTC Date.
+   * @param {{year:number, month:number, day:number, hour:number, minute:number, second:number, millisecond:number}} parts
+   * @param {string} timezone
+   * @returns {Date|null}
+   */
+  static zonedDateTimeToDate(parts, timezone) {
+    const targetTimestamp = Date.UTC(
+      parts.year,
+      parts.month - 1,
+      parts.day,
+      parts.hour,
+      parts.minute,
+      parts.second,
+      parts.millisecond
+    );
+    let candidateTimestamp = targetTimestamp;
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const candidateParts = this.getTimezoneParts(new Date(candidateTimestamp), timezone);
+      const candidateWallTimestamp = Date.UTC(
+        candidateParts.year,
+        candidateParts.month - 1,
+        candidateParts.day,
+        candidateParts.hour,
+        candidateParts.minute,
+        candidateParts.second,
+        parts.millisecond
+      );
+      const correction = targetTimestamp - candidateWallTimestamp;
+      candidateTimestamp += correction;
+      if (correction === 0) break;
     }
+
+    const candidateDate = new Date(candidateTimestamp);
+    const resolvedParts = this.getTimezoneParts(candidateDate, timezone);
+    const resolvesToRequestedTime = [
+      'year',
+      'month',
+      'day',
+      'hour',
+      'minute',
+      'second'
+    ].every(key => resolvedParts[key] === parts[key]);
+
+    return resolvesToRequestedTime ? candidateDate : null;
+  }
+
+  /**
+   * Extract numeric calendar fields for an instant in an IANA timezone.
+   * @param {Date} date
+   * @param {string} timezone
+   * @returns {{year:number, month:number, day:number, hour:number, minute:number, second:number}}
+   */
+  static getTimezoneParts(date, timezone) {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23'
+    });
+    const values = Object.fromEntries(
+      formatter.formatToParts(date)
+        .filter(part => part.type !== 'literal')
+        .map(part => [part.type, Number(part.value)])
+    );
+    return {
+      year: values.year,
+      month: values.month,
+      day: values.day,
+      hour: values.hour,
+      minute: values.minute,
+      second: values.second
+    };
   }
 
   /**
