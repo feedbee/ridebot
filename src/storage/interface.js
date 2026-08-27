@@ -73,6 +73,7 @@
  * @property {Object} rideDefaults
  * @property {boolean} rideDefaults.notifyParticipation
  * @property {boolean} rideDefaults.allowReposts
+ * @property {'all'|'membership'} [participationNotificationLevel]
  */
 
 /**

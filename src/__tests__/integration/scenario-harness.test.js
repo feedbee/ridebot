@@ -602,4 +602,57 @@ describe('Scenario Harness Integration', () => {
       ])
     );
   });
+
+  it('applies the live membership-only notification level across participation changes', async () => {
+    const harness = await createScenarioHarness();
+    const owner = { id: 42, first_name: 'Alex', last_name: 'Rider', username: 'alex' };
+    const guest = { id: 77, first_name: 'Sam', last_name: 'Guest', username: 'sam' };
+    const chat = { id: 501, type: 'private' };
+
+    await harness.dispatchMessage({ text: '/settings', chat, from: owner });
+    const settingsMessage = harness.outbox.replies.at(-1);
+    await harness.dispatchCallback({
+      data: 'settings:user:notification-level:membership',
+      chat,
+      from: owner,
+      message: {
+        message_id: settingsMessage.messageId,
+        text: settingsMessage.text,
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' }
+      }
+    });
+    expect(harness.storage.users.get(owner.id).settings.participationNotificationLevel).toBe('membership');
+
+    await harness.dispatchMessage({
+      text: '/newride\ntitle: Membership Ride\nwhen: tomorrow 11:00',
+      chat,
+      from: owner
+    });
+    const [ride] = harness.listRides();
+    const trackedMessage = ride.messages[0];
+    const callbackMessage = {
+      message_id: trackedMessage.messageId,
+      text: 'Membership Ride',
+      chat,
+      from: { id: 0, is_bot: true, username: 'testbot' }
+    };
+    const ownerDmCount = () => harness.outbox.replies.filter(reply => reply.chatId === owner.id).length;
+
+    const beforeThinking = ownerDmCount();
+    await harness.dispatchCallback({ data: `thinking:${ride.id}`, chat, from: guest, message: callbackMessage });
+    await jest.advanceTimersByTimeAsync(20_000);
+    expect(ownerDmCount()).toBe(beforeThinking);
+
+    await harness.dispatchCallback({ data: `join:${ride.id}`, chat, from: guest, message: callbackMessage });
+    await jest.advanceTimersByTimeAsync(20_000);
+    expect(harness.outbox.replies.filter(reply => reply.chatId === owner.id).at(-1).text)
+      .toContain('joined your ride');
+
+    await harness.dispatchCallback({ data: `thinking:${ride.id}`, chat, from: guest, message: callbackMessage });
+    await harness.dispatchCallback({ data: `skip:${ride.id}`, chat, from: guest, message: callbackMessage });
+    await jest.advanceTimersByTimeAsync(20_000);
+    expect(harness.outbox.replies.filter(reply => reply.chatId === owner.id).at(-1).text)
+      .toContain('declined your ride');
+  });
 });

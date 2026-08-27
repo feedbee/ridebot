@@ -13,6 +13,7 @@ const tr = (key, params = {}) =>
 describe('NotificationService', () => {
   let service;
   let mockApi;
+  let mockSettingsService;
   const ride = {
     id: 'ride-1',
     title: 'Morning Ride',
@@ -30,7 +31,10 @@ describe('NotificationService', () => {
 
   beforeEach(() => {
     jest.useFakeTimers();
-    service = new NotificationService();
+    mockSettingsService = {
+      getParticipationNotificationLevel: jest.fn().mockResolvedValue('all')
+    };
+    service = new NotificationService(mockSettingsService);
     mockApi = { sendMessage: jest.fn().mockResolvedValue({}) };
   });
 
@@ -40,7 +44,7 @@ describe('NotificationService', () => {
 
   describe('scheduleParticipationNotification', () => {
     it('sends notification after 20s', async () => {
-      service.scheduleParticipationNotification(ride, participant, 'joined', mockApi);
+      service.scheduleParticipationNotification(ride, participant, null, 'joined', mockApi);
       expect(mockApi.sendMessage).not.toHaveBeenCalled();
 
       await jest.runAllTimersAsync();
@@ -54,9 +58,9 @@ describe('NotificationService', () => {
     });
 
     it('debounces rapid state changes — only final state fires', async () => {
-      service.scheduleParticipationNotification(ride, participant, 'joined', mockApi);
-      service.scheduleParticipationNotification(ride, participant, 'thinking', mockApi);
-      service.scheduleParticipationNotification(ride, participant, 'skipped', mockApi);
+      service.scheduleParticipationNotification(ride, participant, null, 'joined', mockApi);
+      service.scheduleParticipationNotification(ride, participant, 'joined', 'thinking', mockApi);
+      service.scheduleParticipationNotification(ride, participant, 'thinking', 'skipped', mockApi);
 
       await jest.runAllTimersAsync();
 
@@ -78,7 +82,7 @@ describe('NotificationService', () => {
           notifyParticipation: false
         }
       };
-      service.scheduleParticipationNotification(silentRide, participant, 'joined', mockApi);
+      service.scheduleParticipationNotification(silentRide, participant, null, 'joined', mockApi);
 
       await jest.runAllTimersAsync();
 
@@ -87,7 +91,7 @@ describe('NotificationService', () => {
 
     it('does not send when participant is the ride creator', async () => {
       const creatorParticipant = { ...participant, userId: ride.createdBy };
-      service.scheduleParticipationNotification(ride, creatorParticipant, 'joined', mockApi);
+      service.scheduleParticipationNotification(ride, creatorParticipant, null, 'joined', mockApi);
 
       await jest.runAllTimersAsync();
 
@@ -96,8 +100,8 @@ describe('NotificationService', () => {
 
     it('sends independently for two different participants', async () => {
       const bob = { userId: 300, username: 'bob', firstName: 'Bob', lastName: '' };
-      service.scheduleParticipationNotification(ride, participant, 'joined', mockApi);
-      service.scheduleParticipationNotification(ride, bob, 'thinking', mockApi);
+      service.scheduleParticipationNotification(ride, participant, null, 'joined', mockApi);
+      service.scheduleParticipationNotification(ride, bob, null, 'thinking', mockApi);
 
       await jest.runAllTimersAsync();
 
@@ -106,8 +110,8 @@ describe('NotificationService', () => {
 
     it('uses correct message template for each state', async () => {
       for (const state of ['joined', 'thinking', 'skipped']) {
-        service = new NotificationService();
-        service.scheduleParticipationNotification(ride, participant, state, mockApi);
+        service = new NotificationService(mockSettingsService);
+        service.scheduleParticipationNotification(ride, participant, null, state, mockApi);
         await jest.runAllTimersAsync();
 
         const sentText = mockApi.sendMessage.mock.calls[mockApi.sendMessage.mock.calls.length - 1][1];
@@ -125,13 +129,75 @@ describe('NotificationService', () => {
       mockApi.sendMessage.mockRejectedValueOnce(apiError);
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-      service.scheduleParticipationNotification(ride, participant, 'joined', mockApi);
+      service.scheduleParticipationNotification(ride, participant, null, 'joined', mockApi);
       await jest.runAllTimersAsync();
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         expect.stringContaining('NotificationService'),
         apiError
       );
+      consoleErrorSpy.mockRestore();
+    });
+
+    it.each([
+      [null, 'thinking'],
+      [null, 'skipped'],
+      ['thinking', 'skipped'],
+      ['skipped', 'thinking']
+    ])('suppresses non-membership transition %s -> %s in membership mode', async (previousState, targetState) => {
+      mockSettingsService.getParticipationNotificationLevel.mockResolvedValue('membership');
+      service.scheduleParticipationNotification(ride, participant, previousState, targetState, mockApi);
+
+      await jest.runAllTimersAsync();
+
+      expect(mockApi.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      [null, 'joined'],
+      ['thinking', 'joined'],
+      ['skipped', 'joined'],
+      ['joined', 'thinking'],
+      ['joined', 'skipped']
+    ])('sends membership transition %s -> %s', async (previousState, targetState) => {
+      mockSettingsService.getParticipationNotificationLevel.mockResolvedValue('membership');
+      service.scheduleParticipationNotification(ride, participant, previousState, targetState, mockApi);
+
+      await jest.runAllTimersAsync();
+
+      expect(mockApi.sendMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it('uses the first previous state and suppresses a round trip', async () => {
+      mockSettingsService.getParticipationNotificationLevel.mockResolvedValue('all');
+      service.scheduleParticipationNotification(ride, participant, 'joined', 'thinking', mockApi);
+      service.scheduleParticipationNotification(ride, participant, 'thinking', 'joined', mockApi);
+
+      await jest.runAllTimersAsync();
+
+      expect(mockApi.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('reads the current preference when the timer fires', async () => {
+      mockSettingsService.getParticipationNotificationLevel.mockResolvedValue('membership');
+      service.scheduleParticipationNotification(ride, participant, null, 'thinking', mockApi);
+      mockSettingsService.getParticipationNotificationLevel.mockResolvedValue('all');
+
+      await jest.runAllTimersAsync();
+
+      expect(mockApi.sendMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to all when preference lookup fails', async () => {
+      const error = new Error('storage unavailable');
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockSettingsService.getParticipationNotificationLevel.mockRejectedValue(error);
+      service.scheduleParticipationNotification(ride, participant, null, 'thinking', mockApi);
+
+      await jest.runAllTimersAsync();
+
+      expect(mockApi.sendMessage).toHaveBeenCalledTimes(1);
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('failed to read'), error);
       consoleErrorSpy.mockRestore();
     });
 

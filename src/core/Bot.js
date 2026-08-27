@@ -45,7 +45,7 @@ export class Bot {
     const rideService = new RideService(storage, settingsService);
     const messageFormatter = new MessageFormatter();
     const rideMessagesService = new RideMessagesService(rideService, messageFormatter);
-    const notificationService = new NotificationService();
+    const notificationService = new NotificationService(settingsService);
     this.wizard = new RideWizard(storage, rideService, messageFormatter, rideMessagesService);
     const aiRideService = new AiRideService();
     this.aiRideHandler = new AiRideCommandHandler(rideService, messageFormatter, rideMessagesService, aiRideService);
@@ -141,6 +141,7 @@ export class Bot {
         { pattern: /^rideowner:participants:(\w+)$/, handler: (ctx) => listParticipantsHandler.handleCallback(ctx) },
         { pattern: /^rideowner:settings:(\w+)$/, handler: (ctx) => rideSettingsHandler.handleCallback(ctx) },
         { pattern: /^settings:user:bool:(\w+):(on|off)$/, handler: (ctx) => rideSettingsHandler.handleUserBooleanCallback(ctx) },
+        { pattern: /^settings:user:notification-level:(\w+)$/, handler: (ctx) => rideSettingsHandler.handleUserNotificationLevelCallback(ctx) },
         { pattern: /^settings:ride:bool:(\w+):(on|off):(\w+)$/, handler: (ctx) => rideSettingsHandler.handleRideBooleanCallback(ctx) },
         { pattern: /^wizard:(\w+)(?::(.*))?$/, handler: (ctx) => this.wizard.handleWizardAction(ctx) },
         { pattern: /^airide:(confirm|cancel):(\d+:\d+)$/, handler: (ctx) => this.aiRideHandler.handleCallback(ctx) },

@@ -89,7 +89,31 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
       defaults = updatedUser.settings.rideDefaults;
     }
 
-    await this.showUserSettings(ctx, 'edit', defaults);
+    await this.showUserSettings(ctx, 'edit', { rideDefaults: defaults });
+    await ctx.answerCallbackQuery(this.translate(ctx, 'commands.settings.updated'));
+  }
+
+  /**
+   * @param {import('grammy').Context} ctx
+   * @returns {Promise<void>}
+   */
+  async handleUserNotificationLevelCallback(ctx) {
+    const requestedLevel = ctx.match?.[1];
+    const resolvedLevel = SettingsService.resolveParticipationNotificationLevel(requestedLevel);
+    if (requestedLevel !== resolvedLevel) {
+      await ctx.answerCallbackQuery(this.translate(ctx, 'errors.generic'));
+      return;
+    }
+
+    const currentLevel = await this.settingsService.getParticipationNotificationLevel(ctx.from.id);
+    if (currentLevel !== requestedLevel) {
+      await this.settingsService.updateParticipationNotificationLevel(
+        UserProfile.fromTelegramUser(ctx.from),
+        requestedLevel
+      );
+    }
+
+    await this.showUserSettings(ctx, 'edit', { participationNotificationLevel: requestedLevel });
     await ctx.answerCallbackQuery(this.translate(ctx, 'commands.settings.updated'));
   }
 
@@ -143,10 +167,15 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
    * @param {Object|null} defaultsOverride
    * @returns {Promise<void>}
    */
-  async showUserSettings(ctx, mode, defaultsOverride = null) {
-    const defaults = defaultsOverride || await this.settingsService.getUserRideDefaults(ctx.from.id);
-    const text = this.buildUserSettingsText(ctx, defaults);
-    const keyboard = this.buildUserSettingsKeyboard(ctx, defaults);
+  async showUserSettings(ctx, mode, settingsOverride = null) {
+    const [storedDefaults, storedLevel] = await Promise.all([
+      this.settingsService.getUserRideDefaults(ctx.from.id),
+      this.settingsService.getParticipationNotificationLevel(ctx.from.id)
+    ]);
+    const defaults = settingsOverride?.rideDefaults || storedDefaults;
+    const level = settingsOverride?.participationNotificationLevel || storedLevel;
+    const text = this.buildUserSettingsText(ctx, defaults, level);
+    const keyboard = this.buildUserSettingsKeyboard(ctx, defaults, level);
     const options = {
       parse_mode: 'HTML',
       reply_markup: keyboard
@@ -190,13 +219,17 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
    * @param {Object} defaults
    * @returns {string}
    */
-  buildUserSettingsText(ctx, defaults) {
+  buildUserSettingsText(ctx, defaults, level) {
     return [
       `<b>${this.translate(ctx, 'commands.settings.userTitle')}</b>`,
       '',
       this.buildSettingLine(ctx, 'commands.settings.notifyParticipationLabel', defaults.notifyParticipation),
       this.buildSettingLine(ctx, 'commands.settings.allowRepostsLabel', defaults.allowReposts),
-      this.translate(ctx, 'commands.settings.userHint')
+      this.translate(ctx, 'commands.settings.userHint'),
+      '',
+      `<b>${this.translate(ctx, 'commands.settings.notificationPreferencesTitle')}</b>`,
+      `${this.translate(ctx, 'commands.settings.participationNotificationLevelLabel')}: <b>${this.translate(ctx, `commands.settings.notificationLevel.${level}`)}</b>`,
+      this.translate(ctx, 'commands.settings.notificationPreferencesHint')
     ].join('\n');
   }
 
@@ -205,7 +238,7 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
    * @param {Object} defaults
    * @returns {InlineKeyboard}
    */
-  buildUserSettingsKeyboard(ctx, defaults) {
+  buildUserSettingsKeyboard(ctx, defaults, level) {
     return new InlineKeyboard()
       .text(
         this.getSettingToggleLabel(ctx, defaults.notifyParticipation, {
@@ -221,6 +254,16 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
           disableKey: 'commands.settings.disableReposts'
         }),
         `settings:user:bool:repost:${defaults.allowReposts ? 'off' : 'on'}`
+      )
+      .row()
+      .text(
+        `${level === 'all' ? '✓ ' : ''}${this.translate(ctx, 'commands.settings.notificationLevel.all')}`,
+        'settings:user:notification-level:all'
+      )
+      .row()
+      .text(
+        `${level === 'membership' ? '✓ ' : ''}${this.translate(ctx, 'commands.settings.notificationLevel.membership')}`,
+        'settings:user:notification-level:membership'
       );
   }
 

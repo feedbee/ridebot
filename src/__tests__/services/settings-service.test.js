@@ -68,6 +68,36 @@ describe('SettingsService', () => {
     });
   });
 
+  describe('participation notification level', () => {
+    it('defaults missing users and invalid stored values to all without materializing', async () => {
+      await expect(service.getParticipationNotificationLevel(123)).resolves.toBe('all');
+      await expect(storage.getUser(123)).resolves.toBeNull();
+
+      await storage.upsertUser({ userId: 456, settings: { participationNotificationLevel: 'invalid' } });
+      await expect(service.getParticipationNotificationLevel(456)).resolves.toBe('all');
+    });
+
+    it('reads membership and updates it while preserving ride defaults', async () => {
+      const profile = new UserProfile({ userId: 123, username: 'alice' });
+      await service.updateUserRideDefaults(profile, { notifyParticipation: false });
+      const user = await service.updateParticipationNotificationLevel(profile, 'membership');
+
+      expect(user.settings).toEqual({
+        rideDefaults: { notifyParticipation: false, allowReposts: false },
+        participationNotificationLevel: 'membership'
+      });
+      await expect(service.getParticipationNotificationLevel(123)).resolves.toBe('membership');
+    });
+
+    it('preserves the level when ride defaults are updated', async () => {
+      const profile = new UserProfile({ userId: 123 });
+      await service.updateParticipationNotificationLevel(profile, 'membership');
+      const user = await service.updateUserRideDefaults(profile, { allowReposts: true });
+
+      expect(user.settings.participationNotificationLevel).toBe('membership');
+    });
+  });
+
   describe('ride settings snapshots', () => {
     it('builds new ride settings from persisted user defaults', async () => {
       await service.updateUserRideDefaults(

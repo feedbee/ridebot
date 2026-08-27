@@ -2,6 +2,11 @@
  * Application service for user defaults and ride settings snapshots.
  */
 export class SettingsService {
+  static PARTICIPATION_NOTIFICATION_LEVELS = Object.freeze({
+    ALL: 'all',
+    MEMBERSHIP: 'membership'
+  });
+
   /**
    * @param {import('../storage/interface.js').StorageInterface} storage
    */
@@ -38,6 +43,16 @@ export class SettingsService {
    */
   static getEffectiveUserRideDefaults(user) {
     return SettingsService.buildRideSettingsSnapshot(user?.settings?.rideDefaults);
+  }
+
+  /**
+   * @param {string|undefined} value
+   * @returns {'all'|'membership'}
+   */
+  static resolveParticipationNotificationLevel(value) {
+    return value === SettingsService.PARTICIPATION_NOTIFICATION_LEVELS.MEMBERSHIP
+      ? SettingsService.PARTICIPATION_NOTIFICATION_LEVELS.MEMBERSHIP
+      : SettingsService.PARTICIPATION_NOTIFICATION_LEVELS.ALL;
   }
 
   /**
@@ -83,6 +98,42 @@ export class SettingsService {
   }
 
   /**
+   * Read the live participation notification preference without creating a user.
+   * @param {number} userId
+   * @returns {Promise<'all'|'membership'>}
+   */
+  async getParticipationNotificationLevel(userId) {
+    const user = await this.storage.getUser(userId);
+    return SettingsService.resolveParticipationNotificationLevel(
+      user?.settings?.participationNotificationLevel
+    );
+  }
+
+  /**
+   * @param {import('../models/UserProfile.js').UserProfile} userProfile
+   * @param {'all'|'membership'} level
+   * @returns {Promise<import('../storage/interface.js').UserEntity>}
+   */
+  async updateParticipationNotificationLevel(userProfile, level) {
+    const resolvedLevel = SettingsService.resolveParticipationNotificationLevel(level);
+    if (resolvedLevel !== level) {
+      throw new Error(`Unsupported participation notification level: ${level}`);
+    }
+
+    const existingUser = await this.storage.getUser(userProfile.userId);
+    return this.storage.upsertUser({
+      userId: userProfile.userId,
+      username: userProfile.username,
+      firstName: userProfile.firstName,
+      lastName: userProfile.lastName,
+      settings: {
+        ...(existingUser?.settings || {}),
+        participationNotificationLevel: level
+      }
+    });
+  }
+
+  /**
    * Ensure the user exists with persisted defaults.
    *
    * @param {import('../models/UserProfile.js').UserProfile} userProfile
@@ -100,6 +151,7 @@ export class SettingsService {
       firstName: userProfile.firstName,
       lastName: userProfile.lastName,
       settings: {
+        ...(existingUser?.settings || {}),
         rideDefaults: SettingsService.getEffectiveUserRideDefaults(existingUser)
       }
     });
@@ -125,6 +177,7 @@ export class SettingsService {
       firstName: userProfile.firstName,
       lastName: userProfile.lastName,
       settings: {
+        ...(existingUser?.settings || {}),
         rideDefaults: mergedRideDefaults
       }
     });

@@ -10,8 +10,12 @@ const DEBOUNCE_DELAY_MS = 20_000;
  * the pending notification is cancelled and rescheduled with the latest state.
  */
 export class NotificationService {
-  constructor() {
-    /** @type {Map<string, {timer: ReturnType<typeof setTimeout>, participant: Object, state: string}>} */
+  /**
+   * @param {import('./SettingsService.js').SettingsService} settingsService
+   */
+  constructor(settingsService) {
+    this.settingsService = settingsService;
+    /** @type {Map<string, {timer: ReturnType<typeof setTimeout>, participant: Object, initialState: string|null, finalState: string, ride: Object, api: Object}>} */
     this.pendingTimers = new Map();
   }
 
@@ -19,10 +23,11 @@ export class NotificationService {
    * Schedule a participation notification with debouncing.
    * @param {import('../storage/interface.js').Ride} ride
    * @param {Object} participant - Participant data
-   * @param {string} newState - New participation state ('joined'|'thinking'|'skipped')
+   * @param {string|null} previousState
+   * @param {string} targetState
    * @param {Object} api - Grammy bot API object
    */
-  scheduleParticipationNotification(ride, participant, newState, api) {
+  scheduleParticipationNotification(ride, participant, previousState, targetState, api) {
     if (!ride.settings.notifyParticipation) return;
     if (ride.createdBy === participant.userId) return;
 
@@ -32,12 +37,36 @@ export class NotificationService {
       clearTimeout(existing.timer);
     }
 
+    const initialState = existing ? existing.initialState : previousState;
     const timer = setTimeout(async () => {
       this.pendingTimers.delete(key);
-      await this._sendNotification(ride, participant, newState, api);
+      await this._deliverNotification(ride, participant, initialState, targetState, api);
     }, DEBOUNCE_DELAY_MS);
 
-    this.pendingTimers.set(key, { timer, participant, state: newState });
+    this.pendingTimers.set(key, {
+      timer,
+      participant,
+      initialState,
+      finalState: targetState,
+      ride,
+      api
+    });
+  }
+
+  async _deliverNotification(ride, participant, initialState, finalState, api) {
+    if (initialState === finalState) return;
+
+    let level = 'all';
+    try {
+      level = await this.settingsService.getParticipationNotificationLevel(ride.createdBy);
+    } catch (error) {
+      console.error('NotificationService: failed to read participation notification level:', error);
+    }
+
+    const membershipChanged = (initialState === 'joined') !== (finalState === 'joined');
+    if (level === 'membership' && !membershipChanged) return;
+
+    await this._sendNotification(ride, participant, finalState, api);
   }
 
   /**

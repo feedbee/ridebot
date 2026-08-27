@@ -290,6 +290,13 @@ Click here to start a private chat: @botname
     settings: {
       userTitle: 'Default settings for new rides',
       userHint: 'These defaults will be copied into each new ride you create.',
+      notificationPreferencesTitle: 'Notification preferences',
+      participationNotificationLevelLabel: 'Participation notifications',
+      notificationPreferencesHint: 'This live preference applies to all your rides. Notifications can still be disabled for an individual ride.',
+      notificationLevel: {
+        all: 'All participation changes',
+        membership: 'Joins and leaves only'
+      },
       rideTitle: 'Ride settings',
       rideHint: 'These settings affect only this ride.',
       notifyParticipationLabel: 'Notify me when participation changes',

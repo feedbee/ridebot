@@ -76,7 +76,8 @@ rideSchema.index(
 const Ride = mongoose.model('Ride', rideSchema);
 
 const userSettingsSchema = new mongoose.Schema({
-  rideDefaults: { type: rideSettingsSchema, default: undefined }
+  rideDefaults: { type: rideSettingsSchema, default: undefined },
+  participationNotificationLevel: { type: String, enum: ['all', 'membership'], default: undefined }
 }, { _id: false });
 
 const userSchema = new mongoose.Schema({

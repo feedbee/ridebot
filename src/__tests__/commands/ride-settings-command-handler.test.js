@@ -24,6 +24,8 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
 
     mockSettingsService = {
       getUserRideDefaults: jest.fn().mockResolvedValue({ notifyParticipation: true, allowReposts: false }),
+      getParticipationNotificationLevel: jest.fn().mockResolvedValue('all'),
+      updateParticipationNotificationLevel: jest.fn().mockResolvedValue({}),
       updateUserRideDefaults: jest.fn().mockResolvedValue({
         settings: {
           rideDefaults: {
@@ -70,6 +72,7 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
         })
       );
       expect(mockCtx.reply.mock.calls[0][0]).toContain(tr('commands.settings.allowRepostsLabel'));
+      expect(mockCtx.reply.mock.calls[0][0]).toContain(tr('commands.settings.notificationPreferencesTitle'));
       expect(mockCtx.reply.mock.calls[0][0]).toContain('<code>/shareride</code>');
     });
 
@@ -144,6 +147,31 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
       expect(mockCtx.reply).toHaveBeenCalledWith(
         tr('commands.common.onlyCreatorAction')
       );
+    });
+  });
+
+  describe('handleUserNotificationLevelCallback', () => {
+    it('persists membership level and marks it in the redrawn keyboard', async () => {
+      mockCtx.match = ['settings:user:notification-level:membership', 'membership'];
+
+      await handler.handleUserNotificationLevelCallback(mockCtx);
+
+      expect(mockSettingsService.updateParticipationNotificationLevel).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 123 }),
+        'membership'
+      );
+      const keyboard = mockCtx.editMessageText.mock.calls[0][1].reply_markup.inline_keyboard;
+      expect(keyboard[3][0].text).toContain('✓');
+      expect(keyboard[3][0].callback_data).toBe('settings:user:notification-level:membership');
+    });
+
+    it('rejects an unknown level without persistence', async () => {
+      mockCtx.match = ['settings:user:notification-level:nope', 'nope'];
+
+      await handler.handleUserNotificationLevelCallback(mockCtx);
+
+      expect(mockSettingsService.updateParticipationNotificationLevel).not.toHaveBeenCalled();
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('errors.generic'));
     });
   });
 

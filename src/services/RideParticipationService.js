@@ -39,7 +39,13 @@ export class RideParticipationService {
     }
 
     if (this.notificationService) {
-      this.notificationService.scheduleParticipationNotification(result.ride, participantProfile, targetState, api);
+      this.notificationService.scheduleParticipationNotification(
+        result.ride,
+        participantProfile,
+        result.previousState,
+        targetState,
+        api
+      );
     }
 
     if (result.ride.groupId && this.groupManagementService) {

@@ -123,6 +123,7 @@ describe('RideParticipationService', () => {
     expect(mockNotificationService.scheduleParticipationNotification).toHaveBeenCalledWith(
       ride,
       participantProfile,
+      null,
       'joined',
       api
     );
