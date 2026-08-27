@@ -5,6 +5,7 @@
 import { jest } from '@jest/globals';
 import { ShareRideCommandHandler } from '../../commands/ShareRideCommandHandler.js';
 import { t } from '../../i18n/index.js';
+import { config } from '../../config.js';
 
 describe.each(['en', 'ru'])('ShareRideCommandHandler (%s)', (language) => {
   let handler;
@@ -21,6 +22,7 @@ describe.each(['en', 'ru'])('ShareRideCommandHandler (%s)', (language) => {
 
     mockRideMessagesService = {
       extractRideId: jest.fn(),
+      cleanupRideMessagesForScope: jest.fn(),
       createRideMessage: jest.fn()
     };
 
@@ -44,6 +46,12 @@ describe.each(['en', 'ru'])('ShareRideCommandHandler (%s)', (language) => {
     };
 
     handler = new ShareRideCommandHandler(mockRideService, mockMessageFormatter, mockRideMessagesService);
+    mockRideMessagesService.cleanupRideMessagesForScope.mockImplementation(async ride => ({
+      success: true,
+      cleanupNeeded: false,
+      removedCount: 0,
+      updatedRide: ride
+    }));
   });
 
   describe('handle', () => {
@@ -112,7 +120,7 @@ describe.each(['en', 'ru'])('ShareRideCommandHandler (%s)', (language) => {
       expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.share.cannotRepostCancelled'));
     });
 
-    it('does not repost when ride already posted in current chat', async () => {
+    it('allows another announcement in the same chat below the limit', async () => {
       mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '123', error: null });
       mockRideService.getRide.mockResolvedValue({
         id: '123',
@@ -120,10 +128,56 @@ describe.each(['en', 'ru'])('ShareRideCommandHandler (%s)', (language) => {
         cancelled: false,
         messages: [{ chatId: 101112, messageId: 999 }]
       });
+      mockRideMessagesService.createRideMessage.mockResolvedValue({ sentMessage: { message_id: 42 } });
 
       await handler.handle(mockCtx);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.share.alreadyPostedInChat', { topicSuffix: '' }), {
+      expect(mockRideMessagesService.cleanupRideMessagesForScope).toHaveBeenCalledWith(
+        expect.objectContaining({ id: '123' }),
+        mockCtx,
+        101112,
+        null,
+        config.maxRideMessagesPerChatThread
+      );
+      expect(mockRideMessagesService.createRideMessage).toHaveBeenCalled();
+    });
+
+    it('publishes using the ride returned by cleanup', async () => {
+      const ride = {
+        id: '123',
+        createdBy: 789,
+        cancelled: false,
+        messages: [{ chatId: 101112, messageId: 1 }]
+      };
+      const cleanedRide = { ...ride, messages: [] };
+      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '123', error: null });
+      mockRideService.getRide.mockResolvedValue(ride);
+      mockRideMessagesService.cleanupRideMessagesForScope.mockResolvedValue({
+        success: true,
+        cleanupNeeded: true,
+        removedCount: 1,
+        updatedRide: cleanedRide
+      });
+      mockRideMessagesService.createRideMessage.mockResolvedValue({ sentMessage: { message_id: 42 } });
+
+      await handler.handle(mockCtx);
+
+      expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(cleanedRide, mockCtx, null);
+    });
+
+    it('blocks publication with a localized error when required cleanup fails', async () => {
+      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '123', error: null });
+      mockRideService.getRide.mockResolvedValue({ id: '123', createdBy: 789, cancelled: false, messages: [] });
+      mockRideMessagesService.cleanupRideMessagesForScope.mockResolvedValue({
+        success: false,
+        cleanupNeeded: true,
+        removedCount: 0,
+        updatedRide: { id: '123', messages: [] }
+      });
+
+      await handler.handle(mockCtx);
+
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.share.announcementLimitCleanupFailed'), {
         message_thread_id: null
       });
       expect(mockRideMessagesService.createRideMessage).not.toHaveBeenCalled();

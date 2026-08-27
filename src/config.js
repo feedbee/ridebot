@@ -4,6 +4,11 @@ dotenv.config();
 
 const defaultLanguage = process.env.DEFAULT_LANGUAGE || 'en';
 const fallbackLanguage = process.env.FALLBACK_LANGUAGE || 'en';
+const configuredMaxRideMessagesPerChatThread = Number(process.env.MAX_RIDE_MESSAGES_PER_CHAT_THREAD);
+const maxRideMessagesPerChatThread = Number.isInteger(configuredMaxRideMessagesPerChatThread) &&
+  configuredMaxRideMessagesPerChatThread > 0
+  ? configuredMaxRideMessagesPerChatThread
+  : 5;
 
 export const config = {
   isDev: process.env.NODE_ENV === 'development',
@@ -70,6 +75,7 @@ export const config = {
     }
   },
   maxParticipantsDisplay: parseInt(process.env.MAX_PARTICIPANTS_DISPLAY, 10) || 20,
+  maxRideMessagesPerChatThread,
   strava: {
     clientId:     process.env.STRAVA_CLIENT_ID     || null,
     clientSecret: process.env.STRAVA_CLIENT_SECRET || null,

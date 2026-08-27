@@ -72,6 +72,62 @@ describe('Scenario Harness Integration', () => {
     );
   });
 
+  it('keeps repeated /shareride announcements bounded and synchronizes retained messages', async () => {
+    const originalLimit = process.env.MAX_RIDE_MESSAGES_PER_CHAT_THREAD;
+    process.env.MAX_RIDE_MESSAGES_PER_CHAT_THREAD = '2';
+
+    try {
+      const harness = await createScenarioHarness();
+      const owner = { id: 42, first_name: 'Alex', last_name: 'Rider', username: 'alex' };
+      const guest = { id: 43, first_name: 'Sam', last_name: 'Guest', username: 'sam' };
+      const chat = { id: 501, type: 'private' };
+
+      await harness.dispatchMessage({
+        text: '/newride\ntitle: Repeat Ride\nwhen: tomorrow 11:00',
+        chat,
+        from: owner,
+      });
+
+      const [createdRide] = harness.listRides();
+      const oldestMessageId = createdRide.messages[0].messageId;
+
+      await harness.dispatchMessage({ text: `/shareride ${createdRide.id}`, chat, from: owner });
+      expect(harness.getRide(createdRide.id).messages).toHaveLength(2);
+      expect(harness.outbox.deletes).toEqual([]);
+
+      await harness.dispatchMessage({ text: `/shareride ${createdRide.id}`, chat, from: owner });
+
+      const retainedRide = harness.getRide(createdRide.id);
+      const retainedMessageIds = retainedRide.messages.map(message => message.messageId);
+      expect(harness.outbox.deletes).toEqual([{ chatId: chat.id, messageId: oldestMessageId }]);
+      expect(retainedRide.messages).toHaveLength(2);
+      expect(retainedMessageIds).not.toContain(oldestMessageId);
+
+      await harness.dispatchCallback({
+        data: `join:${createdRide.id}`,
+        chat,
+        from: guest,
+        message: {
+          message_id: retainedMessageIds[0],
+          text: 'Repeat Ride',
+          chat,
+          from: { id: 0, is_bot: true, username: 'testbot' },
+        },
+      });
+
+      const synchronizedMessageIds = harness.outbox.edits
+        .filter(edit => edit.via === 'api.editMessageText')
+        .map(edit => edit.messageId);
+      expect(synchronizedMessageIds).toEqual(expect.arrayContaining(retainedMessageIds));
+    } finally {
+      if (originalLimit === undefined) {
+        delete process.env.MAX_RIDE_MESSAGES_PER_CHAT_THREAD;
+      } else {
+        process.env.MAX_RIDE_MESSAGES_PER_CHAT_THREAD = originalLimit;
+      }
+    }
+  });
+
   it('starts the update wizard from creator owner button callback', async () => {
     const harness = await createScenarioHarness();
     const owner = { id: 42, first_name: 'Alex', last_name: 'Rider', username: 'alex' };

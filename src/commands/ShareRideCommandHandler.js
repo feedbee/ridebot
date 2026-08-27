@@ -1,5 +1,6 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
 import { SettingsService } from '../services/SettingsService.js';
+import { config } from '../config.js';
 
 /**
  * Handler for the shareride command
@@ -52,23 +53,25 @@ export class ShareRideCommandHandler extends BaseCommandHandler {
       }
 
       const currentChatId = ctx.chat.id;
-      const currentThreadId = ctx.message.message_thread_id || null;
+      const currentThreadId = ctx.message.message_thread_id ?? null;
 
-      // Check if the ride is already posted in the current chat and topic
-      if (ride.messages && ride.messages.some(msg => 
-        msg.chatId === currentChatId && 
-        (msg.messageThreadId || null) === currentThreadId
-      )) {
-        await ctx.reply(this.translate(ctx, 'commands.share.alreadyPostedInChat', {
-          topicSuffix: currentThreadId ? this.translate(ctx, 'commands.share.topicSuffix') : ''
-        }), {
+      const cleanupResult = await this.rideMessagesService.cleanupRideMessagesForScope(
+        ride,
+        ctx,
+        currentChatId,
+        currentThreadId,
+        config.maxRideMessagesPerChatThread
+      );
+
+      if (!cleanupResult.success) {
+        await ctx.reply(this.translate(ctx, 'commands.share.announcementLimitCleanupFailed'), {
           message_thread_id: currentThreadId
         });
         return;
       }
 
       // Post the ride to the current chat
-      const result = await this.shareRideToChat(ride, ctx);
+      const result = await this.shareRideToChat(cleanupResult.updatedRide, ctx);
       
       if (!result.success) {
         await ctx.reply(this.translate(ctx, 'commands.share.failedToPostWithError', { error: result.error }));

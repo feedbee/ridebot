@@ -608,6 +608,126 @@ describe('RideMessagesService', () => {
     });
   });
 
+  describe('cleanupRideMessagesForScope', () => {
+    const createCtx = () => ({
+      api: {
+        deleteMessage: jest.fn().mockResolvedValue(true)
+      }
+    });
+
+    it('does nothing while the scope is below the limit', async () => {
+      const ride = {
+        id: 'ride123',
+        messages: [{ chatId: 100, messageId: 1 }]
+      };
+      const ctx = createCtx();
+
+      const result = await rideMessagesService.cleanupRideMessagesForScope(ride, ctx, 100, null, 2);
+
+      expect(result).toEqual({ success: true, cleanupNeeded: false, removedCount: 0, updatedRide: ride });
+      expect(ctx.api.deleteMessage).not.toHaveBeenCalled();
+      expect(mockRideService.updateRide).not.toHaveBeenCalled();
+    });
+
+    it('deletes the oldest exact scoped message and persists its removal', async () => {
+      const ride = {
+        id: 'ride123',
+        messages: [
+          { chatId: 100, messageId: 1 },
+          { chatId: 100, messageId: 2, messageThreadId: null },
+          { chatId: 100, messageId: 3, messageThreadId: 9 },
+          { chatId: 200, messageId: 4 }
+        ]
+      };
+      const ctx = createCtx();
+      mockRideService.updateRide.mockImplementation(async (id, patch) => ({ ...ride, ...patch }));
+
+      const result = await rideMessagesService.cleanupRideMessagesForScope(ride, ctx, 100, null, 2);
+
+      expect(ctx.api.deleteMessage).toHaveBeenCalledWith(100, 1);
+      expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
+        messages: [
+          { chatId: 100, messageId: 2, messageThreadId: null },
+          { chatId: 100, messageId: 3, messageThreadId: 9 },
+          { chatId: 200, messageId: 4 }
+        ]
+      });
+      expect(result.success).toBe(true);
+      expect(result.removedCount).toBe(1);
+    });
+
+    it('treats two topics in the same chat as independent scopes', async () => {
+      const ride = {
+        id: 'ride123',
+        messages: [
+          { chatId: 100, messageId: 1, messageThreadId: 8 },
+          { chatId: 100, messageId: 2, messageThreadId: 9 },
+          { chatId: 100, messageId: 3, messageThreadId: 8 }
+        ]
+      };
+      const ctx = createCtx();
+      mockRideService.updateRide.mockImplementation(async (id, patch) => ({ ...ride, ...patch }));
+
+      const result = await rideMessagesService.cleanupRideMessagesForScope(ride, ctx, 100, 8, 2);
+
+      expect(ctx.api.deleteMessage).toHaveBeenCalledWith(100, 1);
+      expect(result.updatedRide.messages).toEqual([
+        { chatId: 100, messageId: 2, messageThreadId: 9 },
+        { chatId: 100, messageId: 3, messageThreadId: 8 }
+      ]);
+    });
+
+    it('removes all excess oldest messages after the limit is reduced', async () => {
+      const ride = {
+        id: 'ride123',
+        messages: [1, 2, 3, 4].map(messageId => ({ chatId: 100, messageId }))
+      };
+      const ctx = createCtx();
+      mockRideService.updateRide.mockImplementation(async (id, patch) => ({ ...ride, ...patch }));
+
+      const result = await rideMessagesService.cleanupRideMessagesForScope(ride, ctx, 100, null, 2);
+
+      expect(ctx.api.deleteMessage.mock.calls).toEqual([[100, 1], [100, 2], [100, 3]]);
+      expect(result.updatedRide.messages).toEqual([{ chatId: 100, messageId: 4 }]);
+    });
+
+    it('treats a missing Telegram message as successful cleanup', async () => {
+      const ride = { id: 'ride123', messages: [{ chatId: 100, messageId: 1 }] };
+      const ctx = createCtx();
+      const error = new Error('missing');
+      error.description = 'Bad Request: message to delete not found';
+      ctx.api.deleteMessage.mockRejectedValue(error);
+      mockRideService.updateRide.mockImplementation(async (id, patch) => ({ ...ride, ...patch }));
+
+      const result = await rideMessagesService.cleanupRideMessagesForScope(ride, ctx, 100, null, 1);
+
+      expect(result.success).toBe(true);
+      expect(result.updatedRide.messages).toEqual([]);
+    });
+
+    it('blocks on other deletion failures while retaining earlier successful cleanup', async () => {
+      const ride = {
+        id: 'ride123',
+        messages: [1, 2, 3].map(messageId => ({ chatId: 100, messageId }))
+      };
+      const ctx = createCtx();
+      ctx.api.deleteMessage
+        .mockResolvedValueOnce(true)
+        .mockRejectedValueOnce(Object.assign(new Error('forbidden'), { description: 'Forbidden: not enough rights' }));
+      mockRideService.updateRide.mockImplementation(async (id, patch) => ({ ...ride, ...patch }));
+
+      const result = await rideMessagesService.cleanupRideMessagesForScope(ride, ctx, 100, null, 2);
+
+      expect(result.success).toBe(false);
+      expect(result.removedCount).toBe(1);
+      expect(result.updatedRide.messages).toEqual([
+        { chatId: 100, messageId: 2 },
+        { chatId: 100, messageId: 3 }
+      ]);
+      expect(mockRideService.updateRide).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('updateRideMessages', () => {
     it('should return early when ride has no messages', async () => {
       // Setup

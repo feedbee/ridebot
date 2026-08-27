@@ -136,6 +136,55 @@ export class RideMessagesService {
   }
 
   /**
+   * Delete the oldest tracked messages needed to make room in one chat/topic scope.
+   * @param {Object} ride - Ride object
+   * @param {import('grammy').Context} ctx - Grammy context
+   * @param {number} chatId - Target chat ID
+   * @param {number|null} messageThreadId - Target topic ID, or null for the main chat
+   * @param {number} limit - Maximum tracked messages in the scope after publication
+   * @returns {Promise<{success: boolean, cleanupNeeded: boolean, removedCount: number, updatedRide: Object, error?: unknown}>}
+   */
+  async cleanupRideMessagesForScope(ride, ctx, chatId, messageThreadId, limit) {
+    const normalizedThreadId = messageThreadId ?? null;
+    const scopedMessages = (ride.messages || []).filter(message =>
+      message.chatId === chatId && (message.messageThreadId ?? null) === normalizedThreadId
+    );
+    const removalCount = Math.max(0, scopedMessages.length - limit + 1);
+
+    if (removalCount === 0) {
+      return { success: true, cleanupNeeded: false, removedCount: 0, updatedRide: ride };
+    }
+
+    let updatedRide = ride;
+    let removedCount = 0;
+
+    for (const message of scopedMessages.slice(0, removalCount)) {
+      try {
+        await ctx.api.deleteMessage(message.chatId, message.messageId);
+      } catch (error) {
+        if (!error.description?.includes('message to delete not found')) {
+          return { success: false, cleanupNeeded: true, removedCount, updatedRide, error };
+        }
+      }
+
+      const messages = [...(updatedRide.messages || [])];
+      const messageIndex = messages.findIndex(candidate =>
+        candidate.chatId === message.chatId &&
+        candidate.messageId === message.messageId &&
+        (candidate.messageThreadId ?? null) === (message.messageThreadId ?? null)
+      );
+
+      if (messageIndex !== -1) {
+        messages.splice(messageIndex, 1);
+        updatedRide = await this.rideService.updateRide(ride.id, { messages });
+      }
+      removedCount++;
+    }
+
+    return { success: true, cleanupNeeded: true, removedCount, updatedRide };
+  }
+
+  /**
    * Update all messages for a ride across all chats
    * @param {Object} ride - Ride object
    * @param {import('grammy').Context} ctx - Grammy context

@@ -348,6 +348,7 @@ Click here to start a private chat: @botname
       onlyCreatorRepost: 'Only the ride creator can repost this ride.',
       cannotRepostCancelled: 'Cannot repost a cancelled ride.',
       alreadyPostedInChat: 'This ride is already posted in this chat{topicSuffix}.',
+      announcementLimitCleanupFailed: 'The announcement limit for this chat or topic has been reached, and the oldest announcement could not be removed. The new announcement was not published.',
       topicSuffix: ' topic',
       failedToPostWithError: 'Failed to post ride: {error}',
       postingError: 'An error occurred while posting the ride.',
