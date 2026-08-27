@@ -211,10 +211,9 @@ describe('wizardFieldConfig', () => {
       expect(result.value.speedMax).toBe(25);
     });
 
-    it('should accept any input (validation is lenient)', () => {
-      // The actual validator accepts most inputs
+    it('should reject malformed input', () => {
       const result = WIZARD_FIELDS.speed.validator('abc');
-      expect(result.valid).toBe(true);
+      expect(result.valid).toBe(false);
     });
 
     it('should accept negative speeds (validation is lenient)', () => {
@@ -222,9 +221,9 @@ describe('wizardFieldConfig', () => {
       expect(result.valid).toBe(true);
     });
 
-    it('should accept reversed range (validation is lenient)', () => {
+    it('should reject reversed range', () => {
       const result = WIZARD_FIELDS.speed.validator('30-25');
-      expect(result.valid).toBe(true);
+      expect(result.valid).toBe(false);
     });
 
     it('should be optional and clearable', () => {

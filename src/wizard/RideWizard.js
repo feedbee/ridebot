@@ -421,6 +421,8 @@ export class RideWizard {
       duration:       d.duration       ?? null,
       speedMin:       d.speedMin       ?? null,
       speedMax:       d.speedMax       ?? null,
+      cruisingSpeedMin: d.cruisingSpeedMin ?? null,
+      cruisingSpeedMax: d.cruisingSpeedMax ?? null,
       additionalInfo: d.additionalInfo ?? null
     };
   }

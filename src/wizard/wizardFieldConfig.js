@@ -229,10 +229,13 @@ export function getWizardFields(language = config.i18n.defaultLanguage) {
       required: false,
       clearable: true,
       skippable: true,
-      nextStep: 'meet',
+      nextStep: 'cruisingSpeed',
       previousStep: 'duration',
       validator: (text) => {
         const parsed = parseSpeedInput(text);
+        if (parsed === null) {
+          return { valid: false, error: translate(language, 'wizard.validation.speedInvalid') };
+        }
         return {
           valid: true,
           value: {
@@ -247,6 +250,37 @@ export function getWizardFields(language = config.i18n.defaultLanguage) {
       hasValue: (state) => state.data.speedMin || state.data.speedMax
     },
 
+    cruisingSpeed: {
+      step: 'cruisingSpeed',
+      type: FieldType.SPEED,
+      dataKey: ['cruisingSpeedMin', 'cruisingSpeedMax'],
+      prompt: translate(language, 'wizard.prompts.cruisingSpeed'),
+      required: false,
+      clearable: true,
+      skippable: true,
+      nextStep: 'meet',
+      previousStep: 'speed',
+      validator: (text) => {
+        const parsed = parseSpeedInput(text);
+        if (parsed === null) {
+          return { valid: false, error: translate(language, 'wizard.validation.cruisingSpeedInvalid') };
+        }
+        return {
+          valid: true,
+          value: {
+            cruisingSpeedMin: parsed.speedMin ?? null,
+            cruisingSpeedMax: parsed.speedMax ?? null
+          }
+        };
+      },
+      formatter: (value, state) => formatSpeed(
+        state.data.cruisingSpeedMin,
+        state.data.cruisingSpeedMax,
+        language
+      ),
+      hasValue: (state) => state.data.cruisingSpeedMin || state.data.cruisingSpeedMax
+    },
+
     meet: {
       step: 'meet',
       type: FieldType.TEXT,
@@ -256,7 +290,7 @@ export function getWizardFields(language = config.i18n.defaultLanguage) {
       clearable: true,
       skippable: true,
       nextStep: 'info',
-      previousStep: 'speed',
+      previousStep: 'cruisingSpeed',
       validator: (text) => ({ valid: true, value: text })
     },
 
@@ -323,6 +357,8 @@ export function buildRideDataFromWizard(wizardData, metadata = {}) {
     duration: wizardData.duration,
     speedMin: wizardData.speedMin,
     speedMax: wizardData.speedMax,
+    cruisingSpeedMin: wizardData.cruisingSpeedMin,
+    cruisingSpeedMax: wizardData.cruisingSpeedMax,
     additionalInfo: wizardData.additionalInfo
   };
 

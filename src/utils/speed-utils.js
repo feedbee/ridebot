@@ -22,30 +22,27 @@ function tr(language, key, params = {}) {
  * @returns {{ speedMin?: number, speedMax?: number } | null}
  */
 export function parseSpeedInput(text) {
-  const trimmed = text.trim().replace(/^~/, '');
+  if (typeof text !== 'string') return null;
+  const trimmed = text.trim();
+  const number = '(\\d+(?:\\.\\d+)?)';
+  let match = trimmed.match(new RegExp(`^-${number}$`));
+  if (match) return { speedMax: Number(match[1]) };
 
-  if (/^-\d/.test(trimmed)) {
-    const max = parseFloat(trimmed.slice(1));
-    if (isNaN(max)) return null;
-    return { speedMax: max };
+  match = trimmed.match(new RegExp(`^${number}[+-]$`));
+  if (match) return { speedMin: Number(match[1]) };
+
+  match = trimmed.match(new RegExp(`^${number}-${number}$`));
+  if (match) {
+    const speedMin = Number(match[1]);
+    const speedMax = Number(match[2]);
+    return speedMin <= speedMax ? { speedMin, speedMax } : null;
   }
 
-  if (/\d[+-]$/.test(trimmed)) {
-    const min = parseFloat(trimmed);
-    if (isNaN(min)) return null;
-    return { speedMin: min };
+  match = trimmed.match(new RegExp(`^~?${number}$`));
+  if (match) {
+    const speed = Number(match[1]);
+    return { speedMin: speed, speedMax: speed };
   }
-
-  if (/^\d/.test(trimmed) && trimmed.includes('-')) {
-    const [minStr, maxStr] = trimmed.split('-');
-    const min = parseFloat(minStr);
-    const max = parseFloat(maxStr);
-    if (isNaN(min) || isNaN(max)) return null;
-    return { speedMin: min, speedMax: max };
-  }
-
-  const avg = parseFloat(trimmed);
-  if (!isNaN(avg)) return { speedMin: avg, speedMax: avg };
 
   return null;
 }

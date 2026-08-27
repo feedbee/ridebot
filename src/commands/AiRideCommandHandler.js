@@ -364,6 +364,8 @@ export class AiRideCommandHandler extends BaseCommandHandler {
       duration:     null, // parsed below
       speedMin:     null,
       speedMax:     null,
+      cruisingSpeedMin: null,
+      cruisingSpeedMax: null,
       additionalInfo: null
     };
 
@@ -402,6 +404,18 @@ export class AiRideCommandHandler extends BaseCommandHandler {
     } else if (existingRide) {
       preview.speedMin = existingRide.speedMin ?? null;
       preview.speedMax = existingRide.speedMax ?? null;
+    }
+
+    const cruisingSpeedStr = params.cruisingSpeed ?? null;
+    if (cruisingSpeedStr) {
+      const cruisingSpeedResult = parseSpeedInput(cruisingSpeedStr);
+      if (cruisingSpeedResult) {
+        preview.cruisingSpeedMin = cruisingSpeedResult.speedMin ?? null;
+        preview.cruisingSpeedMax = cruisingSpeedResult.speedMax ?? null;
+      }
+    } else if (existingRide) {
+      preview.cruisingSpeedMin = existingRide.cruisingSpeedMin ?? null;
+      preview.cruisingSpeedMax = existingRide.cruisingSpeedMax ?? null;
     }
 
     // additionalInfo: only free-form notes

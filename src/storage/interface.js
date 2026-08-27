@@ -34,6 +34,8 @@
  * @property {number} [duration]
  * @property {number} [speedMin]
  * @property {number} [speedMax]
+ * @property {number} [cruisingSpeedMin]
+ * @property {number} [cruisingSpeedMax]
  * @property {string} [additionalInfo]
  * @property {boolean} [cancelled]
  * @property {RideSettings} [settings]

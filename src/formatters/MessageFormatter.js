@@ -199,6 +199,9 @@ export class MessageFormatter {
     if (ride.speedMin || ride.speedMax) {
       group4 += `⚡ ${this.translate('formatter.labels.speed', {}, language)}: ${this.formatSpeedRange(ride.speedMin, ride.speedMax, language)}\n`;
     }
+    if (ride.cruisingSpeedMin || ride.cruisingSpeedMax) {
+      group4 += `🛣️ ${this.translate('formatter.labels.cruisingSpeed', {}, language)}: ${this.formatSpeedRange(ride.cruisingSpeedMin, ride.cruisingSpeedMax, language)}\n`;
+    }
     if (group4) {
       rideDetails += `\n${group4}`;
     }
@@ -306,6 +309,9 @@ export class MessageFormatter {
     }
     if (rideData.speedMin || rideData.speedMax) {
       group4 += `⚡ ${this.translate('formatter.labels.speed', {}, language)}: ${this.formatSpeedRange(rideData.speedMin, rideData.speedMax, language)}\n`;
+    }
+    if (rideData.cruisingSpeedMin || rideData.cruisingSpeedMax) {
+      group4 += `🛣️ ${this.translate('formatter.labels.cruisingSpeed', {}, language)}: ${this.formatSpeedRange(rideData.cruisingSpeedMin, rideData.cruisingSpeedMax, language)}\n`;
     }
     if (group4) {
       message += `\n${group4}`;

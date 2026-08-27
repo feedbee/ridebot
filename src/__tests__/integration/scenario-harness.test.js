@@ -72,6 +72,28 @@ describe('Scenario Harness Integration', () => {
     );
   });
 
+  it('creates and renders independent average and cruising speeds', async () => {
+    const harness = await createScenarioHarness();
+
+    await harness.dispatchMessage({
+      text: '/newride\ntitle: Two Speeds\nwhen: tomorrow 11:00\nspeed: 24\ncruisingSpeed: 28-30',
+      chat: { id: 501, type: 'private' },
+      from: { id: 42, first_name: 'Alex', username: 'alex' }
+    });
+
+    const [ride] = harness.listRides();
+    expect(ride).toMatchObject({
+      speedMin: 24,
+      speedMax: 24,
+      cruisingSpeedMin: 28,
+      cruisingSpeedMax: 30
+    });
+    const message = harness.outbox.replies[0].text;
+    expect(message).toContain('⚡ Average moving speed: ~24 km/h');
+    expect(message).toContain('🛣️ Cruising speed: 28-30 km/h');
+    expect(message.indexOf('Average moving speed')).toBeLessThan(message.indexOf('Cruising speed'));
+  });
+
   it('keeps repeated /shareride announcements bounded and synchronizes retained messages', async () => {
     const originalLimit = process.env.MAX_RIDE_MESSAGES_PER_CHAT_THREAD;
     process.env.MAX_RIDE_MESSAGES_PER_CHAT_THREAD = '2';

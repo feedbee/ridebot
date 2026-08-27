@@ -61,10 +61,16 @@ Use these exact field names (all optional except title and when):
   routes: array of strings, each string either a route URL or "Label | URL"
   dist: distance in km as a string number, e.g. "70"
   duration: e.g. "2h 30m", "90m", "1.5h"
-  speed: e.g. "25-28", "25+", "-28", "~25"
+  speed: average moving speed, e.g. "25-28", "25+", "-28", "~25"
+  cruisingSpeed: cruising speed normally held on flat, fast sections, using the same forms
   info: additional notes
   settings: optional object
   settings.notifyParticipation: boolean
+
+Speed classification rules:
+- Explicit average wording ("average speed", "average moving speed", "avg speed", "средняя скорость", "средняя скорость движения") maps to speed.
+- Otherwise unqualified riding speed, pace, cruising speed, riding/holding wording (including "скорость", "темп группы", "едем", "держим") maps to cruisingSpeed.
+- Return both when both concepts are supplied. Never infer one from the other.
 
 Today: ${currentDate} (${timezone})
 Return ONLY valid JSON, no markdown, no explanation. Omit fields that are not mentioned.`;

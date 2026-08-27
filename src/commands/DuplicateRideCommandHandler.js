@@ -77,6 +77,8 @@ export class DuplicateRideCommandHandler extends BaseCommandHandler {
       duration: ride.duration,
       speedMin: ride.speedMin,
       speedMax: ride.speedMax,
+      cruisingSpeedMin: ride.cruisingSpeedMin,
+      cruisingSpeedMax: ride.cruisingSpeedMax,
       additionalInfo: ride.additionalInfo,
       settings: SettingsService.getRideSettingsSnapshot(ride)
     };

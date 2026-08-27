@@ -702,6 +702,17 @@ describe('MessageFormatter', () => {
       expect(result).toContain(tr(language, 'formatter.labels.speed'));
     });
 
+    it.each(['en', 'ru'])('renders average before cruising speed (%s)', (language) => {
+      const result = messageFormatter.formatRidePreview({
+        title: 'Test', speedMin: 24, speedMax: 24, cruisingSpeedMin: 28, cruisingSpeedMax: 30
+      }, language);
+      const averageLabel = tr(language, 'formatter.labels.speed');
+      const cruisingLabel = tr(language, 'formatter.labels.cruisingSpeed');
+      expect(result).toContain(`⚡ ${averageLabel}: ~24`);
+      expect(result).toContain(`🛣️ ${cruisingLabel}: 28-30`);
+      expect(result.indexOf(averageLabel)).toBeLessThan(result.indexOf(cruisingLabel));
+    });
+
     it.each(['en', 'ru'])('HTML-escapes title with special characters (%s)', (language) => {
       const result = messageFormatter.formatRidePreview({ title: '<script>alert("XSS")</script>' }, language);
       expect(result).not.toContain('<script>');

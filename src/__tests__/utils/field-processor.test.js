@@ -135,8 +135,21 @@ describe('FieldProcessor', () => {
     });
 
     // Invalid
-    it('returns empty object for non-numeric input', () => {
-      expect(FieldProcessor.processSpeedField('abc', true)).toEqual({});
+    it('rejects non-numeric input', () => {
+      expect(FieldProcessor.processSpeedField('abc', true)).toBeNull();
     });
+
+    it('maps cruising speed to independent bounds', () => {
+      expect(FieldProcessor.processSpeedField('27-30', true, 'cruisingSpeed')).toEqual({
+        cruisingSpeedMin: 27,
+        cruisingSpeedMax: 30
+      });
+    });
+  });
+
+  it('returns a localized error for malformed speed parameters', () => {
+    const result = FieldProcessor.processRideFields({ speed: '25 km/h' }, false, { language: 'en' });
+    expect(result.data).toBeNull();
+    expect(result.error).toContain('Invalid average moving speed');
   });
 });

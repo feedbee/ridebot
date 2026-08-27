@@ -51,7 +51,8 @@ meet: Meeting point (optional)
 route: Route link or "Label | URL" (repeat to add multiple routes) (optional)
 dist: Distance in km (optional)
 duration: Duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
-speed: Speed in km/h: range (25-28), min (25+ or 25-), max (-28), avg (25 or ~25) (optional)
+speed: Average moving speed in km/h: range (25-28), min (25+ or 25-), max (-28), average (25 or ~25) (optional)
+cruisingSpeed: Cruising speed in km/h, normally held on flat, fast sections (same forms; optional)
 info: Additional information (optional)
 settings.notifyParticipation: yes/no — notify the creator when participants change status (optional)
 settings.allowReposts: yes/no — allow other users to repost this ride with /shareride (optional)
@@ -68,7 +69,8 @@ route: https://www.strava.com/routes/123456
 route: Komoot | https://www.komoot.com/tour/456789
 dist: 35
 duration: 2h 30m
-speed: 25-28
+speed: 24-25
+cruisingSpeed: 28-30
 info: Bring lights and a rain jacket
 </pre>
 
@@ -94,7 +96,7 @@ Send /fromstrava with a Strava club event URL. The bot fetches the event details
 <pre>
 /fromstrava https://www.strava.com/clubs/123/group_events/456
 </pre>
-Fields populated automatically: title, date, meeting point, category, route links, distance, duration, speed range (from pace groups), organizer (club name), and additional info (event link + description + pace groups).
+Fields populated automatically: title, date, meeting point, category, route links, distance, duration, cruising speed (from speed-based pace groups), organizer (club name), and additional info (event link + description + pace groups).
 If the Strava event has an attached route, only that route is imported. Otherwise the bot imports all known route-provider links from the description in discovery order.
     `.trim(),
 
@@ -117,7 +119,8 @@ meet: New meeting point (optional)
 route: New route link or "Label | URL" (repeat to replace the full route list) (optional)
 dist: New distance (optional)
 duration: New duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
-speed: New speed (optional)
+speed: New average moving speed (optional)
+cruisingSpeed: New cruising speed (optional)
 info: Additional information (optional)
 settings.notifyParticipation: yes/no (optional)
 settings.allowReposts: yes/no (optional)
@@ -171,7 +174,8 @@ meet: New meeting point (optional)
 route: New route link or "Label | URL" (repeat to replace the copied route list) (optional)
 dist: New distance (optional)
 duration: New duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
-speed: New speed (optional)
+speed: New average moving speed (optional)
+cruisingSpeed: New cruising speed (optional)
 info: Additional information (optional)
 settings.notifyParticipation: yes/no (optional)
 settings.allowReposts: yes/no (optional)
@@ -458,7 +462,8 @@ Click here to start a private chat: @botname
       route: 'Route',
       distance: 'Distance',
       duration: 'Duration',
-      speed: 'Avg speed',
+      speed: 'Average moving speed',
+      cruisingSpeed: 'Cruising speed',
       additionalInfo: 'Additional info'
     },
     participation: {
@@ -516,7 +521,8 @@ Click here to start a private chat: @botname
       route: '🗺️ Please enter the route link (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
       distance: '📏 Please enter the distance in kilometers (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
       duration: '⏱ Please enter the duration (e.g., \"2h 30m\", \"90m\", \"1.5h\"):\n<i>Enter a dash (-) to clear/skip this field</i>',
-      speed: '⚡ Avg speed in km/h or skip:\n• 25-28 — range\n• 25+ or 25- — minimum\n• -28 — maximum\n• 25 or ~25 — average\n<i>Enter a dash (-) to clear/skip this field</i>',
+      speed: '⚡ Average moving speed in km/h or skip:\nThe average over the full route while moving, excluding stops; it includes climbs, descents, turns, and slow sections.\n• 25-28 — range\n• 25+ or 25- — minimum\n• -28 — maximum\n• 25 or ~25 — average\n<i>Enter a dash (-) to clear/skip this field</i>',
+      cruisingSpeed: '🛣️ Cruising speed in km/h or skip:\nThe speed the group normally holds while riding on flat, fast sections.\n• 25-28 — range\n• 25+ or 25- — minimum\n• -28 — maximum\n• 25 or ~25 — average\n<i>Enter a dash (-) to clear/skip this field</i>',
       meet: '📍 Please enter the meeting point (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
       info: 'ℹ️ Please enter any additional information (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
       notify: '🔔 Notify you when participants join or leave?\n<i>You can change this later by updating the ride.</i>'
@@ -524,7 +530,9 @@ Click here to start a private chat: @botname
     validation: {
       titleRequired: 'Title cannot be empty',
       routeInvalid: 'Invalid route URL format. Please provide a valid URL, use a dash (-) to clear the field, or click Skip.',
-      distanceInvalid: 'Please enter a valid number for distance, or use a dash (-) to clear the field.'
+      distanceInvalid: 'Please enter a valid number for distance, or use a dash (-) to clear the field.',
+      speedInvalid: 'Please enter a valid average moving speed (for example 25-28, 25+, -28, or ~25).',
+      cruisingSpeedInvalid: 'Please enter a valid cruising speed (for example 25-28, 25+, -28, or ~25).'
     },
     confirm: {
       confirmPrompt: '👆 Review the preview above and confirm'
@@ -555,7 +563,12 @@ Click here to start a private chat: @botname
     route: 'Route URL',
     dist: 'Distance in kilometers',
     duration: 'Duration in minutes',
-    speed: 'Speed: range (25-28), min (25+), max (-28), avg (25)',
+    speed: 'Average moving speed: range (25-28), min (25+), max (-28), average (25)',
+    cruisingSpeed: 'Cruising speed: range (25-28), min (25+), max (-28), average (25)',
+    validation: {
+      speedInvalid: 'Invalid average moving speed. Use 25-28, 25+, -28, or ~25.',
+      cruisingSpeedInvalid: 'Invalid cruising speed. Use 25-28, 25+, -28, or ~25.'
+    },
     info: 'Additional information',
     settingsNotifyParticipation: 'Ride setting: notify on participation changes (yes/no)',
     settingsAllowReposts: 'Ride setting: allow other users to repost with /shareride (yes/no)',

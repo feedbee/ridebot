@@ -18,6 +18,8 @@ const testRide = {
   duration: 180,
   speedMin: 25,
   speedMax: 30,
+  cruisingSpeedMin: 32,
+  cruisingSpeedMax: 35,
   additionalInfo: 'This is additional information'
 };
 
@@ -31,7 +33,9 @@ const testRideWithMessages = {
   distance: 50,
   duration: 180,
   speedMin: 25,
-  speedMax: 30
+  speedMax: 30,
+  cruisingSpeedMin: 32,
+  cruisingSpeedMax: 35
 };
 
 const testParticipant = {
@@ -227,6 +231,8 @@ describe('MongoDBStorage', () => {
       expect(retrieved.duration).toBe(completeRide.duration);
       expect(retrieved.speedMin).toBe(completeRide.speedMin);
       expect(retrieved.speedMax).toBe(completeRide.speedMax);
+      expect(retrieved.cruisingSpeedMin).toBe(completeRide.cruisingSpeedMin);
+      expect(retrieved.cruisingSpeedMax).toBe(completeRide.cruisingSpeedMax);
       expect(retrieved.additionalInfo).toBe(completeRide.additionalInfo);
       expect(retrieved.cancelled).toBe(completeRide.cancelled);
       expect(retrieved.createdBy).toBe(completeRide.createdBy);

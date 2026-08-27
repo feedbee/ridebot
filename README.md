@@ -153,7 +153,7 @@ Fetches the Strava club event and creates a ride automatically. The following fi
 - **Title, date, meeting point, category** — directly from the event
 - **Routes** — from the attached route object; if there is no attached route, all known-provider links found in the event description are imported in discovery order (Strava, RideWithGPS, Komoot, Garmin)
 - **Distance and duration** — from the attached route if present; otherwise from the first found route link
-- **Speed range** — derived from pace groups (speed-based only)
+- **Cruising speed** — derived from speed-based pace groups; average moving speed is not inferred
 - **Organizer** — the Strava club name
 - **Additional info** — event URL + description + pace groups detail
 
@@ -174,7 +174,8 @@ route: Komoot | https://www.komoot.com/tour/456789
 route: Short variant | https://ridewithgps.com/routes/987654
 dist: 35
 time: 90
-speed: 25-28
+speed: 24-25
+cruisingSpeed: 28-30
 info: Bring lights and a jacket
 ```
 
@@ -187,7 +188,8 @@ This creates a ride with:
 - Routes: multiple route links in order; the first route is treated as primary
 - Distance: 35 km (optional if route provided)
 - Duration: 90 minutes (optional if route provided)
-- Speed: 25-28 km/h (optional)
+- Average moving speed: 24-25 km/h (optional; full-route average excluding stops)
+- Cruising speed: 28-30 km/h (optional; normally held on flat, fast sections)
 - Additional Info: Bring lights and a jacket (optional)
 
 Route input rules:
@@ -216,7 +218,8 @@ route: https://www.strava.com/routes/123456
 route: Komoot | https://www.komoot.com/tour/456789
 dist: 40
 time: 120
-speed: 26-29
+speed: 25-26
+cruisingSpeed: 29-31
 info: Bring lights and a raincoat
 ```
 

@@ -126,11 +126,11 @@ export class StravaEventParser {
   }
 
   /**
-   * Extract speedMin / speedMax from pace groups (speed-based only).
+   * Extract cruisingSpeedMin / cruisingSpeedMax from pace groups (speed-based only).
    * Returns {} if pace groups are pace-based or missing.
    * @param {Array} paceGroups
    * @param {string} paceType
-   * @returns {{ speedMin?: number, speedMax?: number }}
+   * @returns {{ cruisingSpeedMin?: number, cruisingSpeedMax?: number }}
    */
   static extractSpeedRange(paceGroups, paceType) {
     if (!paceGroups || paceGroups.length === 0 || paceType !== 'speed') return {};
@@ -149,8 +149,8 @@ export class StravaEventParser {
     }
 
     const result = {};
-    if (min !== Infinity) result.speedMin = Math.round(min);
-    if (max !== -Infinity) result.speedMax = Math.round(max);
+    if (min !== Infinity) result.cruisingSpeedMin = Math.round(min);
+    if (max !== -Infinity) result.cruisingSpeedMax = Math.round(max);
     return result;
   }
 

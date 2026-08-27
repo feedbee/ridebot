@@ -348,21 +348,17 @@ export class RideService {
       mergedParams.when = tomorrow.toISOString();
     }
     
-    // Handle speed range
-    if (params.speed !== undefined) {
-      mergedParams.speed = params.speed;
-    } else if (originalRide.speedMin || originalRide.speedMax) {
-      // Reconstruct speed string from original ride, preserving the form type
-      const { speedMin, speedMax } = originalRide;
-      if (speedMin && speedMax && speedMin === speedMax) {
-        mergedParams.speed = `${speedMin}`;           // average: plain number
-      } else if (speedMin && speedMax) {
-        mergedParams.speed = `${speedMin}-${speedMax}`;
-      } else if (speedMin) {
-        mergedParams.speed = `${speedMin}+`;          // explicit min, not avg
-      } else if (speedMax) {
-        mergedParams.speed = `-${speedMax}`;          // explicit max
+    for (const [paramName, prefix] of [['speed', 'speed'], ['cruisingSpeed', 'cruisingSpeed']]) {
+      if (params[paramName] !== undefined) {
+        if (params[paramName] !== '-') mergedParams[paramName] = params[paramName];
+        continue;
       }
+      const min = originalRide[`${prefix}Min`];
+      const max = originalRide[`${prefix}Max`];
+      if (min != null && max != null && min === max) mergedParams[paramName] = `${min}`;
+      else if (min != null && max != null) mergedParams[paramName] = `${min}-${max}`;
+      else if (min != null) mergedParams[paramName] = `${min}+`;
+      else if (max != null) mergedParams[paramName] = `-${max}`;
     }
     
     // Copy ride settings from the original ride when duplicating your own ride.

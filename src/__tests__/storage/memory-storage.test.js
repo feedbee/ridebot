@@ -16,7 +16,9 @@ describe('MemoryStorage', () => {
     distance: 50,
     duration: 180,
     speedMin: 25,
-    speedMax: 28
+    speedMax: 28,
+    cruisingSpeedMin: 30,
+    cruisingSpeedMax: 32
   };
   
   const testRideWithMessages = {
@@ -28,7 +30,9 @@ describe('MemoryStorage', () => {
     distance: 50,
     duration: 180,
     speedMin: 25,
-    speedMax: 28
+    speedMax: 28,
+    cruisingSpeedMin: 30,
+    cruisingSpeedMax: 32
   };
 
   beforeEach(() => {

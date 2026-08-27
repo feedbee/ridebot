@@ -45,9 +45,12 @@ export class FieldProcessor {
       result.data.duration = durationResult.value;
     }
     
-    // Process speed
-    if (params.speed !== undefined) {
-      const speedResult = this.processSpeedField(params.speed, isUpdate);
+    for (const [paramName, prefix] of [['speed', 'speed'], ['cruisingSpeed', 'cruisingSpeed']]) {
+      if (params[paramName] === undefined) continue;
+      const speedResult = this.processSpeedField(params[paramName], isUpdate, prefix);
+      if (speedResult === null) {
+        return { data: null, error: this.translateSpeedError(language, paramName) };
+      }
       Object.assign(result.data, speedResult);
     }
     
@@ -150,21 +153,25 @@ export class FieldProcessor {
    * @param {boolean} isUpdate - Whether this is an update operation
    * @returns {Object} - Object with speedMin and/or speedMax properties
    */
-  static processSpeedField(value, isUpdate) {
+  static processSpeedField(value, isUpdate, prefix = 'speed') {
+    const minKey = `${prefix}Min`;
+    const maxKey = `${prefix}Max`;
     if (isUpdate && value === '-') {
-      return { speedMin: null, speedMax: null };
+      return { [minKey]: null, [maxKey]: null };
     }
 
     const parsed = parseSpeedInput(value);
-    if (!parsed) return {};
+    if (!parsed) return null;
 
-    const result = { ...parsed };
+    const result = {};
+    if ('speedMin' in parsed) result[minKey] = parsed.speedMin;
+    if ('speedMax' in parsed) result[maxKey] = parsed.speedMax;
 
     // On update, explicitly null out whichever bound was not specified,
     // so switching forms (e.g. range → average) clears the old value.
     if (isUpdate) {
-      if (!('speedMin' in result)) result.speedMin = null;
-      if (!('speedMax' in result)) result.speedMax = null;
+      if (!(minKey in result)) result[minKey] = null;
+      if (!(maxKey in result)) result[maxKey] = null;
     }
 
     return result;
@@ -209,6 +216,13 @@ export class FieldProcessor {
 
   static translateRouteError(language) {
     return t(language || config.i18n.defaultLanguage, 'utils.routeParser.invalidUrl', {}, {
+      fallbackLanguage: config.i18n.fallbackLanguage,
+      withMissingMarker: config.isDev
+    });
+  }
+
+  static translateSpeedError(language, paramName) {
+    return t(language || config.i18n.defaultLanguage, `params.validation.${paramName}Invalid`, {}, {
       fallbackLanguage: config.i18n.fallbackLanguage,
       withMissingMarker: config.isDev
     });

@@ -156,7 +156,7 @@ describe('StravaEventParser', () => {
         { pace: 30, range: 2 },  // 28-32
       ];
       expect(StravaEventParser.extractSpeedRange(groups, 'speed'))
-        .toEqual({ speedMin: 19, speedMax: 32 });
+        .toEqual({ cruisingSpeedMin: 19, cruisingSpeedMax: 32 });
     });
   });
 
@@ -269,8 +269,10 @@ describe('StravaEventParser', () => {
         ],
       };
       const data = StravaEventParser.mapToRideData(event, 101, eventUrl, eventId);
-      expect(data.speedMin).toBe(19);
-      expect(data.speedMax).toBe(26);
+      expect(data.cruisingSpeedMin).toBe(19);
+      expect(data.cruisingSpeedMax).toBe(26);
+      expect(data.speedMin).toBeUndefined();
+      expect(data.speedMax).toBeUndefined();
     });
   });
 
