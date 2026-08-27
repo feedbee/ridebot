@@ -77,12 +77,15 @@ export class DateParser {
    */
   static parseDateTime(text, options = {}) {
     try {
+      const normalizedText = text.trim();
+      if (!normalizedText) return null;
+
       // For relative dates (like "tomorrow"), the reference date needs to be in the target timezone
       const convertedRefDate = this.convertToTimezone(new Date(), config.dateFormat.defaultTimezone);
 
       let bestResult = null;
       for (const parser of this.getChronoParsers(options.language)) {
-        const results = parser.parse(text, convertedRefDate, { forwardDate: true });
+        const results = parser.parse(normalizedText, convertedRefDate, { forwardDate: true });
         if (results.length > 0) {
           const candidate = results[0];
           if (
@@ -97,11 +100,19 @@ export class DateParser {
 
       let parsedResult = bestResult;
       if (!parsedResult) {
-        const fallbackResults = chrono.parse(text, convertedRefDate, { forwardDate: true });
+        const fallbackResults = chrono.parse(normalizedText, convertedRefDate, { forwardDate: true });
         if (fallbackResults.length === 0) {
           return null;
         }
         parsedResult = fallbackResults[0];
+      }
+
+      if (parsedResult.index !== 0 || parsedResult.text.length !== normalizedText.length) {
+        return null;
+      }
+
+      if (!parsedResult.start.isCertain('hour')) {
+        return null;
       }
 
       // We expect input in local timezone

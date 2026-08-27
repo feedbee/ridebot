@@ -120,7 +120,7 @@ describe('wizardFieldConfig', () => {
     });
 
     it('should reject past dates', () => {
-      const result = WIZARD_FIELDS.date.validator('yesterday');
+      const result = WIZARD_FIELDS.date.validator('yesterday at 2pm');
       expect(result.valid).toBe(false);
       expect(result.error).toBe(tr('parsers.date.pastDate'));
     });

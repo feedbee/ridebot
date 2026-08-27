@@ -49,6 +49,34 @@ describe('DateParser', () => {
       expect(result).toBeNull();
     });
 
+    it('should reject partially parsed date/time input', () => {
+      const result = DateParser.parseDateTime('26.08 18:00', { language: 'ru' });
+      expect(result).toBeNull();
+    });
+
+    it('should allow surrounding whitespace around fully parsed input', () => {
+      const result = DateParser.parseDateTime('  March 15 2027 at 15:30  ', { language: 'en' });
+      expect(result).not.toBeNull();
+      expect(result.text).toBe('March 15 2027 at 15:30');
+    });
+
+    it.each([
+      ['tomorrow', 'en'],
+      ['March 15 2027', 'en'],
+      ['tomorrow morning', 'en'],
+      ['завтра', 'ru']
+    ])('should reject input without an explicit time: %s', (input, language) => {
+      const result = DateParser.parseDateTime(input, { language });
+      expect(result).toBeNull();
+    });
+
+    it('should accept an explicit hour with implied zero minutes', () => {
+      const result = DateParser.parseDateTime('tomorrow at 18', { language: 'en' });
+      expect(result).not.toBeNull();
+      expect(result.date.getHours()).toBe(18);
+      expect(result.date.getMinutes()).toBe(0);
+    });
+
     it('should parse Russian date input when language is explicitly Russian', () => {
       const now = new Date('2024-03-09T12:00:00Z');
       jest.useFakeTimers().setSystemTime(now);

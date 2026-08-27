@@ -54,4 +54,17 @@ describe('parseDateTimeInput', () => {
     expect(result.date).toBeNull();
     expect(result.error).toContain(tr(language, 'parsers.date.invalidFormat'));
   });
+
+  it('should report partially parsed input as an invalid format', () => {
+    const result = parseDateTimeInput('26.08 18:00', { language: 'ru' });
+    expect(result.date).toBeNull();
+    expect(result.error).toContain(tr('ru', 'parsers.date.invalidFormat'));
+  });
+
+  it.each(['en', 'ru'])('should report missing explicit time as an invalid format (%s)', (language) => {
+    const input = language === 'ru' ? 'завтра' : 'tomorrow';
+    const result = parseDateTimeInput(input, { language });
+    expect(result.date).toBeNull();
+    expect(result.error).toContain(tr(language, 'parsers.date.invalidFormat'));
+  });
 }); 
