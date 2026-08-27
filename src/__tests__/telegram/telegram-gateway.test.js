@@ -14,6 +14,9 @@ const mockApi = {
   deleteWebhook: jest.fn(),
   getMe: jest.fn(),
   setMyCommands: jest.fn(),
+  config: {
+    use: jest.fn(),
+  },
 };
 const mockWebhookCallback = jest.fn(() => 'webhook-middleware');
 const mockGrammyBot = jest.fn().mockImplementation(() => ({
@@ -75,5 +78,18 @@ describe('TelegramGateway', () => {
     gateway.startPolling();
 
     expect(mockBotStart).toHaveBeenCalled();
+  });
+
+  it('installs conversation logging on the shared API boundary', () => {
+    const transformer = jest.fn();
+    const conversationLogger = {
+      enabled: true,
+      createApiTransformer: jest.fn(() => transformer),
+    };
+
+    new TelegramGateway('secret-token', { conversationLogger });
+
+    expect(conversationLogger.createApiTransformer).toHaveBeenCalledTimes(1);
+    expect(mockApi.config.use).toHaveBeenCalledWith(transformer);
   });
 });

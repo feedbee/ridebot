@@ -43,3 +43,43 @@ describe('config.maxRideMessagesPerChatThread', () => {
     expect(config.maxRideMessagesPerChatThread).toBe(5);
   });
 });
+
+describe('config.debugLogMessages', () => {
+  const originalValue = process.env.DEBUG_LOG_MESSAGES;
+
+  afterEach(() => {
+    if (originalValue === undefined) {
+      delete process.env.DEBUG_LOG_MESSAGES;
+    } else {
+      process.env.DEBUG_LOG_MESSAGES = originalValue;
+    }
+    jest.resetModules();
+  });
+
+  it('defaults to false when the value is missing', async () => {
+    delete process.env.DEBUG_LOG_MESSAGES;
+    jest.resetModules();
+
+    const { config } = await import('../config.js');
+
+    expect(config.debugLogMessages).toBe(false);
+  });
+
+  it('is enabled only by the exact value true', async () => {
+    process.env.DEBUG_LOG_MESSAGES = 'true';
+    jest.resetModules();
+
+    const { config } = await import('../config.js');
+
+    expect(config.debugLogMessages).toBe(true);
+  });
+
+  it.each(['false', 'TRUE', '1', 'yes', ''])('is disabled for %j', async (value) => {
+    process.env.DEBUG_LOG_MESSAGES = value;
+    jest.resetModules();
+
+    const { config } = await import('../config.js');
+
+    expect(config.debugLogMessages).toBe(false);
+  });
+});

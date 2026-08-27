@@ -5,8 +5,19 @@ import { Bot as GrammyBot, webhookCallback } from 'grammy';
  * Keeps framework details out of higher-level bot tests.
  */
 export class TelegramGateway {
-  constructor(token) {
+  constructor(token, options = {}) {
     this.bot = new GrammyBot(token);
+    if (options.conversationLogger?.enabled) {
+      this.installConversationLogger(options.conversationLogger);
+    }
+  }
+
+  /**
+   * Observe all Telegram API calls made by the bot or update contexts.
+   * @param {import('./TelegramConversationLogger.js').TelegramConversationLogger} logger
+   */
+  installConversationLogger(logger) {
+    this.bot.api.config.use(logger.createApiTransformer());
   }
 
   get api() {

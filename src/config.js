@@ -12,6 +12,7 @@ const maxRideMessagesPerChatThread = Number.isInteger(configuredMaxRideMessagesP
 
 export const config = {
   isDev: process.env.NODE_ENV === 'development',
+  debugLogMessages: process.env.DEBUG_LOG_MESSAGES === 'true',
   i18n: {
     defaultLanguage,
     fallbackLanguage

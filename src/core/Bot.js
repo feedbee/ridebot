@@ -30,6 +30,7 @@ import { replaceBotUsername } from '../utils/botUtils.js';
 import { t } from '../i18n/index.js';
 import { RideParticipationService } from '../services/RideParticipationService.js';
 import { SettingsService } from '../services/SettingsService.js';
+import { TelegramConversationLogger } from '../telegram/TelegramConversationLogger.js';
 
 /**
  * Core Bot class that coordinates all components
@@ -57,8 +58,17 @@ export class Bot {
       notificationService
     );
     
+    this.conversationLogger = options.conversationLogger || new TelegramConversationLogger({
+      enabled: config.debugLogMessages
+    });
+
     // Initialize Telegram boundary
-    this.bot = options.telegramGateway || new TelegramGateway(config.bot.token);
+    this.bot = options.telegramGateway || new TelegramGateway(config.bot.token, {
+      conversationLogger: this.conversationLogger
+    });
+    if (this.conversationLogger.enabled && options.telegramGateway?.installConversationLogger) {
+      this.bot.installConversationLogger(this.conversationLogger);
+    }
     
     this.configureBot();
   }
@@ -147,6 +157,9 @@ export class Bot {
 
     // Apply middleware for handling message thread IDs in topics
     this.bot.use(threadMiddleware);
+
+    // Correlate incoming updates with Telegram API operations.
+    this.bot.use(this.conversationLogger.middleware);
     
     // Command handlers (private chat only, except /shareride)
     this.setupCommandHandlers();
@@ -175,6 +188,7 @@ export class Bot {
 
   wrapCallbackHandler(handler) {
     return async (ctx) => {
+      this.conversationLogger.markCallbackHandled();
       try {
         await handler(ctx);
       } catch (error) {
