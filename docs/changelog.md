@@ -2,6 +2,23 @@
 
 This changelog is written for product-facing release notes. Release dates are based on Git tag creation dates.
 
+## v2.6.0 - 2026-08-27
+
+- **Distinguished average moving speed from cruising speed.**
+  Rides can now store and display these as separate values throughout parameter commands, wizard flows, AI creation and editing, duplication, storage, and Strava imports. Speed validation was tightened, and Strava speed-based pace groups now populate cruising speed instead of being presented as a full-route average.
+
+- **Added configurable participation notification levels.**
+  Ride creators can choose whether private notifications cover every participation status change or only changes to confirmed membership. The preference is available in user settings, works with existing per-ride notification controls, and is resolved when debounced notifications are delivered so recent setting changes take effect immediately.
+
+- **Allowed repeated ride announcements within a bounded chat or topic history.**
+  `/shareride` can now repost the same ride in a chat or forum topic instead of rejecting every duplicate. The bot keeps a configurable number of synchronized announcements per chat/topic scope and removes the oldest tracked message when the limit is reached.
+
+- **Made date parsing stricter and independent of the server process timezone.**
+  Ride dates now resolve consistently in the configured timezone even when the host uses a different timezone or crosses daylight-saving boundaries. Ambiguous partial inputs and dates without an explicit time are rejected instead of being silently interpreted with unintended defaults.
+
+- **Added optional Telegram conversation debug logging.**
+  Operators can enable structured inbound and outbound Telegram message logging with `DEBUG_TELEGRAM_MESSAGES`, including redaction and bounded payload handling designed to make conversation-flow diagnostics safer and more useful.
+
 ## v2.5.0 - 2026-04-27
 
 - **Imported rides from Strava club events with `/fromstrava`.**  
