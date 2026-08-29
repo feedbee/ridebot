@@ -1,5 +1,5 @@
 # Use the official Node.js image
-FROM node:22
+FROM node:24
 
 # Set the working directory
 WORKDIR /workspace

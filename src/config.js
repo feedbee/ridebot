@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 const defaultLanguage = process.env.DEFAULT_LANGUAGE || 'en';
 const fallbackLanguage = process.env.FALLBACK_LANGUAGE || 'en';

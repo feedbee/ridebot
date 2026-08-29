@@ -25,7 +25,7 @@
  */
 
 import dotenv from 'dotenv';
-dotenv.config();
+dotenv.config({ quiet: true });
 
 import { MongoClient } from 'mongodb';
 import { encrypt, decrypt } from '../src/utils/encryption.js';
