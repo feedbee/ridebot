@@ -96,6 +96,9 @@ describe('Bot', () => {
           expect.objectContaining({ pattern: /^join:(\w+)$/ }),
           expect.objectContaining({ pattern: /^thinking:(\w+)$/ }),
           expect.objectContaining({ pattern: /^skip:(\w+)$/ }),
+          expect.objectContaining({ pattern: /^calendar:menu:(\w+)$/ }),
+          expect.objectContaining({ pattern: /^calendar:ics:(\w+)$/ }),
+          expect.objectContaining({ pattern: /^calendar:close$/ }),
           expect.objectContaining({ pattern: /^delete:(\w+):(\w+)(?::(message|callback))?$/ }),
           expect.objectContaining({ pattern: /^rideowner:update:(\w+)$/ }),
           expect.objectContaining({ pattern: /^rideowner:duplicate:(\w+)$/ }),
@@ -148,6 +151,18 @@ describe('Bot', () => {
       );
       expect(mockBotCallbackQuery).toHaveBeenCalledWith(
         /^skip:(\w+)$/,
+        expect.any(Function)
+      );
+      expect(mockBotCallbackQuery).toHaveBeenCalledWith(
+        /^calendar:menu:(\w+)$/,
+        expect.any(Function)
+      );
+      expect(mockBotCallbackQuery).toHaveBeenCalledWith(
+        /^calendar:ics:(\w+)$/,
+        expect.any(Function)
+      );
+      expect(mockBotCallbackQuery).toHaveBeenCalledWith(
+        /^calendar:close$/,
         expect.any(Function)
       );
       expect(mockBotCallbackQuery).toHaveBeenCalledWith(

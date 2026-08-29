@@ -27,6 +27,7 @@ describe.each(['en', 'ru'])('StartCommandHandler (%s)', (language) => {
   let mockRideService;
   let mockMessageFormatter;
   let mockRideMessagesService;
+  let mockCalendarHandler;
   let mockCtx;
 
   beforeEach(() => {
@@ -43,6 +44,10 @@ describe.each(['en', 'ru'])('StartCommandHandler (%s)', (language) => {
       updateRideMessages: jest.fn()
     };
 
+    mockCalendarHandler = {
+      handleStartPayload: jest.fn().mockResolvedValue(false)
+    };
+
     // Create mock Grammy context
     mockCtx = {
       reply: jest.fn().mockResolvedValue({
@@ -52,6 +57,7 @@ describe.each(['en', 'ru'])('StartCommandHandler (%s)', (language) => {
       api: {
         getMe: jest.fn().mockResolvedValue({ username: 'testbot' })
       },
+      match: '',
       lang: language,
       t: jest.fn((key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' })),
       message: {
@@ -70,11 +76,22 @@ describe.each(['en', 'ru'])('StartCommandHandler (%s)', (language) => {
     startHandler = new StartCommandHandler(
       mockRideService,
       mockMessageFormatter,
-      mockRideMessagesService
+      mockRideMessagesService,
+      mockCalendarHandler
     );
   });
 
   describe('handle', () => {
+    it('delegates a calendar deep-link payload without sending the welcome message', async () => {
+      mockCtx.match = 'calendar_abc123';
+      mockCalendarHandler.handleStartPayload.mockResolvedValue(true);
+
+      await startHandler.handle(mockCtx);
+
+      expect(mockCalendarHandler.handleStartPayload).toHaveBeenCalledWith(mockCtx, 'calendar_abc123');
+      expect(mockCtx.reply).not.toHaveBeenCalled();
+    });
+
     it('should send the start message with HTML formatting', async () => {
       // Execute
       await startHandler.handle(mockCtx);

@@ -11,9 +11,22 @@ class MockInlineKeyboard {
     return this;
   }
 
+  url(label, url) {
+    const lastRow = this.inline_keyboard[this.inline_keyboard.length - 1];
+    lastRow.push({ text: label, url });
+    return this;
+  }
+
   row() {
     this.inline_keyboard.push([]);
     return this;
+  }
+}
+
+class MockInputFile {
+  constructor(data, filename) {
+    this.data = data;
+    this.filename = filename;
   }
 }
 
@@ -76,6 +89,7 @@ export async function createScenarioHarness() {
   await jest.unstable_mockModule('grammy', async () => ({
     Bot: jest.fn().mockImplementation(() => runtime.botInstance),
     InlineKeyboard: MockInlineKeyboard,
+    InputFile: MockInputFile,
     webhookCallback: jest.fn(),
   }));
 
@@ -90,6 +104,7 @@ export async function createScenarioHarness() {
     edits: [],
     callbackAnswers: [],
     deletes: [],
+    documents: [],
   };
 
   let nextMessageId = 1000;
@@ -111,6 +126,7 @@ export async function createScenarioHarness() {
     const ctx = {
       chat,
       from,
+      me: { id: 0, is_bot: true, username: 'testbot' },
       message: callbackData ? undefined : baseMessage,
       callbackQuery: callbackData ? {
         id: `cb-${nextMessageId++}`,
@@ -197,6 +213,10 @@ export async function createScenarioHarness() {
           });
           return sentMessage;
         }),
+        sendDocument: jest.fn(async (chatId, document, options = {}) => {
+          outbox.documents.push({ chatId, document, options });
+          return { message_id: nextMessageId++, chat: { id: chatId }, document };
+        }),
         editMessageText: jest.fn(async (chatId, messageId, replyText, options = {}) => {
           outbox.edits.push({
             via: 'api.editMessageText',
@@ -260,6 +280,9 @@ export async function createScenarioHarness() {
 
     const commandMatch = text.match(/^\/(\w+)(?:@\w+)?/);
     const commandName = commandMatch?.[1];
+    if (commandName === 'start') {
+      ctx.match = text.match(/^\/start(?:@\w+)?(?:[ \t]+([^\s]+))?/i)?.[1] || '';
+    }
 
     await runWithMiddlewares(ctx, async () => {
       if (commandName && runtime.commands.has(commandName)) {

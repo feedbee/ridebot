@@ -101,7 +101,7 @@ export class MessageFormatter {
         .text(this.translate('buttons.participants', {}, language), `rideowner:participants:${ride.id}`)
         .text(this.translate('buttons.settings', {}, language), `rideowner:settings:${ride.id}`);
     }
-    
+
     return keyboard;
   }
 
@@ -127,6 +127,7 @@ export class MessageFormatter {
    * @param {Object} participation - Participation object with joined, thinking, skipped arrays
    * @param {Object} options - Additional options for formatting
    * @param {boolean} options.isForCreator - Whether this message is for the ride creator
+   * @param {string} [options.botUsername] - Bot username used for the private calendar deep link
    * @returns {string} - Formatted message
    */
   formatRideMessage(ride, participation, options = {}) {
@@ -240,6 +241,14 @@ export class MessageFormatter {
       ? `${this.translate('formatter.groupChatLine', { id: ride.id }, language)}\n\n`
       : '';
     message = message.replace('{groupChatLine}', groupChatLine);
+
+    const canLinkToCalendar = !ride.cancelled
+      && /^\w+$/.test(options.botUsername || '')
+      && /^\w+$/.test(ride.id || '');
+    const calendarLine = canLinkToCalendar
+      ? `<a href="https://t.me/${options.botUsername}?start=calendar_${ride.id}">${this.translate('buttons.addToCalendar', {}, language)}</a>\n\n`
+      : '';
+    message = message.replace('{calendarLine}', calendarLine);
 
     message = message.replace('{id}', ride.id);
     

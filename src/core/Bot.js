@@ -31,6 +31,8 @@ import { t } from '../i18n/index.js';
 import { RideParticipationService } from '../services/RideParticipationService.js';
 import { SettingsService } from '../services/SettingsService.js';
 import { TelegramConversationLogger } from '../telegram/TelegramConversationLogger.js';
+import { CalendarEventService } from '../services/CalendarEventService.js';
+import { CalendarCommandHandler } from '../commands/CalendarCommandHandler.js';
 
 /**
  * Core Bot class that coordinates all components
@@ -74,7 +76,14 @@ export class Bot {
   }
 
   getBotConfig(rideService, settingsService, messageFormatter, rideMessagesService, notificationService) {
-    const startHandler = new StartCommandHandler(rideService, messageFormatter, rideMessagesService);
+    const calendarEventService = new CalendarEventService();
+    const calendarHandler = new CalendarCommandHandler(rideService, calendarEventService);
+    const startHandler = new StartCommandHandler(
+      rideService,
+      messageFormatter,
+      rideMessagesService,
+      calendarHandler
+    );
     const helpHandler = new HelpCommandHandler(rideService, messageFormatter, rideMessagesService);
     const newRideHandler = new NewRideCommandHandler(rideService, messageFormatter, this.wizard, rideMessagesService);
     const updateRideHandler = new UpdateRideCommandHandler(rideService, messageFormatter, this.wizard, rideMessagesService);
@@ -131,6 +140,9 @@ export class Bot {
         { pattern: /^join:(\w+)$/, handler: (ctx) => participationHandler.handleJoinRide(ctx) },
         { pattern: /^thinking:(\w+)$/, handler: (ctx) => participationHandler.handleThinkingRide(ctx) },
         { pattern: /^skip:(\w+)$/, handler: (ctx) => participationHandler.handleSkipRide(ctx) },
+        { pattern: /^calendar:menu:(\w+)$/, handler: (ctx) => calendarHandler.handleMenuCallback(ctx) },
+        { pattern: /^calendar:ics:(\w+)$/, handler: (ctx) => calendarHandler.handleIcsCallback(ctx) },
+        { pattern: /^calendar:close$/, handler: (ctx) => calendarHandler.handleCloseCallback(ctx) },
         { pattern: /^delete:(\w+):(\w+)(?::(message|callback))?$/, handler: (ctx) => deleteRideHandler.handleConfirmation(ctx) },
         { pattern: /^list:(\d+)$/, handler: (ctx) => listRidesHandler.handleCallback(ctx) },
         { pattern: /^rideowner:update:(\w+)$/, handler: (ctx) => updateRideHandler.handleCallback(ctx) },

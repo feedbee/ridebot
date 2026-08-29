@@ -112,6 +112,23 @@ describe('MessageFormatter', () => {
       
       // Verify
       expect(result).toBeDefined();
+      expect(result.inline_keyboard.flat()).not.toEqual(
+        expect.arrayContaining([expect.objectContaining({ callback_data: 'calendar:menu:123' })])
+      );
+    });
+
+    it('does not use a large calendar button in active ride announcements', () => {
+      const ride = {
+        id: '123',
+        title: 'Test Ride',
+        cancelled: false
+      };
+
+      const result = messageFormatter.getRideKeyboard(ride, 'en', false);
+
+      expect(result.inline_keyboard.flat()).not.toEqual(
+        expect.arrayContaining([expect.objectContaining({ callback_data: 'calendar:menu:123' })])
+      );
     });
 
     it('adds owner-only management rows for creator private messages', () => {
@@ -144,6 +161,7 @@ describe('MessageFormatter', () => {
           expect.objectContaining({ callback_data: 'rideowner:settings:123' }),
         ])
       );
+      expect(result.inline_keyboard).toHaveLength(3);
     });
 
     it('shows resume action for cancelled creator ride keyboard', () => {
@@ -176,6 +194,42 @@ describe('MessageFormatter', () => {
   describe('formatRideMessage', () => {
     afterEach(() => {
       jest.restoreAllMocks();
+    });
+
+    it('renders a compact calendar deep link for active rides', () => {
+      const ride = {
+        id: 'abc123',
+        title: 'Test Ride',
+        date: new Date('2099-03-30T10:00:00Z'),
+        cancelled: false
+      };
+
+      const result = messageFormatter.formatRideMessage(
+        ride,
+        { joined: [], thinking: [], skipped: [] },
+        { lang: 'en', botUsername: 'testbot' }
+      );
+
+      expect(result).toContain(
+        '<a href="https://t.me/testbot?start=calendar_abc123">📅 Add to calendar</a>'
+      );
+    });
+
+    it('does not render the calendar deep link for cancelled rides', () => {
+      const ride = {
+        id: 'abc123',
+        title: 'Test Ride',
+        date: new Date('2099-03-30T10:00:00Z'),
+        cancelled: true
+      };
+
+      const result = messageFormatter.formatRideMessage(
+        ride,
+        { joined: [], thinking: [], skipped: [] },
+        { lang: 'en', botUsername: 'testbot' }
+      );
+
+      expect(result).not.toContain('start=calendar_abc123');
     });
 
     it('should format ride message with all fields', () => {

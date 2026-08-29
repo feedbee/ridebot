@@ -90,7 +90,7 @@ export class RideMessagesService {
       const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(
         ride,
         participation,
-        { isForCreator, lang: language }
+        { isForCreator, lang: language, botUsername: ctx.me?.username }
       );
       
       // Prepare reply options
@@ -210,7 +210,7 @@ export class RideMessagesService {
         const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(
           ride,
           participation,
-          { isForCreator, lang: language }
+          { isForCreator, lang: language, botUsername: ctx.me?.username }
         );
 
         try {

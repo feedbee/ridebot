@@ -240,7 +240,7 @@ id: abc123 (or #abc123)
 🤔 {thinkingLabel} ({thinkingCount}): {thinking}
 🙅 {notInterestedLabel}: {notInterestedCount}
 
-{groupChatLine}{shareLine}🎫 #Ride #{id}{cancelledInstructions}
+{groupChatLine}{shareLine}{calendarLine}🎫 #Ride #{id}{cancelledInstructions}
     `.trim(),
 
     cancelled: '❌ ОТМЕНЕНО',
@@ -277,7 +277,11 @@ id: abc123 (or #abc123)
     keep: '↩️ Оставить текущее',
     close: 'Закрыть',
     previous: '◀️ Назад',
-    next: 'Вперед ▶️'
+    next: 'Вперед ▶️',
+    addToCalendar: '📅 Добавить в календарь',
+    googleCalendar: 'Google Calendar',
+    outlookCalendar: 'Outlook Calendar',
+    downloadIcs: 'Apple / скачать .ics'
   },
   common: {
     greeting: 'Привет, {name}!',
@@ -437,6 +441,19 @@ id: abc123 (or #abc123)
       fetchError: 'Не удалось получить данные события Strava. Убедитесь, что событие публичное и ссылка корректная.',
       created: 'Поездка создана из события Strava.',
       updated: 'Поездка обновлена из события Strava.'
+    },
+    calendar: {
+      menuPrompt: '📅 Добавить «{title}» в календарь:',
+      sentPrivately: 'Варианты календаря отправлены в личные сообщения.',
+      openPrivateChat: 'Откройте бота, чтобы получить варианты календаря.',
+      fileCaption: 'Событие календаря для «{title}»',
+      fileSent: 'Файл календаря отправлен в личные сообщения.',
+      privateOnly: 'Это меню календаря можно закрыть только в личном чате.',
+      rideNotFound: 'Эта поездка больше не существует.',
+      invalidRide: 'Некорректный запрос календаря.',
+      cancelled: 'Отменённую поездку нельзя добавить в календарь.',
+      missingDuration: 'У поездки некорректная длительность, поэтому её нельзя экспортировать в календарь.',
+      past: 'Прошедшую поездку нельзя добавить в календарь.'
     }
   },
   formatter: {

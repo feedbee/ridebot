@@ -20,6 +20,59 @@ describe('Scenario Harness Integration', () => {
     jest.useRealTimers();
   });
 
+  it('opens compact calendar options privately from an announcement link', async () => {
+    const harness = await createScenarioHarness();
+    const user = { id: 42, first_name: 'Calendar', username: 'calendaruser' };
+    await harness.dispatchMessage({
+      text: '/newride\ntitle: Calendar Ride\nwhen: tomorrow 10:00',
+      chat: { id: 42, type: 'private' },
+      from: user
+    });
+    const ride = harness.listRides()[0];
+    const announcement = harness.outbox.replies[0];
+
+    expect(announcement.text).toContain(
+      `href="https://t.me/testbot?start=calendar_${ride.id}"`
+    );
+    expect(announcement.options.reply_markup.inline_keyboard.flat()).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ callback_data: `calendar:menu:${ride.id}` })
+      ])
+    );
+
+    await harness.dispatchMessage({
+      text: `/start calendar_${ride.id}`,
+      chat: { id: 42, type: 'private' },
+      from: user
+    });
+
+    const privateMenu = harness.outbox.replies.find(reply =>
+      reply.chatId === 42 &&
+      reply.options?.reply_markup?.inline_keyboard?.flat().some(button =>
+        button.callback_data === `calendar:ics:${ride.id}`
+      )
+    );
+    expect(privateMenu).toBeDefined();
+    expect(privateMenu.options.reply_markup.inline_keyboard[0]).toHaveLength(3);
+    expect(privateMenu.options.reply_markup.inline_keyboard[1]).toEqual([
+      expect.objectContaining({ callback_data: 'calendar:close' })
+    ]);
+    expect(harness.outbox.documents).toHaveLength(0);
+
+    await harness.dispatchCallback({
+      data: `calendar:ics:${ride.id}`,
+      chat: { id: 42, type: 'private' },
+      from: user
+    });
+
+    expect(harness.outbox.documents).toEqual([
+      expect.objectContaining({
+        chatId: 42,
+        document: expect.objectContaining({ filename: `ride-${ride.id}.ics` })
+      })
+    ]);
+  });
+
   it('creates a ride from inline /newride params and posts the ride message', async () => {
     const harness = await createScenarioHarness();
 

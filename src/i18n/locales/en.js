@@ -240,7 +240,7 @@ The bot will send you a single-use invite link (valid 24 hours). The command onl
 🤔 {thinkingLabel} ({thinkingCount}): {thinking}
 🙅 {notInterestedLabel}: {notInterestedCount}
 
-{groupChatLine}{shareLine}🎫 #Ride #{id}{cancelledInstructions}
+{groupChatLine}{shareLine}{calendarLine}🎫 #Ride #{id}{cancelledInstructions}
     `.trim(),
 
     cancelled: '❌ CANCELLED',
@@ -277,7 +277,11 @@ Click here to start a private chat: @botname
     keep: '↩️ Keep current',
     close: 'Close',
     previous: '◀️ Previous',
-    next: 'Next ▶️'
+    next: 'Next ▶️',
+    addToCalendar: '📅 Add to calendar',
+    googleCalendar: 'Google Calendar',
+    outlookCalendar: 'Outlook Calendar',
+    downloadIcs: 'Apple / download .ics'
   },
   common: {
     greeting: 'Hello, {name}!',
@@ -437,6 +441,19 @@ Click here to start a private chat: @botname
       fetchError: 'Could not fetch the Strava event. Make sure the event is public and the URL is correct.',
       created: 'Ride created from Strava event.',
       updated: 'Ride updated from Strava event.'
+    },
+    calendar: {
+      menuPrompt: '📅 Add “{title}” to your calendar:',
+      sentPrivately: 'Calendar options sent in a private message.',
+      openPrivateChat: 'Open the bot to get calendar options.',
+      fileCaption: 'Calendar event for “{title}”',
+      fileSent: 'Calendar file sent privately.',
+      privateOnly: 'This calendar menu can only be closed in a private chat.',
+      rideNotFound: 'This ride no longer exists.',
+      invalidRide: 'This calendar request is invalid.',
+      cancelled: 'A cancelled ride cannot be added to a calendar.',
+      missingDuration: 'The ride duration is invalid and cannot be exported to a calendar.',
+      past: 'A past ride cannot be added to a calendar.'
     }
   },
   formatter: {
