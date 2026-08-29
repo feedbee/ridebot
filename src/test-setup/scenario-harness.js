@@ -176,11 +176,13 @@ export async function createScenarioHarness() {
         return sentMessage;
       }),
       editMessageText: jest.fn(async (replyText, options = {}) => {
+        const richMessage = typeof replyText === 'object' ? replyText : null;
         outbox.edits.push({
           via: 'ctx.editMessageText',
           chatId: chat.id,
           messageId: ctx.callbackQuery?.message?.message_id,
-          text: replyText,
+          text: richMessage?.html || richMessage?.markdown || replyText,
+          richMessage,
           options,
         });
         return {};
@@ -218,11 +220,13 @@ export async function createScenarioHarness() {
           return { message_id: nextMessageId++, chat: { id: chatId }, document };
         }),
         editMessageText: jest.fn(async (chatId, messageId, replyText, options = {}) => {
+          const richMessage = typeof replyText === 'object' ? replyText : null;
           outbox.edits.push({
             via: 'api.editMessageText',
             chatId,
             messageId,
-            text: replyText,
+            text: richMessage?.html || richMessage?.markdown || replyText,
+            richMessage,
             options,
           });
           return {};

@@ -185,6 +185,47 @@ describe('RideMessagesService', () => {
       expect(result.rideId).toBe('abc123');
       expect(result.error).toBeNull();
     });
+
+    it('should fall back to old message text when Rich Message content has no ride ID', () => {
+      const result = rideMessagesService.extractRideId({
+        text: '/updateride',
+        reply_to_message: {
+          text: '🎫 #Ride #legacy123',
+          rich_message: {
+            blocks: [{ type: 'paragraph', text: ['Rich content without a ride marker'] }]
+          }
+        }
+      });
+
+      expect(result).toEqual({ rideId: 'legacy123', error: null });
+    });
+
+    it('should extract ride ID from a replied Rich Message keyboard', () => {
+      const result = rideMessagesService.extractRideId({
+        text: '/updateride',
+        reply_to_message: {
+          rich_message: { blocks: [] },
+          reply_markup: {
+            inline_keyboard: [[{ text: 'Join', callback_data: 'join:abc123' }]]
+          }
+        }
+      });
+
+      expect(result).toEqual({ rideId: 'abc123', error: null });
+    });
+
+    it('should extract ride ID from replied Rich Message blocks without a keyboard', () => {
+      const result = rideMessagesService.extractRideId({
+        text: '/updateride',
+        reply_to_message: {
+          rich_message: {
+            blocks: [{ type: 'paragraph', text: ['🎫 #Ride #cancelled123'] }]
+          }
+        }
+      });
+
+      expect(result).toEqual({ rideId: 'cancelled123', error: null });
+    });
     
     // Test for returning error when no ID is found
     it.each(['en', 'ru'])('should return error when no ID is found (%s)', (language) => {
@@ -218,6 +259,34 @@ describe('RideMessagesService', () => {
   });
 
   describe('createRideMessage', () => {
+    it('should use the HTTPS teaser as the first Rich Message block', async () => {
+      const mockRide = {
+        id: 'ride123',
+        title: 'Morning Ride',
+        messages: []
+      };
+      const mockCtx = {
+        chat: { id: 12345 },
+        replyWithRichMessage: jest.fn().mockResolvedValue({ message_id: 67890 })
+      };
+      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
+        message: '<h3>Morning Ride</h3>',
+        keyboard: { inline_keyboard: [] }
+      });
+      mockRideService.updateRide.mockResolvedValue(mockRide);
+
+      await rideMessagesService.createRideMessage(mockRide, mockCtx);
+
+      const richMessage = mockCtx.replyWithRichMessage.mock.calls[0][0];
+      expect(richMessage.html).toBe(
+        '<img src="https://static.ridebot.valera.ws/ridebot-teaser.jpg"/>\n<h3>Morning Ride</h3>'
+      );
+      expect(richMessage.media).toBeUndefined();
+      expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
+        messages: [expect.not.objectContaining({ teaserFileId: expect.anything() })]
+      });
+    });
+
     it('should create and send a ride message successfully', async () => {
       // Setup
       const mockRide = {
@@ -230,7 +299,7 @@ describe('RideMessagesService', () => {
       const mockCtx = {
         chat: { id: 12345 },
         message: { message_thread_id: null },
-        reply: jest.fn().mockResolvedValue({ message_id: 67890 })
+        replyWithRichMessage: jest.fn().mockResolvedValue({ message_id: 67890 })
       };
 
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
@@ -253,8 +322,9 @@ describe('RideMessagesService', () => {
         { joined: [], thinking: [], skipped: [] },
         { isForCreator: false, lang: 'en' }
       );
-      expect(mockCtx.reply).toHaveBeenCalledWith('Formatted ride message', {
-        parse_mode: 'HTML',
+      expect(mockCtx.replyWithRichMessage).toHaveBeenCalledWith(expect.objectContaining({
+        html: '<img src="https://static.ridebot.valera.ws/ridebot-teaser.jpg"/>\nFormatted ride message'
+      }), {
         reply_markup: { inline_keyboard: [] }
       });
       expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
@@ -276,7 +346,7 @@ describe('RideMessagesService', () => {
       const mockCtx = {
         chat: { id: 12345 },
         message: { message_thread_id: 999 },
-        reply: jest.fn().mockResolvedValue({ message_id: 67890 })
+        replyWithRichMessage: jest.fn().mockResolvedValue({ message_id: 67890 })
       };
 
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
@@ -294,8 +364,9 @@ describe('RideMessagesService', () => {
       const result = await rideMessagesService.createRideMessage(mockRide, mockCtx);
 
       // Verify
-      expect(mockCtx.reply).toHaveBeenCalledWith('Formatted ride message', {
-        parse_mode: 'HTML',
+      expect(mockCtx.replyWithRichMessage).toHaveBeenCalledWith(expect.objectContaining({
+        html: '<img src="https://static.ridebot.valera.ws/ridebot-teaser.jpg"/>\nFormatted ride message'
+      }), {
         reply_markup: { inline_keyboard: [] },
         message_thread_id: 999
       });
@@ -316,7 +387,7 @@ describe('RideMessagesService', () => {
       const mockCtx = {
         chat: { id: 12345 },
         message: { message_thread_id: 888 },
-        reply: jest.fn().mockResolvedValue({ message_id: 67890 })
+        replyWithRichMessage: jest.fn().mockResolvedValue({ message_id: 67890 })
       };
 
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
@@ -334,8 +405,9 @@ describe('RideMessagesService', () => {
       await rideMessagesService.createRideMessage(mockRide, mockCtx, 777);
 
       // Verify explicit thread ID is used
-      expect(mockCtx.reply).toHaveBeenCalledWith('Formatted ride message', {
-        parse_mode: 'HTML',
+      expect(mockCtx.replyWithRichMessage).toHaveBeenCalledWith(expect.objectContaining({
+        html: '<img src="https://static.ridebot.valera.ws/ridebot-teaser.jpg"/>\nFormatted ride message'
+      }), {
         reply_markup: { inline_keyboard: [] },
         message_thread_id: 777
       });
@@ -354,7 +426,7 @@ describe('RideMessagesService', () => {
       const mockCtx = {
         chat: { id: 12345 },
         message: { message_thread_id: null },
-        reply: jest.fn().mockResolvedValue({ message_id: 67890 })
+        replyWithRichMessage: jest.fn().mockResolvedValue({ message_id: 67890 })
       };
 
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
@@ -395,7 +467,7 @@ describe('RideMessagesService', () => {
       const mockCtx = {
         chat: { id: 12345 },
         message: { message_thread_id: null },
-        reply: jest.fn().mockRejectedValue(new Error('Network error'))
+        replyWithRichMessage: jest.fn().mockRejectedValue(new Error('Network error'))
       };
 
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
@@ -433,7 +505,7 @@ describe('RideMessagesService', () => {
       const mockCtx = {
         chat: { id: 12345 },
         message: { message_thread_id: null },
-        reply: jest.fn().mockResolvedValue({ message_id: 67890 })
+        replyWithRichMessage: jest.fn().mockResolvedValue({ message_id: 67890 })
       };
 
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
@@ -458,7 +530,7 @@ describe('RideMessagesService', () => {
       );
       
       // Verify message was sent (operation got far enough)
-      expect(mockCtx.reply).toHaveBeenCalled();
+      expect(mockCtx.replyWithRichMessage).toHaveBeenCalled();
 
       consoleErrorSpy.mockRestore();
     });
@@ -477,7 +549,7 @@ describe('RideMessagesService', () => {
       const mockCtx = {
         chat: { id: 12345 },
         message: { message_thread_id: null },
-        reply: jest.fn().mockResolvedValue({ message_id: 67890 })
+        replyWithRichMessage: jest.fn().mockResolvedValue({ message_id: 67890 })
       };
 
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
@@ -512,7 +584,7 @@ describe('RideMessagesService', () => {
         lang: 'ru',
         chat: { id: 456, type: 'private' },
         from: { id: 123 }, // Same as createdBy
-        reply: jest.fn().mockResolvedValue({ message_id: 789 })
+        replyWithRichMessage: jest.fn().mockResolvedValue({ message_id: 789 })
       };
 
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
@@ -550,7 +622,7 @@ describe('RideMessagesService', () => {
         lang: 'ru',
         chat: { id: 456, type: 'private' },
         from: { id: 789 }, // Different from createdBy
-        reply: jest.fn().mockResolvedValue({ message_id: 789 })
+        replyWithRichMessage: jest.fn().mockResolvedValue({ message_id: 789 })
       };
 
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
@@ -585,7 +657,7 @@ describe('RideMessagesService', () => {
         lang: 'ru',
         chat: { id: 456, type: 'group' },
         from: { id: 123 }, // Same as createdBy but in group chat
-        reply: jest.fn().mockResolvedValue({ message_id: 789 })
+        replyWithRichMessage: jest.fn().mockResolvedValue({ message_id: 789 })
       };
 
       mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
@@ -729,6 +801,36 @@ describe('RideMessagesService', () => {
   });
 
   describe('updateRideMessages', () => {
+    it('should keep the HTTPS teaser when updating an announcement', async () => {
+      const mockRide = {
+        id: 'ride123',
+        messages: [{
+          chatId: 12345,
+          messageId: 67890,
+          language: 'en',
+          isForCreator: false
+        }]
+      };
+      const mockCtx = {
+        api: { editMessageText: jest.fn().mockResolvedValue({}) }
+      };
+      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
+        message: '<h3>Updated Ride</h3>',
+        keyboard: { inline_keyboard: [] }
+      });
+
+      await rideMessagesService.updateRideMessages(mockRide, mockCtx);
+
+      expect(mockCtx.api.editMessageText).toHaveBeenCalledWith(
+        12345,
+        67890,
+        {
+          html: '<img src="https://static.ridebot.valera.ws/ridebot-teaser.jpg"/>\n<h3>Updated Ride</h3>'
+        },
+        { reply_markup: { inline_keyboard: [] } }
+      );
+    });
+
     it('should return early when ride has no messages', async () => {
       // Setup
       const mockRide = {
@@ -779,9 +881,8 @@ describe('RideMessagesService', () => {
       expect(mockCtx.api.editMessageText).toHaveBeenCalledWith(
         12345,
         67890,
-        'Updated ride message',
+        { html: '<img src="https://static.ridebot.valera.ws/ridebot-teaser.jpg"/>\nUpdated ride message' },
         {
-          parse_mode: 'HTML',
           reply_markup: { inline_keyboard: [] }
         }
       );
@@ -875,15 +976,15 @@ describe('RideMessagesService', () => {
         1,
         123,
         1,
-        'Creator private message',
-        { parse_mode: 'HTML', reply_markup: { inline_keyboard: [] } }
+        { html: '<img src="https://static.ridebot.valera.ws/ridebot-teaser.jpg"/>\nCreator private message' },
+        { reply_markup: { inline_keyboard: [] } }
       );
       expect(mockCtx.api.editMessageText).toHaveBeenNthCalledWith(
         2,
         -1001,
         2,
-        'Group message',
-        { parse_mode: 'HTML', reply_markup: { inline_keyboard: [] } }
+        { html: '<img src="https://static.ridebot.valera.ws/ridebot-teaser.jpg"/>\nGroup message' },
+        { reply_markup: { inline_keyboard: [] } }
       );
       expect(result).toEqual({ success: true, updatedCount: 2, removedCount: 0 });
     });
@@ -917,9 +1018,8 @@ describe('RideMessagesService', () => {
       expect(mockCtx.api.editMessageText).toHaveBeenCalledWith(
         12345,
         67890,
-        'Updated ride message',
+        { html: '<img src="https://static.ridebot.valera.ws/ridebot-teaser.jpg"/>\nUpdated ride message' },
         {
-          parse_mode: 'HTML',
           reply_markup: { inline_keyboard: [] },
           message_thread_id: 999
         }

@@ -135,6 +135,9 @@ export class MessageFormatter {
     // Use DateParser for consistent timezone handling
     const formattedDateTime = DateParser.formatDateTime(ride.date, language);
     const datetime = `${formattedDateTime.date} ${this.translate('formatter.atWord', {}, language)} ${formattedDateTime.time}`;
+    const unixTime = Math.floor(ride.date.getTime() / 1000);
+    const richDateTime = `<tg-time unix="${unixTime}">${datetime}</tg-time>`;
+    const formatParagraph = lines => `<p>${lines.join('<br>')}</p>\n`;
     
     // Extract all participation categories
     const joinedParticipants = participation?.joined || [];
@@ -167,49 +170,51 @@ export class MessageFormatter {
     // Group 1: Title is already handled in the template
     
     // Group 2: When and Category
-    let group2 = `📅 ${this.translate('formatter.labels.when', {}, language)}: ${datetime}\n`;
+    const group2 = [`📅 ${this.translate('formatter.labels.when', {}, language)}: ${richDateTime}`];
     if (ride.category) {
-      group2 += `🚵 ${this.translate('formatter.labels.category', {}, language)}: ${escapeHtml(getCategoryLabel(ride.category, language))}\n`;
+      group2.push(`🚵 ${this.translate('formatter.labels.category', {}, language)}: ${escapeHtml(getCategoryLabel(ride.category, language))}`);
     }
-    rideDetails += group2;
+    rideDetails += formatParagraph(group2);
     
     // Group 3: Organizer, Meeting point, Route
-    let group3 = '';
+    const group3 = [];
     if (ride.organizer) {
-      group3 += `👤 ${this.translate('formatter.labels.organizer', {}, language)}: ${escapeHtml(ride.organizer)}\n`;
+      group3.push(`👤 ${this.translate('formatter.labels.organizer', {}, language)}: ${escapeHtml(ride.organizer)}`);
     }
     if (ride.meetingPoint) {
-      group3 += `📍 ${this.translate('formatter.labels.meetingPoint', {}, language)}: ${escapeHtml(ride.meetingPoint)}\n`;
+      group3.push(`📍 ${this.translate('formatter.labels.meetingPoint', {}, language)}: ${escapeHtml(ride.meetingPoint)}`);
     }
     const rideRouteLinks = this.renderRouteLinks(ride, language);
     if (rideRouteLinks) {
-      group3 += `🗺️ ${this.translate('formatter.labels.route', {}, language)}: ${rideRouteLinks}\n`;
+      group3.push(`🗺️ ${this.translate('formatter.labels.route', {}, language)}: ${rideRouteLinks}`);
     }
-    if (group3) {
-      rideDetails += `\n${group3}`;
+    if (group3.length > 0) {
+      rideDetails += formatParagraph(group3);
     }
     
     // Group 4: Distance, Duration, Speed
-    let group4 = '';
+    const group4 = [];
     if (ride.distance) {
-      group4 += `📏 ${this.translate('formatter.labels.distance', {}, language)}: ${ride.distance} ${this.translate('formatter.units.km', {}, language)}\n`;
+      group4.push(`📏 ${this.translate('formatter.labels.distance', {}, language)}: ${ride.distance} ${this.translate('formatter.units.km', {}, language)}`);
     }
     if (ride.duration) {
-      group4 += `⏱ ${this.translate('formatter.labels.duration', {}, language)}: ${this.formatDuration(ride.duration, language)}\n`;
+      group4.push(`⏱ ${this.translate('formatter.labels.duration', {}, language)}: ${this.formatDuration(ride.duration, language)}`);
     }
     if (ride.speedMin || ride.speedMax) {
-      group4 += `⚡ ${this.translate('formatter.labels.speed', {}, language)}: ${this.formatSpeedRange(ride.speedMin, ride.speedMax, language)}\n`;
+      group4.push(`⚡ ${this.translate('formatter.labels.speed', {}, language)}: ${this.formatSpeedRange(ride.speedMin, ride.speedMax, language)}`);
     }
     if (ride.cruisingSpeedMin || ride.cruisingSpeedMax) {
-      group4 += `🛣️ ${this.translate('formatter.labels.cruisingSpeed', {}, language)}: ${this.formatSpeedRange(ride.cruisingSpeedMin, ride.cruisingSpeedMax, language)}\n`;
+      group4.push(`🛣️ ${this.translate('formatter.labels.cruisingSpeed', {}, language)}: ${this.formatSpeedRange(ride.cruisingSpeedMin, ride.cruisingSpeedMax, language)}`);
     }
-    if (group4) {
-      rideDetails += `\n${group4}`;
+    if (group4.length > 0) {
+      rideDetails += formatParagraph(group4);
     }
     
     // Group 5: Additional info
     if (ride.additionalInfo) {
-      rideDetails += `\nℹ️ ${this.translate('formatter.labels.additionalInfo', {}, language)}: ${escapeHtml(ride.additionalInfo)}\n`;
+      rideDetails += formatParagraph([
+        `ℹ️ ${this.translate('formatter.labels.additionalInfo', {}, language)}: ${escapeHtml(ride.additionalInfo)}`
+      ]);
     }
     
     // Convert Markdown template to HTML
@@ -220,49 +225,49 @@ export class MessageFormatter {
       .replace('{rideDetails}', rideDetails)
       .replace('{participantCount}', participantCount)
       .replace('{participants}', participantsList)
-      .replace('{thinkingCount}', thinkingCount)
-      .replace('{thinking}', thinkingContent)
-      .replace('{notInterestedCount}', notInterestedContent)
+      .replace('{thinkingLine}', thinkingCount > 0
+        ? `<br>🤔 ${this.translate('formatter.participation.thinking', {}, language)} (${thinkingCount}): ${thinkingContent}`
+        : '')
+      .replace('{notInterestedLine}', notInterestedCount > 0
+        ? `<br>🙅 ${this.translate('formatter.participation.notInterested', {}, language)}: ${notInterestedContent}`
+        : '')
       .replace('{joinedLabel}', this.translate('formatter.participation.joined', {}, language))
       .replace('{thinkingLabel}', this.translate('formatter.participation.thinking', {}, language))
       .replace('{notInterestedLabel}', this.translate('formatter.participation.notInterested', {}, language));
     
     // Add cancellation instructions if the ride is cancelled
-    const cancelledInstructions = ride.cancelled ? `\n\n${this.translate('templates.cancelledMessage', {}, language)}` : '';
+    const cancelledInstructions = ride.cancelled
+      ? `\n<p>${this.translate('templates.cancelledMessage', {}, language)}</p>`
+      : '';
     message = message.replace('{cancelledInstructions}', cancelledInstructions);
 
     // Add share line for ride creator in private chat
-    const shareLine = options.isForCreator
-      ? `${this.translate('formatter.shareLine', { id: ride.id }, language)}\n\n`
+    const shareBlock = options.isForCreator
+      ? `<p>${this.translate('formatter.shareLine', { id: ride.id }, language)}</p>\n`
       : '';
-    message = message.replace('{shareLine}', shareLine);
+    message = message.replace('{shareBlock}', shareBlock);
 
-    const groupChatLine = ride.groupId
-      ? `${this.translate('formatter.groupChatLine', { id: ride.id }, language)}\n\n`
+    const groupChatBlock = ride.groupId
+      ? `<p>${this.translate('formatter.groupChatLine', { id: ride.id }, language)}</p>\n`
       : '';
-    message = message.replace('{groupChatLine}', groupChatLine);
+    message = message.replace('{groupChatBlock}', groupChatBlock);
 
     const canLinkToCalendar = !ride.cancelled
       && /^\w+$/.test(options.botUsername || '')
       && /^\w+$/.test(ride.id || '');
     const calendarLine = canLinkToCalendar
-      ? `<a href="https://t.me/${options.botUsername}?start=calendar_${ride.id}">${this.translate('buttons.addToCalendar', {}, language)}</a>\n\n`
+      ? `<a href="https://t.me/${options.botUsername}?start=calendar_${ride.id}">${this.translate('buttons.addToCalendar', {}, language)}</a><br>`
       : '';
-    message = message.replace('{calendarLine}', calendarLine);
+    message = message.replace('{footerBlock}', `<p>${calendarLine}🎫 #Ride #{id}</p>`);
 
     message = message.replace('{id}', ride.id);
-    
-    // Remove lines that contain only emoji and empty content (e.g., "🤔 Thinking (0): ")
-    const thinkingLabel = this.translate('formatter.participation.thinking', {}, language);
-    const notInterestedLabel = this.translate('formatter.participation.notInterested', {}, language);
-    message = message.replace(
-      new RegExp(`🤔 ${this.escapeForRegex(thinkingLabel)} \\(0\\): \\n`, 'g'),
-      ''
-    );
-    message = message.replace(
-      new RegExp(`🙅 ${this.escapeForRegex(notInterestedLabel)}: \\n`, 'g'),
-      ''
-    );
+
+    // Telegram renders adjacent Rich HTML paragraphs without the empty line that
+    // separated these groups in regular messages. Keep the body in one paragraph
+    // and express every visual gap explicitly with two line breaks.
+    message = message
+      .replace('</h3>\n<p>', '</h3>\n<p><br>')
+      .replace(/<\/p>\s*<p>/g, '<br><br>');
     
     return message;
   }

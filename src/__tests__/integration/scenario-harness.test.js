@@ -101,7 +101,9 @@ describe('Scenario Harness Integration', () => {
 
     expect(harness.outbox.replies).toHaveLength(1);
     expect(harness.outbox.replies[0].text).toContain('Sunrise Ride');
-    expect(harness.outbox.replies[0].options.parse_mode).toBe('HTML');
+    expect(harness.outbox.replies[0].richMessage?.html).toContain('<h3>🚲 Sunrise Ride</h3>');
+    expect(harness.outbox.replies[0].richMessage?.html).toContain('<tg-time ');
+    expect(harness.outbox.replies[0].options.parse_mode).toBeUndefined();
     expect(harness.outbox.replies[0].options.reply_markup.inline_keyboard[0]).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ callback_data: `join:${ride.id}` }),

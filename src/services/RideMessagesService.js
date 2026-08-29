@@ -2,6 +2,8 @@ import { RideParamsHelper } from '../utils/RideParamsHelper.js';
 import { config } from '../config.js';
 import { t } from '../i18n/index.js';
 
+const RIDE_TEASER_URL = 'https://static.ridebot.valera.ws/ridebot-teaser.jpg';
+
 /**
  * Service class for handling ride message operations
  */
@@ -20,6 +22,39 @@ export class RideMessagesService {
       fallbackLanguage: config.i18n.fallbackLanguage,
       withMissingMarker: config.isDev
     });
+  }
+
+  /**
+   * Find the ride marker in the structured content returned for a Rich Message.
+   * Telegram may omit the announcement keyboard, for example after cancellation.
+   * @param {unknown} richMessage - Telegram Rich Message payload
+   * @returns {string|null} - Ride ID, if present
+   */
+  extractRideIdFromRichMessage(richMessage) {
+    const textParts = [];
+    const collectText = value => {
+      if (typeof value === 'string') {
+        textParts.push(value);
+      } else if (Array.isArray(value)) {
+        value.forEach(collectText);
+      } else if (value && typeof value === 'object') {
+        Object.values(value).forEach(collectText);
+      }
+    };
+
+    collectText(richMessage);
+    return textParts.join('\n').match(/🎫\s*#Ride\s*#(\w+)/i)?.[1] || null;
+  }
+
+  /**
+   * Add the hosted teaser image to a ride Rich Message.
+   * @param {string} html - Formatted ride announcement
+   * @returns {Object} - InputRichMessage payload
+   */
+  buildRideRichMessage(html) {
+    return {
+      html: `<img src="${RIDE_TEASER_URL}"/>\n${html}`
+    };
   }
 
   /**
@@ -49,8 +84,24 @@ export class RideMessagesService {
     }
     
     // Then check replied message
-    if (message.reply_to_message?.text) {
-      const originalMessage = message.reply_to_message.text;
+    if (message.reply_to_message) {
+      const callbackData = message.reply_to_message.reply_markup?.inline_keyboard
+        ?.flat()
+        .map(button => button.callback_data)
+        .find(data => /^(?:join|thinking|skip|rideowner:\w+):\w+$/.test(data || ''));
+      const callbackRideId = callbackData?.match(/:([A-Za-z0-9_]+)$/)?.[1];
+      if (callbackRideId) {
+        return { rideId: callbackRideId, error: null };
+      }
+
+      const richMessageRideId = this.extractRideIdFromRichMessage(
+        message.reply_to_message.rich_message
+      );
+      if (richMessageRideId) {
+        return { rideId: richMessageRideId, error: null };
+      }
+
+      const originalMessage = message.reply_to_message.text || '';
       const rideIdMatch = originalMessage.match(/🎫\s*#Ride\s*#(\w+)/i);
       
       if (!rideIdMatch) {
@@ -87,7 +138,7 @@ export class RideMessagesService {
 
       // Get participants from the ride object and format the message
       const participation = ride.participation || { joined: [], thinking: [], skipped: [] };
-      const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(
+      const { message, keyboard } = this.messageFormatter.formatRideWithKeyboard(
         ride,
         participation,
         { isForCreator, lang: language, botUsername: ctx.me?.username }
@@ -95,7 +146,6 @@ export class RideMessagesService {
       
       // Prepare reply options
       const replyOptions = {
-        parse_mode: parseMode,
         reply_markup: keyboard
       };
       
@@ -105,7 +155,10 @@ export class RideMessagesService {
       }
       
       // Send the message
-      const sentMessage = await ctx.reply(message, replyOptions);
+      const sentMessage = await ctx.replyWithRichMessage(
+        this.buildRideRichMessage(message),
+        replyOptions
+      );
 
       // Prepare the message data for storage
       const messageData = {
@@ -207,7 +260,7 @@ export class RideMessagesService {
       for (const messageInfo of ride.messages) {
         const language = messageInfo.language || ctx?.lang || config.i18n.defaultLanguage;
         const isForCreator = messageInfo.isForCreator ?? (messageInfo.chatId === ride.createdBy);
-        const { message, keyboard, parseMode } = this.messageFormatter.formatRideWithKeyboard(
+        const { message, keyboard } = this.messageFormatter.formatRideWithKeyboard(
           ride,
           participation,
           { isForCreator, lang: language, botUsername: ctx.me?.username }
@@ -216,7 +269,6 @@ export class RideMessagesService {
         try {
           // Prepare options for editing the message
           const editOptions = {
-            parse_mode: parseMode,
             reply_markup: keyboard
           };
           
@@ -225,10 +277,11 @@ export class RideMessagesService {
             editOptions.message_thread_id = messageInfo.messageThreadId;
           }
           
+          const richMessage = this.buildRideRichMessage(message);
           await ctx.api.editMessageText(
             messageInfo.chatId,
             messageInfo.messageId,
-            message,
+            richMessage,
             editOptions
           );
           updatedCount++;

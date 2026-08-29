@@ -211,8 +211,9 @@ describe('MessageFormatter', () => {
       );
 
       expect(result).toContain(
-        '<a href="https://t.me/testbot?start=calendar_abc123">📅 Add to calendar</a>'
+        '<a href="https://t.me/testbot?start=calendar_abc123">📅 Add to calendar</a><br>🎫 #Ride #abc123'
       );
+      expect(result).not.toContain('📅 Add to calendar</a><br><br>🎫 #Ride #abc123');
     });
 
     it('does not render the calendar deep link for cancelled rides', () => {
@@ -238,6 +239,8 @@ describe('MessageFormatter', () => {
         id: '123',
         title: 'Test Ride',
         date: new Date('2025-03-30T10:00:00Z'),
+        category: 'mixed',
+        organizer: 'Test Organizer',
         meetingPoint: 'Test Location',
         routeLink: 'https://example.com/route',
         distance: 50,
@@ -260,7 +263,17 @@ describe('MessageFormatter', () => {
       const result = messageFormatter.formatRideMessage(ride, participants);
       
       // Verify
-      expect(result).toContain('Test Ride');
+      expect(result).toContain('<h3>🚲 Test Ride</h3>');
+      expect(result).toContain('<tg-time unix="1743328800">');
+      expect(result).not.toContain('format="wDt"');
+      expect(result).toContain('</h3>\n<p><br>📅 When: <tg-time ');
+      expect(result).toContain('<br>🚵 Category:');
+      expect(result).toContain('<br><br>👤 Organizer:');
+      expect(result).toContain('<br>📍 Meeting point: Test Location');
+      expect(result).toContain('<br><br>📏 Distance:');
+      expect(result).toContain('<br><br>ℹ️ Additional info:');
+      expect(result).toContain('<br><br>🚴 Joined');
+      expect(result).toContain('<br><br>🎫 #Ride #123</p>');
       expect(result).toContain('Test Location');
       expect(result).toContain('https://example.com/route');
       expect(result).toContain('50 km');
@@ -340,6 +353,17 @@ describe('MessageFormatter', () => {
       expect(result).toContain('<a href="tg://user?id=101112">@testuser3</a>');
     });
 
+    it('escapes the ride title inside the Rich Message heading', () => {
+      const result = messageFormatter.formatRideMessage({
+        id: '123',
+        title: '<Night & Ride>',
+        date: new Date('2025-03-30T10:00:00Z')
+      }, { joined: [], thinking: [], skipped: [] });
+
+      expect(result).toContain('<h3>🚲 &lt;Night &amp; Ride&gt;</h3>');
+      expect(result).not.toContain('<Night & Ride>');
+    });
+
     it('should format date using the selected message language', () => {
       const ride = {
         id: '123',
@@ -351,6 +375,28 @@ describe('MessageFormatter', () => {
       messageFormatter.formatRideMessage(ride, { joined: [], thinking: [], skipped: [] }, { lang: 'ru' });
 
       expect(formatSpy).toHaveBeenCalledWith(ride.date, 'ru');
+    });
+
+    it('keeps the exact localized date text inside the native date entity', () => {
+      const ride = {
+        id: '123',
+        title: 'Test Ride',
+        date: new Date('2026-08-29T11:56:00Z')
+      };
+      jest.spyOn(DateParser, 'formatDateTime').mockReturnValue({
+        date: 'сб, 29 авг. 2026 г.',
+        time: '13:56'
+      });
+
+      const result = messageFormatter.formatRideMessage(
+        ride,
+        { joined: [], thinking: [], skipped: [] },
+        { lang: 'ru' }
+      );
+
+      expect(result).toContain(
+        '<tg-time unix="1788004560">сб, 29 авг. 2026 г. в 13:56</tg-time>'
+      );
     });
 
     it.each(['en', 'ru'])('should truncate participants when there are more than MAX_PARTICIPANTS_DISPLAY (%s)', (language) => {
@@ -576,8 +622,9 @@ describe('MessageFormatter', () => {
       // Verify - should include share line with correct spacing
       expect(result).toContain(tr(language, 'formatter.shareLine', { id: 'abc123' }));
       expect(result).toContain('🎫 #Ride #abc123');
-      // Should have one empty line before and one after the share line
-      expect(result).toContain(`\n\n${tr(language, 'formatter.shareLine', { id: 'abc123' })}\n\n🎫 #Ride #abc123`);
+      expect(result).toContain(
+        `<br><br>${tr(language, 'formatter.shareLine', { id: 'abc123' })}<br><br>🎫 #Ride #abc123</p>`
+      );
     });
 
     it.each(['en', 'ru'])('should not include share line for non-creator (%s)', (language) => {
@@ -596,8 +643,7 @@ describe('MessageFormatter', () => {
       // Verify - should not include share line and have correct spacing
       expect(result).not.toContain(tr(language, 'formatter.shareLine', { id: 'abc123' }));
       expect(result).toContain('🎫 #Ride #abc123');
-      // Should have only one empty line before the #Ride line
-      expect(result).toMatch(/\n\n🎫 #Ride #abc123/);
+      expect(result).toContain('<br><br>🎫 #Ride #abc123</p>');
     });
   });
   

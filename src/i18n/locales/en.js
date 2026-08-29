@@ -233,14 +233,10 @@ The bot will send you a single-use invite link (valid 24 hours). The command onl
     `.trim(),
 
     ride: `
-🚲 <b>{title}</b>{cancelledBadge}
-
+<h3>🚲 {title}{cancelledBadge}</h3>
 {rideDetails}
-🚴 {joinedLabel} ({participantCount}): {participants}
-🤔 {thinkingLabel} ({thinkingCount}): {thinking}
-🙅 {notInterestedLabel}: {notInterestedCount}
-
-{groupChatLine}{shareLine}{calendarLine}🎫 #Ride #{id}{cancelledInstructions}
+<p>🚴 {joinedLabel} ({participantCount}): {participants}{thinkingLine}{notInterestedLine}</p>
+{groupChatBlock}{shareBlock}{footerBlock}{cancelledInstructions}
     `.trim(),
 
     cancelled: '❌ CANCELLED',
