@@ -259,10 +259,27 @@ describe('RideMessagesService', () => {
   });
 
   describe('createRideMessage', () => {
+    it.each([
+      ['road', 'ride-announcement-teaser-road-color.jpg'],
+      ['gravel', 'ride-announcement-teaser-gravel.jpg'],
+      ['mtb', 'ride-announcement-teaser-downhill-color.jpg'],
+      ['mtb-xc', 'ride-announcement-teaser-mtb-xc-color.jpg'],
+      ['e-bike', 'ride-announcement-teaser-ebike-color.jpg'],
+      ['virtual', 'ride-announcement-teaser-indoor-color.jpg'],
+      ['mixed', 'ride-announcement-teaser.jpg'],
+      ['unknown', 'ride-announcement-teaser.jpg'],
+      [undefined, 'ride-announcement-teaser.jpg']
+    ])('should select the teaser for category %s', (category, filename) => {
+      expect(rideMessagesService.buildRideRichMessage('<h3>Ride</h3>', category)).toEqual({
+        html: `<img src="https://static.ridebot.valera.ws/ridebot/${filename}"/>\n<h3>Ride</h3>`
+      });
+    });
+
     it('should use the HTTPS teaser as the first Rich Message block', async () => {
       const mockRide = {
         id: 'ride123',
         title: 'Morning Ride',
+        category: 'road',
         messages: []
       };
       const mockCtx = {
@@ -279,7 +296,7 @@ describe('RideMessagesService', () => {
 
       const richMessage = mockCtx.replyWithRichMessage.mock.calls[0][0];
       expect(richMessage.html).toBe(
-        '<img src="https://static.ridebot.valera.ws/ridebot-teaser.jpg"/>\n<h3>Morning Ride</h3>'
+        '<img src="https://static.ridebot.valera.ws/ridebot/ride-announcement-teaser-road-color.jpg"/>\n<h3>Morning Ride</h3>'
       );
       expect(richMessage.media).toBeUndefined();
       expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
@@ -323,7 +340,7 @@ describe('RideMessagesService', () => {
         { isForCreator: false, lang: 'en' }
       );
       expect(mockCtx.replyWithRichMessage).toHaveBeenCalledWith(expect.objectContaining({
-        html: '<img src="https://static.ridebot.valera.ws/ridebot-teaser.jpg"/>\nFormatted ride message'
+        html: '<img src="https://static.ridebot.valera.ws/ridebot/ride-announcement-teaser.jpg"/>\nFormatted ride message'
       }), {
         reply_markup: { inline_keyboard: [] }
       });
@@ -365,7 +382,7 @@ describe('RideMessagesService', () => {
 
       // Verify
       expect(mockCtx.replyWithRichMessage).toHaveBeenCalledWith(expect.objectContaining({
-        html: '<img src="https://static.ridebot.valera.ws/ridebot-teaser.jpg"/>\nFormatted ride message'
+        html: '<img src="https://static.ridebot.valera.ws/ridebot/ride-announcement-teaser.jpg"/>\nFormatted ride message'
       }), {
         reply_markup: { inline_keyboard: [] },
         message_thread_id: 999
@@ -406,7 +423,7 @@ describe('RideMessagesService', () => {
 
       // Verify explicit thread ID is used
       expect(mockCtx.replyWithRichMessage).toHaveBeenCalledWith(expect.objectContaining({
-        html: '<img src="https://static.ridebot.valera.ws/ridebot-teaser.jpg"/>\nFormatted ride message'
+        html: '<img src="https://static.ridebot.valera.ws/ridebot/ride-announcement-teaser.jpg"/>\nFormatted ride message'
       }), {
         reply_markup: { inline_keyboard: [] },
         message_thread_id: 777
@@ -804,6 +821,7 @@ describe('RideMessagesService', () => {
     it('should keep the HTTPS teaser when updating an announcement', async () => {
       const mockRide = {
         id: 'ride123',
+        category: 'mtb',
         messages: [{
           chatId: 12345,
           messageId: 67890,
@@ -825,7 +843,7 @@ describe('RideMessagesService', () => {
         12345,
         67890,
         {
-          html: '<img src="https://static.ridebot.valera.ws/ridebot-teaser.jpg"/>\n<h3>Updated Ride</h3>'
+          html: '<img src="https://static.ridebot.valera.ws/ridebot/ride-announcement-teaser-downhill-color.jpg"/>\n<h3>Updated Ride</h3>'
         },
         { reply_markup: { inline_keyboard: [] } }
       );
@@ -881,7 +899,7 @@ describe('RideMessagesService', () => {
       expect(mockCtx.api.editMessageText).toHaveBeenCalledWith(
         12345,
         67890,
-        { html: '<img src="https://static.ridebot.valera.ws/ridebot-teaser.jpg"/>\nUpdated ride message' },
+        { html: '<img src="https://static.ridebot.valera.ws/ridebot/ride-announcement-teaser.jpg"/>\nUpdated ride message' },
         {
           reply_markup: { inline_keyboard: [] }
         }
@@ -976,14 +994,14 @@ describe('RideMessagesService', () => {
         1,
         123,
         1,
-        { html: '<img src="https://static.ridebot.valera.ws/ridebot-teaser.jpg"/>\nCreator private message' },
+        { html: '<img src="https://static.ridebot.valera.ws/ridebot/ride-announcement-teaser.jpg"/>\nCreator private message' },
         { reply_markup: { inline_keyboard: [] } }
       );
       expect(mockCtx.api.editMessageText).toHaveBeenNthCalledWith(
         2,
         -1001,
         2,
-        { html: '<img src="https://static.ridebot.valera.ws/ridebot-teaser.jpg"/>\nGroup message' },
+        { html: '<img src="https://static.ridebot.valera.ws/ridebot/ride-announcement-teaser.jpg"/>\nGroup message' },
         { reply_markup: { inline_keyboard: [] } }
       );
       expect(result).toEqual({ success: true, updatedCount: 2, removedCount: 0 });
@@ -1018,7 +1036,7 @@ describe('RideMessagesService', () => {
       expect(mockCtx.api.editMessageText).toHaveBeenCalledWith(
         12345,
         67890,
-        { html: '<img src="https://static.ridebot.valera.ws/ridebot-teaser.jpg"/>\nUpdated ride message' },
+        { html: '<img src="https://static.ridebot.valera.ws/ridebot/ride-announcement-teaser.jpg"/>\nUpdated ride message' },
         {
           reply_markup: { inline_keyboard: [] },
           message_thread_id: 999

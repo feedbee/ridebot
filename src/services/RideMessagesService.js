@@ -1,8 +1,18 @@
 import { RideParamsHelper } from '../utils/RideParamsHelper.js';
 import { config } from '../config.js';
 import { t } from '../i18n/index.js';
+import { CATEGORY_CODES } from '../utils/category-utils.js';
 
-const RIDE_TEASER_URL = 'https://static.ridebot.valera.ws/ridebot-teaser.jpg';
+const RIDE_TEASER_BASE_URL = 'https://static.ridebot.valera.ws/ridebot';
+const DEFAULT_RIDE_TEASER = 'ride-announcement-teaser.jpg';
+const RIDE_TEASER_BY_CATEGORY = Object.freeze({
+  [CATEGORY_CODES.ROAD]: 'ride-announcement-teaser-road-color.jpg',
+  [CATEGORY_CODES.GRAVEL]: 'ride-announcement-teaser-gravel.jpg',
+  [CATEGORY_CODES.MTB]: 'ride-announcement-teaser-downhill-color.jpg',
+  [CATEGORY_CODES.MTB_XC]: 'ride-announcement-teaser-mtb-xc-color.jpg',
+  [CATEGORY_CODES.E_BIKE]: 'ride-announcement-teaser-ebike-color.jpg',
+  [CATEGORY_CODES.VIRTUAL]: 'ride-announcement-teaser-indoor-color.jpg'
+});
 
 /**
  * Service class for handling ride message operations
@@ -49,11 +59,13 @@ export class RideMessagesService {
   /**
    * Add the hosted teaser image to a ride Rich Message.
    * @param {string} html - Formatted ride announcement
+   * @param {string} [category] - Canonical ride category
    * @returns {Object} - InputRichMessage payload
    */
-  buildRideRichMessage(html) {
+  buildRideRichMessage(html, category) {
+    const teaserFilename = RIDE_TEASER_BY_CATEGORY[category] || DEFAULT_RIDE_TEASER;
     return {
-      html: `<img src="${RIDE_TEASER_URL}"/>\n${html}`
+      html: `<img src="${RIDE_TEASER_BASE_URL}/${teaserFilename}"/>\n${html}`
     };
   }
 
@@ -156,7 +168,7 @@ export class RideMessagesService {
       
       // Send the message
       const sentMessage = await ctx.replyWithRichMessage(
-        this.buildRideRichMessage(message),
+        this.buildRideRichMessage(message, ride.category),
         replyOptions
       );
 
@@ -277,7 +289,7 @@ export class RideMessagesService {
             editOptions.message_thread_id = messageInfo.messageThreadId;
           }
           
-          const richMessage = this.buildRideRichMessage(message);
+          const richMessage = this.buildRideRichMessage(message, ride.category);
           await ctx.api.editMessageText(
             messageInfo.chatId,
             messageInfo.messageId,
