@@ -160,6 +160,17 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
   }
 
   /**
+   * Close the current settings interface.
+   *
+   * @param {import('grammy').Context} ctx
+   * @returns {Promise<void>}
+   */
+  async handleClose(ctx) {
+    await ctx.answerCallbackQuery();
+    await ctx.deleteMessage();
+  }
+
+  /**
    * Render the current user-defaults settings screen.
    *
    * @param {import('grammy').Context} ctx
@@ -174,19 +185,18 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
     ]);
     const defaults = settingsOverride?.rideDefaults || storedDefaults;
     const level = settingsOverride?.participationNotificationLevel || storedLevel;
-    const text = this.buildUserSettingsText(ctx, defaults, level);
+    const richMessage = { html: this.buildUserSettingsText(ctx, defaults, level) };
     const keyboard = this.buildUserSettingsKeyboard(ctx, defaults, level);
     const options = {
-      parse_mode: 'HTML',
       reply_markup: keyboard
     };
 
     if (mode === 'edit') {
-      await this.editMessageTextIgnoringNotModified(ctx, text, options);
+      await this.editMessageTextIgnoringNotModified(ctx, richMessage, options);
       return;
     }
 
-    await ctx.reply(text, options);
+    await ctx.replyWithRichMessage(richMessage, options);
   }
 
   /**
@@ -199,19 +209,18 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
    */
   async showRideSettings(ctx, mode, ride) {
     const settings = SettingsService.getRideSettingsSnapshot(ride);
-    const text = this.buildRideSettingsText(ctx, ride, settings);
+    const richMessage = { html: this.buildRideSettingsText(ctx, ride, settings) };
     const keyboard = this.buildRideSettingsKeyboard(ctx, ride.id, settings);
     const options = {
-      parse_mode: 'HTML',
       reply_markup: keyboard
     };
 
     if (mode === 'edit') {
-      await this.editMessageTextIgnoringNotModified(ctx, text, options);
+      await this.editMessageTextIgnoringNotModified(ctx, richMessage, options);
       return;
     }
 
-    await ctx.reply(text, options);
+    await ctx.replyWithRichMessage(richMessage, options);
   }
 
   /**
@@ -221,16 +230,28 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
    */
   buildUserSettingsText(ctx, defaults, level) {
     return [
-      `<b>${this.translate(ctx, 'commands.settings.userTitle')}</b>`,
-      '',
-      this.buildSettingLine(ctx, 'commands.settings.notifyParticipationLabel', defaults.notifyParticipation),
-      this.buildSettingLine(ctx, 'commands.settings.allowRepostsLabel', defaults.allowReposts),
-      this.translate(ctx, 'commands.settings.userHint'),
-      '',
-      `<b>${this.translate(ctx, 'commands.settings.notificationPreferencesTitle')}</b>`,
-      `${this.translate(ctx, 'commands.settings.participationNotificationLevelLabel')}: <b>${this.translate(ctx, `commands.settings.notificationLevel.${level}`)}</b>`,
-      this.translate(ctx, 'commands.settings.notificationPreferencesHint')
-    ].join('\n');
+      `<h3>${this.translate(ctx, 'commands.settings.userTitle')}</h3>`,
+      this.buildSettingsTable([
+        this.buildBooleanSettingRow(
+          ctx,
+          'commands.settings.notifyParticipationLabel',
+          defaults.notifyParticipation
+        ),
+        this.buildBooleanSettingRow(
+          ctx,
+          'commands.settings.allowRepostsLabel',
+          defaults.allowReposts
+        )
+      ]),
+      `<footer>${this.translate(ctx, 'commands.settings.userHint')}</footer>`,
+      '<hr/>',
+      `<h4>${this.translate(ctx, 'commands.settings.notificationPreferencesTitle')}</h4>`,
+      this.buildSettingsTable([{
+        label: this.translate(ctx, 'commands.settings.participationNotificationLevelLabel'),
+        value: this.translate(ctx, `commands.settings.notificationLevel.${level}`)
+      }]),
+      `<footer>${this.translate(ctx, 'commands.settings.notificationPreferencesHint')}</footer>`
+    ].join('');
   }
 
   /**
@@ -264,6 +285,11 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
       .text(
         `${level === 'membership' ? '✓ ' : ''}${this.translate(ctx, 'commands.settings.notificationLevel.membership')}`,
         'settings:user:notification-level:membership'
+      )
+      .row()
+      .text(
+        this.translate(ctx, 'buttons.close'),
+        'settings:close'
       );
   }
 
@@ -275,13 +301,22 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
    */
   buildRideSettingsText(ctx, ride, settings) {
     return [
-      `<b>${this.translate(ctx, 'commands.settings.rideTitle')}</b>`,
-      `${escapeHtml(ride.title)} (#${ride.id})`,
-      '',
-      this.buildSettingLine(ctx, 'commands.settings.notifyParticipationLabel', settings.notifyParticipation),
-      this.buildSettingLine(ctx, 'commands.settings.allowRepostsLabel', settings.allowReposts),
-      this.translate(ctx, 'commands.settings.rideHint')
-    ].join('\n');
+      `<h3>${this.translate(ctx, 'commands.settings.rideTitle')}</h3>`,
+      `<p>${escapeHtml(ride.title)} (#${escapeHtml(ride.id.toString())})</p>`,
+      this.buildSettingsTable([
+        this.buildBooleanSettingRow(
+          ctx,
+          'commands.settings.notifyParticipationLabel',
+          settings.notifyParticipation
+        ),
+        this.buildBooleanSettingRow(
+          ctx,
+          'commands.settings.allowRepostsLabel',
+          settings.allowReposts
+        )
+      ]),
+      `<footer>${this.translate(ctx, 'commands.settings.rideHint')}</footer>`
+    ].join('');
   }
 
   /**
@@ -306,6 +341,11 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
           disableKey: 'commands.settings.disableReposts'
         }),
         `settings:ride:bool:repost:${settings.allowReposts ? 'off' : 'on'}:${rideId}`
+      )
+      .row()
+      .text(
+        this.translate(ctx, 'buttons.close'),
+        'settings:close'
       );
   }
 
@@ -329,13 +369,29 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
    * @param {import('grammy').Context} ctx
    * @param {string} labelKey
    * @param {boolean} value
-   * @returns {string}
+   * @returns {{label: string, value: string}}
    */
-  buildSettingLine(ctx, labelKey, value) {
+  buildBooleanSettingRow(ctx, labelKey, value) {
     const valueLabel = value
       ? this.translate(ctx, 'common.yes')
       : this.translate(ctx, 'common.no');
-    return `${this.translate(ctx, labelKey)}: <b>${valueLabel}</b>`;
+    return {
+      label: this.translate(ctx, labelKey),
+      value: valueLabel
+    };
+  }
+
+  /**
+   * Build a compact two-column key-value table for Telegram Rich HTML.
+   *
+   * @param {Array<{label: string, value: string}>} rows
+   * @returns {string}
+   */
+  buildSettingsTable(rows) {
+    const body = rows
+      .map(({ label, value }) => `<tr><td>${label}</td><td><b>${value}</b></td></tr>`)
+      .join('');
+    return `<table bordered striped compact>${body}</table>`;
   }
 
   /**
@@ -352,13 +408,13 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
 
   /**
    * @param {import('grammy').Context} ctx
-   * @param {string} text
+   * @param {Object} richMessage
    * @param {Object} options
    * @returns {Promise<void>}
    */
-  async editMessageTextIgnoringNotModified(ctx, text, options) {
+  async editMessageTextIgnoringNotModified(ctx, richMessage, options) {
     try {
-      await ctx.editMessageText(text, options);
+      await ctx.editMessageText(richMessage, options);
     } catch (error) {
       const isNotModifiedError = error?.error_code === 400
         && (

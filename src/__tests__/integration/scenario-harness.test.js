@@ -533,6 +533,8 @@ describe('Scenario Harness Integration', () => {
     expect(harness.storage.users.has(owner.id)).toBe(false);
 
     const userSettingsMessage = harness.outbox.replies[harness.outbox.replies.length - 1];
+    expect(userSettingsMessage.richMessage?.html).toContain('<table bordered striped compact>');
+    expect(userSettingsMessage.options.reply_markup.inline_keyboard.at(-1)[0].callback_data).toBe('settings:close');
     await harness.dispatchCallback({
       data: 'settings:user:bool:np:off',
       chat,
@@ -588,6 +590,10 @@ describe('Scenario Harness Integration', () => {
     });
 
     const rideSettingsMessage = harness.outbox.replies[harness.outbox.replies.length - 1];
+    expect(rideSettingsMessage.richMessage?.html).toContain('<table bordered striped compact>');
+    expect(rideSettingsMessage.richMessage?.html).toContain(tr('commands.settings.allowRepostsLabel'));
+    expect(rideSettingsMessage.richMessage?.html).not.toContain(tr('commands.settings.notificationPreferencesTitle'));
+    expect(rideSettingsMessage.richMessage?.html).not.toContain('<tg-button');
     await harness.dispatchCallback({
       data: `settings:ride:bool:np:on:${ride.id}`,
       chat,
@@ -623,6 +629,33 @@ describe('Scenario Harness Integration', () => {
         }),
       ])
     );
+  });
+
+  it('closes a settings message without changing settings', async () => {
+    const harness = await createScenarioHarness();
+    const owner = { id: 42, first_name: 'Alex', last_name: 'Rider', username: 'alex' };
+    const chat = { id: 501, type: 'private' };
+
+    await harness.dispatchMessage({ text: '/settings', chat, from: owner });
+    const settingsMessage = harness.outbox.replies.at(-1);
+
+    await harness.dispatchCallback({
+      data: 'settings:close',
+      chat,
+      from: owner,
+      message: {
+        message_id: settingsMessage.messageId,
+        rich_message: settingsMessage.richMessage,
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' }
+      }
+    });
+
+    expect(harness.outbox.deletes).toContainEqual({
+      chatId: chat.id,
+      messageId: settingsMessage.messageId
+    });
+    expect(harness.storage.users.has(owner.id)).toBe(false);
   });
 
   it('applies the live membership-only notification level across participation changes', async () => {

@@ -143,6 +143,7 @@ export class Bot {
         { pattern: /^settings:user:bool:(\w+):(on|off)$/, handler: (ctx) => rideSettingsHandler.handleUserBooleanCallback(ctx) },
         { pattern: /^settings:user:notification-level:(\w+)$/, handler: (ctx) => rideSettingsHandler.handleUserNotificationLevelCallback(ctx) },
         { pattern: /^settings:ride:bool:(\w+):(on|off):(\w+)$/, handler: (ctx) => rideSettingsHandler.handleRideBooleanCallback(ctx) },
+        { pattern: /^settings:close$/, handler: (ctx) => rideSettingsHandler.handleClose(ctx) },
         { pattern: /^wizard:(\w+)(?::(.*))?$/, handler: (ctx) => this.wizard.handleWizardAction(ctx) },
         { pattern: /^airide:(confirm|cancel):(\d+:\d+)$/, handler: (ctx) => this.aiRideHandler.handleCallback(ctx) },
       ],

@@ -47,7 +47,9 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
       lang: language,
       from: { id: 123, username: 'user123', first_name: 'User', last_name: 'One' },
       reply: jest.fn().mockResolvedValue({}),
+      replyWithRichMessage: jest.fn().mockResolvedValue({}),
       answerCallbackQuery: jest.fn().mockResolvedValue({}),
+      deleteMessage: jest.fn().mockResolvedValue({}),
       editMessageText: jest.fn().mockResolvedValue({})
     };
 
@@ -64,16 +66,30 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
       await handler.handle(mockCtx);
 
       expect(mockSettingsService.getUserRideDefaults).toHaveBeenCalledWith(123);
-      expect(mockCtx.reply).toHaveBeenCalledWith(
-        expect.stringContaining(tr('commands.settings.userTitle')),
+      expect(mockCtx.replyWithRichMessage).toHaveBeenCalledWith(
         expect.objectContaining({
-          parse_mode: 'HTML',
+          html: expect.stringContaining(`<h3>${tr('commands.settings.userTitle')}</h3>`)
+        }),
+        expect.objectContaining({
           reply_markup: expect.any(Object)
         })
       );
-      expect(mockCtx.reply.mock.calls[0][0]).toContain(tr('commands.settings.allowRepostsLabel'));
-      expect(mockCtx.reply.mock.calls[0][0]).toContain(tr('commands.settings.notificationPreferencesTitle'));
-      expect(mockCtx.reply.mock.calls[0][0]).toContain('<code>/shareride</code>');
+      const richHtml = mockCtx.replyWithRichMessage.mock.calls[0][0].html;
+      expect(richHtml.match(/<table bordered striped compact>/g)).toHaveLength(2);
+      expect(richHtml).toContain(`<td>${tr('commands.settings.allowRepostsLabel')}</td>`);
+      expect(richHtml).toContain(`<td><b>${tr('common.yes')}</b></td>`);
+      expect(richHtml).toContain(`<td><b>${tr('common.no')}</b></td>`);
+      expect(richHtml).toContain(tr('commands.settings.notificationPreferencesTitle'));
+      expect(richHtml).toContain(
+        `<td><b>${tr('commands.settings.notificationLevel.all')}</b></td>`
+      );
+      expect(richHtml).not.toContain('<tg-button');
+      expect(richHtml).toContain('<code>/shareride</code>');
+      const keyboard = mockCtx.replyWithRichMessage.mock.calls[0][1].reply_markup.inline_keyboard;
+      expect(keyboard.at(-1)).toEqual([{
+        text: tr('buttons.close'),
+        callback_data: 'settings:close'
+      }]);
     });
 
     it('renders ride settings for /settings #rideId when the user is the creator', async () => {
@@ -89,19 +105,48 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
 
       await handler.handle(mockCtx);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith(
-        expect.stringContaining(tr('commands.settings.rideTitle')),
+      expect(mockCtx.replyWithRichMessage).toHaveBeenCalledWith(
         expect.objectContaining({
-          parse_mode: 'HTML',
+          html: expect.stringContaining(`<h3>${tr('commands.settings.rideTitle')}</h3>`)
+        }),
+        expect.objectContaining({
           reply_markup: expect.any(Object)
         })
       );
       expect(mockSettingsService.getUserRideDefaults).not.toHaveBeenCalled();
-      const [, options] = mockCtx.reply.mock.calls[0];
+      const [richMessage, options] = mockCtx.replyWithRichMessage.mock.calls[0];
+      expect(richMessage.html).toContain('<table bordered striped compact>');
+      expect(richMessage.html).toContain('Morning Ride');
+      expect(richMessage.html).toContain(`<td><b>${tr('common.yes')}</b></td>`);
+      expect(richMessage.html).toContain(`<td><b>${tr('common.no')}</b></td>`);
+      expect(richMessage.html).toContain(`<td>${tr('commands.settings.allowRepostsLabel')}</td>`);
+      expect(richMessage.html).not.toContain(tr('commands.settings.notificationPreferencesTitle'));
+      expect(richMessage.html).not.toContain('<tg-button');
       const callbackData = options.reply_markup.inline_keyboard[0][0].callback_data;
       expect(callbackData).toBe(`settings:ride:bool:np:off:${mongoRideId}`);
       expect(options.reply_markup.inline_keyboard[1][0].callback_data).toBe(`settings:ride:bool:repost:on:${mongoRideId}`);
+      expect(options.reply_markup.inline_keyboard.at(-1)).toEqual([{
+        text: tr('buttons.close'),
+        callback_data: 'settings:close'
+      }]);
       expect(Buffer.byteLength(callbackData, 'utf8')).toBeLessThanOrEqual(64);
+    });
+
+    it('escapes a user-provided ride title in Rich HTML', async () => {
+      mockCtx.message = { text: '/settings #abc123' };
+      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: 'abc123', error: null });
+      mockRideService.getRide.mockResolvedValue({
+        id: 'abc123',
+        title: '<b>Untrusted & Ride</b>',
+        createdBy: 123,
+        settings: { notifyParticipation: true, allowReposts: false }
+      });
+
+      await handler.handle(mockCtx);
+
+      const richHtml = mockCtx.replyWithRichMessage.mock.calls[0][0].html;
+      expect(richHtml).toContain('&lt;b&gt;Untrusted &amp; Ride&lt;/b&gt;');
+      expect(richHtml).not.toContain('<b>Untrusted & Ride</b>');
     });
 
     it('renders ride settings for /settings when replying to a ride message', async () => {
@@ -123,12 +168,9 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
         mockCtx.message,
         { language }
       );
-      expect(mockCtx.reply).toHaveBeenCalledWith(
-        expect.stringContaining(tr('commands.settings.rideTitle')),
-        expect.objectContaining({
-          parse_mode: 'HTML',
-          reply_markup: expect.any(Object)
-        })
+      expect(mockCtx.replyWithRichMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ html: expect.stringContaining(tr('commands.settings.rideTitle')) }),
+        expect.objectContaining({ reply_markup: expect.any(Object) })
       );
     });
 
@@ -192,11 +234,11 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
         { notifyParticipation: false }
       );
       expect(mockCtx.editMessageText).toHaveBeenCalledWith(
-        expect.stringContaining(tr('commands.settings.userTitle')),
-        expect.objectContaining({
-          parse_mode: 'HTML',
-          reply_markup: expect.any(Object)
-        })
+        expect.objectContaining({ html: expect.stringContaining(tr('commands.settings.userTitle')) }),
+        expect.objectContaining({ reply_markup: expect.any(Object) })
+      );
+      expect(mockCtx.editMessageText.mock.calls[0][0].html).toContain(
+        `<td><b>${tr('common.no')}</b></td>`
       );
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(
         tr('commands.settings.updated')
@@ -210,11 +252,8 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
 
       expect(mockSettingsService.updateUserRideDefaults).not.toHaveBeenCalled();
       expect(mockCtx.editMessageText).toHaveBeenCalledWith(
-        expect.stringContaining(tr('commands.settings.userTitle')),
-        expect.objectContaining({
-          parse_mode: 'HTML',
-          reply_markup: expect.any(Object)
-        })
+        expect.objectContaining({ html: expect.stringContaining(tr('commands.settings.userTitle')) }),
+        expect.objectContaining({ reply_markup: expect.any(Object) })
       );
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(
         tr('commands.settings.updated')
@@ -254,11 +293,8 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
         { allowReposts: true }
       );
       expect(mockCtx.editMessageText).toHaveBeenCalledWith(
-        expect.stringContaining(tr('commands.settings.allowRepostsLabel')),
-        expect.objectContaining({
-          parse_mode: 'HTML',
-          reply_markup: expect.any(Object)
-        })
+        expect.objectContaining({ html: expect.stringContaining(tr('commands.settings.allowRepostsLabel')) }),
+        expect.objectContaining({ reply_markup: expect.any(Object) })
       );
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(
         tr('commands.settings.updated')
@@ -288,12 +324,9 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
       await handler.handleCallback(mockCtx);
 
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith();
-      expect(mockCtx.reply).toHaveBeenCalledWith(
-        expect.stringContaining(tr('commands.settings.rideTitle')),
-        expect.objectContaining({
-          parse_mode: 'HTML',
-          reply_markup: expect.any(Object)
-        })
+      expect(mockCtx.replyWithRichMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ html: expect.stringContaining(tr('commands.settings.rideTitle')) }),
+        expect.objectContaining({ reply_markup: expect.any(Object) })
       );
     });
 
@@ -314,9 +347,18 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
         createdBy: 123,
         settings: { notifyParticipation: true, allowReposts: false }
       });
-      mockCtx.reply.mockRejectedValue(new Error('Reply send failed'));
+      mockCtx.replyWithRichMessage.mockRejectedValue(new Error('Reply send failed'));
 
       await expect(handler.handleCallback(mockCtx)).rejects.toThrow('Reply send failed');
+    });
+  });
+
+  describe('handleClose', () => {
+    it('acknowledges the callback and deletes the settings message', async () => {
+      await handler.handleClose(mockCtx);
+
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith();
+      expect(mockCtx.deleteMessage).toHaveBeenCalledWith();
     });
   });
 
@@ -348,11 +390,11 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
         123
       );
       expect(mockCtx.editMessageText).toHaveBeenCalledWith(
-        expect.stringContaining(tr('commands.settings.rideTitle')),
-        expect.objectContaining({
-          parse_mode: 'HTML',
-          reply_markup: expect.any(Object)
-        })
+        expect.objectContaining({ html: expect.stringContaining(tr('commands.settings.rideTitle')) }),
+        expect.objectContaining({ reply_markup: expect.any(Object) })
+      );
+      expect(mockCtx.editMessageText.mock.calls[0][0].html).toContain(
+        `<td><b>${tr('common.no')}</b></td>`
       );
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(
         tr('commands.settings.rideUpdated')
@@ -386,11 +428,8 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
         123
       );
       expect(mockCtx.editMessageText).toHaveBeenCalledWith(
-        expect.stringContaining(tr('commands.settings.allowRepostsLabel')),
-        expect.objectContaining({
-          parse_mode: 'HTML',
-          reply_markup: expect.any(Object)
-        })
+        expect.objectContaining({ html: expect.stringContaining(tr('commands.settings.allowRepostsLabel')) }),
+        expect.objectContaining({ reply_markup: expect.any(Object) })
       );
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(
         tr('commands.settings.rideUpdated')
@@ -410,11 +449,8 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
 
       expect(mockRideService.updateRide).not.toHaveBeenCalled();
       expect(mockCtx.editMessageText).toHaveBeenCalledWith(
-        expect.stringContaining(tr('commands.settings.rideTitle')),
-        expect.objectContaining({
-          parse_mode: 'HTML',
-          reply_markup: expect.any(Object)
-        })
+        expect.objectContaining({ html: expect.stringContaining(tr('commands.settings.rideTitle')) }),
+        expect.objectContaining({ reply_markup: expect.any(Object) })
       );
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(
         tr('commands.settings.rideUpdated')

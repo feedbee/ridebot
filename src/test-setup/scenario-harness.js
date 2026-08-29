@@ -141,6 +141,24 @@ export async function createScenarioHarness() {
         return sentMessage;
       }),
       replyWithHTML: jest.fn(async (replyText, options = {}) => ctx.reply(replyText, { ...options, parse_mode: 'HTML' })),
+      replyWithRichMessage: jest.fn(async (richMessage, options = {}) => {
+        const displayText = richMessage.html || richMessage.markdown || '';
+        const sentMessage = {
+          message_id: nextMessageId++,
+          rich_message: richMessage,
+          chat,
+          from: { id: 0, is_bot: true, username: 'testbot' },
+          options,
+        };
+        outbox.replies.push({
+          chatId: chat.id,
+          messageId: sentMessage.message_id,
+          text: displayText,
+          richMessage,
+          options,
+        });
+        return sentMessage;
+      }),
       editMessageText: jest.fn(async (replyText, options = {}) => {
         outbox.edits.push({
           via: 'ctx.editMessageText',
@@ -152,6 +170,13 @@ export async function createScenarioHarness() {
         return {};
       }),
       editMessageReplyMarkup: jest.fn().mockResolvedValue({}),
+      deleteMessage: jest.fn(async () => {
+        outbox.deletes.push({
+          chatId: chat.id,
+          messageId: ctx.callbackQuery?.message?.message_id,
+        });
+        return {};
+      }),
       answerCallbackQuery: jest.fn(async (textArg) => {
         outbox.callbackAnswers.push({ text: textArg ?? null });
         return {};

@@ -275,6 +275,7 @@ Click here to start a private chat: @botname
     create: '✅ Create',
     update: '✅ Update',
     keep: '↩️ Keep current',
+    close: 'Close',
     previous: '◀️ Previous',
     next: 'Next ▶️'
   },
