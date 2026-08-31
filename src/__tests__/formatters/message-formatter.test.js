@@ -667,7 +667,7 @@ describe('MessageFormatter', () => {
       ];
       
       // Execute
-      const result = messageFormatter.formatRidesList(rides, 0, 1);
+      const result = messageFormatter.formatRidesList(rides, 1, 1, 1);
       
       // Verify
       expect(result).toContain(tr(language, 'formatter.yourRidesTitle'));
@@ -677,15 +677,25 @@ describe('MessageFormatter', () => {
       expect(result).toContain(tr(language, 'templates.cancelled').replace('❌ ', ''));
       expect(result).toContain('Ride #123');
       expect(result).toContain('Ride #456');
+      expect(result).toContain(`<h3>${tr(language, 'formatter.yourRidesTitle')}</h3>`);
+      expect(result).not.toContain('<h3>🚲');
+      expect(result).toContain('</h3>\n<hr/>\n<ol start="1">');
+      expect(result).not.toContain('<p><br></p>');
+      expect(result).toContain('<li value="1"><b>🚲 Test Ride 1</b>');
+      expect(result).toContain('<li value="2"><b>🚲 Test Ride 2</b>');
+      expect(result).toContain('<ul><li>📅 ');
+      expect(result).toContain('<tg-time unix="');
+      expect(result.match(/<\/ul><br><\/li>/g)).toHaveLength(1);
+      expect(result).toContain('</ul></li></ol>');
     });
     
     it.each(['en', 'ru'])('should handle empty rides list (%s)', (language) => {
       config.i18n.defaultLanguage = language;
       // Execute
-      const result = messageFormatter.formatRidesList([], 0, 0);
+      const result = messageFormatter.formatRidesList([], 1, 1, 0);
       
       // Verify
-      expect(result).toBe(tr(language, 'formatter.noCreatedRides'));
+      expect(result).toBe(`<p>${tr(language, 'formatter.noCreatedRides')}</p>`);
     });
     
     it.each(['en', 'ru'])('should include pagination info when there are multiple pages (%s)', (language) => {
@@ -700,10 +710,13 @@ describe('MessageFormatter', () => {
       ];
       
       // Execute
-      const result = messageFormatter.formatRidesList(rides, 2, 3);
+      const result = messageFormatter.formatRidesList(rides, 2, 3, 6);
       
       // Verify
       expect(result).toContain(tr(language, 'formatter.pageLabel', { page: 2, totalPages: 3 }));
+      expect(result).toContain('<ol start="6">');
+      expect(result).toContain('<li value="6"><b>🚲 Test Ride</b>');
+      expect(result).toContain(`<hr/>\n<footer>${tr(language, 'formatter.pageLabel', { page: 2, totalPages: 3 })}</footer>`);
     });
   });
   

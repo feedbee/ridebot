@@ -344,48 +344,57 @@ export class MessageFormatter {
    * @param {Array} rides - List of rides
    * @param {number} page - Current page
    * @param {number} totalPages - Total number of pages
+   * @param {number} startNumber - Number of the first ride on this page
    * @returns {string} - Formatted message
    */
-  formatRidesList(rides, page, totalPages) {
+  formatRidesList(rides, page, totalPages, startNumber) {
     const language = config.i18n.defaultLanguage;
     if (rides.length === 0) {
-      return this.translate('formatter.noCreatedRides', {}, language);
+      return `<p>${this.translate('formatter.noCreatedRides', {}, language)}</p>`;
     }
-    
-    let message = `🚲 <b>${this.translate('formatter.yourRidesTitle', {}, language)}</b>\n\n`;
-    
-    for (const ride of rides) {
+
+    let message = `<h3>${this.translate('formatter.yourRidesTitle', {}, language)}</h3>\n<hr/>\n`;
+    message += `<ol start="${startNumber}">`;
+
+    rides.forEach((ride, index) => {
       // Use DateParser for consistent timezone handling
       const formattedDateTime = DateParser.formatDateTime(ride.date, language);
       const datetime = `${formattedDateTime.date} ${this.translate('formatter.atWord', {}, language)} ${formattedDateTime.time}`;
+      const unixTime = Math.floor(ride.date.getTime() / 1000);
       const status = ride.cancelled ? this.translate('templates.cancelled', {}, language) : '';
-      
-      message += `<b>${escapeHtml(ride.title)}</b> ${status}\n`;
-      message += `📅 ${datetime}\n`;
-      
+      const details = [
+        `📅 <tg-time unix="${unixTime}">${datetime}</tg-time>`
+      ];
+
       if (ride.meetingPoint) {
-        message += `📍 ${escapeHtml(ride.meetingPoint)}\n`;
+        details.push(`📍 ${escapeHtml(ride.meetingPoint)}`);
       }
-      
+
       // Add chat information
       if (ride.messages && ride.messages.length > 0) {
         const chatCount = ride.messages.length;
         if (chatCount === 1) {
-          message += `📢 ${this.translate('formatter.postedInSingleChat', { count: chatCount }, language)}\n`;
+          details.push(`📢 ${this.translate('formatter.postedInSingleChat', { count: chatCount }, language)}`);
         } else {
-          message += `📢 ${this.translate('formatter.postedInMultipleChats', { count: chatCount }, language)}\n`;
+          details.push(`📢 ${this.translate('formatter.postedInMultipleChats', { count: chatCount }, language)}`);
         }
       } else {
-        message += `📢 ${this.translate('formatter.notPostedInAnyChats', {}, language)}\n`;
+        details.push(`📢 ${this.translate('formatter.notPostedInAnyChats', {}, language)}`);
       }
-      
-      message += `🎫 #Ride #${ride.id}\n\n`;
-    }
-    
+
+      details.push(`🎫 #Ride #${ride.id}`);
+
+      const spacer = index < rides.length - 1 ? '<br>' : '';
+      message += `<li value="${startNumber + index}"><b>🚲 ${escapeHtml(ride.title)}</b>${status ? ` ${status}` : ''}`;
+      message += `<ul>${details.map(detail => `<li>${detail}</li>`).join('')}</ul>${spacer}</li>`;
+    });
+
+    message += '</ol>';
+
     if (totalPages > 1) {
-      message += `\n${this.translate('formatter.pageLabel', { page, totalPages }, language)}`;
+      message += `\n<hr/>\n<footer>${this.translate('formatter.pageLabel', { page, totalPages }, language)}</footer>`;
     }
-    
+
     return message;
   }
 

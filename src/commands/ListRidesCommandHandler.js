@@ -25,6 +25,16 @@ export class ListRidesCommandHandler extends BaseCommandHandler {
   }
 
   /**
+   * Close the rides list interface.
+   * @param {import('grammy').Context} ctx - Grammy context
+   * @returns {Promise<void>}
+   */
+  async handleClose(ctx) {
+    await ctx.answerCallbackQuery();
+    await ctx.deleteMessage();
+  }
+
+  /**
    * Show the rides list
    * @param {import('grammy').Context} ctx - Grammy context
    * @param {number} page - Page number
@@ -41,7 +51,13 @@ export class ListRidesCommandHandler extends BaseCommandHandler {
     );
     
     const totalPages = Math.max(1, Math.ceil(total / limit));
-    const message = this.messageFormatter.formatRidesList(rides, page, totalPages);
+    const startNumber = rides.length > 0 ? skip + 1 : 0;
+    const message = this.messageFormatter.formatRidesList(
+      rides,
+      page,
+      totalPages,
+      startNumber
+    );
     
     // Create navigation keyboard
     const keyboard = new InlineKeyboard();
@@ -53,19 +69,21 @@ export class ListRidesCommandHandler extends BaseCommandHandler {
     if (page < totalPages) {
       keyboard.text(ctx.t('buttons.next'), `list:${page + 1}`);
     }
-    
-    // Check if keyboard has any buttons
-    const hasButtons = keyboard.inline_keyboard.some(row => row.length > 0);
-    
+
+    const hasPaginationButtons = keyboard.inline_keyboard.some(row => row.length > 0);
+    if (hasPaginationButtons) {
+      keyboard.row();
+    }
+    keyboard.text(ctx.t('buttons.close'), 'list:close');
+
     const options = {
-      parse_mode: 'HTML',
-      reply_markup: hasButtons ? keyboard : undefined
+      reply_markup: keyboard
     };
     
     if (isEdit) {
-      await ctx.editMessageText(message, options);
+      await ctx.editMessageText({ html: message }, options);
     } else {
-      await ctx.reply(message, options);
+      await ctx.replyWithRichMessage({ html: message }, options);
     }
   }
 }

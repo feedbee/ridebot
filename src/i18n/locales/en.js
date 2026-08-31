@@ -459,7 +459,7 @@ Click here to start a private chat: @botname
     atWord: 'at',
     routeLinkLabel: 'Link',
     noCreatedRides: 'You have not created any rides yet.',
-    yourRidesTitle: 'Your Rides',
+    yourRidesTitle: 'The Rides You Created',
     postedInSingleChat: 'Posted in {count} chat',
     postedInMultipleChats: 'Posted in {count} chats',
     notPostedInAnyChats: 'Not posted in any chats',

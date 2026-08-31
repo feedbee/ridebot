@@ -459,7 +459,7 @@ id: abc123 (or #abc123)
     atWord: 'в',
     routeLinkLabel: 'Ссылка',
     noCreatedRides: 'Вы еще не создали ни одной поездки.',
-    yourRidesTitle: 'Ваши поездки',
+    yourRidesTitle: 'Созданные вами поездки',
     postedInSingleChat: 'Опубликовано в {count} чате',
     postedInMultipleChats: 'Опубликовано в {count} чатах',
     notPostedInAnyChats: 'Не опубликовано ни в одном чате',

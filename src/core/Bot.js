@@ -145,6 +145,7 @@ export class Bot {
         { pattern: /^calendar:close$/, handler: (ctx) => calendarHandler.handleCloseCallback(ctx) },
         { pattern: /^delete:(\w+):(\w+)(?::(message|callback))?$/, handler: (ctx) => deleteRideHandler.handleConfirmation(ctx) },
         { pattern: /^list:(\d+)$/, handler: (ctx) => listRidesHandler.handleCallback(ctx) },
+        { pattern: /^list:close$/, handler: (ctx) => listRidesHandler.handleClose(ctx) },
         { pattern: /^rideowner:update:(\w+)$/, handler: (ctx) => updateRideHandler.handleCallback(ctx) },
         { pattern: /^rideowner:duplicate:(\w+)$/, handler: (ctx) => duplicateRideHandler.handleCallback(ctx) },
         { pattern: /^rideowner:delete:(\w+)$/, handler: (ctx) => deleteRideHandler.handleCallback(ctx) },

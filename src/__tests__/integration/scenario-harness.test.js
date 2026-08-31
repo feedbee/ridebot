@@ -20,6 +20,70 @@ describe('Scenario Harness Integration', () => {
     jest.useRealTimers();
   });
 
+  it('lists rides as a paginated Rich Message with ascending global numbering', async () => {
+    const harness = await createScenarioHarness();
+    const chat = { id: 42, type: 'private' };
+    const user = { id: 42, first_name: 'List', username: 'listuser' };
+
+    for (let index = 1; index <= 6; index++) {
+      await harness.dispatchMessage({
+        text: `/newride\ntitle: Ride ${index}\nwhen: tomorrow 1${index}:00`,
+        chat,
+        from: user
+      });
+    }
+
+    await harness.dispatchMessage({ text: '/listrides', chat, from: user });
+
+    const firstPage = harness.outbox.replies.at(-1);
+    expect(firstPage.richMessage).toEqual(expect.objectContaining({
+      html: expect.stringContaining('<ol start="1">')
+    }));
+    expect(firstPage.text).toContain('<h3>The Rides You Created</h3>\n<hr/>');
+    expect(firstPage.text).not.toContain('<p><br></p>');
+    expect(firstPage.text).toContain('<li value="1"><b>🚲 Ride 6</b>');
+    expect(firstPage.text).toContain('<ul><li>📅 ');
+    expect(firstPage.text).toContain('</ul><br></li>');
+    expect(firstPage.text).toContain('</ul></li></ol>');
+    expect(firstPage.options.reply_markup.inline_keyboard.at(-1)).toEqual([
+      expect.objectContaining({ text: 'Close', callback_data: 'list:close' })
+    ]);
+
+    await harness.dispatchCallback({
+      data: 'list:2',
+      chat,
+      from: user,
+      message: {
+        message_id: firstPage.messageId,
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' }
+      }
+    });
+
+    const secondPage = harness.outbox.edits.at(-1);
+    expect(secondPage.richMessage).toEqual(expect.objectContaining({
+      html: expect.stringContaining('<ol start="6">')
+    }));
+    expect(secondPage.text).toContain('<li value="6"><b>🚲 Ride 1</b>');
+    expect(secondPage.text).toContain('<hr/>\n<footer>Page 2/2</footer>');
+
+    await harness.dispatchCallback({
+      data: 'list:close',
+      chat,
+      from: user,
+      message: {
+        message_id: firstPage.messageId,
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' }
+      }
+    });
+
+    expect(harness.outbox.deletes).toContainEqual({
+      chatId: chat.id,
+      messageId: firstPage.messageId
+    });
+  });
+
   it('opens compact calendar options privately from an announcement link', async () => {
     const harness = await createScenarioHarness();
     const user = { id: 42, first_name: 'Calendar', username: 'calendaruser' };

@@ -38,6 +38,12 @@ This document mirrors and extends the guidance from `.cursor/rules/coding-prefer
 - Keep service method signatures framework-agnostic. Prefer app-level DTOs such as `UserProfile` over raw Telegram objects.
 - If a service only needs identity, pass `userId` rather than a larger object.
 
+## Rich Message Presentation
+
+- Use text-only section headings in Rich Messages. Do not add decorative emoji to headings unless a specific product requirement calls for one.
+- Use Title Case for English Rich Message headings and sentence case for Russian headings, matching the settings interfaces.
+- Keep informational hierarchy in the native Rich Message structure: headings for titles, lists or tables for grouped content, and footers for secondary metadata.
+
 ## Testing Expectations
 
 - Write thorough tests for major functionality changes.

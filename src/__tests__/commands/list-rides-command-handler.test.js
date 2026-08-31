@@ -23,8 +23,9 @@ describe.each(['en', 'ru'])('ListRidesCommandHandler (%s)', (language) => {
     };
 
     mockCtx = {
-      reply: jest.fn().mockResolvedValue({}),
+      replyWithRichMessage: jest.fn().mockResolvedValue({}),
       editMessageText: jest.fn().mockResolvedValue({}),
+      deleteMessage: jest.fn().mockResolvedValue({}),
       answerCallbackQuery: jest.fn().mockResolvedValue({}),
       lang: language,
       t: jest.fn((key, params = {}) => tr(key, params)),
@@ -46,8 +47,15 @@ describe.each(['en', 'ru'])('ListRidesCommandHandler (%s)', (language) => {
       await handler.handle(mockCtx);
 
       expect(mockRideService.getRidesByCreator).toHaveBeenCalledWith(123, 0, 5);
-      expect(mockCtx.reply).toHaveBeenCalled();
+      expect(mockCtx.replyWithRichMessage).toHaveBeenCalledWith(
+        { html: 'Your rides list' },
+        expect.any(Object)
+      );
       expect(mockCtx.editMessageText).not.toHaveBeenCalled();
+      const keyboard = mockCtx.replyWithRichMessage.mock.calls[0][1].reply_markup.inline_keyboard;
+      expect(keyboard).toEqual([[
+        expect.objectContaining({ text: tr('buttons.close'), callback_data: 'list:close' })
+      ]]);
     });
   });
 
@@ -61,8 +69,20 @@ describe.each(['en', 'ru'])('ListRidesCommandHandler (%s)', (language) => {
       await handler.handleCallback(mockCtx);
 
       expect(mockRideService.getRidesByCreator).toHaveBeenCalledWith(123, 5, 5);
-      expect(mockCtx.editMessageText).toHaveBeenCalled();
+      expect(mockCtx.editMessageText).toHaveBeenCalledWith(
+        { html: 'Your rides list' },
+        expect.any(Object)
+      );
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalled();
+    });
+  });
+
+  describe('handleClose', () => {
+    it('acknowledges the callback and deletes the rides list message', async () => {
+      await handler.handleClose(mockCtx);
+
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith();
+      expect(mockCtx.deleteMessage).toHaveBeenCalledWith();
     });
   });
 
@@ -72,8 +92,11 @@ describe.each(['en', 'ru'])('ListRidesCommandHandler (%s)', (language) => {
 
       await handler.showRidesList(mockCtx, 1);
 
-      expect(mockMessageFormatter.formatRidesList).toHaveBeenCalledWith([], 1, 1);
-      expect(mockCtx.reply).toHaveBeenCalledWith('Your rides list', expect.objectContaining({ parse_mode: 'HTML' }));
+      expect(mockMessageFormatter.formatRidesList).toHaveBeenCalledWith([], 1, 1, 0);
+      expect(mockCtx.replyWithRichMessage).toHaveBeenCalledWith(
+        { html: 'Your rides list' },
+        expect.not.objectContaining({ parse_mode: expect.anything() })
+      );
     });
 
     it('formats middle page with expected pagination values', async () => {
@@ -83,8 +106,12 @@ describe.each(['en', 'ru'])('ListRidesCommandHandler (%s)', (language) => {
       await handler.showRidesList(mockCtx, 2);
 
       expect(mockRideService.getRidesByCreator).toHaveBeenCalledWith(123, 5, 5);
-      expect(mockMessageFormatter.formatRidesList).toHaveBeenCalledWith(rides, 2, 3);
-      expect(mockCtx.reply).toHaveBeenCalled();
+      expect(mockMessageFormatter.formatRidesList).toHaveBeenCalledWith(rides, 2, 3, 6);
+      expect(mockCtx.replyWithRichMessage).toHaveBeenCalled();
+      const keyboard = mockCtx.replyWithRichMessage.mock.calls[0][1].reply_markup.inline_keyboard;
+      expect(keyboard.at(-1)).toEqual([
+        expect.objectContaining({ text: tr('buttons.close'), callback_data: 'list:close' })
+      ]);
     });
   });
 });
