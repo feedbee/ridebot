@@ -1,47 +1,27 @@
 export const en = {
   templates: {
     start: `
-<b>🚲 Welcome to Ride Announcement Bot!</b>
-
-I am a <b>Telegram bot for organizing bike rides</b>. I will help you organize bike rides with your friends and community across multiple chats.
-
-<b>Key Features:</b>
-• Create and schedule rides
-• Share rides across multiple chats
-• Track participants with join/leave buttons
-• Manage ride defaults and per-ride settings
-• Attach private group chats to rides
-• Keep everyone updated automatically
-
-<b>Quick Start:</b>
-1. Use /newride in this chat to create your first ride with the wizard
-2. Or use /airide to describe a ride in plain language and let AI fill in the details
-3. Or use /fromstrava with a Strava club event URL to import a ride automatically
-4. Join your ride with the join button
-5. Tune defaults with /settings when you want different behavior for future rides
-6. Share it to other chats with /shareride (bot needs to be added to the other chat before sharing; /shareride@botname works when short commands are not available)
-7. All participants and updates sync automatically!
-
-<b>More details:</b>
-• Type /help for more detailed instructions with examples
-• Use /listrides command to view the rides you created
-• Use ride management commands to manage your ride by ID
-
-Happy cycling! 🚴‍♀️💨
+<img src="https://static.ridebot.valera.ws/ridebot/ride-announcement-teaser.jpg"/>
+<h2>Welcome to Ride Announcement Bot!</h2>
+<p>I am a <b>Telegram bot for organizing bike rides</b>. I will help you organize bike rides with your friends and community across multiple chats.</p>
+<h3>Key Features:</h3>
+<ul><li>Create and schedule rides</li><li>Share rides across multiple chats</li><li>Track participants with join/leave buttons</li><li>Manage ride defaults and per-ride settings</li><li>Attach private group chats to rides</li><li>Keep everyone updated automatically</li></ul>
+<h3>Quick Start:</h3>
+<ol><li>Use /newride in this chat to create your first ride with the wizard</li><li>Or use /airide to describe a ride in plain language and let AI fill in the details</li><li>Or use /fromstrava with a Strava club event URL to import a ride automatically</li><li>Join your ride with the join button</li><li>Tune defaults with /settings when you want different behavior for future rides</li><li>Share it to other chats with /shareride (bot needs to be added to the other chat before sharing; /shareride@botname works when short commands are not available)</li><li>All participants and updates sync automatically!</li></ol>
+<h3>More details:</h3>
+<ul><li>Type /help for more detailed instructions with examples</li><li>Use /listrides command to view the rides you created</li><li>Use ride management commands to manage your ride by ID</li></ul>
+<p>Happy cycling! 🚴‍♀️💨</p>
     `.trim(),
 
     help1: `
-<b>🚲 Ride Announcement Bot Help</b>
+<h2>Ride Announcement Bot Help</h2>
+<p><i>For an overview of features and how to use the bot, use the /start command.</i></p>
 
-<i>For an overview of features and how to use the bot, use the /start command.</i>
+<h3>➕ Creating a New Ride</h3>
+<p>Create a new ride:<br>1. Using the wizard (recommended):<br>Simply send /newride command without any parameters to start an interactive wizard that will guide you through each step. <i>(Note: Wizard mode is only available in private chats with the bot)</i></p>
+<br>
 
-<b>➕ Creating a New Ride</b>
-Create a new ride:
-1. Using the wizard (recommended):
-Simply send /newride command without any parameters to start an interactive wizard that will guide you through each step. <i>(Note: Wizard mode is only available in private chats with the bot)</i>
-
-2. Using command with parameters:
-Use /newride command followed by parameters (one per line):
+<p>2. Using command with parameters:<br>Use /newride command followed by parameters (one per line):</p>
 <pre>
 /newride
 title: Ride title
@@ -58,7 +38,7 @@ settings.notifyParticipation: yes/no — notify the creator when participants ch
 settings.allowReposts: yes/no — allow other users to repost this ride with /shareride (optional)
 </pre>
 
-Example:
+<p>Example:</p>
 <pre>
 /newride
 title: Evening Ride
@@ -74,42 +54,40 @@ cruisingSpeed: 28-30
 info: Bring lights and a rain jacket
 </pre>
 
-Route notes:
-• Repeat <code>route:</code> to add multiple links
-• Use <code>route: Label | URL</code> to set a custom label
-• The URL is always taken from the last <code>|</code>-separated segment, so <code>|</code> may be used inside the label
-• If a label is omitted, the bot shows <code>Strava</code>, <code>Garmin</code>, <code>Komoot</code>, <code>RideWithGPS</code>, or localized <code>Link</code>
+<p>Route notes:</p>
+<ul><li>Repeat <code>route:</code> to add multiple links</li><li>Use <code>route: Label | URL</code> to set a custom label</li><li>The URL is always taken from the last <code>|</code>-separated segment, so <code>|</code> may be used inside the label</li><li>If a label is omitted, the bot shows <code>Strava</code>, <code>Garmin</code>, <code>Komoot</code>, <code>RideWithGPS</code>, or localized <code>Link</code></li></ul>
+<br>
 
-3. Using AI in dialog mode (private chat only):
-Send /airide and describe the ride in plain language. The bot will parse the details with AI, show a live preview, and let you refine it across multiple messages before confirming. AI can extract multiple route links too.
+<p>3. Using AI in dialog mode (private chat only):<br>Send /airide and describe the ride in plain language. The bot will parse the details with AI, show a live preview, and let you refine it across multiple messages before confirming. AI can extract multiple route links too.</p>
+
 <pre>
 /airide
 </pre>
-Or start with an initial description:
+<p>Or start with an initial description:</p>
+
 <pre>
 /airide Gravel ride this Sunday 9am, 80km, starting at Central Station
 </pre>
-Each follow-up message updates the preview. Confirm or cancel anytime using the buttons.
 
-4. From a Strava group event (private chat only):
-Send /fromstrava with a Strava club event URL. The bot fetches the event details from Strava and creates a ride automatically. If you already created a ride from the same event, it will be updated instead.
+<p>Each follow-up message updates the preview. Confirm or cancel anytime using the buttons.</p>
+<br>
+
+<p>4. From a Strava group event (private chat only):<br>Send /fromstrava with a Strava club event URL. The bot fetches the event details from Strava and creates a ride automatically. If you already created a ride from the same event, it will be updated instead.</p>
 <pre>
 /fromstrava https://www.strava.com/clubs/123/group_events/456
 </pre>
-Fields populated automatically: title, date, meeting point, category, route links, distance, duration, cruising speed (from speed-based pace groups), organizer (club name), and additional info (event link + description + pace groups).
-If the Strava event has an attached route, only that route is imported. Otherwise the bot imports all known route-provider links from the description in discovery order.
+<p>Fields populated automatically: title, date, meeting point, category, route links, distance, duration, cruising speed (from speed-based pace groups), organizer (club name), and additional info (event link + description + pace groups).</p>
+<br>
+<p>If the Strava event has an attached route, only that route is imported. Otherwise the bot imports all known route-provider links from the description in discovery order.</p>
     `.trim(),
 
     help2: `
-<b>Managing Rides</b>
+<h2>Managing Rides</h2>
 
-<b>🔄 Updating a Ride</b>
-Only the ride creator can update. Five ways:
-1. Reply to the ride message with /updateride without any parameters to start an interactive wizard. <i>(Note: Wizard mode is only available in private chats with the bot)</i>
-2. Reply to the ride message with /updateride and new parameters
-3. Use /updateride with ride ID directly after the command: <code>/updateride abc123</code>
-4. Use /updateride with ride ID as a parameter:
-5. Use /airide with the ride ID to update via AI dialog (private chat only): <code>/airide #abc123</code>
+<h3>🔄 Updating a Ride</h3>
+
+<p>Only the ride creator can update. Five ways:<br>1. Reply to the ride message with /updateride without any parameters to start an interactive wizard. <i>(Note: Wizard mode is only available in private chats with the bot)</i><br>2. Reply to the ride message with /updateride and new parameters<br>3. Use /updateride with ride ID directly after the command: <code>/updateride abc123</code><br>4. Use /updateride with ride ID as a parameter:<br>5. Use /airide with the ride ID to update via AI dialog (private chat only): <code>/airide #abc123</code></p>
+
 <pre>
 /updateride
 id: abc123
@@ -125,45 +103,40 @@ info: Additional information (optional)
 settings.notifyParticipation: yes/no (optional)
 settings.allowReposts: yes/no (optional)
 </pre>
-If you provide at least one <code>route:</code> line, it replaces the full route list. Use <code>route: -</code> to clear all routes.
-Ride settings passed here are merged into the existing ride settings.
 
-<b>❌ Cancelling a Ride</b>
-Only the ride creator can cancel:
-1. Reply to the ride message with /cancelride
-2. Use /cancelride with ride ID directly after the command: <code>/cancelride abc123</code>
-3. Use /cancelride with ride ID as a parameter:
+<p>If you provide at least one <code>route:</code> line, it replaces the full route list. Use <code>route: -</code> to clear all routes.<br>Ride settings passed here are merged into the existing ride settings.</p>
+
+<h3>❌ Cancelling a Ride</h3>
+
+<p>Only the ride creator can cancel:<br>1. Reply to the ride message with /cancelride<br>2. Use /cancelride with ride ID directly after the command: <code>/cancelride abc123</code><br>3. Use /cancelride with ride ID as a parameter:</p>
+
 <pre>
 /cancelride
 id: abc123
 </pre>
 
-<b>↩️ Resuming a Cancelled Ride</b>
-Only the ride creator can resume a cancelled ride:
-1. Reply to the ride message with /resumeride
-2. Use /resumeride with ride ID directly after the command: <code>/resumeride abc123</code>
-3. Use /resumeride with ride ID as a parameter:
+<h3>↩️ Resuming a Cancelled Ride</h3>
+
+<p>Only the ride creator can resume a cancelled ride:<br>1. Reply to the ride message with /resumeride<br>2. Use /resumeride with ride ID directly after the command: <code>/resumeride abc123</code><br>3. Use /resumeride with ride ID as a parameter:</p>
+
 <pre>
 /resumeride
 id: abc123
 </pre>
 
-<b>🗑 Deleting a Ride</b>
-Only the ride creator can delete:
-1. Reply to the ride message with /deleteride
-2. Use /deleteride with ride ID directly after the command: <code>/deleteride abc123</code>
-3. Use /deleteride with ride ID as a parameter:
+<h3>🗑 Deleting a Ride</h3>
+
+<p>Only the ride creator can delete:<br>1. Reply to the ride message with /deleteride<br>2. Use /deleteride with ride ID directly after the command: <code>/deleteride abc123</code><br>3. Use /deleteride with ride ID as a parameter:</p>
+
 <pre>
 /deleteride
 id: abc123
 </pre>
 
-<b>🔄 Duplicating a Ride</b>
-You can duplicate an existing ride in four ways:
-1. Reply to the ride message with /dupride without any parameters to start an interactive wizard. <i>(Note: Wizard mode is only available in private chats with the bot)</i>
-2. Reply to the ride message with /dupride and new parameters
-3. Use /dupride with ride ID directly after the command: <code>/dupride abc123</code>
-4. Use /dupride with ride ID and optional parameters:
+<h3>🔄 Duplicating a Ride</h3>
+
+<p>You can duplicate an existing ride in four ways:<br>1. Reply to the ride message with /dupride without any parameters to start an interactive wizard. <i>(Note: Wizard mode is only available in private chats with the bot)</i><br>2. Reply to the ride message with /dupride and new parameters<br>3. Use /dupride with ride ID directly after the command: <code>/dupride abc123</code><br>4. Use /dupride with ride ID and optional parameters:</p>
+
 <pre>
 /dupride
 id: abc123
@@ -180,56 +153,49 @@ info: Additional information (optional)
 settings.notifyParticipation: yes/no (optional)
 settings.allowReposts: yes/no (optional)
 </pre>
-Any parameters not provided will be copied from the original ride.
-By default, the new ride will be scheduled for tomorrow at the same time.
-If you provide at least one <code>route:</code> line, it replaces the copied route list. Use <code>route: -</code> to clear all copied routes.
-When duplicating your own ride, its ride settings are copied. When duplicating someone else's ride, your current defaults are used.
 
-<b>📋 Listing Your Rides</b>
-Use /listrides command to see all rides you've created:
-• Rides are sorted by date (newest first)
-• Use navigation buttons to browse pages
+<p>Any parameters not provided will be copied from the original ride.<br>By default, the new ride will be scheduled for tomorrow at the same time.<br>If you provide at least one <code>route:</code> line, it replaces the copied route list. Use <code>route: -</code> to clear all copied routes.<br>When duplicating your own ride, its ride settings are copied. When duplicating someone else's ride, your current defaults are used.</p>
+
+<h3>📋 Listing Your Rides</h3>
+
+<p>Use /listrides command to see all rides you've created:</p>
+
+<ul><li>Rides are sorted by date (newest first)</li><li>Use navigation buttons to browse pages</li></ul>
     `.trim(),
 
     help3: `
-<b>⚙️ Ride Settings</b>
-Use /settings in private chat to manage defaults for rides you create in the future.
-Use /settings #rideId, reply to a ride message with /settings, or press the Settings button on your private creator copy to manage one ride.
-Available settings:
-• Participation notifications — whether the creator gets private notifications when people join, think, or pass.
-• Repost permission — whether users other than the creator can repost the ride with /shareride.
-Defaults apply only to newly created rides. Ride-specific settings affect only that ride.
+<h2>⚙️ Ride Settings</h2>
 
-<b>🧭 Private Creator Buttons</b>
-In your private ride message, owner-only buttons let you edit, duplicate, delete, cancel/resume, list participants, and open settings without typing the full commands.
+<p>Use /settings in private chat to manage defaults for rides you create in the future.<br>Use /settings #rideId, reply to a ride message with /settings, or press the Settings button on your private creator copy to manage one ride.<br>Available settings:</p>
 
-<b>📢 Sharing a Ride</b>
-By default, only the ride creator can repost a ride to another chat. The creator can allow reposts by other users in /settings.
-1. Go to the target chat where you want to post the ride
-2. Use /shareride (or /shareride@botname) with the ride ID directly after the command: <code>/shareride@botname abc123</code>
-3. Or use /shareride (or /shareride@botname) with ride ID as a parameter:
+<ul><li>Participation notifications — whether the creator gets private notifications when people join, think, or pass.</li><li>Repost permission — whether users other than the creator can repost the ride with /shareride.</li></ul>
+
+<p>Defaults apply only to newly created rides. Ride-specific settings affect only that ride.</p>
+
+<h3>🧭 Private Creator Buttons</h3>
+
+<p>In your private ride message, owner-only buttons let you edit, duplicate, delete, cancel/resume, list participants, and open settings without typing the full commands.</p>
+
+<h3>📢 Sharing a Ride</h3>
+
+<p>By default, only the ride creator can repost a ride to another chat. The creator can allow reposts by other users in /settings.<br>1. Go to the target chat where you want to post the ride<br>2. Use /shareride (or /shareride@botname) with the ride ID directly after the command: <code>/shareride@botname abc123</code><br>3. Or use /shareride (or /shareride@botname) with ride ID as a parameter:</p>
+
 <pre>
 /shareride@botname
 id: abc123 (or #abc123)
 </pre>
-The ride will be posted to the current chat and all instances will be synchronized when details change or participants join/leave.
 
-<b>Important:</b> The bot needs to be added to the other chat before sharing. Bot needs to be chat admin in the other chat to use the short form of /shareride, but you can always use the full form /shareride@botname.
+<p>The ride will be posted to the current chat and all instances will be synchronized when details change or participants join/leave.</p>
 
-<b>📎 Attaching a Group to a Ride</b>
-Only the ride creator can attach a group:
-1. Create a Telegram group and add the bot as admin (needs "Add Members" and "Ban Users" permissions)
-2. Use /attach with the ride ID in the group chat: <code>/attach #abc123</code>
-The bot will rename the group to the ride title and date, post and pin the ride info, and automatically add/remove members as participants join or leave the ride.
-One group can be attached to only one ride at a time.
-To unlink the group, use /detach in the group chat.
+<p><b>Important:</b> The bot needs to be added to the other chat before sharing. Bot needs to be chat admin in the other chat to use the short form of /shareride, but you can always use the full form /shareride@botname.</p>
 
-<b>💬 Joining the Ride Group Chat</b>
-Once a group is attached to a ride, the ride message shows a notice with instructions.
-Any participant who has joined the ride can request an invite link by sending the bot a private message:
-<code>/joinchat #rideId</code>
-The bot will send you a single-use invite link (valid 24 hours). The command only works if you have joined the ride.
+<h3>📎 Attaching a Group to a Ride</h3>
 
+<p>Only the ride creator can attach a group:<br>1. Create a Telegram group and add the bot as admin (needs "Add Members" and "Ban Users" permissions)<br>2. Use /attach with the ride ID in the group chat: <code>/attach #abc123</code><br>The bot will rename the group to the ride title and date, post and pin the ride info, and automatically add/remove members as participants join or leave the ride.<br>One group can be attached to only one ride at a time.<br>To unlink the group, use /detach in the group chat.</p>
+
+<h3>💬 Joining the Ride Group Chat</h3>
+
+<p>Once a group is attached to a ride, the ride message shows a notice with instructions.<br>Any participant who has joined the ride can request an invite link by sending the bot a private message:<br><code>/joinchat #rideId</code><br>The bot will send you a single-use invite link (valid 24 hours). The command only works if you have joined the ride.</p>
     `.trim(),
 
     ride: `

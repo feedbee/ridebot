@@ -10,13 +10,23 @@ export class HelpCommandHandler extends BaseCommandHandler {
    * @param {import('grammy').Context} ctx - Grammy context
    */
   async handle(ctx) {
-    const helpParts = ['templates.help1', 'templates.help2', 'templates.help3'];
+    const helpSections = [];
 
-    for (const key of helpParts) {
+    for (const key of ['templates.help1', 'templates.help2', 'templates.help3']) {
       const text = ctx.t(key);
       if (text !== key) {
-        await ctx.reply(await replaceBotUsername(text, ctx), { parse_mode: 'HTML' });
+        const localizedText = await replaceBotUsername(text, ctx);
+        helpSections.push(localizedText);
       }
+    }
+
+    const messages = [
+      helpSections[0],
+      helpSections.slice(1).join('\n<hr/>\n')
+    ].filter(Boolean);
+
+    for (const html of messages) {
+      await ctx.replyWithRichMessage({ html });
     }
   }
 }

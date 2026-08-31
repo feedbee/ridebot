@@ -26,6 +26,6 @@ export class StartCommandHandler extends BaseCommandHandler {
     }
 
     const startMessage = await replaceBotUsername(ctx.t('templates.start'), ctx);
-    await ctx.reply(startMessage, { parse_mode: 'HTML' });
+    await ctx.replyWithRichMessage({ html: startMessage });
   }
 }

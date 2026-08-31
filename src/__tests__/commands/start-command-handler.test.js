@@ -8,17 +8,17 @@ import { t } from '../../i18n/index.js';
 describe.each(['en', 'ru'])('StartCommandHandler (%s)', (language) => {
   const expectedStartFragments = {
     en: [
-      '<b>🚲 Welcome to Ride Announcement Bot!</b>',
-      '<b>Key Features:</b>',
-      '<b>Quick Start:</b>',
-      '<b>More details:</b>',
+      '<h2>Welcome to Ride Announcement Bot!</h2>',
+      '<h3>Key Features:</h3>',
+      '<h3>Quick Start:</h3>',
+      '<h3>More details:</h3>',
       'Happy cycling! 🚴‍♀️💨'
     ],
     ru: [
-      '<b>🚲 Добро пожаловать в Ride Announcement Bot!</b>',
-      '<b>Ключевые возможности:</b>',
-      '<b>Быстрый старт:</b>',
-      '<b>Подробнее:</b>',
+      '<h2>Добро пожаловать в Ride Announcement Bot!</h2>',
+      '<h3>Ключевые возможности:</h3>',
+      '<h3>Быстрый старт:</h3>',
+      '<h3>Подробнее:</h3>',
       'Хороших покатушек! 🚴‍♀️💨'
     ]
   };
@@ -50,7 +50,7 @@ describe.each(['en', 'ru'])('StartCommandHandler (%s)', (language) => {
 
     // Create mock Grammy context
     mockCtx = {
-      reply: jest.fn().mockResolvedValue({
+      replyWithRichMessage: jest.fn().mockResolvedValue({
         message_id: 123,
         chat: { id: 456 }
       }),
@@ -89,26 +89,32 @@ describe.each(['en', 'ru'])('StartCommandHandler (%s)', (language) => {
       await startHandler.handle(mockCtx);
 
       expect(mockCalendarHandler.handleStartPayload).toHaveBeenCalledWith(mockCtx, 'calendar_abc123');
-      expect(mockCtx.reply).not.toHaveBeenCalled();
+      expect(mockCtx.replyWithRichMessage).not.toHaveBeenCalled();
     });
 
-    it('should send the start message with HTML formatting', async () => {
+    it('should send the localized Rich HTML template unchanged apart from the bot username', async () => {
       // Execute
       await startHandler.handle(mockCtx);
 
       // Verify
-      expect(mockCtx.reply).toHaveBeenCalledTimes(1);
-      const [message, options] = mockCtx.reply.mock.calls[0];
-      expect(message).toContain('/shareride@testbot');
-      expect(message).not.toContain('@botname');
-      expect(options).toEqual({ parse_mode: 'HTML' });
+      expect(mockCtx.replyWithRichMessage).toHaveBeenCalledTimes(1);
+      const [richMessage] = mockCtx.replyWithRichMessage.mock.calls[0];
+      expect(richMessage.html).toContain('/shareride@testbot');
+      expect(richMessage.html).not.toContain('@botname');
+      expect(richMessage.html).toContain('<ul><li>');
+      expect(richMessage.html).toContain('<ol><li>');
+      expect(richMessage.html).toContain('</h2>\n<p>');
+      expect(richMessage.html).toContain('</p>\n<h3>');
+      expect(richMessage.html).toContain('</ul>\n<h3>');
+      expect(richMessage.html).not.toMatch(/<br><br>\s*<h[23]>/);
+      expect(richMessage.html).not.toMatch(/<\/h[23]>\s*<br><br>/);
       expect(mockCtx.t).toHaveBeenCalledWith('templates.start');
     });
 
     it('should handle reply failures gracefully', async () => {
       // Setup - make reply throw an error
       const error = new Error('Network error');
-      mockCtx.reply.mockRejectedValue(error);
+      mockCtx.replyWithRichMessage.mockRejectedValue(error);
 
       // Execute and verify it throws
       await expect(startHandler.handle(mockCtx)).rejects.toThrow('Network error');
@@ -119,7 +125,7 @@ describe.each(['en', 'ru'])('StartCommandHandler (%s)', (language) => {
       
       for (const chatType of chatTypes) {
         // Reset mock before each iteration
-        mockCtx.reply.mockClear();
+        mockCtx.replyWithRichMessage.mockClear();
         
         // Setup - set chat type
         mockCtx.message.chat.type = chatType;
@@ -128,7 +134,7 @@ describe.each(['en', 'ru'])('StartCommandHandler (%s)', (language) => {
         await startHandler.handle(mockCtx);
 
         // Verify message was sent
-        expect(mockCtx.reply).toHaveBeenCalled();
+        expect(mockCtx.replyWithRichMessage).toHaveBeenCalled();
       }
     });
 
@@ -137,24 +143,24 @@ describe.each(['en', 'ru'])('StartCommandHandler (%s)', (language) => {
       await startHandler.handle(mockCtx);
 
       // Verify user-facing content was preserved
-      const callArgs = mockCtx.reply.mock.calls[0];
-      expect(callArgs[0]).toContain('/newride');
-      expect(callArgs[0]).toContain('/help');
-      expect(callArgs[0]).toContain('/listrides');
-      expect(callArgs[0]).toContain('@testbot');
-      expect(callArgs[0]).not.toContain('@botname');
+      const html = mockCtx.replyWithRichMessage.mock.calls[0][0].html;
+      expect(html).toContain('/newride');
+      expect(html).toContain('/help');
+      expect(html).toContain('/listrides');
+      expect(html).toContain('@testbot');
+      expect(html).not.toContain('@botname');
       for (const fragment of expectedStartFragments[language]) {
-        expect(callArgs[0]).toContain(fragment);
+        expect(html).toContain(fragment);
       }
     });
 
-    it('should include HTML parse mode in options', async () => {
+    it('should not use the regular-message parse mode', async () => {
       // Execute
       await startHandler.handle(mockCtx);
 
       // Verify
-      const callArgs = mockCtx.reply.mock.calls[0];
-      expect(callArgs[1]).toEqual({ parse_mode: 'HTML' });
+      const callArgs = mockCtx.replyWithRichMessage.mock.calls[0];
+      expect(callArgs[1]).toBeUndefined();
     });
   });
 });

@@ -84,6 +84,49 @@ describe('Scenario Harness Integration', () => {
     });
   });
 
+  it('sends /help as two Rich Messages with creation and management sections', async () => {
+    const harness = await createScenarioHarness();
+
+    await harness.dispatchMessage({
+      text: '/help',
+      chat: { id: 42, type: 'private' },
+      from: { id: 42, first_name: 'Help', username: 'helpuser' }
+    });
+
+    expect(harness.outbox.replies).toHaveLength(2);
+    expect(harness.outbox.replies[0].richMessage?.html).toContain('<h2>Ride Announcement Bot Help</h2>');
+    expect(harness.outbox.replies[0].richMessage?.html).toContain('</h3>\n<p>');
+    expect(harness.outbox.replies[0].richMessage?.html).not.toContain('<br><br>');
+    expect(harness.outbox.replies[0].richMessage?.html).toContain('/newride');
+    expect(harness.outbox.replies[1].richMessage?.html).toContain('<h2>Managing Rides</h2>');
+    expect(harness.outbox.replies[1].richMessage?.html).not.toContain('<br><br>');
+    expect(harness.outbox.replies[1].richMessage?.html).toContain('/settings');
+    expect(harness.outbox.replies[1].richMessage?.html).toContain('<hr/>');
+    expect(harness.outbox.replies.every(reply => reply.options.parse_mode == null)).toBe(true);
+  });
+
+  it('sends /start from the localized Rich HTML template', async () => {
+    const harness = await createScenarioHarness();
+
+    await harness.dispatchMessage({
+      text: '/start',
+      chat: { id: 42, type: 'private' },
+      from: { id: 42, first_name: 'Start', username: 'startuser' }
+    });
+
+    expect(harness.outbox.replies).toHaveLength(1);
+    const reply = harness.outbox.replies[0];
+    expect(reply.richMessage?.html.startsWith(
+      '<img src="https://static.ridebot.valera.ws/ridebot/ride-announcement-teaser.jpg"/>'
+    )).toBe(true);
+    expect(reply.richMessage?.html).toContain('<h2>Welcome to Ride Announcement Bot!</h2>');
+    expect(reply.richMessage?.html).toContain('<ul><li>Create and schedule rides</li>');
+    expect(reply.richMessage?.html).toContain('<ol><li>Use /newride');
+    expect(reply.richMessage?.html).not.toMatch(/<br><br>\s*<h[23]>/);
+    expect(reply.richMessage?.html).not.toMatch(/<\/h[23]>\s*<br><br>/);
+    expect(reply.options.parse_mode).toBeUndefined();
+  });
+
   it('opens compact calendar options privately from an announcement link', async () => {
     const harness = await createScenarioHarness();
     const user = { id: 42, first_name: 'Calendar', username: 'calendaruser' };
