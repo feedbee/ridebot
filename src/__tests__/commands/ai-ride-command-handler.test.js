@@ -261,6 +261,21 @@ describe.each(['en', 'ru'])('AiRideCommandHandler (%s)', (language) => {
     });
   });
 
+  describe('handleInlineMenu()', () => {
+    it('acknowledges the menu button and starts an empty create dialog', async () => {
+      mockCtx.message = undefined;
+
+      await handler.handleInlineMenu(mockCtx);
+
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalled();
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.airide.dialogPrompt'));
+      expect(handler.states.get('42:100')).toEqual(expect.objectContaining({
+        mode: 'create',
+        messageCount: 0
+      }));
+    });
+  });
+
   // ─── handleTextInput() ───────────────────────────────────────────────────────
 
   describe('handleTextInput()', () => {

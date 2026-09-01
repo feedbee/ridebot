@@ -31,6 +31,7 @@ import { t } from '../i18n/index.js';
 import { RideParticipationService } from '../services/RideParticipationService.js';
 import { SettingsService } from '../services/SettingsService.js';
 import { TelegramConversationLogger } from '../telegram/TelegramConversationLogger.js';
+import { resolveMainMenuAction } from '../telegram/MainMenuKeyboard.js';
 import { CalendarEventService } from '../services/CalendarEventService.js';
 import { CalendarCommandHandler } from '../commands/CalendarCommandHandler.js';
 
@@ -136,7 +137,19 @@ export class Bot {
           }},
         ],
       },
+      mainMenuActions: {
+        buttons: (ctx) => startHandler.showButtons(ctx),
+        newride: (ctx) => newRideHandler.handleMainMenu(ctx),
+        settings: (ctx) => rideSettingsHandler.handleMainMenu(ctx),
+        help: (ctx) => helpHandler.handle(ctx)
+      },
       callbacks: [
+        { pattern: /^main:newride$/, handler: (ctx) => newRideHandler.handleInlineMenu(ctx) },
+        { pattern: /^main:airide$/, handler: (ctx) => this.aiRideHandler.handleInlineMenu(ctx) },
+        { pattern: /^main:listrides$/, handler: (ctx) => listRidesHandler.handleInlineMenu(ctx) },
+        { pattern: /^main:settings$/, handler: (ctx) => rideSettingsHandler.handleInlineMenu(ctx) },
+        { pattern: /^main:help$/, handler: (ctx) => helpHandler.handleInlineMenu(ctx) },
+        { pattern: /^main:close$/, handler: (ctx) => startHandler.closeButtons(ctx) },
         { pattern: /^join:(\w+)$/, handler: (ctx) => participationHandler.handleJoinRide(ctx) },
         { pattern: /^thinking:(\w+)$/, handler: (ctx) => participationHandler.handleThinkingRide(ctx) },
         { pattern: /^skip:(\w+)$/, handler: (ctx) => participationHandler.handleSkipRide(ctx) },
@@ -182,8 +195,17 @@ export class Bot {
     // Callback query handlers
     this.setupCallbackQueryHandlers();
     
-    // Text input handlers: wizard first, then AI ride follow-up
+    // Persistent menu actions take priority; other text continues active creation sessions.
     this.bot.on('message:text', async (ctx) => {
+      const mainMenuAction = ctx.chat?.type === 'private'
+        ? resolveMainMenuAction(ctx, ctx.message.text)
+        : null;
+      const mainMenuHandler = this.botConfig.mainMenuActions[mainMenuAction];
+      if (mainMenuHandler) {
+        await mainMenuHandler(ctx);
+        return;
+      }
+
       await this.wizard.handleWizardInput(ctx);
       await this.aiRideHandler.handleTextInput(ctx);
     });

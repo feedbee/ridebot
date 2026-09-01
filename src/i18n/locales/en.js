@@ -15,7 +15,7 @@ export const en = {
 
     help1: `
 <h2>Ride Announcement Bot Help</h2>
-<p><i>For an overview of features and how to use the bot, use the /start command.</i></p>
+<p>Ride Announcement Bot helps you create and schedule rides, share them across chats, track participants, manage ride settings, attach private groups, and keep published announcements in sync. For a brief overview of the main features and how to use the bot, see /start.</p>
 
 <h3>➕ Creating a New Ride</h3>
 <p>Create a new ride:<br>1. Using the wizard (recommended):<br>Simply send /newride command without any parameters to start an interactive wizard that will guide you through each step. <i>(Note: Wizard mode is only available in private chats with the bot)</i></p>
@@ -219,6 +219,12 @@ Click here to start a private chat: @botname
     `.trim()
   },
   buttons: {
+    mainMenuButtons: '☰ Buttons',
+    mainMenuCreateWizard: '➕ Create with wizard',
+    mainMenuCreateAi: '🤖 Create with AI',
+    mainMenuCreatedRides: '📋 Created rides',
+    mainMenuSettings: '⚙️ Settings',
+    mainMenuHelp: '❓ Help',
     join: "I'm in! 🚴",
     thinking: 'Maybe 🤔',
     pass: 'Pass 🙅',
@@ -237,13 +243,17 @@ Click here to start a private chat: @botname
     create: '✅ Create',
     update: '✅ Update',
     keep: '↩️ Keep current',
-    close: 'Close',
+    close: '✖️ Close',
     previous: '◀️ Previous',
     next: 'Next ▶️',
     addToCalendar: '📅 Add to calendar',
     googleCalendar: 'Google Calendar',
     outlookCalendar: 'Outlook Calendar',
     downloadIcs: 'Apple / download .ics'
+  },
+  mainMenu: {
+    placeholder: 'Choose an action',
+    expandedPrompt: 'Choose an action:'
   },
   common: {
     greeting: 'Hello, {name}!',

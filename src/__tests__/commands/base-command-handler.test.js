@@ -46,6 +46,27 @@ describe('BaseCommandHandler', () => {
       await expect(baseCommandHandler.handle()).rejects.toThrow('Method not implemented');
     });
   });
+
+  describe('main menu entry points', () => {
+    it('delegates a persistent menu action to the regular handler by default', async () => {
+      const ctx = {};
+      baseCommandHandler.handle = jest.fn().mockResolvedValue();
+
+      await baseCommandHandler.handleMainMenu(ctx);
+
+      expect(baseCommandHandler.handle).toHaveBeenCalledWith(ctx);
+    });
+
+    it('acknowledges an inline action and delegates to the main-menu handler', async () => {
+      const ctx = { answerCallbackQuery: jest.fn().mockResolvedValue({}) };
+      baseCommandHandler.handleMainMenu = jest.fn().mockResolvedValue();
+
+      await baseCommandHandler.handleInlineMenu(ctx);
+
+      expect(ctx.answerCallbackQuery).toHaveBeenCalledWith();
+      expect(baseCommandHandler.handleMainMenu).toHaveBeenCalledWith(ctx);
+    });
+  });
   
   describe('extractRide', () => {
     it('should return error when ride ID extraction fails', async () => {

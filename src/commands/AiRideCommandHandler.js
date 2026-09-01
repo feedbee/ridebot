@@ -37,6 +37,26 @@ export class AiRideCommandHandler extends BaseCommandHandler {
    */
   async handle(ctx) {
     const rawText = ctx.message.text.replace(/^\/airide\s*/i, '').trim();
+    await this._startDialog(ctx, rawText);
+  }
+
+  /**
+   * Start an AI-assisted create dialog from the expanded main menu.
+   * @param {import('grammy').Context} ctx
+   * @returns {Promise<void>}
+   */
+  async handleInlineMenu(ctx) {
+    await ctx.answerCallbackQuery();
+    await this._startDialog(ctx, '');
+  }
+
+  /**
+   * Start a create or update AI dialog from normalized input.
+   * @param {import('grammy').Context} ctx
+   * @param {string} rawText
+   * @returns {Promise<void>}
+   */
+  async _startDialog(ctx, rawText) {
     const stateKey = this._stateKey(ctx.from.id, ctx.chat.id);
 
     if (this.states.has(stateKey)) {

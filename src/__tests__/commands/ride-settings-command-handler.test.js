@@ -192,6 +192,21 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
     });
   });
 
+  describe('handleInlineMenu', () => {
+    it('acknowledges the callback and renders user defaults', async () => {
+      await handler.handleInlineMenu(mockCtx);
+
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith();
+      expect(mockSettingsService.getUserRideDefaults).toHaveBeenCalledWith(123);
+      expect(mockCtx.replyWithRichMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          html: expect.stringContaining(`<h3>${tr('commands.settings.userTitle')}</h3>`)
+        }),
+        expect.objectContaining({ reply_markup: expect.any(Object) })
+      );
+    });
+  });
+
   describe('handleUserNotificationLevelCallback', () => {
     it('persists membership level and marks it in the redrawn keyboard', async () => {
       mockCtx.match = ['settings:user:notification-level:membership', 'membership'];

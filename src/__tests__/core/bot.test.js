@@ -222,6 +222,24 @@ describe('Bot', () => {
       );
     });
 
+    it('falls through safely when a resolved main-menu action has no configured handler', async () => {
+      const messageHandler = mockBotOn.mock.calls.find(([event]) => event === 'message:text')[1];
+      const ctx = {
+        chat: { id: 100, type: 'private' },
+        from: { id: 200 },
+        message: { text: '☰ Buttons' },
+        t: jest.fn((key) => key === 'buttons.mainMenuButtons' ? '☰ Buttons' : key)
+      };
+      bot.botConfig.mainMenuActions.buttons = undefined;
+      bot.wizard.handleWizardInput = jest.fn().mockResolvedValue();
+      bot.aiRideHandler.handleTextInput = jest.fn().mockResolvedValue();
+
+      await expect(messageHandler(ctx)).resolves.toBeUndefined();
+
+      expect(bot.wizard.handleWizardInput).toHaveBeenCalledWith(ctx);
+      expect(bot.aiRideHandler.handleTextInput).toHaveBeenCalledWith(ctx);
+    });
+
     it('should answer callback query with a generic error when a callback handler throws', async () => {
       const failingHandler = jest.fn().mockRejectedValue(new Error('Boom'));
       const callbackCtx = {

@@ -35,6 +35,15 @@ export class NewRideCommandHandler extends BaseCommandHandler {
   }
 
   /**
+   * Start the creation wizard from the persistent main menu.
+   * @param {import('grammy').Context} ctx - Grammy context
+   * @returns {Promise<void>}
+   */
+  async handleMainMenu(ctx) {
+    await this.wizard.startWizard(ctx, null);
+  }
+
+  /**
    * Handle the newride command with parameters
    * @param {import('grammy').Context} ctx - Grammy context
    * @param {Object} params - Command parameters

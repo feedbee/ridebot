@@ -10,12 +10,14 @@ describe.each(['en', 'ru'])('HelpCommandHandler (%s)', (language) => {
   const expectedHelpPart1Fragments = {
     en: [
       '<h2>Ride Announcement Bot Help</h2>',
+      'in sync. For a brief overview of the main features and how to use the bot, see /start.</p>',
       '<h3>➕ Creating a New Ride</h3>',
       '/fromstrava',
       'settings.allowReposts'
     ],
     ru: [
       '<h2>Помощь по Ride Announcement Bot</h2>',
+      'объявления. Для краткого обзора основных возможностей и принципа использования смотрите /start.</p>',
       '<h3>➕ Создание новой поездки</h3>',
       '/fromstrava',
       'settings.allowReposts'
@@ -73,6 +75,7 @@ describe.each(['en', 'ru'])('HelpCommandHandler (%s)', (language) => {
       },
       lang: language,
       t: jest.fn((key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' })),
+      answerCallbackQuery: jest.fn().mockResolvedValue({}),
       replyWithRichMessage: jest.fn().mockResolvedValue({})
     };
     
@@ -123,6 +126,15 @@ describe.each(['en', 'ru'])('HelpCommandHandler (%s)', (language) => {
       expect(mockCtx.t).toHaveBeenCalledWith('templates.help1');
       expect(mockCtx.t).toHaveBeenCalledWith('templates.help2');
       expect(mockCtx.t).toHaveBeenCalledWith('templates.help3');
+    });
+  });
+
+  describe('handleInlineMenu', () => {
+    it('acknowledges the callback and sends help', async () => {
+      await helpCommandHandler.handleInlineMenu(mockCtx);
+
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith();
+      expect(mockCtx.replyWithRichMessage).toHaveBeenCalledTimes(2);
     });
   });
 });

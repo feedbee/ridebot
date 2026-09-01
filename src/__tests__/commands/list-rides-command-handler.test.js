@@ -59,6 +59,18 @@ describe.each(['en', 'ru'])('ListRidesCommandHandler (%s)', (language) => {
     });
   });
 
+  describe('handleInlineMenu', () => {
+    it('acknowledges the callback and shows the first page', async () => {
+      mockRideService.getRidesByCreator.mockResolvedValue({ rides: [], total: 0 });
+
+      await handler.handleInlineMenu(mockCtx);
+
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith();
+      expect(mockRideService.getRidesByCreator).toHaveBeenCalledWith(123, 0, 5);
+      expect(mockCtx.replyWithRichMessage).toHaveBeenCalled();
+    });
+  });
+
   describe('handleCallback', () => {
     it('edits message for requested page and answers callback', async () => {
       mockRideService.getRidesByCreator.mockResolvedValue({

@@ -23,6 +23,37 @@ class MockInlineKeyboard {
   }
 }
 
+class MockKeyboard {
+  constructor() {
+    this.keyboard = [[]];
+  }
+
+  text(label) {
+    this.keyboard[this.keyboard.length - 1].push({ text: label });
+    return this;
+  }
+
+  row() {
+    this.keyboard.push([]);
+    return this;
+  }
+
+  persistent(isEnabled = true) {
+    this.is_persistent = isEnabled;
+    return this;
+  }
+
+  resized(isEnabled = true) {
+    this.resize_keyboard = isEnabled;
+    return this;
+  }
+
+  placeholder(value) {
+    this.input_field_placeholder = value;
+    return this;
+  }
+}
+
 class MockInputFile {
   constructor(data, filename) {
     this.data = data;
@@ -89,6 +120,7 @@ export async function createScenarioHarness() {
   await jest.unstable_mockModule('grammy', async () => ({
     Bot: jest.fn().mockImplementation(() => runtime.botInstance),
     InlineKeyboard: MockInlineKeyboard,
+    Keyboard: MockKeyboard,
     InputFile: MockInputFile,
     webhookCallback: jest.fn(),
   }));

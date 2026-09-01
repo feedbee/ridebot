@@ -46,7 +46,7 @@ describe('Scenario Harness Integration', () => {
     expect(firstPage.text).toContain('</ul><br></li>');
     expect(firstPage.text).toContain('</ul></li></ol>');
     expect(firstPage.options.reply_markup.inline_keyboard.at(-1)).toEqual([
-      expect.objectContaining({ text: 'Close', callback_data: 'list:close' })
+      expect.objectContaining({ text: '✖️ Close', callback_data: 'list:close' })
     ]);
 
     await harness.dispatchCallback({
@@ -105,7 +105,7 @@ describe('Scenario Harness Integration', () => {
     expect(harness.outbox.replies.every(reply => reply.options.parse_mode == null)).toBe(true);
   });
 
-  it('sends /start from the localized Rich HTML template', async () => {
+  it('sends a persistent /start keyboard and handles its localized text actions', async () => {
     const harness = await createScenarioHarness();
 
     await harness.dispatchMessage({
@@ -116,15 +116,82 @@ describe('Scenario Harness Integration', () => {
 
     expect(harness.outbox.replies).toHaveLength(1);
     const reply = harness.outbox.replies[0];
-    expect(reply.richMessage?.html.startsWith(
+    expect(reply.richMessage?.html).toContain(
       '<img src="https://static.ridebot.valera.ws/ridebot/ride-announcement-teaser.jpg"/>'
-    )).toBe(true);
+    );
     expect(reply.richMessage?.html).toContain('<h2>Welcome to Ride Announcement Bot!</h2>');
-    expect(reply.richMessage?.html).toContain('<ul><li>Create and schedule rides</li>');
-    expect(reply.richMessage?.html).toContain('<ol><li>Use /newride');
-    expect(reply.richMessage?.html).not.toMatch(/<br><br>\s*<h[23]>/);
-    expect(reply.richMessage?.html).not.toMatch(/<\/h[23]>\s*<br><br>/);
-    expect(reply.options.parse_mode).toBeUndefined();
+    expect(reply.richMessage?.html).toContain('<h3>Key Features:</h3>');
+    expect(reply.richMessage?.html).toContain('<h3>Quick Start:</h3>');
+    expect(reply.options.reply_markup.keyboard).toEqual([
+      [
+        { text: '☰ Buttons' },
+        { text: '➕ Create with wizard' },
+        { text: '⚙️ Settings' },
+        { text: '❓ Help' }
+      ]
+    ]);
+    expect(reply.options.reply_markup).toEqual(expect.objectContaining({
+      is_persistent: true,
+      resize_keyboard: true
+    }));
+
+    await harness.dispatchMessage({ text: '☰ Buttons' });
+    const expandedMenu = harness.outbox.replies.at(-1);
+    expect(expandedMenu.text).toBe('Choose an action:');
+    expect(expandedMenu.options.reply_markup.inline_keyboard).toEqual([
+      [
+        { text: '➕ Create with wizard', callback_data: 'main:newride' },
+        { text: '🤖 Create with AI', callback_data: 'main:airide' },
+        { text: '📋 Created rides', callback_data: 'main:listrides' }
+      ],
+      [
+        { text: '⚙️ Settings', callback_data: 'main:settings' },
+        { text: '❓ Help', callback_data: 'main:help' }
+      ],
+      [
+        { text: '✖️ Close', callback_data: 'main:close' }
+      ]
+    ]);
+
+    await harness.dispatchCallback({ data: 'main:listrides' });
+    expect(harness.outbox.replies.at(-1).text).toContain('You have not created any rides yet.');
+
+    await harness.dispatchMessage({ text: '⚙️ Settings' });
+    expect(harness.outbox.replies.at(-1).richMessage?.html).toContain(
+      '<h3>Default settings for new rides</h3>'
+    );
+
+    const repliesBeforeHelp = harness.outbox.replies.length;
+    await harness.dispatchCallback({ data: 'main:help' });
+    expect(harness.outbox.replies).toHaveLength(repliesBeforeHelp + 2);
+
+    await harness.dispatchCallback({ data: 'main:newride' });
+    expect(harness.outbox.replies.at(-1).text).toContain('Please enter the ride title');
+    expect(harness.outbox.replies.every(reply =>
+      reply.options?.reply_markup?.remove_keyboard !== true
+    )).toBe(true);
+
+    await harness.dispatchCallback({ data: 'wizard:cancel' });
+    expect(harness.outbox.replies.at(-1).options.reply_markup).toBeUndefined();
+
+    await harness.dispatchCallback({ data: 'main:airide' });
+    expect(harness.outbox.replies.at(-1).text).toContain('Describe the ride');
+    await harness.dispatchCallback({ data: 'airide:cancel:200:100' });
+
+    await harness.dispatchMessage({ text: '☰ Buttons' });
+    const closeableMenu = harness.outbox.replies.at(-1);
+    await harness.dispatchCallback({
+      data: 'main:close',
+      message: {
+        message_id: closeableMenu.messageId,
+        chat: { id: 100, type: 'private' },
+        from: { id: 0, is_bot: true, username: 'testbot' }
+      }
+    });
+    expect(harness.outbox.deletes).toContainEqual({
+      chatId: 100,
+      messageId: closeableMenu.messageId
+    });
   });
 
   it('opens compact calendar options privately from an announcement link', async () => {

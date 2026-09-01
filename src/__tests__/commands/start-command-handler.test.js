@@ -92,13 +92,15 @@ describe.each(['en', 'ru'])('StartCommandHandler (%s)', (language) => {
       expect(mockCtx.replyWithRichMessage).not.toHaveBeenCalled();
     });
 
-    it('should send the localized Rich HTML template unchanged apart from the bot username', async () => {
+    it('should send the full localized Rich HTML with a persistent reply keyboard', async () => {
       // Execute
       await startHandler.handle(mockCtx);
 
       // Verify
       expect(mockCtx.replyWithRichMessage).toHaveBeenCalledTimes(1);
-      const [richMessage] = mockCtx.replyWithRichMessage.mock.calls[0];
+      const [richMessage, options] = mockCtx.replyWithRichMessage.mock.calls[0];
+      expect(richMessage.html).toContain('<img');
+      expect(richMessage.html).toContain('<ul>');
       expect(richMessage.html).toContain('/shareride@testbot');
       expect(richMessage.html).not.toContain('@botname');
       expect(richMessage.html).toContain('<ul><li>');
@@ -108,6 +110,19 @@ describe.each(['en', 'ru'])('StartCommandHandler (%s)', (language) => {
       expect(richMessage.html).toContain('</ul>\n<h3>');
       expect(richMessage.html).not.toMatch(/<br><br>\s*<h[23]>/);
       expect(richMessage.html).not.toMatch(/<\/h[23]>\s*<br><br>/);
+      expect(options.reply_markup.keyboard).toEqual([
+        [
+          { text: mockCtx.t('buttons.mainMenuButtons') },
+          { text: mockCtx.t('buttons.mainMenuCreateWizard') },
+          { text: mockCtx.t('buttons.mainMenuSettings') },
+          { text: mockCtx.t('buttons.mainMenuHelp') }
+        ]
+      ]);
+      expect(options.reply_markup).toEqual(expect.objectContaining({
+        is_persistent: true,
+        resize_keyboard: true,
+        input_field_placeholder: mockCtx.t('mainMenu.placeholder')
+      }));
       expect(mockCtx.t).toHaveBeenCalledWith('templates.start');
     });
 
@@ -138,7 +153,7 @@ describe.each(['en', 'ru'])('StartCommandHandler (%s)', (language) => {
       }
     });
 
-    it('should use the configured start message template', async () => {
+    it('should use the original configured start message template', async () => {
       // Execute
       await startHandler.handle(mockCtx);
 
@@ -154,13 +169,40 @@ describe.each(['en', 'ru'])('StartCommandHandler (%s)', (language) => {
       }
     });
 
-    it('should not use the regular-message parse mode', async () => {
+    it('should pass only the reply keyboard as message options', async () => {
       // Execute
       await startHandler.handle(mockCtx);
 
       // Verify
       const callArgs = mockCtx.replyWithRichMessage.mock.calls[0];
-      expect(callArgs[1]).toBeUndefined();
+      expect(callArgs[1]).toEqual(expect.objectContaining({
+        reply_markup: expect.any(Object)
+      }));
+      expect(callArgs[1].parse_mode).toBeUndefined();
+    });
+  });
+
+  describe('closeButtons', () => {
+    beforeEach(() => {
+      mockCtx.answerCallbackQuery = jest.fn().mockResolvedValue({});
+      mockCtx.deleteMessage = jest.fn().mockResolvedValue({});
+    });
+
+    it('ignores an already deleted inline menu message', async () => {
+      mockCtx.deleteMessage.mockRejectedValue({
+        description: 'Bad Request: message to delete not found'
+      });
+
+      await expect(startHandler.closeButtons(mockCtx)).resolves.toBeUndefined();
+
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith();
+    });
+
+    it('rethrows unexpected deletion errors', async () => {
+      const error = new Error('Telegram unavailable');
+      mockCtx.deleteMessage.mockRejectedValue(error);
+
+      await expect(startHandler.closeButtons(mockCtx)).rejects.toBe(error);
     });
   });
 });

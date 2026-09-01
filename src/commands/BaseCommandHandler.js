@@ -25,6 +25,26 @@ export class BaseCommandHandler {
     throw new Error('Method not implemented');
   }
 
+  /**
+   * Handle a persistent main-menu action using the regular command flow.
+   * Override when the reply-keyboard text cannot be processed as a command.
+   * @param {import('grammy').Context} ctx - Grammy context
+   * @returns {Promise<void>}
+   */
+  async handleMainMenu(ctx) {
+    await this.handle(ctx);
+  }
+
+  /**
+   * Handle an expanded inline-menu action.
+   * @param {import('grammy').Context} ctx - Grammy context
+   * @returns {Promise<void>}
+   */
+  async handleInlineMenu(ctx) {
+    await ctx.answerCallbackQuery();
+    await this.handleMainMenu(ctx);
+  }
+
   translate(ctx, key, params = {}) {
     if (ctx?.t) {
       return ctx.t(key, params);

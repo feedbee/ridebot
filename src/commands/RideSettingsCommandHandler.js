@@ -47,6 +47,15 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
   }
 
   /**
+   * Open user settings from the persistent main menu.
+   * @param {import('grammy').Context} ctx
+   * @returns {Promise<void>}
+   */
+  async handleMainMenu(ctx) {
+    await this.showUserSettings(ctx, 'reply');
+  }
+
+  /**
    * Handle owner action callback for ride settings button.
    */
   async handleCallback(ctx) {

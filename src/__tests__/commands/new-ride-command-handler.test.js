@@ -115,6 +115,23 @@ describe.each(['en', 'ru'])('NewRideCommandHandler (%s)', (language) => {
     });
   });
 
+  describe('handleMainMenu', () => {
+    it('starts a wizard without changing the persistent menu', async () => {
+      await handler.handleMainMenu(mockCtx);
+
+      expect(mockWizard.startWizard).toHaveBeenCalledWith(mockCtx, null);
+    });
+
+    it('acknowledges an inline menu button and starts the managed wizard', async () => {
+      mockCtx.answerCallbackQuery = jest.fn().mockResolvedValue({});
+
+      await handler.handleInlineMenu(mockCtx);
+
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalled();
+      expect(mockWizard.startWizard).toHaveBeenCalledWith(mockCtx, null);
+    });
+  });
+
   describe('handleWithParams', () => {
     it('replies with error and does not post message when service returns error', async () => {
       const params = { title: 'Test Ride', when: 'invalid date' };
