@@ -6,6 +6,17 @@ import { getRideRoutes } from '../utils/route-links.js';
 import { UserProfile } from '../models/UserProfile.js';
 import { SettingsService } from './SettingsService.js';
 
+const SELF_ORGANIZER_REFERENCES = new Set([
+  'i',
+  'me',
+  'myself',
+  'я',
+  'я сам',
+  'я сама',
+  'сам',
+  'сама'
+]);
+
 /**
  * Service class for managing rides and their messages
  */
@@ -246,19 +257,10 @@ export class RideService {
    * @returns {string}
    */
   resolveCreateOrganizer(organizer, creatorProfile, options = {}) {
-    const references = t(
-      options.language || config.i18n.defaultLanguage,
-      'services.ride.selfOrganizerReferences',
-      {},
-      {
-        fallbackLanguage: config.i18n.fallbackLanguage,
-        withMissingMarker: false
-      }
-    );
     const normalized = typeof organizer === 'string'
       ? organizer.trim().toLowerCase().replace(/[.!?]+$/g, '')
       : '';
-    const refersToCreator = Array.isArray(references) && references.includes(normalized);
+    const refersToCreator = SELF_ORGANIZER_REFERENCES.has(normalized);
 
     if (!organizer || refersToCreator) {
       return creatorProfile ? this.getDefaultOrganizer(creatorProfile) : '';

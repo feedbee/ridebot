@@ -78,6 +78,16 @@ describe.each(['en', 'ru'])('RideWizard Edge Cases (%s)', (language) => {
   beforeEach(() => {
     storage = new MockStorage();
     mockRideService = {
+      resolveCreateOrganizer: jest.fn((organizer, profile) => {
+        const normalized = organizer?.trim().toLowerCase();
+        if (organizer && !['i', 'me', 'myself', 'я', 'я сам', 'я сама', 'сам', 'сама'].includes(normalized)) {
+          return organizer;
+        }
+        const fullName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
+        return fullName
+          ? (profile.username ? `${fullName} (@${profile.username})` : fullName)
+          : (profile.username ? `@${profile.username}` : '');
+      }),
       createRide: jest.fn((data) => storage.createRide(data)),
       updateRide: jest.fn((id, data) => storage.updateRide(id, data))
     };

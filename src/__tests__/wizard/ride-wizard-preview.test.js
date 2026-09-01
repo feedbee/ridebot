@@ -84,7 +84,13 @@ describe.each(['en', 'ru'])('RideWizard — Live Preview (%s)', (language) => {
       updateRideMessages: jest.fn().mockResolvedValue(true)
     };
     wizard = new RideWizard(storage, {
-      createRide: jest.fn((data) => storage.createRide(data))
+      createRide: jest.fn((data) => storage.createRide(data)),
+      resolveCreateOrganizer: jest.fn((organizer, profile) => {
+        if (['я', 'me', 'myself'].includes(organizer?.trim().toLowerCase())) {
+          return `${profile.firstName} ${profile.lastName} (@${profile.username})`;
+        }
+        return organizer || `${profile.firstName} ${profile.lastName} (@${profile.username})`;
+      })
     }, mockMessageFormatter, mockRideMessagesService);
   });
 
@@ -232,6 +238,25 @@ describe.each(['en', 'ru'])('RideWizard — Live Preview (%s)', (language) => {
 
       expect(mockMessageFormatter.formatRidePreview).toHaveBeenCalled();
     });
+
+    it.each(['я', 'me', 'myself'])('shows the creator immediately after entering organizer "%s"', async (organizer) => {
+      const ctx = createMockContext(123, 456, 'private', language);
+      await wizard.startWizard(ctx);
+
+      ctx.message = { text: 'Test Ride', message_id: 10 };
+      await wizard.handleWizardInput(ctx); // title
+      ctx.match = ['wizard:skip', 'skip'];
+      await wizard.handleWizardAction(ctx); // category -> organizer
+
+      mockMessageFormatter.formatRidePreview.mockClear();
+      ctx.message = { text: organizer, message_id: 11 };
+      await wizard.handleWizardInput(ctx);
+
+      expect(mockMessageFormatter.formatRidePreview).toHaveBeenLastCalledWith(
+        expect.objectContaining({ organizer: 'Test User (@testuser)' }),
+        language
+      );
+    });
   });
 
   describe('confirm step', () => {
@@ -267,6 +292,26 @@ describe.each(['en', 'ru'])('RideWizard — Live Preview (%s)', (language) => {
         mockMessageFormatter.formatRidePreview.mock.calls.length - 1
       ];
       expect(lastCall[0].organizer).toBeTruthy();
+    });
+
+    it.each(['я', 'me', 'myself'])('shows the creator in preview when organizer is "%s"', async (organizer) => {
+      const ctx = createMockContext(123, 456, 'private', language);
+      const state = {
+        step: 'confirm',
+        data: { organizer },
+        isUpdate: false,
+        errorMessageIds: [],
+        primaryMessageId: null,
+        previewMessageId: 1
+      };
+
+      await wizard.sendConfirmStep(ctx, state, false);
+
+      expect(state.data.organizer).toBe('Test User (@testuser)');
+      expect(mockMessageFormatter.formatRidePreview).toHaveBeenLastCalledWith(
+        expect.objectContaining({ organizer: 'Test User (@testuser)' }),
+        language
+      );
     });
   });
 

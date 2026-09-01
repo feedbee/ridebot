@@ -698,11 +698,15 @@ describe('RideService', () => {
       expect(result.ride.organizer).toBe('Test User (@testuser)');
     });
 
-    it('should not treat another language self-reference as default organizer', async () => {
+    it.each([
+      ['ru', 'me'],
+      ['ru', 'myself'],
+      ['en', 'я']
+    ])('should recognize self-reference independently of interface language (%s: %s)', async (language, organizer) => {
       const params = {
         title: 'Cross Language Organizer Test Ride',
         when: 'tomorrow 9am',
-        organizer: 'me'
+        organizer
       };
 
       const user = new UserProfile({
@@ -712,10 +716,10 @@ describe('RideService', () => {
         username: 'testuser'
       });
 
-      const result = await rideService.createRideFromParams(params, 123456, user, { language: 'ru' });
+      const result = await rideService.createRideFromParams(params, 123456, user, { language });
 
       expect(result.error).toBeNull();
-      expect(result.ride.organizer).toBe('me');
+      expect(result.ride.organizer).toBe('Test User (@testuser)');
     });
 
     it('should resolve create organizer consistently for preview and persistence', () => {

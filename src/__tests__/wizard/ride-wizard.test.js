@@ -119,6 +119,16 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
   beforeEach(() => {
     storage = new MockStorage();
     mockRideService = {
+      resolveCreateOrganizer: jest.fn((organizer, profile) => {
+        const normalized = organizer?.trim().toLowerCase();
+        if (organizer && !['i', 'me', 'myself', 'я', 'я сам', 'я сама', 'сам', 'сама'].includes(normalized)) {
+          return organizer;
+        }
+        const fullName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
+        return fullName
+          ? (profile.username ? `${fullName} (@${profile.username})` : fullName)
+          : (profile.username ? `@${profile.username}` : '');
+      }),
       createRide: jest.fn(async (rideData, creatorProfile) => {
         const ride = await storage.createRide(rideData);
         if (!creatorProfile || creatorProfile.userId !== ride.createdBy) {

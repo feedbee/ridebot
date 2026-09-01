@@ -536,8 +536,7 @@ id: abc123 (or #abc123)
       pleaseProvideTitleAndDate: 'Укажите как минимум название и дату/время.',
       errorCreatingRide: 'Произошла ошибка при создании поездки.',
       errorUpdatingRide: 'Произошла ошибка при обновлении поездки.',
-      originalRideNotFound: 'Исходная поездка не найдена',
-      selfOrganizerReferences: ['я', 'я сам', 'я сама', 'сам', 'сама']
+      originalRideNotFound: 'Исходная поездка не найдена'
     },
     rideMessages: {
       couldNotFindRideIdInMessage: 'Не удалось найти ID поездки в сообщении. Убедитесь, что вы отвечаете на сообщение о поездке, или передайте ID поездки.',

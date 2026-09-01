@@ -340,6 +340,14 @@ export class RideWizard {
         
         // Set the value(s)
         this.setFieldValue(state, fieldConfig, validationResult.value);
+
+        if (!state.isUpdate && fieldConfig.dataKey === 'organizer') {
+          state.data.organizer = this.rideService.resolveCreateOrganizer(
+            state.data.organizer,
+            UserProfile.fromTelegramUser(ctx.from),
+            { language: this.getContextLanguage(ctx) }
+          );
+        }
         
         // Handle post-processing (e.g., route parsing)
         if (fieldConfig.postProcess) {
@@ -623,8 +631,14 @@ export class RideWizard {
    * @param {boolean} edit - Whether to edit existing message
    */
   async sendConfirmStep(ctx, state, edit) {
-    // Set default organizer name if not provided
-    if (!state.data.organizer) {
+    if (!state.isUpdate) {
+      state.data.organizer = this.rideService.resolveCreateOrganizer(
+        state.data.organizer,
+        UserProfile.fromTelegramUser(ctx.from),
+        { language: this.getContextLanguage(ctx) }
+      );
+    } else if (!state.data.organizer) {
+      // Preserve the existing update-flow fallback for legacy wizard states.
       // Format organizer name in the same format as participant names but without the link
       let organizerName = '';
       if (ctx.from.first_name || ctx.from.last_name) {
