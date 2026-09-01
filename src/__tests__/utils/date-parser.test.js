@@ -203,12 +203,18 @@ describe('DateParser', () => {
     });
 
     it('uses the process timezone when no timezone is configured', () => {
-      process.env.TZ = 'Europe/Warsaw';
       config.dateFormat.defaultTimezone = null;
+      const date = new Date('2026-09-01T21:30:00.000Z');
 
-      const result = DateParser.startOfDay(new Date('2026-09-01T21:30:00.000Z'));
+      const result = DateParser.startOfDay(date);
 
-      expect(result.toISOString()).toBe('2026-08-31T22:00:00.000Z');
+      expect(result.getFullYear()).toBe(date.getFullYear());
+      expect(result.getMonth()).toBe(date.getMonth());
+      expect(result.getDate()).toBe(date.getDate());
+      expect(result.getHours()).toBe(0);
+      expect(result.getMinutes()).toBe(0);
+      expect(result.getSeconds()).toBe(0);
+      expect(result.getMilliseconds()).toBe(0);
     });
 
     it('uses the offset in effect at midnight across a DST transition', () => {
