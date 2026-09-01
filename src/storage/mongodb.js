@@ -188,23 +188,18 @@ export class MongoDBStorage extends StorageInterface {
   }
 
   async getRidesByCreator(userId, skip, limit) {
-    try {
-      const [rides, total] = await Promise.all([
-        Ride.find({ createdBy: userId })
-          .sort({ date: -1 })
-          .skip(skip)
-          .limit(limit),
-        Ride.countDocuments({ createdBy: userId })
-      ]);
+    const [rides, total] = await Promise.all([
+      Ride.find({ createdBy: userId })
+        .sort({ date: -1 })
+        .skip(skip)
+        .limit(limit),
+      Ride.countDocuments({ createdBy: userId })
+    ]);
 
-      return {
-        total,
-        rides: rides.map(ride => this.mapRideToInterface(ride))
-      };
-    } catch (error) {
-      console.error('Error getting rides by creator:', error);
-      return { total: 0, rides: [] };
-    }
+    return {
+      total,
+      rides: rides.map(ride => this.mapRideToInterface(ride))
+    };
   }
 
   /**

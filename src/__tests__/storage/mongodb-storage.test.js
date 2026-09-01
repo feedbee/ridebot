@@ -508,11 +508,9 @@ describe('MongoDBStorage', () => {
       expect(result).toBeNull();
     });
 
-    test('should handle getRidesByCreator with database error', async () => {
-      // Mock mongoose to throw an error
+    test('should propagate getRidesByCreator database errors', async () => {
       const originalFind = mongoose.model('Ride').find;
       const originalCountDocuments = mongoose.model('Ride').countDocuments;
-      
       mongoose.model('Ride').find = jest.fn().mockReturnValue({
         sort: jest.fn().mockReturnValue({
           skip: jest.fn().mockReturnValue({
@@ -521,13 +519,14 @@ describe('MongoDBStorage', () => {
         })
       });
       mongoose.model('Ride').countDocuments = jest.fn().mockRejectedValue(new Error('Database error'));
-      
-      const result = await storage.getRidesByCreator(123, 0, 10);
-      expect(result).toEqual({ total: 0, rides: [] });
-      
-      // Restore original methods
-      mongoose.model('Ride').find = originalFind;
-      mongoose.model('Ride').countDocuments = originalCountDocuments;
+
+      try {
+        await expect(storage.getRidesByCreator(123, 0, 10))
+          .rejects.toThrow('Database error');
+      } finally {
+        mongoose.model('Ride').find = originalFind;
+        mongoose.model('Ride').countDocuments = originalCountDocuments;
+      }
     });
 
     test('should propagate getPlannedRides database errors', async () => {

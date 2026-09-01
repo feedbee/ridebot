@@ -57,6 +57,15 @@ describe.each(['en', 'ru'])('ListRidesCommandHandler (%s)', (language) => {
         expect.objectContaining({ text: tr('buttons.close'), callback_data: 'list:close' })
       ]]);
     });
+
+    it('does not convert a storage failure into an empty list', async () => {
+      mockRideService.getRidesByCreator.mockRejectedValue(new Error('Database error'));
+
+      await expect(handler.handle(mockCtx)).rejects.toThrow('Database error');
+
+      expect(mockMessageFormatter.formatRidesList).not.toHaveBeenCalled();
+      expect(mockCtx.replyWithRichMessage).not.toHaveBeenCalled();
+    });
   });
 
   describe('handleInlineMenu', () => {
