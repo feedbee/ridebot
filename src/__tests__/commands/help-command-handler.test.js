@@ -99,6 +99,7 @@ describe.each(['en', 'ru'])('HelpCommandHandler (%s)', (language) => {
       expect(helpPart2).toContain('/deleteride');
       expect(helpPart2).toContain('/dupride');
       expect(helpPart2).toContain('/listrides');
+      expect(helpPart2).toContain('/planned');
       expect(helpPart2).toContain('/shareride@testbot');
       expect(helpPart2).toContain('/settings');
       expect(helpPart2).toContain('/joinchat');

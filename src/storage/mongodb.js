@@ -66,6 +66,8 @@ const rideSchema = new mongoose.Schema({
 
 // Supports getRidesByCreator() query pattern: filter by createdBy + sort by date desc.
 rideSchema.index({ createdBy: 1, date: -1 });
+rideSchema.index({ 'participation.joined.userId': 1, date: 1 });
+rideSchema.index({ 'participation.thinking.userId': 1, date: 1 });
 rideSchema.index(
   { groupId: 1 },
   { unique: true, partialFilterExpression: { groupId: { $type: 'number' } } }
@@ -203,6 +205,37 @@ export class MongoDBStorage extends StorageInterface {
       console.error('Error getting rides by creator:', error);
       return { total: 0, rides: [] };
     }
+  }
+
+  /**
+   * Get current and future rides where a user is joined or thinking.
+   * @param {number} userId - Participant's user ID
+   * @param {Date} startOfToday - Inclusive date boundary
+   * @param {number} skip - Number of items to skip
+   * @param {number} limit - Maximum number of items to return
+   * @returns {Promise<RidesList>}
+   */
+  async getPlannedRides(userId, startOfToday, skip, limit) {
+    const query = {
+      date: { $gte: startOfToday },
+      $or: [
+        { 'participation.joined.userId': userId },
+        { 'participation.thinking.userId': userId }
+      ]
+    };
+
+    const [rides, total] = await Promise.all([
+      Ride.find(query)
+        .sort({ date: 1 })
+        .skip(skip)
+        .limit(limit),
+      Ride.countDocuments(query)
+    ]);
+
+    return {
+      total,
+      rides: rides.map(ride => this.mapRideToInterface(ride))
+    };
   }
 
 

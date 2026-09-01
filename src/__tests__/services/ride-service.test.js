@@ -339,6 +339,19 @@ describe('RideService', () => {
       expect(result.total).toBe(5);
       expect(result.rides).toHaveLength(2);
     });
+
+    it('delegates planned ride listing to storage', async () => {
+      const boundary = new Date('2026-09-01T00:00:00.000Z');
+      const spy = jest.spyOn(storage, 'getPlannedRides').mockResolvedValue({
+        total: 1,
+        rides: [{ title: 'Planned ride' }]
+      });
+
+      const result = await rideService.getPlannedRides(101, boundary, 5, 5);
+
+      expect(spy).toHaveBeenCalledWith(101, boundary, 5, 5);
+      expect(result.total).toBe(1);
+    });
   });
 
   describe('Route Processing', () => {

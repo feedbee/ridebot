@@ -399,6 +399,58 @@ export class MessageFormatter {
   }
 
   /**
+   * Format rides where the requester is joined or thinking.
+   * @param {Array} rides - List of rides
+   * @param {number} userId - Requesting user's ID
+   * @param {number} page - Current page
+   * @param {number} totalPages - Total number of pages
+   * @param {number} startNumber - Number of the first ride on this page
+   * @param {string} language - Output language
+   * @returns {string} - Formatted message
+   */
+  formatPlannedRidesList(rides, userId, page, totalPages, startNumber, language) {
+    if (rides.length === 0) {
+      return `<p>${this.translate('formatter.noPlannedRides', {}, language)}</p>`;
+    }
+
+    let message = `<h3>${this.translate('formatter.plannedRidesTitle', {}, language)}</h3>\n<hr/>\n`;
+    message += `<ol start="${startNumber}">`;
+
+    rides.forEach((ride, index) => {
+      const formattedDateTime = DateParser.formatDateTime(ride.date, language);
+      const datetime = `${formattedDateTime.date} ${this.translate('formatter.atWord', {}, language)} ${formattedDateTime.time}`;
+      const unixTime = Math.floor(ride.date.getTime() / 1000);
+      const status = ride.cancelled ? this.translate('templates.cancelled', {}, language) : '';
+      const details = [`📅 <tg-time unix="${unixTime}">${datetime}</tg-time>`];
+
+      if (ride.meetingPoint) {
+        details.push(`📍 ${escapeHtml(ride.meetingPoint)}`);
+      }
+
+      const participationState = ['joined', 'thinking'].find(state =>
+        (ride.participation?.[state] || []).some(participant => participant.userId === userId)
+      );
+      if (participationState) {
+        details.push(this.translate(`formatter.participationStatus.${participationState}`, {}, language));
+      }
+
+      details.push(`🎫 #Ride #${ride.id}`);
+
+      const spacer = index < rides.length - 1 ? '<br>' : '';
+      message += `<li value="${startNumber + index}"><b>🚲 ${escapeHtml(ride.title)}</b>${status ? ` ${status}` : ''}`;
+      message += `<ul>${details.map(detail => `<li>${detail}</li>`).join('')}</ul>${spacer}</li>`;
+    });
+
+    message += '</ol>';
+
+    if (totalPages > 1) {
+      message += `\n<hr/>\n<footer>${this.translate('formatter.pageLabel', { page, totalPages }, language)}</footer>`;
+    }
+
+    return message;
+  }
+
+  /**
    * Format a duration in minutes to a human-readable string
    * @param {number} minutes - Duration in minutes
    * @returns {string} - Formatted duration

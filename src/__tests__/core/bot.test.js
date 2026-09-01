@@ -77,6 +77,7 @@ describe('Bot', () => {
           expect.objectContaining({ command: 'cancelride' }),
           expect.objectContaining({ command: 'resumeride' }),
           expect.objectContaining({ command: 'deleteride' }),
+          expect.objectContaining({ command: 'planned' }),
           expect.objectContaining({ command: 'settings' }),
         ])
       );
@@ -171,6 +172,14 @@ describe('Bot', () => {
       );
       expect(mockBotCallbackQuery).toHaveBeenCalledWith(
         /^list:(\d+)$/,
+        expect.any(Function)
+      );
+      expect(mockBotCallbackQuery).toHaveBeenCalledWith(
+        /^planned:list:(\d+)$/,
+        expect.any(Function)
+      );
+      expect(mockBotCallbackQuery).toHaveBeenCalledWith(
+        /^planned:list:close$/,
         expect.any(Function)
       );
       expect(mockBotCallbackQuery).toHaveBeenCalledWith(
@@ -278,6 +287,7 @@ describe('Bot', () => {
       expect(mockBotCommand).toHaveBeenCalledWith('resumeride', expect.any(Function));
       expect(mockBotCommand).toHaveBeenCalledWith('deleteride', expect.any(Function));
       expect(mockBotCommand).toHaveBeenCalledWith('listrides', expect.any(Function));
+      expect(mockBotCommand).toHaveBeenCalledWith('planned', expect.any(Function));
       expect(mockBotCommand).toHaveBeenCalledWith('dupride', expect.any(Function));
       expect(mockBotCommand).toHaveBeenCalledWith('shareride', expect.any(Function));
     });

@@ -14,6 +14,7 @@ import { UpdateRideCommandHandler } from '../commands/UpdateRideCommandHandler.j
 import { CancelRideCommandHandler } from '../commands/CancelRideCommandHandler.js';
 import { DeleteRideCommandHandler } from '../commands/DeleteRideCommandHandler.js';
 import { ListRidesCommandHandler } from '../commands/ListRidesCommandHandler.js';
+import { PlannedRidesCommandHandler } from '../commands/PlannedRidesCommandHandler.js';
 import { ListParticipantsCommandHandler } from '../commands/ListParticipantsCommandHandler.js';
 import { DuplicateRideCommandHandler } from '../commands/DuplicateRideCommandHandler.js';
 import { ShareRideCommandHandler } from '../commands/ShareRideCommandHandler.js';
@@ -91,6 +92,7 @@ export class Bot {
     const cancelRideHandler = new CancelRideCommandHandler(rideService, messageFormatter, rideMessagesService);
     const deleteRideHandler = new DeleteRideCommandHandler(rideService, messageFormatter, rideMessagesService);
     const listRidesHandler = new ListRidesCommandHandler(rideService, messageFormatter, rideMessagesService);
+    const plannedRidesHandler = new PlannedRidesCommandHandler(rideService, messageFormatter, rideMessagesService);
     const listParticipantsHandler = new ListParticipantsCommandHandler(rideService, messageFormatter, rideMessagesService);
     const duplicateRideHandler = new DuplicateRideCommandHandler(rideService, messageFormatter, this.wizard, rideMessagesService);
     const resumeRideHandler = new ResumeRideCommandHandler(rideService, messageFormatter, rideMessagesService);
@@ -111,6 +113,7 @@ export class Bot {
           { command: 'cancelride', descriptionKey: 'bot.commandDescriptions.cancelride', handler: (ctx) => cancelRideHandler.handle(ctx) },
           { command: 'deleteride', descriptionKey: 'bot.commandDescriptions.deleteride', handler: (ctx) => deleteRideHandler.handle(ctx) },
           { command: 'listrides', descriptionKey: 'bot.commandDescriptions.listrides', handler: (ctx) => listRidesHandler.handle(ctx) },
+          { command: 'planned', descriptionKey: 'bot.commandDescriptions.planned', handler: (ctx) => plannedRidesHandler.handle(ctx) },
           { command: 'listparticipants', descriptionKey: 'bot.commandDescriptions.listparticipants', handler: (ctx) => listParticipantsHandler.handle(ctx) },
           { command: 'dupride', descriptionKey: 'bot.commandDescriptions.dupride', handler: (ctx) => duplicateRideHandler.handle(ctx) },
           { command: 'resumeride', descriptionKey: 'bot.commandDescriptions.resumeride', handler: (ctx) => resumeRideHandler.handle(ctx) },
@@ -147,6 +150,7 @@ export class Bot {
         { pattern: /^main:newride$/, handler: (ctx) => newRideHandler.handleInlineMenu(ctx) },
         { pattern: /^main:airide$/, handler: (ctx) => this.aiRideHandler.handleInlineMenu(ctx) },
         { pattern: /^main:listrides$/, handler: (ctx) => listRidesHandler.handleInlineMenu(ctx) },
+        { pattern: /^main:planned$/, handler: (ctx) => plannedRidesHandler.handleInlineMenu(ctx) },
         { pattern: /^main:settings$/, handler: (ctx) => rideSettingsHandler.handleInlineMenu(ctx) },
         { pattern: /^main:help$/, handler: (ctx) => helpHandler.handleInlineMenu(ctx) },
         { pattern: /^main:close$/, handler: (ctx) => startHandler.closeButtons(ctx) },
@@ -159,6 +163,8 @@ export class Bot {
         { pattern: /^delete:(\w+):(\w+)(?::(message|callback))?$/, handler: (ctx) => deleteRideHandler.handleConfirmation(ctx) },
         { pattern: /^list:(\d+)$/, handler: (ctx) => listRidesHandler.handleCallback(ctx) },
         { pattern: /^list:close$/, handler: (ctx) => listRidesHandler.handleClose(ctx) },
+        { pattern: /^planned:list:(\d+)$/, handler: (ctx) => plannedRidesHandler.handleCallback(ctx) },
+        { pattern: /^planned:list:close$/, handler: (ctx) => plannedRidesHandler.handleClose(ctx) },
         { pattern: /^rideowner:update:(\w+)$/, handler: (ctx) => updateRideHandler.handleCallback(ctx) },
         { pattern: /^rideowner:duplicate:(\w+)$/, handler: (ctx) => duplicateRideHandler.handleCallback(ctx) },
         { pattern: /^rideowner:delete:(\w+)$/, handler: (ctx) => deleteRideHandler.handleCallback(ctx) },

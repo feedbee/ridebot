@@ -192,6 +192,35 @@ describe('DateParser', () => {
     });
   });
 
+  describe('startOfDay', () => {
+    it('returns midnight in the configured timezone', () => {
+      process.env.TZ = 'America/New_York';
+      config.dateFormat.defaultTimezone = 'Europe/Warsaw';
+
+      const result = DateParser.startOfDay(new Date('2026-09-01T21:30:00.000Z'));
+
+      expect(result.toISOString()).toBe('2026-08-31T22:00:00.000Z');
+    });
+
+    it('uses the process timezone when no timezone is configured', () => {
+      process.env.TZ = 'Europe/Warsaw';
+      config.dateFormat.defaultTimezone = null;
+
+      const result = DateParser.startOfDay(new Date('2026-09-01T21:30:00.000Z'));
+
+      expect(result.toISOString()).toBe('2026-08-31T22:00:00.000Z');
+    });
+
+    it('uses the offset in effect at midnight across a DST transition', () => {
+      process.env.TZ = 'UTC';
+      config.dateFormat.defaultTimezone = 'Europe/Warsaw';
+
+      const result = DateParser.startOfDay(new Date('2027-03-28T12:00:00.000Z'));
+
+      expect(result.toISOString()).toBe('2027-03-27T23:00:00.000Z');
+    });
+  });
+
   describe('formatDateTime', () => {
     it('should format date and time according to config', () => {
       const date = new Date('2024-03-15T15:30:00Z');

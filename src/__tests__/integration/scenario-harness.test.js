@@ -84,6 +84,54 @@ describe('Scenario Harness Integration', () => {
     });
   });
 
+  it('shows current planned status only when the list is requested or paged', async () => {
+    const harness = await createScenarioHarness();
+    const chat = { id: 43, type: 'private' };
+    const user = { id: 43, first_name: 'Plan', username: 'planner' };
+
+    await harness.dispatchMessage({
+      text: '/newride\ntitle: Planned Ride\nwhen: tomorrow 10:00',
+      chat,
+      from: user
+    });
+    const [ride] = harness.listRides();
+
+    await harness.dispatchMessage({ text: '/planned', chat, from: user });
+    const joinedList = harness.outbox.replies.at(-1);
+    expect(joinedList.text).toContain('Planned Ride');
+    expect(joinedList.text).toContain('🙋 Joined');
+
+    await harness.dispatchCallback({
+      data: `thinking:${ride.id}`,
+      chat,
+      from: user,
+      message: {
+        message_id: ride.messages[0].messageId,
+        text: 'Planned Ride',
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' }
+      }
+    });
+    expect(harness.outbox.edits.some(edit => edit.messageId === joinedList.messageId)).toBe(false);
+
+    await harness.dispatchMessage({ text: '/planned', chat, from: user });
+    expect(harness.outbox.replies.at(-1).text).toContain('🤔 Thinking');
+
+    await harness.dispatchCallback({
+      data: `skip:${ride.id}`,
+      chat,
+      from: user,
+      message: {
+        message_id: ride.messages[0].messageId,
+        text: 'Planned Ride',
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' }
+      }
+    });
+    await harness.dispatchMessage({ text: '/planned', chat, from: user });
+    expect(harness.outbox.replies.at(-1).text).toContain('You have no planned rides.');
+  });
+
   it('sends /help as two Rich Messages with creation and management sections', async () => {
     const harness = await createScenarioHarness();
 
@@ -145,6 +193,7 @@ describe('Scenario Harness Integration', () => {
         { text: '📋 Created rides', callback_data: 'main:listrides' }
       ],
       [
+        { text: '🗓 Planned rides', callback_data: 'main:planned' },
         { text: '⚙️ Settings', callback_data: 'main:settings' },
         { text: '❓ Help', callback_data: 'main:help' }
       ],
@@ -155,6 +204,9 @@ describe('Scenario Harness Integration', () => {
 
     await harness.dispatchCallback({ data: 'main:listrides' });
     expect(harness.outbox.replies.at(-1).text).toContain('You have not created any rides yet.');
+
+    await harness.dispatchCallback({ data: 'main:planned' });
+    expect(harness.outbox.replies.at(-1).text).toContain('You have no planned rides.');
 
     await harness.dispatchMessage({ text: '⚙️ Settings' });
     expect(harness.outbox.replies.at(-1).richMessage?.html).toContain(

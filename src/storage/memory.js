@@ -119,6 +119,31 @@ export class MemoryStorage extends StorageInterface {
     };
   }
 
+  /**
+   * Get current and future rides where a user is joined or thinking.
+   * @param {number} userId - Participant's user ID
+   * @param {Date} startOfToday - Inclusive date boundary
+   * @param {number} skip - Number of items to skip
+   * @param {number} limit - Maximum number of items to return
+   * @returns {Promise<RidesList>}
+   */
+  async getPlannedRides(userId, startOfToday, skip, limit) {
+    const plannedRides = Array.from(this.rides.values())
+      .filter(ride => {
+        if (ride.date < startOfToday) return false;
+        const participation = ride.participation || {};
+        return ['joined', 'thinking'].some(state =>
+          (participation[state] || []).some(participant => participant.userId === userId)
+        );
+      })
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    return {
+      total: plannedRides.length,
+      rides: plannedRides.slice(skip, skip + limit).map(ride => this.mapRideToInterface(ride))
+    };
+  }
+
   async deleteRide(rideId) {
     const ride = this.rides.get(rideId);
     if (!ride) {

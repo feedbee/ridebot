@@ -719,6 +719,53 @@ describe('MessageFormatter', () => {
       expect(result).toContain(`<hr/>\n<footer>${tr(language, 'formatter.pageLabel', { page: 2, totalPages: 3 })}</footer>`);
     });
   });
+
+  describe('formatPlannedRidesList', () => {
+    it.each(['en', 'ru'])('shows the requester status instead of announcement metadata (%s)', (language) => {
+      const rides = [
+        {
+          id: 'joined1',
+          title: '<Joined Ride>',
+          date: new Date('2026-09-01T08:00:00.000Z'),
+          meetingPoint: '<Park>',
+          messages: [{ chatId: 1, messageId: 2 }],
+          participation: {
+            joined: [{ userId: 123 }],
+            thinking: [],
+            skipped: []
+          }
+        },
+        {
+          id: 'thinking1',
+          title: 'Thinking Ride',
+          date: new Date('2026-09-02T08:00:00.000Z'),
+          cancelled: true,
+          participation: {
+            joined: [],
+            thinking: [{ userId: 123 }],
+            skipped: []
+          }
+        }
+      ];
+
+      const result = messageFormatter.formatPlannedRidesList(rides, 123, 1, 2, 1, language);
+
+      expect(result).toContain(`<h3>${tr(language, 'formatter.plannedRidesTitle')}</h3>`);
+      expect(result).toContain(tr(language, 'formatter.participationStatus.joined'));
+      expect(result).toContain(tr(language, 'formatter.participationStatus.thinking'));
+      expect(result).toContain(tr(language, 'templates.cancelled'));
+      expect(result).toContain('&lt;Joined Ride&gt;');
+      expect(result).toContain('&lt;Park&gt;');
+      expect(result).toContain('🎫 #Ride #joined1');
+      expect(result).toContain(tr(language, 'formatter.pageLabel', { page: 1, totalPages: 2 }));
+      expect(result).not.toContain(tr(language, 'formatter.postedInSingleChat', { count: 1 }));
+    });
+
+    it.each(['en', 'ru'])('shows a localized empty state (%s)', (language) => {
+      expect(messageFormatter.formatPlannedRidesList([], 123, 1, 1, 0, language))
+        .toBe(`<p>${tr(language, 'formatter.noPlannedRides')}</p>`);
+    });
+  });
   
   describe('formatDuration', () => {
     it.each(['en', 'ru'])('should format duration less than an hour (%s)', (language) => {

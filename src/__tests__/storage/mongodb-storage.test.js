@@ -170,6 +170,51 @@ describe('MongoDBStorage', () => {
       expect(result.rides[0].title).toBeDefined();
     });
 
+    test('should list joined and thinking rides from the date boundary in ascending order', async () => {
+      const startOfToday = new Date('2026-09-01T00:00:00.000Z');
+      const joined = await storage.createRide({
+        ...testRide,
+        title: 'Joined today',
+        date: new Date('2026-09-01T08:00:00.000Z')
+      });
+      const thinking = await storage.createRide({
+        ...testRide,
+        title: 'Thinking tomorrow',
+        date: new Date('2026-09-02T08:00:00.000Z'),
+        cancelled: true
+      });
+      const skipped = await storage.createRide({
+        ...testRide,
+        title: 'Skipped',
+        date: new Date('2026-09-03T08:00:00.000Z')
+      });
+      const yesterday = await storage.createRide({
+        ...testRide,
+        title: 'Yesterday',
+        date: new Date('2026-08-31T23:59:59.000Z')
+      });
+
+      await storage.setParticipation(joined.id, 'joined', testParticipant);
+      await storage.setParticipation(thinking.id, 'thinking', testParticipant);
+      await storage.setParticipation(skipped.id, 'skipped', testParticipant);
+      await storage.setParticipation(yesterday.id, 'joined', testParticipant);
+
+      const result = await storage.getPlannedRides(testParticipant.userId, startOfToday, 0, 10);
+
+      expect(result.total).toBe(2);
+      expect(result.rides.map(ride => ride.title)).toEqual(['Joined today', 'Thinking tomorrow']);
+      expect(result.rides[1].cancelled).toBe(true);
+    });
+
+    test('should define planned ride participation indexes', () => {
+      const indexes = mongoose.model('Ride').schema.indexes().map(([fields]) => fields);
+
+      expect(indexes).toEqual(expect.arrayContaining([
+        { 'participation.joined.userId': 1, date: 1 },
+        { 'participation.thinking.userId': 1, date: 1 }
+      ]));
+    });
+
     test('should get a ride by stravaId and creator', async () => {
       const stravaId = '1234567890123456789';
       const createdBy = 789;
@@ -483,6 +528,27 @@ describe('MongoDBStorage', () => {
       // Restore original methods
       mongoose.model('Ride').find = originalFind;
       mongoose.model('Ride').countDocuments = originalCountDocuments;
+    });
+
+    test('should propagate getPlannedRides database errors', async () => {
+      const originalFind = mongoose.model('Ride').find;
+      const originalCountDocuments = mongoose.model('Ride').countDocuments;
+      mongoose.model('Ride').find = jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          skip: jest.fn().mockReturnValue({
+            limit: jest.fn().mockRejectedValue(new Error('Database error'))
+          })
+        })
+      });
+      mongoose.model('Ride').countDocuments = jest.fn().mockRejectedValue(new Error('Database error'));
+
+      try {
+        await expect(storage.getPlannedRides(123, new Date('2026-09-01T00:00:00Z'), 0, 10))
+          .rejects.toThrow('Database error');
+      } finally {
+        mongoose.model('Ride').find = originalFind;
+        mongoose.model('Ride').countDocuments = originalCountDocuments;
+      }
     });
   });
 

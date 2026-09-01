@@ -34,6 +34,7 @@ export function buildExpandedMainMenuKeyboard(ctx) {
     .text(ctx.t('buttons.mainMenuCreateAi'), 'main:airide')
     .text(ctx.t('buttons.mainMenuCreatedRides'), 'main:listrides')
     .row()
+    .text(ctx.t('buttons.mainMenuPlannedRides'), 'main:planned')
     .text(ctx.t('buttons.mainMenuSettings'), 'main:settings')
     .text(ctx.t('buttons.mainMenuHelp'), 'main:help')
     .row()

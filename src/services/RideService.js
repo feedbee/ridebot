@@ -127,6 +127,18 @@ export class RideService {
     return await this.storage.getRidesByCreator(userId, skip, limit);
   }
 
+  /**
+   * Get current and future rides where a user is joined or thinking.
+   * @param {number} userId - Participant's user ID
+   * @param {Date} startOfToday - Inclusive date boundary
+   * @param {number} skip - Number of items to skip
+   * @param {number} limit - Maximum number of items to return
+   * @returns {Promise<Object>} - List of rides
+   */
+  async getPlannedRides(userId, startOfToday, skip, limit) {
+    return await this.storage.getPlannedRides(userId, startOfToday, skip, limit);
+  }
+
 
   /**
    * Set participant state for a ride

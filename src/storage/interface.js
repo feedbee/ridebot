@@ -170,6 +170,18 @@ export class StorageInterface {
   }
 
   /**
+   * Get current and future rides where a user is joined or thinking.
+   * @param {number} userId - Participant's user ID
+   * @param {Date} startOfToday - Inclusive date boundary
+   * @param {number} skip - Number of items to skip
+   * @param {number} limit - Maximum number of items to return
+   * @returns {Promise<RidesList>}
+   */
+  async getPlannedRides(userId, startOfToday, skip, limit) {
+    throw new Error('Not implemented');
+  }
+
+  /**
    * Get a ride by its attached group ID
    * @param {number} groupId - Telegram chat ID of the attached group
    * @returns {Promise<Ride|null>}

@@ -204,6 +204,63 @@ describe('MemoryStorage', () => {
       expect(result.rides[0].date.getTime()).toBeGreaterThan(result.rides[1].date.getTime());
       expect(result.rides[1].date.getTime()).toBeGreaterThan(result.rides[2].date.getTime());
     });
+
+    it('lists joined and thinking rides from today in ascending order', async () => {
+      const user = { userId: 123, username: 'rider' };
+      const startOfToday = new Date('2026-09-01T00:00:00.000Z');
+      const yesterday = await storage.createRide({
+        ...testRide,
+        title: 'Yesterday',
+        date: new Date('2026-08-31T23:59:59.000Z')
+      });
+      const thinking = await storage.createRide({
+        ...testRide,
+        title: 'Later',
+        date: new Date('2026-09-02T12:00:00.000Z'),
+        cancelled: true
+      });
+      const joined = await storage.createRide({
+        ...testRide,
+        title: 'Today',
+        createdBy: user.userId,
+        date: new Date('2026-09-01T08:00:00.000Z')
+      });
+      const skipped = await storage.createRide({
+        ...testRide,
+        title: 'Skipped',
+        date: new Date('2026-09-03T08:00:00.000Z')
+      });
+
+      await storage.setParticipation(yesterday.id, 'joined', user);
+      await storage.setParticipation(thinking.id, 'thinking', user);
+      await storage.setParticipation(joined.id, 'joined', user);
+      await storage.setParticipation(skipped.id, 'skipped', user);
+
+      const result = await storage.getPlannedRides(user.userId, startOfToday, 0, 10);
+
+      expect(result.total).toBe(2);
+      expect(result.rides.map(ride => ride.title)).toEqual(['Today', 'Later']);
+      expect(result.rides[1].cancelled).toBe(true);
+    });
+
+    it('paginates planned rides after filtering', async () => {
+      const user = { userId: 123, username: 'rider' };
+      const startOfToday = new Date('2026-09-01T00:00:00.000Z');
+
+      for (let day = 1; day <= 3; day += 1) {
+        const ride = await storage.createRide({
+          ...testRide,
+          title: `Ride ${day}`,
+          date: new Date(`2026-09-0${day}T08:00:00.000Z`)
+        });
+        await storage.setParticipation(ride.id, day === 2 ? 'thinking' : 'joined', user);
+      }
+
+      const result = await storage.getPlannedRides(user.userId, startOfToday, 1, 1);
+
+      expect(result.total).toBe(3);
+      expect(result.rides.map(ride => ride.title)).toEqual(['Ride 2']);
+    });
   });
   
   describe('Messages Array Handling', () => {

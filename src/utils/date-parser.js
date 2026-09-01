@@ -320,6 +320,29 @@ export class DateParser {
   }
 
   /**
+   * Get the start of the calendar day in the configured timezone.
+   * @param {Date} [date] - Instant whose calendar day should be used.
+   * @returns {Date}
+   */
+  static startOfDay(date = new Date()) {
+    const timezone = config.dateFormat.defaultTimezone;
+    if (!timezone) {
+      return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    }
+
+    const { year, month, day } = this.getTimezoneParts(date, timezone);
+    return this.zonedDateTimeToDate({
+      year,
+      month,
+      day,
+      hour: 0,
+      minute: 0,
+      second: 0,
+      millisecond: 0
+    }, timezone);
+  }
+
+  /**
    * Check if a date is in the past
    * @param {Date} date 
    * @returns {boolean}

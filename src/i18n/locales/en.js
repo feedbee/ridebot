@@ -161,6 +161,12 @@ settings.allowReposts: yes/no (optional)
 <p>Use /listrides command to see all rides you've created:</p>
 
 <ul><li>Rides are sorted by date (newest first)</li><li>Use navigation buttons to browse pages</li></ul>
+
+<h3>🗓 Listing Your Planned Rides</h3>
+
+<p>Use /planned in private chat to see rides where you are joined or thinking, starting with today:</p>
+
+<ul><li>Rides are sorted by date (nearest first)</li><li>Today's rides remain visible after their start time</li><li>Each item shows your current participation status</li></ul>
     `.trim(),
 
     help3: `
@@ -223,6 +229,7 @@ Click here to start a private chat: @botname
     mainMenuCreateWizard: '➕ Create with wizard',
     mainMenuCreateAi: '🤖 Create with AI',
     mainMenuCreatedRides: '📋 Created rides',
+    mainMenuPlannedRides: '🗓 Planned rides',
     mainMenuSettings: '⚙️ Settings',
     mainMenuHelp: '❓ Help',
     join: "I'm in! 🚴",
@@ -436,6 +443,12 @@ Click here to start a private chat: @botname
     routeLinkLabel: 'Link',
     noCreatedRides: 'You have not created any rides yet.',
     yourRidesTitle: 'The Rides You Created',
+    noPlannedRides: 'You have no planned rides.',
+    plannedRidesTitle: 'Your Planned Rides',
+    participationStatus: {
+      joined: '🙋 Joined',
+      thinking: '🤔 Thinking'
+    },
     postedInSingleChat: 'Posted in {count} chat',
     postedInMultipleChats: 'Posted in {count} chats',
     notPostedInAnyChats: 'Not posted in any chats',
@@ -577,6 +590,7 @@ Click here to start a private chat: @botname
       cancelride: 'Cancel a ride',
       deleteride: 'Delete a ride',
       listrides: 'List all your rides',
+      planned: 'List rides you plan to attend',
       listparticipants: 'List all participants for a ride',
       dupride: 'Duplicate an existing ride',
       resumeride: 'Resume a cancelled ride',
