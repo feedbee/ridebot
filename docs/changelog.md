@@ -2,6 +2,26 @@
 
 This changelog is written for product-facing release notes. Release dates are based on Git tag creation dates.
 
+## v2.7.0 - 2026-09-01
+
+- **Introduced richer Telegram presentation across the bot.**
+  Ride announcements, ride lists, settings, help, and onboarding now use Telegram Rich Messages for clearer structure and more compact, readable layouts. Ride announcements also include category-specific teaser images where available.
+
+- **Added private calendar export with `/calendar`.**
+  Users can download an iCalendar file containing their upcoming rides and import it into compatible calendar apps. Exported events include ride timing, location, route details, and other useful context from the ride.
+
+- **Added a persistent main menu for common actions.**
+  Private chats now offer quick-access buttons for creating a ride, viewing rides, opening settings, and getting help, making the bot easier to navigate without memorizing commands.
+
+- **Added `/plannedrides` for discovering upcoming rides.**
+  Users can browse future rides they created, joined, or are considering in a single chronological view, with expired rides excluded automatically.
+
+- **Improved organizer and ride-query reliability.**
+  Self-referencing organizer values are now resolved consistently in ride creation and editing flows, and storage errors encountered while loading a creator's rides are surfaced instead of being mistaken for an empty result.
+
+- **Updated the application runtime and dependencies.**
+  Production, development, and CI environments now use Node.js 24 LTS, with direct dependencies refreshed and dotenv logging behavior preserved.
+
 ## v2.6.0 - 2026-08-27
 
 - **Distinguished average moving speed from cruising speed.**
