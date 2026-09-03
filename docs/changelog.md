@@ -2,6 +2,11 @@
 
 This changelog is written for product-facing release notes. Release dates are based on Git tag creation dates.
 
+## v2.8.0 - 2026-09-03
+
+- **Added one-tap publishing to recent chats and topics.**
+  Ride creators can now open a publication menu from their private ride card and send the announcement to one of their five most recently used destinations. The menu shows where the current ride is already published, links to existing announcements, and preserves the configured per-destination announcement limits.
+
 ## v2.7.0 - 2026-09-01
 
 - **Introduced richer Telegram presentation across the bot.**
