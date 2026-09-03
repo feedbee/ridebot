@@ -259,6 +259,56 @@ describe('RideMessagesService', () => {
   });
 
   describe('createRideMessage', () => {
+    it('publishes a rich ride message to an explicit chat and topic', async () => {
+      const ride = {
+        id: 'ride123',
+        title: 'Morning Ride',
+        category: 'road',
+        createdBy: 42,
+        messages: []
+      };
+      const ctx = {
+        lang: 'en',
+        me: { username: 'testbot' },
+        api: {
+          sendRichMessage: jest.fn().mockResolvedValue({ message_id: 67890 })
+        }
+      };
+      mockMessageFormatter.formatRideWithKeyboard.mockReturnValue({
+        message: '<h3>Morning Ride</h3>',
+        keyboard: { inline_keyboard: [] }
+      });
+      mockRideService.updateRide.mockImplementation(async (id, patch) => ({ ...ride, ...patch }));
+
+      await rideMessagesService.createRideMessageInTarget(ride, ctx, {
+        chatId: -100123,
+        messageThreadId: 77,
+        chatTitle: 'Road Forum',
+        chatUsername: 'road_forum',
+        publishedBy: 42
+      });
+
+      expect(ctx.api.sendRichMessage).toHaveBeenCalledWith(
+        -100123,
+        expect.objectContaining({ html: expect.stringContaining('Morning Ride') }),
+        expect.objectContaining({
+          message_thread_id: 77,
+          reply_markup: { inline_keyboard: [] }
+        })
+      );
+      expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
+        messages: [expect.objectContaining({
+          chatId: -100123,
+          messageId: 67890,
+          messageThreadId: 77,
+          chatTitle: 'Road Forum',
+          publishedBy: 42,
+          publishedAt: expect.any(Date),
+          isForCreator: false
+        })]
+      });
+    });
+
     it.each([
       ['road', 'ride-announcement-teaser-road-color.jpg'],
       ['gravel', 'ride-announcement-teaser-gravel.jpg'],

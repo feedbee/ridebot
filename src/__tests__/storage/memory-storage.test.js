@@ -180,6 +180,59 @@ describe('MemoryStorage', () => {
   });
 
   describe('Ride Listing', () => {
+    it('returns the five most recent unique publication destinations for a creator', async () => {
+      const olderRide = await storage.createRide({
+        ...testRide,
+        createdBy: 789,
+        messages: [
+          {
+            chatId: -100111,
+            messageId: 10,
+            chatTitle: 'Road Chat',
+            publishedBy: 789,
+            publishedAt: new Date('2026-08-01T10:00:00Z')
+          },
+          {
+            chatId: -100222,
+            messageId: 20,
+            messageThreadId: 7,
+            chatTitle: 'Forum Chat',
+            publishedBy: 789,
+            publishedAt: new Date('2026-08-02T10:00:00Z')
+          }
+        ]
+      });
+      await storage.createRide({
+        ...testRide,
+        title: 'Newer publication',
+        createdBy: 789,
+        messages: [
+          {
+            chatId: -100111,
+            messageId: 30,
+            chatTitle: 'Road Chat Renamed',
+            publishedBy: 789,
+            publishedAt: new Date('2026-08-03T10:00:00Z')
+          },
+          {
+            chatId: 789,
+            messageId: 31,
+            isForCreator: true,
+            publishedBy: 789,
+            publishedAt: new Date('2026-08-04T10:00:00Z')
+          }
+        ]
+      });
+
+      const destinations = await storage.getRecentPublicationDestinations(789, 5);
+
+      expect(destinations).toEqual([
+        expect.objectContaining({ chatId: -100111, messageId: 30, chatTitle: 'Road Chat Renamed' }),
+        expect.objectContaining({ chatId: -100222, messageThreadId: 7, messageId: 20 })
+      ]);
+      expect(olderRide).toBeDefined();
+    });
+
     it('should sort rides by date in descending order', async () => {
       // Create rides with different dates
       await storage.createRide({

@@ -18,6 +18,7 @@ import { PlannedRidesCommandHandler } from '../commands/PlannedRidesCommandHandl
 import { ListParticipantsCommandHandler } from '../commands/ListParticipantsCommandHandler.js';
 import { DuplicateRideCommandHandler } from '../commands/DuplicateRideCommandHandler.js';
 import { ShareRideCommandHandler } from '../commands/ShareRideCommandHandler.js';
+import { PublishRideCommandHandler } from '../commands/PublishRideCommandHandler.js';
 import { ResumeRideCommandHandler } from '../commands/ResumeRideCommandHandler.js';
 import { RideSettingsCommandHandler } from '../commands/RideSettingsCommandHandler.js';
 import { ParticipationHandlers } from '../commands/ParticipationHandlers.js';
@@ -101,6 +102,7 @@ export class Bot {
     const rideParticipationService = new RideParticipationService(rideService, notificationService, groupManagementService);
     const participationHandler = new ParticipationHandlers(rideService, messageFormatter, rideMessagesService, rideParticipationService);
     const shareRideHandler = new ShareRideCommandHandler(rideService, messageFormatter, rideMessagesService);
+    const publishRideHandler = new PublishRideCommandHandler(rideService, messageFormatter, rideMessagesService);
     const groupHandler = new GroupCommandHandler(rideService, messageFormatter, rideMessagesService, groupManagementService);
     
     return {
@@ -136,7 +138,7 @@ export class Bot {
             }
             
             // Process the shareride command normally
-            shareRideHandler.handle(ctx);
+            await shareRideHandler.handle(ctx);
           }},
         ],
       },
@@ -172,6 +174,9 @@ export class Bot {
         { pattern: /^rideowner:resume:(\w+)$/, handler: (ctx) => resumeRideHandler.handleCallback(ctx) },
         { pattern: /^rideowner:participants:(\w+)$/, handler: (ctx) => listParticipantsHandler.handleCallback(ctx) },
         { pattern: /^rideowner:settings:(\w+)$/, handler: (ctx) => rideSettingsHandler.handleCallback(ctx) },
+        { pattern: /^rideowner:publish:(\w+)$/, handler: (ctx) => publishRideHandler.handleMenu(ctx) },
+        { pattern: /^ridepublish:(\w+):(-?\d+):(\d+|main)$/, handler: (ctx) => publishRideHandler.handlePublish(ctx) },
+        { pattern: /^ridepublish:close$/, handler: (ctx) => publishRideHandler.handleClose(ctx) },
         { pattern: /^settings:user:bool:(\w+):(on|off)$/, handler: (ctx) => rideSettingsHandler.handleUserBooleanCallback(ctx) },
         { pattern: /^settings:user:notification-level:(\w+)$/, handler: (ctx) => rideSettingsHandler.handleUserNotificationLevelCallback(ctx) },
         { pattern: /^settings:ride:bool:(\w+):(on|off):(\w+)$/, handler: (ctx) => rideSettingsHandler.handleRideBooleanCallback(ctx) },

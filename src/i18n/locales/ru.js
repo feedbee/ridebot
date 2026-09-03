@@ -242,6 +242,7 @@ id: abc123 (or #abc123)
     resumeRide: 'Возобновить',
     participants: 'Участники',
     settings: 'Настройки',
+    publish: 'Публикация',
     confirmDelete: 'Да, удалить ❌',
     cancelDelete: 'Нет, оставить ✅',
     back: '⬅️ Назад',
@@ -274,6 +275,19 @@ id: abc123 (or #abc123)
   commands: {
     ownerActions: {
       settingsComingSoon: 'Настройки поездки пока недоступны.'
+    },
+    publish: {
+      introTitle: 'Публикация анонса',
+      introText: 'Вы можете опубликовать анонс в любом чате, где есть бот, используя команду <code>{command}</code>',
+      publishedTitle: 'Анонс опубликован в чатах:',
+      chooseDestination: 'Опубликовать анонс в чатах (последние 5 публикаций):',
+      publicationHint: 'Нажмите на кнопку ниже, чтобы опубликовать анонс в выбранном чате. Если анонс в данном чате уже есть, сообщение продублируется.',
+      notPublishedYet: 'Анонс пока нигде не опубликован.',
+      noRecentPublications: 'Вы пока не делали публикаций анонсов.',
+      threadLabel: 'Тема',
+      destinationExpired: 'Этого места больше нет в списке последних публикаций.',
+      unknownChat: 'Неизвестный чат',
+      privateOnly: 'Это меню доступно только в личном чате с ботом.'
     },
     settings: {
       userTitle: 'Настройки по умолчанию для новых поездок',

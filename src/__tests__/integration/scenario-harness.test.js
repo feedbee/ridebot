@@ -469,6 +469,90 @@ describe('Scenario Harness Integration', () => {
     expect(harness.outbox.callbackAnswers).toContainEqual({ text: null });
   });
 
+  it('publishes a creator ride from the numbered recent-destinations menu', async () => {
+    const harness = await createScenarioHarness();
+    const owner = { id: 42, first_name: 'Alex', last_name: 'Rider', username: 'alex' };
+    const privateChat = { id: 42, type: 'private' };
+    const forumChat = {
+      id: -1001234567890,
+      type: 'supergroup',
+      title: 'Cyclists Forum',
+      username: 'cyclists_forum'
+    };
+
+    await harness.dispatchMessage({
+      text: '/newride\ntitle: Publish Me\nwhen: tomorrow 11:00',
+      chat: privateChat,
+      from: owner,
+    });
+    const [ride] = harness.listRides();
+    const privateRideMessage = harness.outbox.replies[0];
+
+    await harness.dispatchMessage({
+      text: `/shareride ${ride.id}`,
+      chat: forumChat,
+      from: owner,
+      messageThreadId: 77,
+    });
+    expect(harness.getRide(ride.id).messages).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        chatId: forumChat.id,
+        messageThreadId: 77,
+        chatTitle: forumChat.title,
+        publishedBy: owner.id
+      })
+    ]));
+
+    await harness.dispatchCallback({
+      data: `rideowner:publish:${ride.id}`,
+      chat: privateChat,
+      from: owner,
+      message: {
+        message_id: privateRideMessage.messageId,
+        text: privateRideMessage.text,
+        chat: privateChat,
+        from: { id: 0, is_bot: true, username: 'testbot' },
+      },
+    });
+
+    const destinationMenu = harness.outbox.replies.at(-1);
+    expect(destinationMenu.text).toContain(
+      '✅ <a href="https://t.me/cyclists_forum/77">Cyclists Forum / Thread #77</a>'
+    );
+    expect(destinationMenu.options.reply_markup.inline_keyboard).toEqual([
+      [expect.objectContaining({
+          text: '1',
+          callback_data: `ridepublish:${ride.id}:${forumChat.id}:77`
+      })],
+      [expect.objectContaining({ callback_data: 'ridepublish:close' })]
+    ]);
+
+    await harness.dispatchCallback({
+      data: `ridepublish:${ride.id}:${forumChat.id}:77`,
+      chat: privateChat,
+      from: owner,
+      message: {
+        message_id: destinationMenu.messageId,
+        text: destinationMenu.text,
+        chat: privateChat,
+        from: { id: 0, is_bot: true, username: 'testbot' },
+      },
+    });
+
+    const forumAnnouncements = harness.outbox.replies.filter(reply => reply.chatId === forumChat.id);
+    expect(forumAnnouncements).toHaveLength(2);
+    expect(forumAnnouncements.at(-1).options.message_thread_id).toBe(77);
+    expect(harness.outbox.deletes).not.toContainEqual({
+      chatId: privateChat.id,
+      messageId: destinationMenu.messageId
+    });
+    expect(harness.outbox.edits.at(-1)).toEqual(expect.objectContaining({
+      chatId: privateChat.id,
+      messageId: destinationMenu.messageId,
+      text: expect.stringContaining('>[2]</a>')
+    }));
+  });
+
   it('shows participants list and swaps cancel button to resume after owner callback cancellation', async () => {
     const harness = await createScenarioHarness();
     const owner = { id: 88, first_name: 'Ira', last_name: 'Owner', username: 'ira' };

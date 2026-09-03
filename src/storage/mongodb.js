@@ -24,7 +24,11 @@ const messageSchema = new mongoose.Schema({
   chatId: { type: Number, required: true },
   messageThreadId: { type: Number, default: null },
   language: { type: String, default: null },
-  isForCreator: { type: Boolean, default: null }
+  isForCreator: { type: Boolean, default: null },
+  chatTitle: String,
+  chatUsername: String,
+  publishedBy: Number,
+  publishedAt: Date
 });
 
 const routeSchema = new mongoose.Schema({
@@ -200,6 +204,34 @@ export class MongoDBStorage extends StorageInterface {
       total,
       rides: rides.map(ride => this.mapRideToInterface(ride))
     };
+  }
+
+  async getRecentPublicationDestinations(userId, limit) {
+    const rides = await Ride.find({ createdBy: userId }, { messages: 1, createdAt: 1 }).lean();
+    const publications = rides
+      .flatMap(ride => (ride.messages || []).map((message, index) => ({
+        ...message,
+        publishedAt: message.publishedAt || ride.createdAt,
+        _fallbackOrder: index
+      })))
+      .filter(message => !message.isForCreator)
+      .filter(message => message.publishedBy == null || message.publishedBy === userId)
+      .sort((left, right) => {
+        const dateDifference = new Date(right.publishedAt).getTime() - new Date(left.publishedAt).getTime();
+        return dateDifference || right._fallbackOrder - left._fallbackOrder;
+      });
+
+    const destinations = [];
+    const seen = new Set();
+    for (const { _fallbackOrder, _id, ...message } of publications) {
+      const key = `${message.chatId}:${message.messageThreadId ?? 'main'}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      destinations.push(message);
+      if (destinations.length === limit) break;
+    }
+
+    return destinations;
   }
 
   /**
@@ -398,7 +430,11 @@ export class MongoDBStorage extends StorageInterface {
         messageId: msg.messageId,
         messageThreadId: msg.messageThreadId ?? null,
         language: msg.language ?? undefined,
-        isForCreator: msg.isForCreator ?? undefined
+        isForCreator: msg.isForCreator ?? undefined,
+        chatTitle: msg.chatTitle ?? undefined,
+        chatUsername: msg.chatUsername ?? undefined,
+        publishedBy: msg.publishedBy ?? undefined,
+        publishedAt: msg.publishedAt ?? undefined
       }))
     };
 

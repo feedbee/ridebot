@@ -247,6 +247,26 @@ export async function createScenarioHarness() {
           });
           return sentMessage;
         }),
+        sendRichMessage: jest.fn(async (chatId, richMessage, options = {}) => {
+          const displayText = richMessage.html || richMessage.markdown || '';
+          const sentMessage = {
+            message_id: nextMessageId++,
+            rich_message: richMessage,
+            chat: { id: chatId },
+            options,
+          };
+          outbox.replies.push({
+            chatId,
+            messageId: sentMessage.message_id,
+            text: displayText,
+            richMessage,
+            options,
+          });
+          return sentMessage;
+        }),
+        getChat: jest.fn(async () => {
+          throw new Error('Chat lookup unavailable in scenario harness');
+        }),
         sendDocument: jest.fn(async (chatId, document, options = {}) => {
           outbox.documents.push({ chatId, document, options });
           return { message_id: nextMessageId++, chat: { id: chatId }, document };
@@ -316,8 +336,8 @@ export async function createScenarioHarness() {
 
     const commandMatch = text.match(/^\/(\w+)(?:@\w+)?/);
     const commandName = commandMatch?.[1];
-    if (commandName === 'start') {
-      ctx.match = text.match(/^\/start(?:@\w+)?(?:[ \t]+([^\s]+))?/i)?.[1] || '';
+    if (commandName) {
+      ctx.match = text.match(/^\/\w+(?:@\w+)?(?:[ \t]+([^\n]+))?/i)?.[1] || '';
     }
 
     await runWithMiddlewares(ctx, async () => {

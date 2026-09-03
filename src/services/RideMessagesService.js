@@ -179,6 +179,13 @@ export class RideMessagesService {
         language,
         isForCreator
       };
+
+      if (!isForCreator && ctx.chat?.type && ctx.chat.type !== 'private') {
+        messageData.chatTitle = ctx.chat.title;
+        messageData.chatUsername = ctx.chat.username;
+        messageData.publishedBy = ctx.from?.id;
+        messageData.publishedAt = new Date();
+      }
       
       // Include message thread ID if present
       if (threadId) {
@@ -198,6 +205,56 @@ export class RideMessagesService {
       console.error('Error creating ride message:', error);
       throw error;
     }
+  }
+
+  /**
+   * Create and track a ride announcement in an explicit chat/topic destination.
+   * @param {Object} ride
+   * @param {import('grammy').Context} ctx
+   * @param {Object} destination
+   * @param {number} destination.chatId
+   * @param {number} [destination.messageThreadId]
+   * @param {string} [destination.chatTitle]
+   * @param {string} [destination.chatUsername]
+   * @param {number} destination.publishedBy - Publisher validated by the caller
+   * @returns {Promise<{sentMessage: Object, updatedRide: Object}>}
+   */
+  async createRideMessageInTarget(ride, ctx, destination) {
+    const language = ctx?.lang || config.i18n.defaultLanguage;
+    const participation = ride.participation || { joined: [], thinking: [], skipped: [] };
+    const { message, keyboard } = this.messageFormatter.formatRideWithKeyboard(
+      ride,
+      participation,
+      { isForCreator: false, lang: language, botUsername: ctx.me?.username }
+    );
+    const options = { reply_markup: keyboard };
+    if (destination.messageThreadId) {
+      options.message_thread_id = destination.messageThreadId;
+    }
+
+    const sentMessage = await ctx.api.sendRichMessage(
+      destination.chatId,
+      this.buildRideRichMessage(message, ride.category),
+      options
+    );
+    const messageData = {
+      chatId: destination.chatId,
+      messageId: sentMessage.message_id,
+      language,
+      isForCreator: false,
+      chatTitle: destination.chatTitle,
+      chatUsername: destination.chatUsername,
+      publishedBy: destination.publishedBy,
+      publishedAt: new Date()
+    };
+    if (destination.messageThreadId) {
+      messageData.messageThreadId = destination.messageThreadId;
+    }
+
+    const updatedRide = await this.rideService.updateRide(ride.id, {
+      messages: [...(ride.messages || []), messageData]
+    });
+    return { sentMessage, updatedRide };
   }
 
   /**

@@ -242,6 +242,7 @@ Click here to start a private chat: @botname
     resumeRide: 'Resume',
     participants: 'Participants',
     settings: 'Settings',
+    publish: 'Publication',
     confirmDelete: 'Yes, delete ❌',
     cancelDelete: 'No, keep it ✅',
     back: '⬅️ Back',
@@ -274,6 +275,19 @@ Click here to start a private chat: @botname
   commands: {
     ownerActions: {
       settingsComingSoon: 'Ride settings are not available yet.'
+    },
+    publish: {
+      introTitle: 'Publishing an announcement',
+      introText: 'You can publish the announcement in any chat where the bot is present using <code>{command}</code>',
+      publishedTitle: 'Announcement published in chats:',
+      chooseDestination: 'Publish announcement to chats (last 5 publications):',
+      publicationHint: 'Press a button below to publish the announcement in the selected chat. If the announcement is already there, the message will be duplicated.',
+      notPublishedYet: 'This announcement has not been published anywhere yet.',
+      noRecentPublications: 'You have not published any announcements yet.',
+      threadLabel: 'Thread',
+      destinationExpired: 'This destination is no longer available in your recent list.',
+      unknownChat: 'Unknown chat',
+      privateOnly: 'This menu is available only in a private chat with the bot.'
     },
     settings: {
       userTitle: 'Default settings for new rides',

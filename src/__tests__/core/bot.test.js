@@ -108,6 +108,9 @@ describe('Bot', () => {
           expect.objectContaining({ pattern: /^rideowner:resume:(\w+)$/ }),
           expect.objectContaining({ pattern: /^rideowner:participants:(\w+)$/ }),
           expect.objectContaining({ pattern: /^rideowner:settings:(\w+)$/ }),
+          expect.objectContaining({ pattern: /^rideowner:publish:(\w+)$/ }),
+          expect.objectContaining({ pattern: /^ridepublish:(\w+):(-?\d+):(\d+|main)$/ }),
+          expect.objectContaining({ pattern: /^ridepublish:close$/ }),
           expect.objectContaining({ pattern: /^settings:user:bool:(\w+):(on|off)$/ }),
           expect.objectContaining({ pattern: /^settings:ride:bool:(\w+):(on|off):(\w+)$/ }),
           expect.objectContaining({ pattern: /^wizard:(\w+)(?::(.*))?$/ }),
@@ -208,6 +211,18 @@ describe('Bot', () => {
       );
       expect(mockBotCallbackQuery).toHaveBeenCalledWith(
         /^rideowner:settings:(\w+)$/,
+        expect.any(Function)
+      );
+      expect(mockBotCallbackQuery).toHaveBeenCalledWith(
+        /^rideowner:publish:(\w+)$/,
+        expect.any(Function)
+      );
+      expect(mockBotCallbackQuery).toHaveBeenCalledWith(
+        /^ridepublish:(\w+):(-?\d+):(\d+|main)$/,
+        expect.any(Function)
+      );
+      expect(mockBotCallbackQuery).toHaveBeenCalledWith(
+        /^ridepublish:close$/,
         expect.any(Function)
       );
       expect(mockBotCallbackQuery).toHaveBeenCalledWith(

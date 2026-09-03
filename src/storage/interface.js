@@ -5,6 +5,10 @@
  * @property {number} [messageThreadId]
  * @property {string} [language]
  * @property {boolean} [isForCreator]
+ * @property {string} [chatTitle]
+ * @property {string} [chatUsername]
+ * @property {number} [publishedBy]
+ * @property {Date} [publishedAt]
  */
 
 /**
@@ -166,6 +170,16 @@ export class StorageInterface {
    * @returns {Promise<RidesList>}
    */
   async getRidesByCreator(userId, skip, limit) {
+    throw new Error('Not implemented');
+  }
+
+  /**
+   * Get recently used unique group/topic destinations for a ride creator.
+   * @param {number} userId
+   * @param {number} limit
+   * @returns {Promise<RideMessage[]>}
+   */
+  async getRecentPublicationDestinations(userId, limit) {
     throw new Error('Not implemented');
   }
 

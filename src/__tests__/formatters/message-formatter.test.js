@@ -161,7 +161,26 @@ describe('MessageFormatter', () => {
           expect.objectContaining({ callback_data: 'rideowner:settings:123' }),
         ])
       );
-      expect(result.inline_keyboard).toHaveLength(3);
+      expect(result.inline_keyboard[3]).toEqual([
+        expect.objectContaining({
+          text: 'Publication',
+          callback_data: 'rideowner:publish:123'
+        })
+      ]);
+      expect(result.inline_keyboard).toHaveLength(4);
+    });
+
+    it('uses the localized publication label for the Russian owner keyboard', () => {
+      const ride = { id: '123', title: 'Тестовый райд', cancelled: false };
+
+      const result = messageFormatter.getRideKeyboard(ride, 'ru', true);
+
+      expect(result.inline_keyboard[3]).toEqual([
+        expect.objectContaining({
+          text: 'Публикация',
+          callback_data: 'rideowner:publish:123'
+        })
+      ]);
     });
 
     it('shows resume action for cancelled creator ride keyboard', () => {
@@ -173,7 +192,7 @@ describe('MessageFormatter', () => {
 
       const result = messageFormatter.getRideKeyboard(ride, 'en', true);
 
-      expect(result.inline_keyboard).toHaveLength(2);
+      expect(result.inline_keyboard).toHaveLength(3);
       expect(result.inline_keyboard[0]).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ callback_data: 'rideowner:update:123' }),
@@ -188,6 +207,9 @@ describe('MessageFormatter', () => {
           expect.objectContaining({ callback_data: 'rideowner:settings:123' }),
         ])
       );
+      expect(result.inline_keyboard[2]).toEqual([
+        expect.objectContaining({ callback_data: 'rideowner:publish:123' })
+      ]);
     });
   });
   

@@ -100,6 +100,9 @@ export class MessageFormatter {
         )
         .text(this.translate('buttons.participants', {}, language), `rideowner:participants:${ride.id}`)
         .text(this.translate('buttons.settings', {}, language), `rideowner:settings:${ride.id}`);
+
+      keyboard.row()
+        .text(this.translate('buttons.publish', {}, language), `rideowner:publish:${ride.id}`);
     }
 
     return keyboard;

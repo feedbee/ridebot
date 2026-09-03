@@ -128,6 +128,16 @@ export class RideService {
   }
 
   /**
+   * Get recently used unique publication destinations for a ride creator.
+   * @param {number} userId
+   * @param {number} limit
+   * @returns {Promise<Array<Object>>}
+   */
+  async getRecentPublicationDestinations(userId, limit) {
+    return await this.storage.getRecentPublicationDestinations(userId, limit);
+  }
+
+  /**
    * Get current and future rides where a user is joined or thinking.
    * @param {number} userId - Participant's user ID
    * @param {Date} startOfToday - Inclusive date boundary
