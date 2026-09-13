@@ -32,7 +32,7 @@ describe('AiRideService', () => {
   describe('parseRideText', () => {
     it('returns parsed params when AI returns valid JSON', async () => {
       mockCreate.mockResolvedValue(
-        makeResponse('{"title":"Evening Ride","when":"tomorrow at 6pm","category":"road","dist":"50"}')
+        makeResponse('{"title":"Evening Ride","when":"tomorrow at 6pm","category":"road","dist":"50","chat":"https://t.me/evening_chat"}')
       );
 
       const { params, error } = await service.parseRideText('Evening road ride tomorrow 6pm 50km');
@@ -42,7 +42,8 @@ describe('AiRideService', () => {
         title: 'Evening Ride',
         when: 'tomorrow at 6pm',
         category: 'road',
-        dist: '50'
+        dist: '50',
+        chat: 'https://t.me/evening_chat'
       });
     });
 

@@ -5,6 +5,23 @@
 import { FieldProcessor } from '../../utils/FieldProcessor.js';
 
 describe('FieldProcessor', () => {
+  describe('processRideFields — chat', () => {
+    it('normalizes a Telegram chat link', () => {
+      expect(FieldProcessor.processRideFields({ chat: 'telegram.me/example_chat/' }).data.chat)
+        .toBe('https://t.me/example_chat');
+    });
+
+    it('clears chat with a dash during update', () => {
+      expect(FieldProcessor.processRideFields({ chat: '-' }, true).data.chat).toBe('');
+    });
+
+    it('rejects invalid chat links', () => {
+      const result = FieldProcessor.processRideFields({ chat: 'https://example.com/chat' });
+      expect(result.data).toBeNull();
+      expect(result.error).toContain('Invalid Telegram chat');
+    });
+  });
+
   describe('processRideFields — settings.notifyParticipation', () => {
     it('maps settings.notifyParticipation:yes to nested settings', () => {
       const { data } = FieldProcessor.processRideFields({

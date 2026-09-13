@@ -12,6 +12,7 @@ import { config } from '../config.js';
 import { t } from '../i18n/index.js';
 import { parseSpeedInput, formatSpeed } from '../utils/speed-utils.js';
 import { getDerivedRouteLabel, parseRouteEntries } from '../utils/route-links.js';
+import { parseTelegramChatLink } from '../utils/telegram-chat-link.js';
 
 /**
  * Wizard field configuration
@@ -289,9 +290,29 @@ export function getWizardFields(language = config.i18n.defaultLanguage) {
       required: false,
       clearable: true,
       skippable: true,
-      nextStep: 'info',
+      nextStep: 'chat',
       previousStep: 'cruisingSpeed',
       validator: (text) => ({ valid: true, value: text })
+    },
+
+    chat: {
+      step: 'chat',
+      type: FieldType.TEXT,
+      dataKey: 'chat',
+      prompt: translate(language, 'wizard.prompts.chat'),
+      required: false,
+      clearable: true,
+      skippable: true,
+      nextStep: 'info',
+      previousStep: 'meet',
+      validator: (text) => {
+        const result = parseTelegramChatLink(text);
+        if (result.error) {
+          const key = result.error === 'tooLong' ? 'chatTooLong' : 'chatInvalid';
+          return { valid: false, error: translate(language, `wizard.validation.${key}`) };
+        }
+        return { valid: true, value: result.link };
+      }
     },
 
     info: {
@@ -303,7 +324,7 @@ export function getWizardFields(language = config.i18n.defaultLanguage) {
       clearable: true,
       skippable: true,
       nextStep: 'confirm',
-      previousStep: 'meet',
+      previousStep: 'chat',
       validator: (text) => ({ valid: true, value: text })
     }
   };
@@ -359,6 +380,7 @@ export function buildRideDataFromWizard(wizardData, metadata = {}) {
     speedMax: wizardData.speedMax,
     cruisingSpeedMin: wizardData.cruisingSpeedMin,
     cruisingSpeedMax: wizardData.cruisingSpeedMax,
+    chat: wizardData.chat,
     additionalInfo: wizardData.additionalInfo
   };
 

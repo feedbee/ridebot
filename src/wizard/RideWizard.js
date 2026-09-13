@@ -431,6 +431,7 @@ export class RideWizard {
       speedMax:       d.speedMax       ?? null,
       cruisingSpeedMin: d.cruisingSpeedMin ?? null,
       cruisingSpeedMax: d.cruisingSpeedMax ?? null,
+      chat:           d.chat           ?? null,
       additionalInfo: d.additionalInfo ?? null
     };
   }

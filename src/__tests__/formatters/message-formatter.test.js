@@ -270,6 +270,7 @@ describe('MessageFormatter', () => {
         speedMin: 25,
         speedMax: 30,
         cancelled: false,
+        chat: 'https://t.me/+invite_Hash-1',
         additionalInfo: 'Bring lights and a jacket'
       };
       
@@ -294,6 +295,8 @@ describe('MessageFormatter', () => {
       expect(result).toContain('<br>📍 Meeting point: Test Location');
       expect(result).toContain('<br><br>📏 Distance:');
       expect(result).toContain('<br><br>ℹ️ Additional info:');
+      expect(result).toContain('💬 Chat: <a href="https://t.me/+invite_Hash-1">Open chat</a>');
+      expect(result.indexOf('💬 Chat:')).toBeLessThan(result.indexOf('ℹ️ Additional info:'));
       expect(result).toContain('<br><br>🚴 Joined');
       expect(result).toContain('<br><br>🎫 #Ride #123</p>');
       expect(result).toContain('Test Location');
