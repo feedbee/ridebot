@@ -386,6 +386,22 @@ describe('MessageFormatter', () => {
       expect(result).not.toContain('<Night & Ride>');
     });
 
+    it('preserves line breaks in user-entered text fields in Rich Messages', () => {
+      const result = messageFormatter.formatRideMessage({
+        id: '123',
+        title: 'Night\nRide',
+        date: new Date('2025-03-30T10:00:00Z'),
+        organizer: 'John & Jane\r\nBike Club',
+        meetingPoint: 'Main square\rNear the fountain',
+        additionalInfo: 'Bring lights\nTake warm clothes'
+      }, { joined: [], thinking: [], skipped: [] });
+
+      expect(result).toContain('<h3>🚲 Night<br>Ride</h3>');
+      expect(result).toContain('👤 Organizer: John &amp; Jane<br>Bike Club');
+      expect(result).toContain('📍 Meeting point: Main square<br>Near the fountain');
+      expect(result).toContain('ℹ️ Additional info: Bring lights<br>Take warm clothes');
+    });
+
     it('should format date using the selected message language', () => {
       const ride = {
         id: '123',

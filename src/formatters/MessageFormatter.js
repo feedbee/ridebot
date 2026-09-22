@@ -8,6 +8,15 @@ import { formatSpeed } from '../utils/speed-utils.js';
 import { getDerivedRouteLabel, getRideRoutes } from '../utils/route-links.js';
 
 /**
+ * Escape user-entered text and preserve its line breaks in Telegram Rich HTML.
+ * @param {string} text - User-entered text
+ * @returns {string} Escaped Rich HTML text
+ */
+function escapeRichText(text) {
+  return escapeHtml(text).replace(/\r\n?|\n/g, '<br>');
+}
+
+/**
  * Handles formatting messages for display
  */
 export class MessageFormatter {
@@ -182,10 +191,10 @@ export class MessageFormatter {
     // Group 3: Organizer, Meeting point, Route
     const group3 = [];
     if (ride.organizer) {
-      group3.push(`👤 ${this.translate('formatter.labels.organizer', {}, language)}: ${escapeHtml(ride.organizer)}`);
+      group3.push(`👤 ${this.translate('formatter.labels.organizer', {}, language)}: ${escapeRichText(ride.organizer)}`);
     }
     if (ride.meetingPoint) {
-      group3.push(`📍 ${this.translate('formatter.labels.meetingPoint', {}, language)}: ${escapeHtml(ride.meetingPoint)}`);
+      group3.push(`📍 ${this.translate('formatter.labels.meetingPoint', {}, language)}: ${escapeRichText(ride.meetingPoint)}`);
     }
     const rideRouteLinks = this.renderRouteLinks(ride, language);
     if (rideRouteLinks) {
@@ -216,14 +225,14 @@ export class MessageFormatter {
     // Group 5: Additional info
     if (ride.additionalInfo) {
       rideDetails += formatParagraph([
-        `ℹ️ ${this.translate('formatter.labels.additionalInfo', {}, language)}: ${escapeHtml(ride.additionalInfo)}`
+        `ℹ️ ${this.translate('formatter.labels.additionalInfo', {}, language)}: ${escapeRichText(ride.additionalInfo)}`
       ]);
     }
     
     // Convert Markdown template to HTML
     let message = this.translate('templates.ride', {}, language)
       .replace(/\*([^*]+)\*/g, '<b>$1</b>') // Bold text
-      .replace('{title}', escapeHtml(ride.title))
+      .replace('{title}', escapeRichText(ride.title))
       .replace('{cancelledBadge}', ride.cancelled ? ` ${this.translate('templates.cancelled', {}, language)}` : '')
       .replace('{rideDetails}', rideDetails)
       .replace('{participantCount}', participantCount)

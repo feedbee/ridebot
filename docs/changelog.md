@@ -2,6 +2,11 @@
 
 This changelog is written for product-facing release notes. Release dates are based on Git tag creation dates.
 
+## v2.8.1 - 2026-09-22
+
+- **Preserved multiline ride details in Rich Message announcements.**
+  Line breaks entered in ride titles, organizer names, meeting points, and additional information now remain visible in published and synchronized ride announcements.
+
 ## v2.8.0 - 2026-09-03
 
 - **Added one-tap publishing to recent chats and topics.**
