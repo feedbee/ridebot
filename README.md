@@ -9,7 +9,7 @@ A Telegram bot for organizing bike rides within multiple chats. The bot allows u
   - Title
   - Category (Road Ride, Gravel Ride, Mountain Bike Ride, etc.)
   - Optional meeting point
-  - Optional route links with optional labels (Strava, RideWithGPS, Komoot, Garmin, or any other URL)
+  - Optional route links with optional labels (Strava, RideWithGPS, Komoot, Garmin, GetGPX, or any other URL)
   - Optional distance
   - Optional estimated riding time
   - Optional speed expectations
@@ -151,7 +151,7 @@ To update an existing ride via AI dialog:
 Fetches the Strava club event and creates a ride automatically. The following fields are populated from the event:
 
 - **Title, date, meeting point, category** — directly from the event
-- **Routes** — from the attached route object; if there is no attached route, all known-provider links found in the event description are imported in discovery order (Strava, RideWithGPS, Komoot, Garmin)
+- **Routes** — from the attached route object; if there is no attached route, all known-provider links found in the event description are imported in discovery order (Strava, RideWithGPS, Komoot, Garmin, GetGPX)
 - **Distance and duration** — from the attached route if present; otherwise from the first found route link
 - **Cruising speed** — derived from speed-based pace groups; average moving speed is not inferred
 - **Organizer** — the Strava club name
@@ -197,7 +197,7 @@ Route input rules:
 - Use `route: URL` for an unlabeled route.
 - Use `route: Label | URL` for a labeled route.
 - The URL is always taken from the last `|`-separated segment, so `|` can be used inside the label.
-- If a label is omitted, the bot derives one when rendering: `Strava`, `Garmin`, `Komoot`, `RideWithGPS`, otherwise localized `Link` / `Ссылка`.
+- If a label is omitted, the bot derives one when rendering: `Strava`, `Garmin`, `Komoot`, `RideWithGPS`, `GetGPX`, otherwise localized `Link` / `Ссылка`.
 
 ### Updating a Ride
 
@@ -314,6 +314,7 @@ The bot supports route links from:
 - RideWithGPS
 - Komoot
 - Garmin
+- GetGPX (`https://getgpx.link/tracks/TRACK_ID`)
 
 Multiple route links are supported in command mode, wizard mode, AI mode, and Strava import. Route information (distance and estimated time) is automatically parsed from the first route link that provides those metrics.
 In the wizard, changing the route list refreshes previously auto-derived distance and duration when the new route provides those metrics.

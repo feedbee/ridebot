@@ -3,6 +3,7 @@ import { t } from '../i18n/index.js';
 
 const PROVIDER_LABELS = {
   strava: 'Strava',
+  getgpx: 'GetGPX',
   garmin: 'Garmin',
   komoot: 'Komoot',
   ridewithgps: 'RideWithGPS'
