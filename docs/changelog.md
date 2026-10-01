@@ -2,6 +2,11 @@
 
 This changelog is written for product-facing release notes. Release dates are based on Git tag creation dates.
 
+## v2.9.0 - 2026-10-01
+
+- **Added GetGPX route support.**
+  GetGPX track links are now recognized across ride creation, editing, and Strava event imports, with automatic route labels. The bot retrieves distance and estimated riding time from the GetGPX API when available.
+
 ## v2.8.1 - 2026-09-22
 
 - **Preserved multiline ride details in Rich Message announcements.**
