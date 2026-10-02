@@ -37,6 +37,7 @@ chat: Ссылка на Telegram-чат для координации или и�
 info: Additional information (optional)
 settings.notifyParticipation: yes/no — уведомлять создателя об изменениях участия (optional)
 settings.allowReposts: yes/no — разрешить другим пользователям репост через /shareride (optional)
+settings.participantLimit: 0-1000 — максимум участвующих; 0 означает без ограничений (optional)
 </pre>
 
 <p>Пример:</p>
@@ -105,6 +106,7 @@ chat: Новая ссылка на Telegram-чат или инвайт (необ
 info: Additional information (optional)
 settings.notifyParticipation: yes/no (optional)
 settings.allowReposts: yes/no (optional)
+settings.participantLimit: 0-1000 (optional; 0 означает без ограничений)
 </pre>
 
 <p>Если передан хотя бы один параметр <code>route:</code>, он заменяет весь список маршрутов. Используйте <code>route: -</code>, чтобы очистить все маршруты.<br>Переданные настройки поездки будут объединены с текущими настройками этой поездки.</p>
@@ -156,6 +158,7 @@ chat: Новая ссылка на Telegram-чат или инвайт (необ
 info: Additional information (optional)
 settings.notifyParticipation: yes/no (optional)
 settings.allowReposts: yes/no (optional)
+settings.participantLimit: 0-1000 (optional; 0 означает без ограничений)
 </pre>
 
 <p>Параметры, которые не были переданы, будут скопированы из исходной поездки.<br>По умолчанию новая поездка будет запланирована на завтра в то же время.<br>Если передан хотя бы один параметр <code>route:</code>, он заменяет скопированный список маршрутов. Используйте <code>route: -</code>, чтобы очистить все скопированные маршруты.<br>При дублировании своей поездки копируются ее настройки. При дублировании чужой поездки используются ваши текущие дефолты.</p>
@@ -614,11 +617,13 @@ id: abc123 (or #abc123)
       speedInvalid: 'Некорректная средняя скорость движения. Используйте 25-28, 25+, -28 или ~25.',
       cruisingSpeedInvalid: 'Некорректная крейсерская скорость. Используйте 25-28, 25+, -28 или ~25.',
       chatInvalid: 'Некорректная ссылка на Telegram-чат или инвайт.',
-      chatTooLong: 'Ссылка на Telegram-чат должна быть не длиннее 512 символов.'
+      chatTooLong: 'Ссылка на Telegram-чат должна быть не длиннее 512 символов.',
+      participantLimitInvalid: 'Лимит участников должен быть целым десятичным числом от 0 до 1000 без ведущих нулей.'
     },
     info: 'Дополнительная информация',
     settingsNotifyParticipation: 'Настройка поездки: уведомлять об изменениях участников (yes/no)',
     settingsAllowReposts: 'Настройка поездки: разрешить другим пользователям репост через /shareride (yes/no)',
+    settingsParticipantLimit: 'Настройка поездки: максимум участвующих (0-1000; 0 означает без ограничений)',
     id: 'ID поездки (для команд, где требуется)'
   },
   utils: {

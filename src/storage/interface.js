@@ -21,6 +21,7 @@
  * @typedef {Object} RideSettings
  * @property {boolean} notifyParticipation
  * @property {boolean} allowReposts
+ * @property {number} participantLimit
  */
 
 /**
@@ -80,6 +81,7 @@
  * @property {Object} rideDefaults
  * @property {boolean} rideDefaults.notifyParticipation
  * @property {boolean} rideDefaults.allowReposts
+ * @property {number} rideDefaults.participantLimit
  * @property {'all'|'membership'} [participationNotificationLevel]
  */
 

@@ -67,6 +67,7 @@ Use these exact field names (all optional except title and when):
   info: additional notes
   settings: optional object
   settings.notifyParticipation: boolean
+  settings.participantLimit: integer from 0 through 1000; 0 means unlimited
 
 Set chat only when the user explicitly identifies a Telegram link as the ride's coordination chat or invite.
 Do not map route links, event links, or arbitrary URLs from notes to chat.

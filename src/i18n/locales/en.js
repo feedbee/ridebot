@@ -37,6 +37,7 @@ chat: Telegram coordination chat or invite link (optional)
 info: Additional information (optional)
 settings.notifyParticipation: yes/no — notify the creator when participants change status (optional)
 settings.allowReposts: yes/no — allow other users to repost this ride with /shareride (optional)
+settings.participantLimit: 0-1000 — maximum joined participants; 0 means unlimited (optional)
 </pre>
 
 <p>Example:</p>
@@ -105,6 +106,7 @@ chat: New Telegram coordination chat or invite link (optional; use - to clear)
 info: Additional information (optional)
 settings.notifyParticipation: yes/no (optional)
 settings.allowReposts: yes/no (optional)
+settings.participantLimit: 0-1000 (optional; 0 means unlimited)
 </pre>
 
 <p>If you provide at least one <code>route:</code> line, it replaces the full route list. Use <code>route: -</code> to clear all routes.<br>Ride settings passed here are merged into the existing ride settings.</p>
@@ -156,6 +158,7 @@ chat: New Telegram coordination chat or invite link (optional; use - to clear)
 info: Additional information (optional)
 settings.notifyParticipation: yes/no (optional)
 settings.allowReposts: yes/no (optional)
+settings.participantLimit: 0-1000 (optional; 0 means unlimited)
 </pre>
 
 <p>Any parameters not provided will be copied from the original ride.<br>By default, the new ride will be scheduled for tomorrow at the same time.<br>If you provide at least one <code>route:</code> line, it replaces the copied route list. Use <code>route: -</code> to clear all copied routes.<br>When duplicating your own ride, its ride settings are copied. When duplicating someone else's ride, your current defaults are used.</p>
@@ -614,11 +617,13 @@ Click here to start a private chat: @botname
       speedInvalid: 'Invalid average moving speed. Use 25-28, 25+, -28, or ~25.',
       cruisingSpeedInvalid: 'Invalid cruising speed. Use 25-28, 25+, -28, or ~25.',
       chatInvalid: 'Invalid Telegram chat or invite link.',
-      chatTooLong: 'The Telegram chat link must be 512 characters or fewer.'
+      chatTooLong: 'The Telegram chat link must be 512 characters or fewer.',
+      participantLimitInvalid: 'Participant limit must be a whole decimal number from 0 to 1000 without leading zeros.'
     },
     info: 'Additional information',
     settingsNotifyParticipation: 'Ride setting: notify on participation changes (yes/no)',
     settingsAllowReposts: 'Ride setting: allow other users to repost with /shareride (yes/no)',
+    settingsParticipantLimit: 'Ride setting: maximum joined participants (0-1000; 0 means unlimited)',
     id: 'Ride ID (for commands that need it)'
   },
   utils: {

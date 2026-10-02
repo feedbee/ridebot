@@ -29,6 +29,7 @@ export class RideParamsHelper {
       info: translate('params.info'),
       'settings.notifyParticipation': translate('params.settingsNotifyParticipation'),
       'settings.allowReposts': translate('params.settingsAllowReposts'),
+      'settings.participantLimit': translate('params.settingsParticipantLimit'),
       id: translate('params.id')
     };
   }

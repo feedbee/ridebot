@@ -5,6 +5,7 @@ import { parseSpeedInput } from './speed-utils.js';
 import { parseRouteEntries } from './route-links.js';
 import { config } from '../config.js';
 import { t } from '../i18n/index.js';
+import { parseParticipantLimit } from './participant-limit.js';
 import { parseTelegramChatLink } from './telegram-chat-link.js';
 
 /**
@@ -94,6 +95,11 @@ export class FieldProcessor {
 
     this.processBooleanSettings(params, result.data);
 
+    const participantLimitResult = this.processParticipantLimitSetting(params, result.data, language);
+    if (participantLimitResult.error) {
+      return { data: null, error: participantLimitResult.error };
+    }
+
     return result;
   }
 
@@ -113,6 +119,34 @@ export class FieldProcessor {
         };
       }
     });
+  }
+
+  /**
+   * Process a participant-limit setting from dotted or structured input.
+   * @param {Object} params
+   * @param {Object} data
+   * @param {string} language
+   * @returns {{error: string|null}}
+   */
+  static processParticipantLimitSetting(params, data, language) {
+    const value = params.settings?.participantLimit ?? params['settings.participantLimit'];
+    if (value === undefined) return { error: null };
+
+    const participantLimit = parseParticipantLimit(value);
+    if (participantLimit === null) {
+      return {
+        error: t(language || config.i18n.defaultLanguage, 'params.validation.participantLimitInvalid', {}, {
+          fallbackLanguage: config.i18n.fallbackLanguage,
+          withMissingMarker: config.isDev
+        })
+      };
+    }
+
+    data.settings = {
+      ...(data.settings || {}),
+      participantLimit
+    };
+    return { error: null };
   }
 
   /**
