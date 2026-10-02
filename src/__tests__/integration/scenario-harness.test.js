@@ -303,7 +303,7 @@ describe('Scenario Harness Integration', () => {
     const harness = await createScenarioHarness();
 
     await harness.dispatchMessage({
-      text: '/newride\ntitle: Sunrise Ride\nwhen: tomorrow 11:00\nmeet: River Park',
+      text: '/newride\ntitle: Sunrise Ride\nwhen: tomorrow 11:00\nmeet: River Park\nchat: telegram.me/sunrise_chat',
       chat: { id: 501, type: 'private' },
       from: { id: 42, first_name: 'Alex', last_name: 'Rider', username: 'alex' },
     });
@@ -315,6 +315,7 @@ describe('Scenario Harness Integration', () => {
     expect(ride.title).toBe('Sunrise Ride');
     expect(ride.createdBy).toBe(42);
     expect(ride.meetingPoint).toBe('River Park');
+    expect(ride.chat).toBe('https://t.me/sunrise_chat');
     expect(ride.messages).toHaveLength(1);
     expect(ride.participation.joined).toEqual([
       expect.objectContaining({
@@ -329,6 +330,8 @@ describe('Scenario Harness Integration', () => {
     expect(harness.outbox.replies[0].text).toContain('Sunrise Ride');
     expect(harness.outbox.replies[0].richMessage?.html).toContain('<h3>🚲 Sunrise Ride</h3>');
     expect(harness.outbox.replies[0].richMessage?.html).toContain('<tg-time ');
+    expect(harness.outbox.replies[0].richMessage?.html)
+      .toContain('💬 Chat: <a href="https://t.me/sunrise_chat">Open chat</a>');
     expect(harness.outbox.replies[0].options.parse_mode).toBeUndefined();
     expect(harness.outbox.replies[0].options.reply_markup.inline_keyboard[0]).toEqual(
       expect.arrayContaining([

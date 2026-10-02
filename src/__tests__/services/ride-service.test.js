@@ -1178,6 +1178,7 @@ describe('RideService', () => {
         speedMax: 30,
         organizer: 'Org',
         category: 'road',
+        chat: 'https://t.me/example_chat',
         additionalInfo: 'Info'
       });
       const result = await rideService.duplicateRide(originalRide.id, {}, new UserProfile({ userId: 7, username: 'user7' }));
@@ -1194,6 +1195,7 @@ describe('RideService', () => {
       expect(result.ride.duration).toBe(originalRide.duration);
       expect(result.ride.speedMin).toBe(26);
       expect(result.ride.speedMax).toBe(30);
+      expect(result.ride.chat).toBe(originalRide.chat);
       expect(result.ride.additionalInfo).toBe(originalRide.additionalInfo);
     });
 
@@ -1285,6 +1287,28 @@ describe('RideService', () => {
       expect(result.error).toBeNull();
       expect(result.ride.routes).toEqual([]);
       expect(result.ride.routeLink).toBe('');
+    });
+
+    it('should override or clear chat when duplicating', async () => {
+      const originalRide = await rideService.createRide({
+        ...testRide,
+        date: new Date('2030-03-18T15:00:00Z'),
+        chat: 'https://t.me/original_chat'
+      });
+
+      const overridden = await rideService.duplicateRide(
+        originalRide.id,
+        { chat: 'telegram.me/new_chat' },
+        new UserProfile({ userId: 7 })
+      );
+      const cleared = await rideService.duplicateRide(
+        originalRide.id,
+        { chat: '-' },
+        new UserProfile({ userId: 7 })
+      );
+
+      expect(overridden.ride.chat).toBe('https://t.me/new_chat');
+      expect(cleared.ride.chat).toBeUndefined();
     });
   });
 });

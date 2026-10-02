@@ -40,6 +40,7 @@
  * @property {number} [speedMax]
  * @property {number} [cruisingSpeedMin]
  * @property {number} [cruisingSpeedMax]
+ * @property {string} [chat] - Normalized Telegram coordination chat or invite link
  * @property {string} [additionalInfo]
  * @property {boolean} [cancelled]
  * @property {RideSettings} [settings]

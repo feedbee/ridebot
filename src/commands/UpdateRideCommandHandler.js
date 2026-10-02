@@ -76,6 +76,7 @@ export class UpdateRideCommandHandler extends BaseCommandHandler {
       speedMax: ride.speedMax,
       cruisingSpeedMin: ride.cruisingSpeedMin,
       cruisingSpeedMax: ride.cruisingSpeedMax,
+      chat: ride.chat,
       additionalInfo: ride.additionalInfo
     };
   }

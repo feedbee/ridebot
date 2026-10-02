@@ -6,6 +6,7 @@ import { getCategoryLabel } from '../utils/category-utils.js';
 import { t } from '../i18n/index.js';
 import { formatSpeed } from '../utils/speed-utils.js';
 import { getDerivedRouteLabel, getRideRoutes } from '../utils/route-links.js';
+import { parseTelegramChatLink } from '../utils/telegram-chat-link.js';
 
 /**
  * Escape user-entered text and preserve its line breaks in Telegram Rich HTML.
@@ -46,6 +47,18 @@ export class MessageFormatter {
       const label = route.label || getDerivedRouteLabel(route.url, language);
       return `<a href="${escapeHtml(route.url)}">${escapeHtml(label)}</a>`;
     }).join(', ');
+  }
+
+  /**
+   * Render a validated Telegram coordination chat as a short HTML link.
+   * @param {string} chat
+   * @param {string} language
+   * @returns {string}
+   */
+  renderChatLink(chat, language = config.i18n.defaultLanguage) {
+    const result = parseTelegramChatLink(chat);
+    if (result.error) return '';
+    return `<a href="${escapeHtml(result.link)}">${this.translate('formatter.openChat', {}, language)}</a>`;
   }
 
   /**
@@ -222,7 +235,13 @@ export class MessageFormatter {
       rideDetails += formatParagraph(group4);
     }
     
-    // Group 5: Additional info
+    // Group 5: Coordination chat and additional info
+    const chatLink = this.renderChatLink(ride.chat, language);
+    if (chatLink) {
+      rideDetails += formatParagraph([
+        `💬 ${this.translate('formatter.labels.chat', {}, language)}: ${chatLink}`
+      ]);
+    }
     if (ride.additionalInfo) {
       rideDetails += formatParagraph([
         `ℹ️ ${this.translate('formatter.labels.additionalInfo', {}, language)}: ${escapeRichText(ride.additionalInfo)}`
@@ -343,7 +362,11 @@ export class MessageFormatter {
       message += `\n${group4}`;
     }
 
-    // Group 5: Additional info
+    // Group 5: Coordination chat and additional info
+    const previewChatLink = this.renderChatLink(rideData.chat, language);
+    if (previewChatLink) {
+      message += `\n💬 ${this.translate('formatter.labels.chat', {}, language)}: ${previewChatLink}\n`;
+    }
     if (rideData.additionalInfo) {
       message += `\nℹ️ ${this.translate('formatter.labels.additionalInfo', {}, language)}: ${escapeHtml(rideData.additionalInfo)}\n`;
     }

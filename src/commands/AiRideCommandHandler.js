@@ -386,6 +386,7 @@ export class AiRideCommandHandler extends BaseCommandHandler {
       speedMax:     null,
       cruisingSpeedMin: null,
       cruisingSpeedMax: null,
+      chat: null,
       additionalInfo: null
     };
 
@@ -437,6 +438,8 @@ export class AiRideCommandHandler extends BaseCommandHandler {
       preview.cruisingSpeedMin = existingRide.cruisingSpeedMin ?? null;
       preview.cruisingSpeedMax = existingRide.cruisingSpeedMax ?? null;
     }
+
+    preview.chat = params.chat === '-' ? null : (params.chat || existingRide?.chat || null);
 
     // additionalInfo: only free-form notes
     if (params.info) {

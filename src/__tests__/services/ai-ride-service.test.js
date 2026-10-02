@@ -32,7 +32,7 @@ describe('AiRideService', () => {
   describe('parseRideText', () => {
     it('returns parsed params when AI returns valid JSON', async () => {
       mockCreate.mockResolvedValue(
-        makeResponse('{"title":"Evening Ride","when":"tomorrow at 6pm","category":"road","dist":"50"}')
+        makeResponse('{"title":"Evening Ride","when":"tomorrow at 6pm","category":"road","dist":"50","chat":"https://t.me/evening_chat"}')
       );
 
       const { params, error } = await service.parseRideText('Evening road ride tomorrow 6pm 50km');
@@ -42,7 +42,8 @@ describe('AiRideService', () => {
         title: 'Evening Ride',
         when: 'tomorrow at 6pm',
         category: 'road',
-        dist: '50'
+        dist: '50',
+        chat: 'https://t.me/evening_chat'
       });
     });
 
@@ -163,6 +164,17 @@ describe('AiRideService', () => {
       expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({ model: expect.stringContaining('haiku') })
       );
+    });
+
+    it('instructs AI to distinguish coordination chat from other links', async () => {
+      mockCreate.mockResolvedValue(makeResponse('{"title":"Ride","when":"tomorrow"}'));
+
+      await service.parseRideText('ride tomorrow');
+
+      const calledSystem = mockCreate.mock.calls[0][0].system;
+      expect(calledSystem).toContain('coordination chat');
+      expect(calledSystem).toContain('Do not map route links');
+      expect(calledSystem).toContain('arbitrary URLs');
     });
 
     describe('dialog mode (dialogMessages option)', () => {
