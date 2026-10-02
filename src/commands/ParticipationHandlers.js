@@ -76,6 +76,13 @@ export class ParticipationHandlers extends BaseCommandHandler {
         return;
       }
 
+      if (result.status === 'participant_limit_reached') {
+        await ctx.answerCallbackQuery(
+          this.translate(ctx, 'commands.participation.participantLimitReached')
+        );
+        return;
+      }
+
       if (result.status === 'changed') {
         const result2 = await this.updateRideMessage(result.ride, ctx);
         

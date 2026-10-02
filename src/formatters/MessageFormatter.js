@@ -173,6 +173,10 @@ export class MessageFormatter {
     const participantCount = joinedParticipants.length;
     const thinkingCount = thinkingParticipants.length;
     const notInterestedCount = skippedParticipants.length;
+    const participantLimit = ride.settings?.participantLimit ?? 0;
+    const participantLimitLine = participantLimit > 0
+      ? `${this.translate('formatter.labels.participantLimit', {}, language)}: ${participantLimit}<br>`
+      : '';
     
     const participantsList = this.formatParticipantsWithLogic(
       joinedParticipants,
@@ -254,6 +258,7 @@ export class MessageFormatter {
       .replace('{title}', escapeRichText(ride.title))
       .replace('{cancelledBadge}', ride.cancelled ? ` ${this.translate('templates.cancelled', {}, language)}` : '')
       .replace('{rideDetails}', rideDetails)
+      .replace('{participantLimitLine}', participantLimitLine)
       .replace('{participantCount}', participantCount)
       .replace('{participants}', participantsList)
       .replace('{thinkingLine}', thinkingCount > 0

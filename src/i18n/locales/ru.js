@@ -218,7 +218,7 @@ id: abc123 (or #abc123)
     ride: `
 <h3>🚲 {title}{cancelledBadge}</h3>
 {rideDetails}
-<p>🚴 {joinedLabel} ({participantCount}): {participants}{thinkingLine}{notInterestedLine}</p>
+<p>{participantLimitLine}🚴 {joinedLabel} ({participantCount}): {participants}{thinkingLine}{notInterestedLine}</p>
 {groupChatBlock}{shareBlock}{footerBlock}{cancelledInstructions}
     `.trim(),
 
@@ -387,6 +387,7 @@ id: abc123 (or #abc123)
       rideArchived: 'Этот райд уже архивный: с момента старта прошло как минимум {hours} ч. Голосование закрыто.',
       updatedButMessageFailed: 'Ваш статус участия обновлен, но обновление сообщения не удалось',
       genericError: 'Произошла ошибка',
+      participantLimitReached: 'Извините, лимит участников исчерпан.',
       alreadyInState: 'У вас уже установлен статус: {state}',
       states: {
         joined: 'участвую',
@@ -506,7 +507,8 @@ id: abc123 (or #abc123)
       speed: 'Средняя скорость движения',
       cruisingSpeed: 'Крейсерская скорость',
       chat: 'Чат',
-      additionalInfo: 'Дополнительно'
+      additionalInfo: 'Дополнительно',
+      participantLimit: 'Лимит участников'
     },
     participation: {
       joined: 'Участвуют',

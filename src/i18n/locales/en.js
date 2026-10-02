@@ -218,7 +218,7 @@ id: abc123 (or #abc123)
     ride: `
 <h3>🚲 {title}{cancelledBadge}</h3>
 {rideDetails}
-<p>🚴 {joinedLabel} ({participantCount}): {participants}{thinkingLine}{notInterestedLine}</p>
+<p>{participantLimitLine}🚴 {joinedLabel} ({participantCount}): {participants}{thinkingLine}{notInterestedLine}</p>
 {groupChatBlock}{shareBlock}{footerBlock}{cancelledInstructions}
     `.trim(),
 
@@ -387,6 +387,7 @@ Click here to start a private chat: @botname
       rideArchived: 'This ride is archived: it started at least {hours} hour(s) ago. Participation is closed.',
       updatedButMessageFailed: 'Your participation was updated, but message updates failed',
       genericError: 'An error occurred',
+      participantLimitReached: 'Sorry, the participant limit has been reached.',
       alreadyInState: 'You are already {state} for this ride',
       states: {
         joined: 'joined',
@@ -506,7 +507,8 @@ Click here to start a private chat: @botname
       speed: 'Average moving speed',
       cruisingSpeed: 'Cruising speed',
       chat: 'Chat',
-      additionalInfo: 'Additional info'
+      additionalInfo: 'Additional info',
+      participantLimit: 'Participant limit'
     },
     participation: {
       joined: 'Joined',

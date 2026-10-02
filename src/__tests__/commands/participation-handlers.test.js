@@ -179,6 +179,20 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
       expect(mockRideMessagesService.updateRideMessages).not.toHaveBeenCalled();
     });
 
+    it('reports a reached participant limit without updating messages', async () => {
+      mockRideParticipationService.changeParticipation.mockResolvedValue({
+        status: 'participant_limit_reached',
+        targetState: 'joined'
+      });
+
+      await participationHandlers.handleJoinRide(mockCtx);
+
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(
+        tr('commands.participation.participantLimitReached')
+      );
+      expect(mockRideMessagesService.updateRideMessages).not.toHaveBeenCalled();
+    });
+
     // Multi-chat propagation: just expect the simple reply
     it('should report join with simple reply even after multi-chat propagation', async () => {
       // Setup
