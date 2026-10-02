@@ -1,3 +1,5 @@
+import { isRideArchived } from './ride-lifecycle.js';
+
 /**
  * Application service for participation state changes and their side effects.
  */
@@ -21,12 +23,16 @@ export class RideParticipationService {
    * @param {'joined'|'thinking'|'skipped'} params.targetState
    * @param {string} [params.language]
    * @param {import('grammy').Api} params.api
-   * @returns {Promise<{status: 'changed'|'ride_not_found'|'ride_cancelled'|'already_in_state', ride?: Object, previousState?: string|null, targetState: string}>}
+   * @returns {Promise<{status: 'changed'|'ride_not_found'|'ride_archived'|'ride_cancelled'|'already_in_state', ride?: Object, previousState?: string|null, targetState: string}>}
    */
   async changeParticipation({ rideId, participantProfile, targetState, language, api }) {
     const ride = await this.rideService.getRide(rideId);
     if (!ride) {
       return { status: 'ride_not_found', targetState };
+    }
+
+    if (isRideArchived(ride)) {
+      return { status: 'ride_archived', ride, targetState };
     }
 
     if (ride.cancelled) {

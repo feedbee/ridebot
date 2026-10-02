@@ -303,7 +303,7 @@ describe('Scenario Harness Integration', () => {
     const harness = await createScenarioHarness();
 
     await harness.dispatchMessage({
-      text: '/newride\ntitle: Sunrise Ride\nwhen: tomorrow 11:00\nmeet: River Park',
+      text: '/newride\ntitle: Sunrise Ride\nwhen: tomorrow 11:00\nmeet: River Park\nchat: telegram.me/sunrise_chat',
       chat: { id: 501, type: 'private' },
       from: { id: 42, first_name: 'Alex', last_name: 'Rider', username: 'alex' },
     });
@@ -315,6 +315,7 @@ describe('Scenario Harness Integration', () => {
     expect(ride.title).toBe('Sunrise Ride');
     expect(ride.createdBy).toBe(42);
     expect(ride.meetingPoint).toBe('River Park');
+    expect(ride.chat).toBe('https://t.me/sunrise_chat');
     expect(ride.messages).toHaveLength(1);
     expect(ride.participation.joined).toEqual([
       expect.objectContaining({
@@ -329,6 +330,8 @@ describe('Scenario Harness Integration', () => {
     expect(harness.outbox.replies[0].text).toContain('Sunrise Ride');
     expect(harness.outbox.replies[0].richMessage?.html).toContain('<h3>🚲 Sunrise Ride</h3>');
     expect(harness.outbox.replies[0].richMessage?.html).toContain('<tg-time ');
+    expect(harness.outbox.replies[0].richMessage?.html)
+      .toContain('💬 Chat: <a href="https://t.me/sunrise_chat">Open chat</a>');
     expect(harness.outbox.replies[0].options.parse_mode).toBeUndefined();
     expect(harness.outbox.replies[0].options.reply_markup.inline_keyboard[0]).toEqual(
       expect.arrayContaining([
@@ -469,6 +472,46 @@ describe('Scenario Harness Integration', () => {
     expect(harness.outbox.callbackAnswers).toContainEqual({ text: null });
   });
 
+  it('changes the matching list and numbered button from unpublished to published', async () => {
+    const harness = await createScenarioHarness();
+    const owner = { id: 42, first_name: 'Alex' };
+    const privateChat = { id: 42, type: 'private' };
+    const groupChat = { id: -1001234567890, type: 'supergroup', title: 'Alex Chat', username: 'alex_chat' };
+
+    await harness.dispatchMessage({
+      text: '/newride\ntitle: Old Announcement\nwhen: tomorrow 11:00',
+      chat: privateChat, from: owner,
+    });
+    const [oldRide] = harness.listRides();
+    await harness.dispatchMessage({ text: `/shareride ${oldRide.id}`, chat: groupChat, from: owner });
+    await harness.dispatchMessage({
+      text: '/newride\ntitle: Fresh Announcement\nwhen: tomorrow 12:00',
+      chat: privateChat, from: owner,
+    });
+    const freshRide = harness.listRides().find(ride => ride.id !== oldRide.id);
+    const privateMessage = harness.outbox.replies.at(-1);
+    await harness.dispatchCallback({
+      data: `rideowner:publish:${freshRide.id}`, chat: privateChat, from: owner,
+      message: { message_id: privateMessage.messageId, text: privateMessage.text, chat: privateChat },
+    });
+    const menu = harness.outbox.replies.at(-1);
+    expect(menu.text).toContain('<li>❌ <a href="https://t.me/alex_chat">Alex Chat</a></li>');
+    const button = menu.options.reply_markup.inline_keyboard[0][0];
+    expect(button.text).toBe('❌ 1');
+    await harness.dispatchCallback({
+      data: button.callback_data, chat: privateChat, from: owner,
+      message: { message_id: menu.messageId, text: menu.text, chat: privateChat },
+    });
+    const updatedMenu = harness.outbox.edits.at(-1);
+    expect(updatedMenu.text).toContain('<li>✅ <a href="https://t.me/alex_chat">Alex Chat</a></li>');
+    expect(updatedMenu.text).toContain('<ul><li>✅ Alex Chat ');
+    expect(updatedMenu.options.reply_markup.inline_keyboard[0][0].text).toBe('✅ 1');
+    expect(harness.outbox.replies.at(-1).text).toContain('Fresh Announcement');
+    expect(harness.getRide(freshRide.id).messages).toEqual(expect.arrayContaining([
+      expect.objectContaining({ chatId: groupChat.id, isForCreator: false })
+    ]));
+  });
+
   it('publishes a creator ride from the numbered recent-destinations menu', async () => {
     const harness = await createScenarioHarness();
     const owner = { id: 42, first_name: 'Alex', last_name: 'Rider', username: 'alex' };
@@ -521,7 +564,7 @@ describe('Scenario Harness Integration', () => {
     );
     expect(destinationMenu.options.reply_markup.inline_keyboard).toEqual([
       [expect.objectContaining({
-          text: '1',
+          text: '✅ 1',
           callback_data: `ridepublish:${ride.id}:${forumChat.id}:77`
       })],
       [expect.objectContaining({ callback_data: 'ridepublish:close' })]

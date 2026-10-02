@@ -5,6 +5,7 @@ import { parseSpeedInput } from './speed-utils.js';
 import { parseRouteEntries } from './route-links.js';
 import { config } from '../config.js';
 import { t } from '../i18n/index.js';
+import { parseTelegramChatLink } from './telegram-chat-link.js';
 
 /**
  * Utility class for processing ride field parameters
@@ -77,6 +78,19 @@ export class FieldProcessor {
     
     // Process simple text fields
     this.processTextFields(params, result.data, isUpdate);
+
+    if (params.chat !== undefined) {
+      if (isUpdate && params.chat === '-') {
+        result.data.chat = '';
+      } else {
+        const chatResult = parseTelegramChatLink(params.chat);
+        if (chatResult.error) {
+          const key = chatResult.error === 'tooLong' ? 'chatTooLong' : 'chatInvalid';
+          return { data: null, error: this.translateChatError(language, key) };
+        }
+        result.data.chat = chatResult.link;
+      }
+    }
 
     this.processBooleanSettings(params, result.data);
 
@@ -223,6 +237,19 @@ export class FieldProcessor {
 
   static translateSpeedError(language, paramName) {
     return t(language || config.i18n.defaultLanguage, `params.validation.${paramName}Invalid`, {}, {
+      fallbackLanguage: config.i18n.fallbackLanguage,
+      withMissingMarker: config.isDev
+    });
+  }
+
+  /**
+   * Translate a chat-link validation error.
+   * @param {string} language
+   * @param {'chatInvalid'|'chatTooLong'} key
+   * @returns {string}
+   */
+  static translateChatError(language, key) {
+    return t(language || config.i18n.defaultLanguage, `params.validation.${key}`, {}, {
       fallbackLanguage: config.i18n.fallbackLanguage,
       withMissingMarker: config.isDev
     });

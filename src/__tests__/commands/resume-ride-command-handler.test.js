@@ -74,6 +74,20 @@ describe.each(['en', 'ru'])('ResumeRideCommandHandler (%s)', (language) => {
       expect(mockRideService.resumeRide).not.toHaveBeenCalled();
     });
 
+    it('blocks resuming an archived ride', async () => {
+      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '456', error: null });
+      mockRideService.getRide.mockResolvedValue({
+        id: '456', createdBy: 123, cancelled: true, date: new Date(Date.now() - 60 * 60 * 1000)
+      });
+
+      await handler.handle(mockCtx);
+
+      expect(mockCtx.reply).toHaveBeenCalledWith(
+        tr('commands.stateChange.rideArchived', { action: tr('commands.common.verbs.resume'), hours: 1 })
+      );
+      expect(mockRideService.resumeRide).not.toHaveBeenCalled();
+    });
+
     it('resumes ride and reports update count', async () => {
       mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '456', error: null });
       mockRideService.getRide.mockResolvedValue({ id: '456', createdBy: 123, cancelled: true });
