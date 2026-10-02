@@ -81,6 +81,9 @@ export class RouteParser {
    */
   static getRouteId(url) {
     if (!this.isKnownProvider(url)) return null;
+    if (this.getRouteProvider(url) === 'getgpx') {
+      return new URL(url).pathname.split('/')[2];
+    }
     const match = url.match(/\d+$/);
     return match ? match[0] : null;
   }
@@ -101,6 +104,10 @@ export class RouteParser {
     if (!provider) {
       console.warn(`[RouteParser] Could not determine route provider for URL: ${url}`);
       return null;
+    }
+
+    if (provider === 'getgpx') {
+      return await this.parseGetGpxViaApi(url);
     }
 
     // Strava requires OAuth — use API instead of HTML scraping
@@ -179,6 +186,38 @@ export class RouteParser {
 
     // For non-supported providers, just return the URL without error
     return { routeLink: url };
+  }
+
+  /**
+   * Parse GetGPX track metrics via its public JSON API.
+   * @param {string} url - Track URL
+   * @returns {Promise<{distance?: number, duration?: number}|null>}
+   */
+  static async parseGetGpxViaApi(url) {
+    try {
+      const id = this.getRouteId(url);
+      if (!id) return null;
+      const response = await fetch(`https://getgpx.link/api/v1/tracks/${id}`, {
+        headers: { Accept: 'application/json' }
+      });
+      if (!response.ok) {
+        console.warn(`[RouteParser] GetGPX API error: ${response.status} for URL: ${url}`);
+        return null;
+      }
+      const data = await response.json();
+      const metrics = data?.data?.metrics;
+      const result = {};
+      if (Number.isFinite(metrics?.distanceKm) && metrics.distanceKm > 0) {
+        result.distance = Math.round(metrics.distanceKm);
+      }
+      if (Number.isFinite(metrics?.estimatedDurationMs) && metrics.estimatedDurationMs > 0) {
+        result.duration = Math.round(metrics.estimatedDurationMs / 60000);
+      }
+      return Object.keys(result).length ? result : null;
+    } catch (error) {
+      console.warn(`[RouteParser] Error calling GetGPX API: ${error.message} for URL: ${url}`);
+      return null;
+    }
   }
 
   /**

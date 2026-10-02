@@ -430,7 +430,7 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
       await wizard.handleWizardInput(ctx);
       
       // Skip to the additional info step
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < 7; i++) {
         ctx.match = ['wizard:skip', 'skip'];
         await wizard.handleWizardAction(ctx);
       }
@@ -472,7 +472,7 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
       await wizard.handleWizardInput(ctx);
 
       // Skip to the additional info step
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < 7; i++) {
         ctx.match = ['wizard:skip', 'skip'];
         await wizard.handleWizardAction(ctx);
       }
@@ -625,6 +625,7 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
         { text: '25-28', step: 'speed' },
         { text: '29-32', step: 'cruisingSpeed' },
         { text: 'City Center', step: 'meet' },
+        { text: 'https://t.me/example_chat', step: 'chat' },
         { text: 'Bring lights and a jacket', step: 'additionalInfo' }
       ];
       
@@ -648,6 +649,7 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
       expect(createdRide.speedMax).toBe(28);
       expect(createdRide.cruisingSpeedMin).toBe(29);
       expect(createdRide.cruisingSpeedMax).toBe(32);
+      expect(createdRide.chat).toBe('https://t.me/example_chat');
       expect(createdRide.additionalInfo).toBe('Bring lights and a jacket');
 
       // Verify RideMessagesService was called
@@ -781,8 +783,8 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
         ctx.message = { text, message_id: ctx._test.messages.length + 2 };
         await wizard.handleWizardInput(ctx);
       }
-      // Skip route, distance, duration, average speed, cruising speed, meet, info
-      for (let i = 0; i < 7; i++) {
+      // Skip route, distance, duration, average speed, cruising speed, meet, chat, info
+      for (let i = 0; i < 8; i++) {
         ctx.match = ['wizard:skip', 'skip'];
         await wizard.handleWizardAction(ctx);
       }

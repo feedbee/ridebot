@@ -418,6 +418,7 @@ export class RideService {
         : getRideRoutes(originalRide).map(route => route.label ? `${route.label} | ${route.url}` : route.url),
       dist: params.dist !== undefined ? params.dist : originalRide.distance?.toString(),
       duration: params.duration !== undefined ? params.duration : originalRide.duration?.toString(),
+      chat: params.chat === '-' ? undefined : (params.chat !== undefined ? params.chat : originalRide.chat),
       info: params.info !== undefined ? params.info : originalRide.additionalInfo
     };
     

@@ -45,6 +45,12 @@ export const config = {
     defaultTimezone: process.env.DEFAULT_TIMEZONE || null
   },
   routeProviders: {
+    getgpx: {
+      domain: 'getgpx.link',
+      patterns: [
+        /^https?:\/\/getgpx\.link\/tracks\/[A-Za-z0-9_-]+\/?(?:[?#][^\s]*)?$/
+      ]
+    },
     strava: {
       domain: 'strava.com',
       patterns: [

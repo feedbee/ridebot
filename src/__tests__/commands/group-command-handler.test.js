@@ -173,13 +173,17 @@ describe.each(['en', 'ru'])('GroupCommandHandler (%s)', (language) => {
     });
 
     it('should attach group, post message, pin it, update messages, and reply success', async () => {
-      mockRideService.getRide.mockResolvedValue(makeRide());
+      mockRideService.getRide.mockResolvedValue(makeRide({ chat: 'https://t.me/coordination_chat' }));
 
       await handler.handleAttach(mockCtx);
 
       expect(mockRideService.updateRide).toHaveBeenCalledWith(RIDE_ID, { groupId: GROUP_ID });
       expect(mockRideMessagesService.createRideMessage).toHaveBeenCalledWith(
-        expect.objectContaining({ id: RIDE_ID, groupId: GROUP_ID }),
+        expect.objectContaining({
+          id: RIDE_ID,
+          groupId: GROUP_ID,
+          chat: 'https://t.me/coordination_chat'
+        }),
         mockCtx,
         null
       );
@@ -261,13 +265,20 @@ describe.each(['en', 'ru'])('GroupCommandHandler (%s)', (language) => {
     });
 
     it('should allow ride creator to detach', async () => {
-      mockRideService.getRideByGroupId.mockResolvedValue(makeRide({ groupId: GROUP_ID }));
+      mockRideService.getRideByGroupId.mockResolvedValue(makeRide({
+        groupId: GROUP_ID,
+        chat: 'https://t.me/coordination_chat'
+      }));
 
       await handler.handleDetach(mockCtx);
 
       expect(mockRideService.updateRide).toHaveBeenCalledWith(RIDE_ID, { groupId: null });
       expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalledWith(
-        expect.objectContaining({ id: RIDE_ID, groupId: null }),
+        expect.objectContaining({
+          id: RIDE_ID,
+          groupId: null,
+          chat: 'https://t.me/coordination_chat'
+        }),
         mockCtx
       );
       expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.group.detachSuccess'));

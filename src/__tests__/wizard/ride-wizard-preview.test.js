@@ -120,6 +120,7 @@ describe.each(['en', 'ru'])('RideWizard — Live Preview (%s)', (language) => {
           speedMax: 28,
           cruisingSpeedMin: 29,
           cruisingSpeedMax: 32,
+          chat: 'https://t.me/example_chat',
           additionalInfo: 'Bring lights',
           // extra wizard-only keys that should NOT appear in result
           chatId: 456,
@@ -142,6 +143,7 @@ describe.each(['en', 'ru'])('RideWizard — Live Preview (%s)', (language) => {
         speedMax: 28,
         cruisingSpeedMin: 29,
         cruisingSpeedMax: 32,
+        chat: 'https://t.me/example_chat',
         additionalInfo: 'Bring lights'
       });
     });
@@ -278,7 +280,7 @@ describe.each(['en', 'ru'])('RideWizard — Live Preview (%s)', (language) => {
       await wizard.handleWizardAction(ctx); // skip organizer
       ctx.message = { text: 'tomorrow at 6pm', message_id: 11 };
       await wizard.handleWizardInput(ctx); // date
-      for (let i = 0; i < 7; i++) {
+      for (let i = 0; i < 8; i++) {
         ctx.match = ['wizard:skip', 'skip'];
         await wizard.handleWizardAction(ctx);
       }
