@@ -103,23 +103,47 @@ describe('PublishRideCommandHandler', () => {
     );
     expect(html).not.toContain('<code>/shareride@ride_test_bot #ride123</code>.');
     expect(html).toContain('<h3>Announcement published in chats:</h3>');
-    expect(html).toContain('<ul><li>Forum &amp; Friends / Thread #17 ');
+    expect(html).toContain('<ul><li>✅ Forum &amp; Friends / Thread #17 ');
     expect(html).toContain('<a href="https://t.me/forum_friends/17/41">[1]</a>');
     expect(html).toContain('<a href="https://t.me/forum_friends/17/42">[2]</a>');
-    expect(html).toContain('<h3>Publish announcement to chats (last 5 publications):</h3>');
+    expect(html).toContain('<h3>Publish announcement to chats (last 5 chats):</h3>');
     expect(html).toContain('<ol><li>✅ <a href="https://t.me/forum_friends/17">Forum &amp; Friends / Thread #17</a></li>');
-    expect(html).toContain('<li><a href="https://t.me/road_chat/81">Road Chat</a></li></ol>');
+    expect(html).toContain('<li>❌ <a href="https://t.me/road_chat">Road Chat</a></li></ol>');
     expect(html.endsWith(
-      '<p>&#160;</p><p><i>Press a button below to publish the announcement in the selected chat. If the announcement is already there, the message will be duplicated.</i></p>'
+      '<p>&#160;</p><p><i>Press the numbered button below that matches the chat number in the list above to publish the announcement in that chat. If the announcement is already there, the message will be duplicated.</i></p>'
     )).toBe(true);
     expect(options.reply_markup.inline_keyboard).toEqual([
       [
-        expect.objectContaining({ text: '1', callback_data: 'ridepublish:ride123:-1001234567890:17' }),
-        expect.objectContaining({ text: '2', callback_data: 'ridepublish:ride123:-1009876543210:main' })
+        expect.objectContaining({ text: '✅ 1', callback_data: 'ridepublish:ride123:-1001234567890:17' }),
+        expect.objectContaining({ text: '❌ 2', callback_data: 'ridepublish:ride123:-1009876543210:main' })
       ],
       [expect.objectContaining({ text: '✖️ Close', callback_data: 'ridepublish:close' })]
     ]);
     expect(ctx.answerCallbackQuery).toHaveBeenCalledWith();
+  });
+
+  it.each([
+    [{ chatUsername: 'road_chat', messageId: 81 }, 'https://t.me/road_chat'],
+    [{ chatUsername: 'forum', messageThreadId: 17, messageId: 91 }, 'https://t.me/forum/17'],
+    [{ chatId: -1001234567890, messageThreadId: 17, messageId: 91 }, 'https://t.me/c/1234567890/17'],
+    [{ chatId: -1001234567890, chatInviteLink: 'https://t.me/+invite', messageId: 91 }, 'https://t.me/+invite'],
+    [{ chatId: -1001234567890, messageId: 91 }, null],
+    [{ chatId: -123, messageId: 91 }, null]
+  ])('links to the chat or topic without using the old announcement: %j', (destination, expected) => {
+    expect(handler.buildDestinationLink(destination)).toBe(expected);
+  });
+
+  it('uses the available private chat invite link from Telegram', async () => {
+    rideService.getRecentPublicationDestinations.mockResolvedValue([
+      { chatId: -1009876543210, messageId: 81, chatTitle: 'Private Chat' }
+    ]);
+    ctx.api.getChat.mockResolvedValue({ title: 'Private Chat', invite_link: 'https://t.me/+invite' });
+
+    await handler.handleMenu(ctx);
+
+    expect(ctx.replyWithRichMessage.mock.calls[0][0].html).toContain(
+      '❌ <a href="https://t.me/+invite">Private Chat</a>'
+    );
   });
 
   it('shows both empty states and only the close button when there is no publication history', async () => {
@@ -133,9 +157,9 @@ describe('PublishRideCommandHandler', () => {
     expect(ctx.reply).not.toHaveBeenCalled();
     expect(html).toContain('<h3>Announcement published in chats:</h3>');
     expect(html).toContain('<ul><li>This announcement has not been published anywhere yet.</li></ul>');
-    expect(html).toContain('<h3>Publish announcement to chats (last 5 publications):</h3>');
+    expect(html).toContain('<h3>Publish announcement to chats (last 5 chats):</h3>');
     expect(html).toContain('<ul><li>You have not published any announcements yet.</li></ul>');
-    expect(html).not.toContain('Press a button below');
+    expect(html).not.toContain('Press the numbered button');
     expect(keyboard).toEqual([
       [expect.objectContaining({ text: '✖️ Close', callback_data: 'ridepublish:close' })]
     ]);
@@ -209,7 +233,7 @@ describe('PublishRideCommandHandler', () => {
     expect(rideService.getRecentPublicationDestinations).toHaveBeenCalledTimes(2);
     const editedKeyboard = ctx.editMessageText.mock.calls[0][1].reply_markup.inline_keyboard;
     expect(editedKeyboard[0][0]).toEqual(expect.objectContaining({
-      text: '1',
+      text: '❌ 1',
       callback_data: 'ridepublish:ride123:-1009876543210:main'
     }));
   });
