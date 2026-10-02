@@ -120,6 +120,27 @@ describe('RideParticipationService', () => {
     expect(mockNotificationService.scheduleParticipationNotification).not.toHaveBeenCalled();
   });
 
+  it('returns participant_limit_reached without running side effects', async () => {
+    mockRideService.getRide.mockResolvedValue(ride);
+    mockRideService.setParticipation.mockResolvedValue({
+      success: false,
+      status: 'participant_limit_reached',
+      ride: null
+    });
+
+    const result = await service.changeParticipation({
+      rideId: 'ride-1',
+      participantProfile,
+      targetState: 'joined',
+      language: 'en',
+      api
+    });
+
+    expect(result).toEqual({ status: 'participant_limit_reached', targetState: 'joined' });
+    expect(mockNotificationService.scheduleParticipationNotification).not.toHaveBeenCalled();
+    expect(mockGroupManagementService.addParticipant).not.toHaveBeenCalled();
+  });
+
   it('schedules notification and adds participant to group on join', async () => {
     mockRideService.getRide.mockResolvedValue(ride);
     mockRideService.setParticipation.mockResolvedValue({

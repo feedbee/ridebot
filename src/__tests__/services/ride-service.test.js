@@ -244,6 +244,23 @@ describe('RideService', () => {
       expect(updatedRide.participation.joined).toHaveLength(1);
     });
 
+    it('does not exceed a positive participant limit', async () => {
+      const ride = await rideService.createRide({
+        ...testRide,
+        settings: { participantLimit: 1 }
+      });
+      const participant2 = { userId: 456, username: 'user2' };
+
+      await rideService.setParticipation(ride.id, testParticipant, 'joined');
+      const result = await rideService.setParticipation(ride.id, participant2, 'joined');
+
+      expect(result).toEqual(expect.objectContaining({
+        success: false,
+        status: 'participant_limit_reached'
+      }));
+      expect((await rideService.getRide(ride.id)).participation.joined).toHaveLength(1);
+    });
+
     it('should move participant between states', async () => {
       const ride = await rideService.createRide(testRide);
       
@@ -602,6 +619,7 @@ describe('RideService', () => {
       expect(result.ride.settings).toEqual({
         notifyParticipation: false,
         allowReposts: false,
+        participantLimit: 0,
         futureSetting: 'preserved'
       });
       expect(result.ride.updatedBy).toBe(502);

@@ -222,14 +222,13 @@ export class RideService {
    * @returns {Promise<Object>} - Success status and updated ride
    */
   async setParticipation(rideId, participantProfile, state) {
-    // Check if user is already in the desired state
-    const currentState = await this.storage.getParticipation(rideId, participantProfile.userId);
-    if (currentState === state) {
-      return { success: false, ride: null };
-    }
-
     const result = await this.storage.setParticipation(rideId, state, participantProfile);
-    return { success: true, ride: result.ride, previousState: currentState };
+    const success = result.status === 'changed';
+    return {
+      ...result,
+      success,
+      ride: success ? result.ride : null
+    };
   }
 
   /**

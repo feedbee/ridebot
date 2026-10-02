@@ -304,23 +304,26 @@ export class MongoDBStorage extends StorageInterface {
   }
 
   async setParticipation(rideId, state, participantProfile) {
-    const ride = await Ride.findById(rideId);
-    if (!ride) {
+    const currentRide = await Ride.findById(rideId);
+    if (!currentRide) {
       throw new Error('Ride not found');
     }
 
-    // Ensure participation structure exists
-    if (!ride.participation) {
-      ride.participation = { joined: [], thinking: [], skipped: [] };
+    const participation = currentRide.participation || { joined: [], thinking: [], skipped: [] };
+    const previousState = ['joined', 'thinking', 'skipped']
+      .find(candidate => participation[candidate].some(
+        participant => participant.userId === participantProfile.userId
+      )) || null;
+    if (previousState === state) {
+      return {
+        status: 'already_in_state',
+        ride: this.mapRideToInterface(currentRide),
+        previousState
+      };
     }
 
-    // Remove user from all states first
-    ride.participation.joined = ride.participation.joined.filter(p => p.userId !== participantProfile.userId);
-    ride.participation.thinking = ride.participation.thinking.filter(p => p.userId !== participantProfile.userId);
-    ride.participation.skipped = ride.participation.skipped.filter(p => p.userId !== participantProfile.userId);
-
-    // Add user to the specified state
     const participantData = {
+      _id: new mongoose.Types.ObjectId(),
       userId: participantProfile.userId,
       username: participantProfile.username,
       firstName: participantProfile.firstName || '',
@@ -328,9 +331,64 @@ export class MongoDBStorage extends StorageInterface {
       createdAt: new Date()
     };
 
-    ride.participation[state].push(participantData);
-    await ride.save();
-    return { ride: this.mapRideToInterface(ride) };
+    const filter = {
+      _id: rideId,
+      [`participation.${state}.userId`]: { $ne: participantProfile.userId }
+    };
+    if (state === 'joined') {
+      filter.$expr = {
+        $or: [
+          { $lte: [{ $ifNull: ['$settings.participantLimit', 0] }, 0] },
+          {
+            $lt: [
+              { $size: { $ifNull: ['$participation.joined', []] } },
+              { $ifNull: ['$settings.participantLimit', 0] }
+            ]
+          }
+        ]
+      };
+    }
+
+    const filteredParticipants = candidate => ({
+      $filter: {
+        input: { $ifNull: [`$participation.${candidate}`, []] },
+        as: 'participant',
+        cond: { $ne: ['$$participant.userId', participantProfile.userId] }
+      }
+    });
+    const nextParticipation = Object.fromEntries(
+      ['joined', 'thinking', 'skipped'].map(candidate => [
+        `participation.${candidate}`,
+        candidate === state
+          ? { $concatArrays: [filteredParticipants(candidate), [participantData]] }
+          : filteredParticipants(candidate)
+      ])
+    );
+
+    const updatedRide = await Ride.findOneAndUpdate(
+      filter,
+      [{ $set: nextParticipation }],
+      { new: true }
+    );
+    if (updatedRide) {
+      return {
+        status: 'changed',
+        ride: this.mapRideToInterface(updatedRide),
+        previousState
+      };
+    }
+
+    const unchangedRide = await Ride.findById(rideId);
+    if (!unchangedRide) throw new Error('Ride not found');
+    const currentState = ['joined', 'thinking', 'skipped']
+      .find(candidate => unchangedRide.participation?.[candidate]?.some(
+        participant => participant.userId === participantProfile.userId
+      )) || null;
+    return {
+      status: currentState === state ? 'already_in_state' : 'participant_limit_reached',
+      ride: this.mapRideToInterface(unchangedRide),
+      previousState: currentState
+    };
   }
 
   async getParticipation(rideId, userId) {

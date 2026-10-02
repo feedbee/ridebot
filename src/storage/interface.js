@@ -141,7 +141,7 @@ export class StorageInterface {
    * @param {string} rideId - Ride ID
    * @param {'joined'|'thinking'|'skipped'} state - Participation state
    * @param {Participant} participantProfile - Participant data
-   * @returns {Promise<{ride: Ride}>} - Updated ride
+   * @returns {Promise<{status: 'changed'|'already_in_state'|'participant_limit_reached', ride: Ride, previousState: 'joined'|'thinking'|'skipped'|null}>}
    */
   async setParticipation(rideId, state, participantProfile) {
     throw new Error('Not implemented');
