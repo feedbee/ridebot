@@ -166,6 +166,17 @@ describe('AiRideService', () => {
       );
     });
 
+    it('instructs AI to distinguish coordination chat from other links', async () => {
+      mockCreate.mockResolvedValue(makeResponse('{"title":"Ride","when":"tomorrow"}'));
+
+      await service.parseRideText('ride tomorrow');
+
+      const calledSystem = mockCreate.mock.calls[0][0].system;
+      expect(calledSystem).toContain('coordination chat');
+      expect(calledSystem).toContain('Do not map route links');
+      expect(calledSystem).toContain('arbitrary URLs');
+    });
+
     describe('dialog mode (dialogMessages option)', () => {
       it('sends numbered messages as combined user message', async () => {
         mockCreate.mockResolvedValue(

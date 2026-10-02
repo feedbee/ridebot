@@ -22,6 +22,11 @@ describe('parseTelegramChatLink', () => {
     'https://t.me/example_chat/123',
     'https://t.me/c/123456/7',
     'https://t.me/share',
+    'https://t.me/blog',
+    'https://t.me/faq',
+    'https://t.me/addtheme',
+    'https://t.me/confirmphone',
+    'https://t.me/message',
     'https://t.me/example_bot?start=payload',
     'tg://resolve?domain=example_chat&start=payload',
     'tg://user?id=123'
@@ -34,5 +39,11 @@ describe('parseTelegramChatLink', () => {
       link: null,
       error: 'tooLong'
     });
+  });
+
+  it('enforces the length limit after adding the canonical scheme', () => {
+    const input = `t.me/+${'a'.repeat(505)}`;
+    expect(input).toHaveLength(511);
+    expect(parseTelegramChatLink(input)).toEqual({ link: null, error: 'tooLong' });
   });
 });

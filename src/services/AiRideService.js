@@ -68,6 +68,9 @@ Use these exact field names (all optional except title and when):
   settings: optional object
   settings.notifyParticipation: boolean
 
+Set chat only when the user explicitly identifies a Telegram link as the ride's coordination chat or invite.
+Do not map route links, event links, or arbitrary URLs from notes to chat.
+
 Speed classification rules:
 - Explicit average wording ("average speed", "average moving speed", "avg speed", "средняя скорость", "средняя скорость движения") maps to speed.
 - Otherwise unqualified riding speed, pace, cruising speed, riding/holding wording (including "скорость", "темп группы", "едем", "держим") maps to cruisingSpeed.

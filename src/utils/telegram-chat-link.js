@@ -2,8 +2,10 @@ export const MAX_TELEGRAM_CHAT_LINK_LENGTH = 512;
 
 const TELEGRAM_WEB_HOSTS = new Set(['t.me', 'telegram.me', 'telegram.dog']);
 const NON_CHAT_PATHS = new Set([
-  'addemoji', 'addlist', 'addstickers', 'boost', 'contact', 'giftcode', 'invoice',
-  'iv', 'joinchat', 'login', 'proxy', 'setlanguage', 'share', 'socks'
+  'addemoji', 'addlist', 'addstickers', 'addtheme', 'api', 'apps', 'blog', 'boost',
+  'confirmphone', 'contact', 'faq', 'giftcode', 'invoice', 'iv', 'jobs', 'joinchat',
+  'login', 'message', 'press', 'privacy', 'protocol', 'proxy', 'schema', 'setlanguage',
+  'share', 'socks', 'tos', 'tour'
 ]);
 const CHAT_NAME_PATTERN = /^[A-Za-z0-9_]+$/;
 const INVITE_HASH_PATTERN = /^[A-Za-z0-9_-]+$/;
@@ -55,7 +57,7 @@ export function parseTelegramChatLink(input) {
     return { link: null, error: 'invalid' };
   }
 
-  return { link: `https://t.me/${segments.join('/')}`, error: null };
+  return finalizeLink(`https://t.me/${segments.join('/')}`);
 }
 
 /**
@@ -79,11 +81,24 @@ function parseDeepLink(value) {
   }
 
   if (action === 'resolve' && entries[0][0] === 'domain' && CHAT_NAME_PATTERN.test(entries[0][1])) {
-    return { link: `tg://resolve?domain=${encodeURIComponent(entries[0][1])}`, error: null };
+    return finalizeLink(`tg://resolve?domain=${encodeURIComponent(entries[0][1])}`);
   }
   if (action === 'join' && entries[0][0] === 'invite' && INVITE_HASH_PATTERN.test(entries[0][1])) {
-    return { link: `tg://join?invite=${encodeURIComponent(entries[0][1])}`, error: null };
+    return finalizeLink(`tg://join?invite=${encodeURIComponent(entries[0][1])}`);
   }
 
   return { link: null, error: 'invalid' };
+}
+
+/**
+ * Enforce the persistence limit on the canonical value.
+ *
+ * @param {string} link
+ * @returns {{link: string|null, error: 'tooLong'|null}}
+ */
+function finalizeLink(link) {
+  if (link.length > MAX_TELEGRAM_CHAT_LINK_LENGTH) {
+    return { link: null, error: 'tooLong' };
+  }
+  return { link, error: null };
 }
