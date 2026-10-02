@@ -191,6 +191,16 @@ export class MongoDBStorage extends StorageInterface {
     }
   }
 
+  async removeRideMessages(rideId, messages) {
+    const ride = await Ride.findByIdAndUpdate(
+      rideId,
+      { $pull: { messages: { $or: messages.map(({ chatId, messageId }) => ({ chatId, messageId })) } } },
+      { new: true }
+    );
+    if (!ride) throw new Error('Ride not found');
+    return this.mapRideToInterface(ride);
+  }
+
   async getRidesByCreator(userId, skip, limit) {
     const [rides, total] = await Promise.all([
       Ride.find({ createdBy: userId })

@@ -149,6 +149,16 @@ describe('MongoDBStorage', () => {
       expect(updated.messages[1].chatId).toBe(444444);
     });
 
+    test('should atomically remove selected ride messages', async () => {
+      const created = await storage.createRide(testRideWithMessages);
+      const retained = { messageId: 333333, chatId: 444444 };
+      await storage.updateRide(created.id, { messages: [...created.messages, retained] });
+
+      const updated = await storage.removeRideMessages(created.id, [created.messages[0]]);
+
+      expect(updated.messages).toEqual([expect.objectContaining(retained)]);
+    });
+
     test('should delete a ride', async () => {
       const created = await storage.createRide(testRide);
       const deleted = await storage.deleteRide(created.id);

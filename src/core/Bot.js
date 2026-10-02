@@ -18,6 +18,7 @@ import { PlannedRidesCommandHandler } from '../commands/PlannedRidesCommandHandl
 import { ListParticipantsCommandHandler } from '../commands/ListParticipantsCommandHandler.js';
 import { DuplicateRideCommandHandler } from '../commands/DuplicateRideCommandHandler.js';
 import { ShareRideCommandHandler } from '../commands/ShareRideCommandHandler.js';
+import { UnshareRideCommandHandler } from '../commands/UnshareRideCommandHandler.js';
 import { PublishRideCommandHandler } from '../commands/PublishRideCommandHandler.js';
 import { ResumeRideCommandHandler } from '../commands/ResumeRideCommandHandler.js';
 import { RideSettingsCommandHandler } from '../commands/RideSettingsCommandHandler.js';
@@ -102,6 +103,7 @@ export class Bot {
     const rideParticipationService = new RideParticipationService(rideService, notificationService, groupManagementService);
     const participationHandler = new ParticipationHandlers(rideService, messageFormatter, rideMessagesService, rideParticipationService);
     const shareRideHandler = new ShareRideCommandHandler(rideService, messageFormatter, rideMessagesService);
+    const unshareRideHandler = new UnshareRideCommandHandler(rideService, messageFormatter, rideMessagesService);
     const publishRideHandler = new PublishRideCommandHandler(rideService, messageFormatter, rideMessagesService);
     const groupHandler = new GroupCommandHandler(rideService, messageFormatter, rideMessagesService, groupManagementService);
     
@@ -129,6 +131,7 @@ export class Bot {
           { command: 'detach', descriptionKey: 'bot.commandDescriptions.detach', handler: (ctx) => groupHandler.handleDetach(ctx) },
         ],
         mixed: [
+          { command: 'unshareride', descriptionKey: 'bot.commandDescriptions.unshareride', handler: (ctx) => unshareRideHandler.handle(ctx) },
           { command: 'shareride', descriptionKey: 'bot.commandDescriptions.shareride', handler: async (ctx) => {
             // If no parameters provided in group chat, show a helpful message
             if (ctx.chat?.type !== 'private' && !ctx.match) {
@@ -163,6 +166,7 @@ export class Bot {
         { pattern: /^calendar:ics:(\w+)$/, handler: (ctx) => calendarHandler.handleIcsCallback(ctx) },
         { pattern: /^calendar:close$/, handler: (ctx) => calendarHandler.handleCloseCallback(ctx) },
         { pattern: /^delete:(\w+):(\w+)(?::(message|callback))?$/, handler: (ctx) => deleteRideHandler.handleConfirmation(ctx) },
+        { pattern: /^u:(c|x):(\w+):(a|s|m)(?::(-?\d+))?(?::(-?\d+))?$/, handler: (ctx) => unshareRideHandler.handleConfirmation(ctx) },
         { pattern: /^list:(\d+)$/, handler: (ctx) => listRidesHandler.handleCallback(ctx) },
         { pattern: /^list:close$/, handler: (ctx) => listRidesHandler.handleClose(ctx) },
         { pattern: /^planned:list:(\d+)$/, handler: (ctx) => plannedRidesHandler.handleCallback(ctx) },

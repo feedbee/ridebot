@@ -860,6 +860,70 @@ describe('Scenario Harness Integration', () => {
     });
   });
 
+  it('removes ride announcements from the current topic after private confirmation', async () => {
+    const harness = await createScenarioHarness();
+    const owner = { id: 78, first_name: 'Ann', username: 'ann' };
+    const privateChat = { id: owner.id, type: 'private' };
+    const publicChat = { id: -10078, type: 'supergroup', title: 'Rides' };
+
+    await harness.dispatchMessage({
+      text: '/newride\ntitle: Unshare Me\nwhen: tomorrow 07:00',
+      chat: privateChat,
+      from: owner
+    });
+    const [ride] = harness.listRides();
+
+    await harness.dispatchMessage({
+      text: `/shareride ${ride.id}`,
+      chat: publicChat,
+      from: owner,
+      message: {
+        message_id: 500,
+        message_thread_id: 9,
+        text: `/shareride ${ride.id}`,
+        chat: publicChat,
+        from: owner
+      }
+    });
+    const announcement = harness.getRide(ride.id).messages.find(message => !message.isForCreator);
+
+    await harness.dispatchMessage({
+      text: `/unshareride ${ride.id}`,
+      chat: publicChat,
+      from: owner,
+      message: {
+        message_id: 501,
+        message_thread_id: 9,
+        text: `/unshareride ${ride.id}`,
+        chat: publicChat,
+        from: owner
+      }
+    });
+    const confirmation = harness.outbox.replies.at(-1);
+    const confirmData = confirmation.options.reply_markup.inline_keyboard[0][0].callback_data;
+
+    await harness.dispatchCallback({
+      data: confirmData,
+      chat: privateChat,
+      from: owner,
+      message: {
+        message_id: confirmation.messageId,
+        text: confirmation.text,
+        chat: privateChat,
+        from: { id: 0, is_bot: true, username: 'testbot' }
+      }
+    });
+
+    expect(harness.getRide(ride.id).messages).toHaveLength(1);
+    expect(harness.outbox.deletes).toContainEqual({
+      chatId: announcement.chatId,
+      messageId: announcement.messageId
+    });
+    expect(harness.outbox.callbackAnswers).toContainEqual({
+      text: tr('commands.unshare.success', { count: 1 })
+    });
+  });
+
   it('returns a user-facing error when joining a non-existent ride', async () => {
     const harness = await createScenarioHarness();
     const chat = { id: 1200, type: 'private' };

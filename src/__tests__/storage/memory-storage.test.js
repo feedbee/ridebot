@@ -134,6 +134,26 @@ describe('MemoryStorage', () => {
         notifyParticipation: false
       });
     });
+
+    it('removes only selected ride messages from the current stored value', async () => {
+      const ride = await storage.createRide({
+        ...testRide,
+        messages: [
+          { chatId: -1, messageId: 1 },
+          { chatId: -1, messageId: 2 }
+        ]
+      });
+      await storage.updateRide(ride.id, {
+        messages: [...ride.messages, { chatId: -2, messageId: 3 }]
+      });
+
+      const updated = await storage.removeRideMessages(ride.id, [{ chatId: -1, messageId: 1 }]);
+
+      expect(updated.messages).toEqual([
+        expect.objectContaining({ chatId: -1, messageId: 2 }),
+        expect.objectContaining({ chatId: -2, messageId: 3 })
+      ]);
+    });
   });
 
   describe('User Persistence', () => {

@@ -15,7 +15,8 @@ describe('RideMessagesService', () => {
   beforeEach(() => {
     // Create mock ride service for extended tests
     mockRideService = {
-      updateRide: jest.fn()
+      updateRide: jest.fn(),
+      removeRideMessages: jest.fn()
     };
 
     // Create service instance
@@ -33,6 +34,18 @@ describe('RideMessagesService', () => {
   });
 
   describe('extractRideId', () => {
+    it('should extract a ride ID from a forwarded announcement replied to by a command', () => {
+      const result = rideMessagesService.extractRideId({
+        text: '/unshareride',
+        reply_to_message: {
+          text: '🎫 #Ride #forwarded123',
+          forward_origin: { type: 'channel', chat: { id: -100 }, message_id: 42 }
+        }
+      });
+
+      expect(result).toEqual({ rideId: 'forwarded123', error: null });
+    });
+
     // Test for extracting ride ID from command line with optional # symbol
     it('should extract ride ID from command line with optional # symbol', () => {
       // Test without #
@@ -255,6 +268,32 @@ describe('RideMessagesService', () => {
       
       expect(result.rideId).toBeNull();
       expect(result.error).toContain(tr(language, 'services.rideMessages.couldNotFindRideIdInMessage'));
+    });
+  });
+
+  describe('unshareRideMessages', () => {
+    it('removes deleted and missing messages from tracking but retains failures', async () => {
+      const messages = [
+        { chatId: -1, messageId: 1 },
+        { chatId: -1, messageId: 2 },
+        { chatId: -1, messageId: 3 }
+      ];
+      const ride = { id: 'ride1', messages };
+      const api = {
+        deleteMessage: jest.fn()
+          .mockResolvedValueOnce({})
+          .mockRejectedValueOnce({ description: 'Bad Request: message to delete not found' })
+          .mockRejectedValueOnce({ description: 'Forbidden: not enough rights' })
+      };
+      mockRideService.removeRideMessages.mockResolvedValue({ ...ride, messages: [messages[2]] });
+
+      const result = await rideMessagesService.unshareRideMessages(ride, api, messages);
+
+      expect(result).toEqual({ deletedCount: 1, unavailableCount: 1, failedCount: 1 });
+      expect(mockRideService.removeRideMessages).toHaveBeenCalledWith('ride1', [
+        { chatId: -1, messageId: 1 },
+        { chatId: -1, messageId: 2 }
+      ]);
     });
   });
 

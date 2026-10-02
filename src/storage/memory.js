@@ -108,6 +108,16 @@ export class MemoryStorage extends StorageInterface {
     return this.mapRideToInterface(ride);
   }
 
+  async removeRideMessages(rideId, messages) {
+    const ride = this.rides.get(rideId);
+    if (!ride) throw new Error('Ride not found');
+    const matches = new Set(messages.map(message => `${message.chatId}:${message.messageId}`));
+    ride.messages = (ride.messages || []).filter(message =>
+      !matches.has(`${message.chatId}:${message.messageId}`)
+    );
+    return this.mapRideToInterface(ride);
+  }
+
   async getRidesByCreator(userId, skip, limit) {
     const userRides = Array.from(this.rides.values())
       .filter(ride => ride.createdBy === userId)

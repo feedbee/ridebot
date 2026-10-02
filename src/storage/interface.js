@@ -122,6 +122,16 @@ export class StorageInterface {
     throw new Error('Not implemented');
   }
 
+  /**
+   * Atomically remove tracked messages by chat and message ID.
+   * @param {string} rideId
+   * @param {Array<Pick<RideMessage, 'chatId'|'messageId'>>} messages
+   * @returns {Promise<Ride>}
+   */
+  async removeRideMessages(rideId, messages) {
+    throw new Error('Not implemented');
+  }
+
 
   /**
    * Set user participation state for a ride

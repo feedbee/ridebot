@@ -98,6 +98,11 @@ export class RideService {
     return await this.storage.getRide(rideId);
   }
 
+  /** Atomically remove tracked messages without replacing concurrent additions. */
+  async removeRideMessages(rideId, messages) {
+    return await this.storage.removeRideMessages(rideId, messages);
+  }
+
   /**
    * Get a ride by its attached group ID
    * @param {number} groupId - Telegram chat ID

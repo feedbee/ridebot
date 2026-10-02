@@ -195,6 +195,10 @@ id: abc123 (or #abc123)
 
 <p><b>Important:</b> The bot needs to be added to the other chat before sharing. Bot needs to be chat admin in the other chat to use the short form of /shareride, but you can always use the full form /shareride@botname.</p>
 
+<h3>Removing Announcements</h3>
+
+<p>Use <code>/unshareride rideId</code> to remove your announcements everywhere from private chat, or only in the current topic from a group. Reply to an original or forwarded announcement with <code>/unshareride</code> to remove only that announcement. The ride creator may remove any repost.</p>
+
 <h3>📎 Attaching a Group to a Ride</h3>
 
 <p>Only the ride creator can attach a group:<br>1. Create a Telegram group and add the bot as admin (needs "Add Members" and "Ban Users" permissions)<br>2. Use /attach with the ride ID in the group chat: <code>/attach #abc123</code><br>The bot will rename the group to the ride title and date, post and pin the ride info, and automatically add/remove members as participants join or leave the ride.<br>One group can be attached to only one ride at a time.<br>To unlink the group, use /detach in the group chat.</p>
@@ -417,6 +421,14 @@ Click here to start a private chat: @botname
       deletedMessages: 'Deleted {count} message(s).',
       removedMessages: 'Removed {count} unavailable message(s).'
     },
+    unshare: {
+      confirmation: 'Remove {messages} announcement(s) from {chats} chat(s)?',
+      cancelled: 'Removal cancelled.',
+      success: 'Removed {count} announcement(s).',
+      partial: 'Partially removed: {removed}; failed: {failed}.',
+      nothingToDelete: 'No announcements available for you to remove.',
+      unrecognizedAnnouncement: 'This message is not a tracked ride announcement.'
+    },
     airide: {
       usageHint: 'Use /airide to create a ride in dialog mode.\nTo update an existing ride: /airide #rideId',
       sessionAlreadyActive: 'You already have an active AI ride session. Please confirm or cancel it first.',
@@ -609,6 +621,7 @@ Click here to start a private chat: @botname
       dupride: 'Duplicate an existing ride',
       resumeride: 'Resume a cancelled ride',
       shareride: 'Share a ride in a chat',
+      unshareride: 'Remove ride announcements',
       attach: 'Attach a Telegram group to a ride',
       detach: 'Detach the Telegram group from its ride',
       airide: 'Create or update a ride using AI',

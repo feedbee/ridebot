@@ -90,6 +90,7 @@ describe('Bot', () => {
       expect(bot.botConfig.commands.mixed).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ command: 'shareride' }),
+          expect.objectContaining({ command: 'unshareride' }),
         ])
       );
       expect(bot.botConfig.callbacks).toEqual(
@@ -101,6 +102,7 @@ describe('Bot', () => {
           expect.objectContaining({ pattern: /^calendar:ics:(\w+)$/ }),
           expect.objectContaining({ pattern: /^calendar:close$/ }),
           expect.objectContaining({ pattern: /^delete:(\w+):(\w+)(?::(message|callback))?$/ }),
+          expect.objectContaining({ pattern: /^u:(c|x):(\w+):(a|s|m)(?::(-?\d+))?(?::(-?\d+))?$/ }),
           expect.objectContaining({ pattern: /^rideowner:update:(\w+)$/ }),
           expect.objectContaining({ pattern: /^rideowner:duplicate:(\w+)$/ }),
           expect.objectContaining({ pattern: /^rideowner:delete:(\w+)$/ }),
