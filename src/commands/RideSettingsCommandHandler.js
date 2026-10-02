@@ -3,6 +3,7 @@ import { InlineKeyboard } from 'grammy';
 import { UserProfile } from '../models/UserProfile.js';
 import { escapeHtml } from '../utils/html-escape.js';
 import { SettingsService } from '../services/SettingsService.js';
+import { parseParticipantLimit } from '../utils/participant-limit.js';
 
 const BOOLEAN_SETTING_CALLBACK_KEYS = {
   np: 'notifyParticipation',
@@ -22,6 +23,8 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
   constructor(rideService, messageFormatter, rideMessagesService, settingsService) {
     super(rideService, messageFormatter, rideMessagesService);
     this.settingsService = settingsService;
+    /** @type {Map<number, {scope: 'user'|'ride', rideId?: string}>} */
+    this.pendingParticipantLimitInputs = new Map();
   }
 
   /**
@@ -169,6 +172,132 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
   }
 
   /**
+   * Prompt for a new user-default participant limit.
+   * @param {import('grammy').Context} ctx
+   * @returns {Promise<void>}
+   */
+  async handleUserParticipantLimitCallback(ctx) {
+    this.pendingParticipantLimitInputs.set(ctx.from.id, { scope: 'user' });
+    await ctx.answerCallbackQuery();
+    await this.replyWithParticipantLimitPrompt(ctx);
+  }
+
+  /**
+   * Prompt for a new participant limit on one ride.
+   * @param {import('grammy').Context} ctx
+   * @returns {Promise<void>}
+   */
+  async handleRideParticipantLimitCallback(ctx) {
+    const { ride, error } = await this.extractRideWithCreatorCheck(
+      ctx,
+      'commands.common.onlyCreatorAction',
+      'callback'
+    );
+    if (error) {
+      await ctx.answerCallbackQuery(error);
+      return;
+    }
+
+    this.pendingParticipantLimitInputs.set(ctx.from.id, {
+      scope: 'ride',
+      rideId: ride.id
+    });
+    await ctx.answerCallbackQuery();
+    await this.replyWithParticipantLimitPrompt(ctx);
+  }
+
+  /**
+   * Cancel the current participant-limit input flow.
+   * @param {import('grammy').Context} ctx
+   * @returns {Promise<void>}
+   */
+  async handleParticipantLimitCancel(ctx) {
+    this.pendingParticipantLimitInputs.delete(ctx.from.id);
+    await ctx.answerCallbackQuery(
+      this.translate(ctx, 'commands.settings.participantLimitCancelled')
+    );
+  }
+
+  /**
+   * Consume text while a participant-limit input flow is active.
+   * @param {import('grammy').Context} ctx
+   * @returns {Promise<boolean>} Whether the message belonged to this flow.
+   */
+  async handleTextInput(ctx) {
+    const pending = this.pendingParticipantLimitInputs.get(ctx.from.id);
+    if (!pending) return false;
+
+    const participantLimit = parseParticipantLimit(ctx.message?.text);
+    if (participantLimit === null) {
+      await ctx.reply(
+        this.translate(ctx, 'params.validation.participantLimitInvalid'),
+        { reply_markup: this.buildParticipantLimitCancelKeyboard(ctx) }
+      );
+      return true;
+    }
+
+    if (pending.scope === 'user') {
+      const updatedUser = await this.settingsService.updateUserRideDefaults(
+        UserProfile.fromTelegramUser(ctx.from),
+        { participantLimit }
+      );
+      this.pendingParticipantLimitInputs.delete(ctx.from.id);
+      await this.showUserSettings(ctx, 'reply', {
+        rideDefaults: updatedUser.settings.rideDefaults
+      });
+      return true;
+    }
+
+    const ride = await this.rideService.getRide(pending.rideId);
+    if (!ride) {
+      this.pendingParticipantLimitInputs.delete(ctx.from.id);
+      await ctx.reply(this.translate(ctx, 'commands.common.rideNotFoundById', {
+        id: pending.rideId
+      }));
+      return true;
+    }
+    if (!this.isRideCreator(ride, ctx.from.id)) {
+      this.pendingParticipantLimitInputs.delete(ctx.from.id);
+      await ctx.reply(this.translate(ctx, 'commands.common.onlyCreatorAction'));
+      return true;
+    }
+
+    const updatedRide = await this.rideService.updateRide(
+      ride.id,
+      { settings: { participantLimit } },
+      ctx.from.id
+    );
+    this.pendingParticipantLimitInputs.delete(ctx.from.id);
+    await this.updateRideMessage(updatedRide, ctx);
+    await this.showRideSettings(ctx, 'reply', updatedRide);
+    return true;
+  }
+
+  /**
+   * Send the localized numeric-input prompt.
+   * @param {import('grammy').Context} ctx
+   * @returns {Promise<void>}
+   */
+  async replyWithParticipantLimitPrompt(ctx) {
+    await ctx.reply(
+      this.translate(ctx, 'commands.settings.participantLimitPrompt'),
+      { reply_markup: this.buildParticipantLimitCancelKeyboard(ctx) }
+    );
+  }
+
+  /**
+   * Build the cancel keyboard shared by prompts and validation errors.
+   * @param {import('grammy').Context} ctx
+   * @returns {InlineKeyboard}
+   */
+  buildParticipantLimitCancelKeyboard(ctx) {
+    return new InlineKeyboard().text(
+      this.translate(ctx, 'commands.settings.participantLimitCancel'),
+      'settings:participant-limit:cancel'
+    );
+  }
+
+  /**
    * Close the current settings interface.
    *
    * @param {import('grammy').Context} ctx
@@ -250,7 +379,8 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
           ctx,
           'commands.settings.allowRepostsLabel',
           defaults.allowReposts
-        )
+        ),
+        this.buildParticipantLimitSettingRow(ctx, defaults.participantLimit)
       ]),
       `<footer>${this.translate(ctx, 'commands.settings.userHint')}</footer>`,
       '<hr/>',
@@ -284,6 +414,11 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
           disableKey: 'commands.settings.disableReposts'
         }),
         `settings:user:bool:repost:${defaults.allowReposts ? 'off' : 'on'}`
+      )
+      .row()
+      .text(
+        this.translate(ctx, 'commands.settings.changeParticipantLimit'),
+        'settings:user:participant-limit'
       )
       .row()
       .text(
@@ -322,7 +457,8 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
           ctx,
           'commands.settings.allowRepostsLabel',
           settings.allowReposts
-        )
+        ),
+        this.buildParticipantLimitSettingRow(ctx, settings.participantLimit)
       ]),
       `<footer>${this.translate(ctx, 'commands.settings.rideHint')}</footer>`
     ].join('');
@@ -350,6 +486,11 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
           disableKey: 'commands.settings.disableReposts'
         }),
         `settings:ride:bool:repost:${settings.allowReposts ? 'off' : 'on'}:${rideId}`
+      )
+      .row()
+      .text(
+        this.translate(ctx, 'commands.settings.changeParticipantLimit'),
+        `settings:ride:participant-limit:${rideId}`
       )
       .row()
       .text(
@@ -387,6 +528,21 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
     return {
       label: this.translate(ctx, labelKey),
       value: valueLabel
+    };
+  }
+
+  /**
+   * Build a participant-limit row for a settings table.
+   * @param {import('grammy').Context} ctx
+   * @param {number|undefined} participantLimit
+   * @returns {{label: string, value: string}}
+   */
+  buildParticipantLimitSettingRow(ctx, participantLimit) {
+    return {
+      label: this.translate(ctx, 'commands.settings.participantLimitLabel'),
+      value: participantLimit > 0
+        ? participantLimit.toString()
+        : this.translate(ctx, 'commands.settings.participantLimitUnlimited')
     };
   }
 

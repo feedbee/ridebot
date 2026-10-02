@@ -108,7 +108,8 @@ describe.each(['en', 'ru'])('DuplicateRideCommandHandler (%s)', (language) => {
           meetingPoint: 'Test Location',
           settings: {
             notifyParticipation: false,
-            allowReposts: false
+            allowReposts: false,
+            participantLimit: 0
           }
         }),
         'message'

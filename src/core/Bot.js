@@ -151,6 +151,7 @@ export class Bot {
         settings: (ctx) => rideSettingsHandler.handleMainMenu(ctx),
         help: (ctx) => helpHandler.handle(ctx)
       },
+      settingsTextInput: (ctx) => rideSettingsHandler.handleTextInput(ctx),
       callbacks: [
         { pattern: /^main:newride$/, handler: (ctx) => newRideHandler.handleInlineMenu(ctx) },
         { pattern: /^main:airide$/, handler: (ctx) => this.aiRideHandler.handleInlineMenu(ctx) },
@@ -184,6 +185,9 @@ export class Bot {
         { pattern: /^settings:user:bool:(\w+):(on|off)$/, handler: (ctx) => rideSettingsHandler.handleUserBooleanCallback(ctx) },
         { pattern: /^settings:user:notification-level:(\w+)$/, handler: (ctx) => rideSettingsHandler.handleUserNotificationLevelCallback(ctx) },
         { pattern: /^settings:ride:bool:(\w+):(on|off):(\w+)$/, handler: (ctx) => rideSettingsHandler.handleRideBooleanCallback(ctx) },
+        { pattern: /^settings:user:participant-limit$/, handler: (ctx) => rideSettingsHandler.handleUserParticipantLimitCallback(ctx) },
+        { pattern: /^settings:ride:participant-limit:(\w+)$/, handler: (ctx) => rideSettingsHandler.handleRideParticipantLimitCallback(ctx) },
+        { pattern: /^settings:participant-limit:cancel$/, handler: (ctx) => rideSettingsHandler.handleParticipantLimitCancel(ctx) },
         { pattern: /^settings:close$/, handler: (ctx) => rideSettingsHandler.handleClose(ctx) },
         { pattern: /^wizard:(\w+)(?::(.*))?$/, handler: (ctx) => this.wizard.handleWizardAction(ctx) },
         { pattern: /^airide:(confirm|cancel):(\d+:\d+)$/, handler: (ctx) => this.aiRideHandler.handleCallback(ctx) },
@@ -220,6 +224,8 @@ export class Bot {
         await mainMenuHandler(ctx);
         return;
       }
+
+      if (await this.botConfig.settingsTextInput(ctx)) return;
 
       await this.wizard.handleWizardInput(ctx);
       await this.aiRideHandler.handleTextInput(ctx);

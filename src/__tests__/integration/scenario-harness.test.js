@@ -1103,6 +1103,92 @@ describe('Scenario Harness Integration', () => {
     );
   });
 
+  it('configures a participant limit, rejects overflow, and restores joining after an increase', async () => {
+    const harness = await createScenarioHarness();
+    const owner = { id: 142, first_name: 'Alex', username: 'alex_limit' };
+    const guestOne = { id: 177, first_name: 'Sam', username: 'sam_limit' };
+    const guestTwo = { id: 178, first_name: 'Mia', username: 'mia_limit' };
+    const chat = { id: owner.id, type: 'private' };
+
+    await harness.dispatchMessage({ text: '/settings', chat, from: owner });
+    const settingsMessage = harness.outbox.replies.at(-1);
+    await harness.dispatchCallback({
+      data: 'settings:user:participant-limit',
+      chat,
+      from: owner,
+      message: {
+        message_id: settingsMessage.messageId,
+        text: settingsMessage.text,
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' }
+      }
+    });
+    await harness.dispatchMessage({ text: '2', chat, from: owner });
+
+    expect(harness.storage.users.get(owner.id).settings.rideDefaults.participantLimit).toBe(2);
+
+    await harness.dispatchMessage({
+      text: '/newride\ntitle: Limited Ride\nwhen: tomorrow 11:00\nsettings.notifyParticipation: no',
+      chat,
+      from: owner
+    });
+    const [ride] = harness.listRides();
+    expect(ride.settings.participantLimit).toBe(2);
+    const trackedMessage = ride.messages[0];
+    const trackedReply = harness.outbox.replies.find(message => message.messageId === trackedMessage.messageId);
+    expect(trackedReply.richMessage?.html).toContain(`${tr('formatter.labels.participantLimit')}: 2<br>`);
+
+    for (const guest of [guestOne, guestTwo]) {
+      await harness.dispatchCallback({
+        data: `join:${ride.id}`,
+        chat,
+        from: guest,
+        message: {
+          message_id: trackedMessage.messageId,
+          text: trackedReply.text,
+          chat,
+          from: { id: 0, is_bot: true, username: 'testbot' }
+        }
+      });
+    }
+
+    expect(harness.getRide(ride.id).participation.joined).toHaveLength(2);
+    expect(harness.outbox.callbackAnswers).toContainEqual({
+      text: tr('commands.participation.participantLimitReached')
+    });
+
+    await harness.dispatchCallback({
+      data: `settings:ride:participant-limit:${ride.id}`,
+      chat,
+      from: owner,
+      message: {
+        message_id: trackedMessage.messageId,
+        text: trackedReply.text,
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' }
+      }
+    });
+    await harness.dispatchMessage({ text: '3', chat, from: owner });
+
+    expect(harness.getRide(ride.id).settings.participantLimit).toBe(3);
+    expect(harness.outbox.edits.some(edit => edit.text.includes(
+      `${tr('formatter.labels.participantLimit')}: 3<br>`
+    ))).toBe(true);
+
+    await harness.dispatchCallback({
+      data: `join:${ride.id}`,
+      chat,
+      from: guestTwo,
+      message: {
+        message_id: trackedMessage.messageId,
+        text: trackedReply.text,
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' }
+      }
+    });
+    expect(harness.getRide(ride.id).participation.joined).toHaveLength(3);
+  });
+
   it('closes a settings message without changing settings', async () => {
     const harness = await createScenarioHarness();
     const owner = { id: 42, first_name: 'Alex', last_name: 'Rider', username: 'alex' };

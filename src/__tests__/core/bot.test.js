@@ -115,6 +115,9 @@ describe('Bot', () => {
           expect.objectContaining({ pattern: /^ridepublish:close$/ }),
           expect.objectContaining({ pattern: /^settings:user:bool:(\w+):(on|off)$/ }),
           expect.objectContaining({ pattern: /^settings:ride:bool:(\w+):(on|off):(\w+)$/ }),
+          expect.objectContaining({ pattern: /^settings:user:participant-limit$/ }),
+          expect.objectContaining({ pattern: /^settings:ride:participant-limit:(\w+)$/ }),
+          expect.objectContaining({ pattern: /^settings:participant-limit:cancel$/ }),
           expect.objectContaining({ pattern: /^wizard:(\w+)(?::(.*))?$/ }),
         ])
       );

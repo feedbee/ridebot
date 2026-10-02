@@ -10,19 +10,19 @@
 
 ## Tasks
 
-- [ ] Add the setting contract, default, schema, strict parser, and create/update text support.
+- [x] Add the setting contract, default, schema, strict parser, and create/update text support.
   - Acceptance: only canonical `0`–`1000` inputs are accepted; snapshots preserve the value.
   - Verify: settings, field-processor, storage, and ride-service unit tests.
-- [ ] Enforce the limit in participation storage and service flows.
+- [x] Enforce the limit in participation storage and service flows.
   - Acceptance: full rides reject joins without losing the prior state or running side effects; concurrent last-place attempts cannot overfill.
   - Verify: memory storage and participation service tests; Mongo contract tests added but not run by default.
-- [ ] Render and localize the limit and rejection outcome.
+- [x] Render and localize the limit and rejection outcome.
   - Acceptance: positive limits appear above `Joined`; zero is omitted; full joins receive the approved callback text.
   - Verify: formatter and participation-handler tests in both languages.
-- [ ] Add user-default and ride-specific numeric settings input.
+- [x] Add user-default and ride-specific numeric settings input.
   - Acceptance: prompt, validation retry, cancellation, ownership recheck, persistence, and ride-message refresh work through bot routing.
   - Verify: settings-handler, bot-routing, and scenario tests.
-- [ ] Run review and regression verification.
+- [x] Run review and regression verification.
   - Acceptance: implementation matches the approved spec and has no unrelated changes.
   - Verify: `./run-tests.sh --mode basic` and multi-axis code review.
 

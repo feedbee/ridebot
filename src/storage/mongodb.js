@@ -39,7 +39,12 @@ const routeSchema = new mongoose.Schema({
 const rideSettingsSchema = new mongoose.Schema({
   notifyParticipation: { type: Boolean },
   allowReposts: { type: Boolean },
-  participantLimit: { type: Number, min: 0, max: 1000 }
+  participantLimit: {
+    type: Number,
+    min: 0,
+    max: 1000,
+    validate: Number.isInteger
+  }
 }, { _id: false });
 
 const rideSchema = new mongoose.Schema({
