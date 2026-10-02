@@ -605,7 +605,7 @@ describe.each(['en', 'ru'])('AiRideCommandHandler (%s)', (language) => {
     });
 
     it('update mode: confirm uses existing ride date when params has no when', async () => {
-      const existingDate = new Date('2026-04-12T09:00:00Z');
+      const existingDate = new Date('2099-04-12T09:00:00Z');
       const existingRide = { id: 'abc123', createdBy: 42, title: 'Old Ride', date: existingDate };
       mockRideService.updateRideFromParams.mockResolvedValue({ ride: { id: 'abc123' }, error: null });
       handler.states.set('42:100', {
@@ -623,6 +623,24 @@ describe.each(['en', 'ru'])('AiRideCommandHandler (%s)', (language) => {
         expect.stringContaining(language === 'ru' ? 'дата' : 'date')
       );
       expect(mockRideService.updateRideFromParams).toHaveBeenCalled();
+    });
+
+    it('update mode: archived ride requires an explicit new date', async () => {
+      const existingRide = {
+        id: 'abc123', createdBy: 42, title: 'Old Ride',
+        date: new Date(Date.now() - 60 * 60 * 1000)
+      };
+      handler.states.set('42:100', {
+        mode: 'update', rideId: 'abc123', ride: existingRide,
+        userMessages: ['speed 25'], messageCount: 1,
+        lastParams: { speed: '25' }, previewMessageId: 55, botMessageIds: [55]
+      });
+      mockCtx.match = ['airide:confirm:42:100', 'confirm', '42:100'];
+
+      await handler.handleCallback(mockCtx);
+
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('services.ride.archivedUpdate', { hours: 1 }));
+      expect(mockRideService.updateRideFromParams).not.toHaveBeenCalled();
     });
   });
 

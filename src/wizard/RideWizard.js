@@ -6,6 +6,7 @@ import { DateParser } from '../utils/date-parser.js';
 import { getFieldConfig, FieldType, buildRideDataFromWizard } from './wizardFieldConfig.js';
 import { t } from '../i18n/index.js';
 import { UserProfile } from '../models/UserProfile.js';
+import { RIDE_ARCHIVE_AFTER_HOURS, isRideArchived } from '../services/ride-lifecycle.js';
 
 export class RideWizard {
   /**
@@ -101,6 +102,7 @@ export class RideWizard {
       },
       isUpdate: prefillData?.isUpdate || false,  // Flag to indicate if this is an update
       originalRideId: prefillData?.originalRideId, // Store original ride ID for updates
+      requiresReschedule: Boolean(prefillData?.isUpdate && isRideArchived({ date: prefillData.datetime })),
       responseMode,
       errorMessageIds: [], // Track error message IDs
       primaryMessageId: null, // Track the primary wizard message ID
@@ -174,6 +176,12 @@ export class RideWizard {
           break;
 
         case 'keep':
+          if (state.step === 'date' && state.requiresReschedule) {
+            await ctx.answerCallbackQuery(this.translate(ctx, 'wizard.messages.archivedDateRequired', {
+              hours: RIDE_ARCHIVE_AFTER_HOURS
+            }));
+            return;
+          }
           // Move to the next step using field configuration
           const keepFieldConfig = getFieldConfig(state.step, ctx.lang);
           if (keepFieldConfig && keepFieldConfig.nextStep) {
@@ -234,10 +242,19 @@ export class RideWizard {
           if (!rideData.category) {
             rideData.category = DEFAULT_CATEGORY;
           }
-          
+
           if (state.isUpdate) {
             // Update existing ride
-            const updatedRide = await this.storage.updateRide(state.data.originalRideId, rideData);
+            const { ride: updatedRide, error } = await this.rideService.updateRideContent(
+              state.data.originalRideId,
+              rideData,
+              ctx.from.id,
+              { language: this.getContextLanguage(ctx) }
+            );
+            if (error) {
+              await this.sendStatus(ctx, state.responseMode, error, true);
+              return;
+            }
             await this.updateRideMessage(updatedRide, ctx);
             // Delete preview message
             await this._deletePreviewMessage(ctx, state);
@@ -252,7 +269,15 @@ export class RideWizard {
           } else {
             // Create new ride
             const creatorProfile = UserProfile.fromTelegramUser(ctx.from);
-            const ride = await this.rideService.createRide(rideData, creatorProfile);
+            const { ride, error } = await this.rideService.createRideContent(
+              rideData,
+              creatorProfile,
+              { language: this.getContextLanguage(ctx) }
+            );
+            if (error) {
+              await this.sendStatus(ctx, state.responseMode, error, true);
+              return;
+            }
 
             // Delete preview message and the wizard message before creating the ride message
             await this._deletePreviewMessage(ctx, state);
@@ -340,6 +365,10 @@ export class RideWizard {
         
         // Set the value(s)
         this.setFieldValue(state, fieldConfig, validationResult.value);
+
+        if (state.isUpdate && fieldConfig.dataKey === 'datetime') {
+          state.requiresReschedule = false;
+        }
 
         if (!state.isUpdate && fieldConfig.dataKey === 'organizer') {
           state.data.organizer = this.rideService.resolveCreateOrganizer(

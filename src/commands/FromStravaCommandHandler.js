@@ -50,14 +50,30 @@ export class FromStravaCommandHandler extends BaseCommandHandler {
 
     if (existing) {
       // Update existing ride
-      const { updatedBy, ...fieldsToUpdate } = { ...rideData, updatedBy: ctx.from.id };
-      const updatedRide = await this.storage.updateRide(existing.id, { ...fieldsToUpdate, updatedBy });
+      const { ride: updatedRide, error } = await this.rideService.updateRideContent(
+        existing.id,
+        rideData,
+        ctx.from.id,
+        { language: ctx.lang }
+      );
+      if (error) {
+        await ctx.reply(error);
+        return;
+      }
       await this.updateRideMessage(updatedRide, ctx);
       await ctx.reply(this.translate(ctx, 'commands.fromStrava.updated'));
     } else {
       // Create new ride
       const creatorProfile = UserProfile.fromTelegramUser(ctx.from);
-      const newRide = await this.rideService.createRide(rideData, creatorProfile);
+      const { ride: newRide, error } = await this.rideService.createRideContent(
+        rideData,
+        creatorProfile,
+        { language: ctx.lang }
+      );
+      if (error) {
+        await ctx.reply(error);
+        return;
+      }
       await this.rideMessagesService.createRideMessage(newRide, ctx);
       await ctx.reply(this.translate(ctx, 'commands.fromStrava.created'));
     }

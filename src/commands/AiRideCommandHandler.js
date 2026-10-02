@@ -7,6 +7,7 @@ import { parseDuration } from '../utils/duration-parser.js';
 import { RouteParser } from '../utils/route-parser.js';
 import { getRideRoutes, parseRouteEntries } from '../utils/route-links.js';
 import { UserProfile } from '../models/UserProfile.js';
+import { RIDE_ARCHIVE_AFTER_HOURS, isRideArchived } from '../services/ride-lifecycle.js';
 
 const MAX_DIALOG_MESSAGES = 10;
 
@@ -154,6 +155,13 @@ export class AiRideCommandHandler extends BaseCommandHandler {
       const existingRide = state.ride;
       const hasTitle = params.title || existingRide?.title;
       const hasWhen = params.when || existingRide?.date;
+
+      if (state.mode === 'update' && isRideArchived(existingRide) && !params.when) {
+        await ctx.answerCallbackQuery(this.translate(ctx, 'services.ride.archivedUpdate', {
+          hours: RIDE_ARCHIVE_AFTER_HOURS
+        }));
+        return;
+      }
 
       if (!hasTitle || !hasWhen) {
         const missing = [

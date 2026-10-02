@@ -1,5 +1,6 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
 import { UserProfile } from '../models/UserProfile.js';
+import { RIDE_ARCHIVE_AFTER_HOURS } from '../services/ride-lifecycle.js';
 
 /**
  * Handler for join/thinking/skip ride callbacks
@@ -60,6 +61,13 @@ export class ParticipationHandlers extends BaseCommandHandler {
 
       if (result.status === 'ride_not_found') {
         await ctx.answerCallbackQuery(this.translate(ctx, 'commands.participation.rideNotFound'));
+        return;
+      }
+
+      if (result.status === 'ride_archived') {
+        await ctx.answerCallbackQuery(this.translate(ctx, 'commands.participation.rideArchived', {
+          hours: RIDE_ARCHIVE_AFTER_HOURS
+        }));
         return;
       }
 

@@ -287,7 +287,8 @@ Click here to start a private chat: @botname
       threadLabel: 'Thread',
       destinationExpired: 'This destination is no longer available in your recent list.',
       unknownChat: 'Unknown chat',
-      privateOnly: 'This menu is available only in a private chat with the bot.'
+      privateOnly: 'This menu is available only in a private chat with the bot.',
+      rideArchived: 'This ride is archived: it started at least {hours} hour(s) ago and can no longer be published.'
     },
     settings: {
       userTitle: 'Default settings for new rides',
@@ -356,6 +357,7 @@ Click here to start a private chat: @botname
       invalidRideIdUsage: 'Please provide a valid ride ID. Usage: /shareride rideID',
       onlyCreatorRepost: 'Only the ride creator can repost this ride.',
       cannotRepostCancelled: 'Cannot repost a cancelled ride.',
+      rideArchived: 'This ride is archived: it started at least {hours} hour(s) ago and can no longer be published.',
       alreadyPostedInChat: 'This ride is already posted in this chat{topicSuffix}.',
       announcementLimitCleanupFailed: 'The announcement limit for this chat or topic has been reached, and the oldest announcement could not be removed. The new announcement was not published.',
       topicSuffix: ' topic',
@@ -371,6 +373,7 @@ Click here to start a private chat: @botname
       skippedSuccess: 'You have passed on this ride',
       rideNotFound: 'Ride not found',
       rideCancelled: 'This ride has been cancelled',
+      rideArchived: 'This ride is archived: it started at least {hours} hour(s) ago. Participation is closed.',
       updatedButMessageFailed: 'Your participation was updated, but message updates failed',
       genericError: 'An error occurred',
       alreadyInState: 'You are already {state} for this ride',
@@ -387,6 +390,7 @@ Click here to start a private chat: @botname
     },
     stateChange: {
       onlyCreator: 'Only the ride creator can {action} this ride.',
+      rideArchived: 'This ride is archived: it started at least {hours} hour(s) ago and can no longer be {action}.',
       messageUpdateError: 'Ride has been {action}, but there was an error updating the ride message. You may need to create a new ride message.'
     },
     group: {
@@ -528,7 +532,8 @@ Click here to start a private chat: @botname
       duplicatedSuccessfully: 'Ride duplicated successfully!',
       createdSuccessfully: 'Ride created successfully!',
       errorWithMessage: 'Error: {message}',
-      currentValue: 'Current value'
+      currentValue: 'Current value',
+      archivedDateRequired: 'This ride is archived (it started at least {hours} hour(s) ago). Enter a new start time in the future before continuing.'
     },
     prompts: {
       title: '🚲 Please enter the ride title:',
@@ -563,6 +568,8 @@ Click here to start a private chat: @botname
       pleaseProvideTitleAndDate: 'Please provide at least title and date/time.',
       errorCreatingRide: 'An error occurred while creating the ride.',
       errorUpdatingRide: 'An error occurred while updating the ride.',
+      notFound: 'Ride not found.',
+      archivedUpdate: 'An archived ride (started at least {hours} hour(s) ago) cannot be changed without rescheduling it. First set a new start time in the future.',
       originalRideNotFound: 'Original ride not found'
     },
     rideMessages: {

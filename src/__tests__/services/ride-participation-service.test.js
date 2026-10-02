@@ -82,6 +82,28 @@ describe('RideParticipationService', () => {
     expect(mockRideService.setParticipation).not.toHaveBeenCalled();
   });
 
+  it('returns ride_archived before other participation checks and side effects', async () => {
+    const archivedRide = {
+      ...ride,
+      cancelled: true,
+      date: new Date(Date.now() - 60 * 60 * 1000)
+    };
+    mockRideService.getRide.mockResolvedValue(archivedRide);
+
+    const result = await service.changeParticipation({
+      rideId: 'ride-1',
+      participantProfile,
+      targetState: 'joined',
+      language: 'en',
+      api
+    });
+
+    expect(result).toEqual({ status: 'ride_archived', ride: archivedRide, targetState: 'joined' });
+    expect(mockRideService.setParticipation).not.toHaveBeenCalled();
+    expect(mockNotificationService.scheduleParticipationNotification).not.toHaveBeenCalled();
+    expect(mockGroupManagementService.addParticipant).not.toHaveBeenCalled();
+  });
+
   it('returns already_in_state when participation does not change', async () => {
     mockRideService.getRide.mockResolvedValue(ride);
     mockRideService.setParticipation.mockResolvedValue({ success: false, ride: null });

@@ -83,15 +83,24 @@ describe.each(['en', 'ru'])('RideWizard — Live Preview (%s)', (language) => {
       createRideMessage: jest.fn().mockResolvedValue(true),
       updateRideMessages: jest.fn().mockResolvedValue(true)
     };
-    wizard = new RideWizard(storage, {
+    const rideService = {
       createRide: jest.fn((data) => storage.createRide(data)),
+      createRideContent: jest.fn(async (data) => ({
+        ride: await rideService.createRide(data),
+        error: null
+      })),
+      updateRideContent: jest.fn(async (id, data) => ({
+        ride: await storage.updateRide(id, data),
+        error: null
+      })),
       resolveCreateOrganizer: jest.fn((organizer, profile) => {
         if (['я', 'me', 'myself'].includes(organizer?.trim().toLowerCase())) {
           return `${profile.firstName} ${profile.lastName} (@${profile.username})`;
         }
         return organizer || `${profile.firstName} ${profile.lastName} (@${profile.username})`;
       })
-    }, mockMessageFormatter, mockRideMessagesService);
+    };
+    wizard = new RideWizard(storage, rideService, mockMessageFormatter, mockRideMessagesService);
   });
 
   describe('buildPreviewRideObject', () => {

@@ -89,7 +89,15 @@ describe.each(['en', 'ru'])('RideWizard Edge Cases (%s)', (language) => {
           : (profile.username ? `@${profile.username}` : '');
       }),
       createRide: jest.fn((data) => storage.createRide(data)),
-      updateRide: jest.fn((id, data) => storage.updateRide(id, data))
+      createRideContent: jest.fn(async (data) => ({
+        ride: await mockRideService.createRide(data),
+        error: null
+      })),
+      updateRide: jest.fn((id, data) => storage.updateRide(id, data)),
+      updateRideContent: jest.fn(async (id, data) => ({
+        ride: await mockRideService.updateRide(id, data),
+        error: null
+      }))
     };
     mockMessageFormatter = {
       formatRidePreview: jest.fn().mockReturnValue('<preview>')

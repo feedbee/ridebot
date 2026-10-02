@@ -5,6 +5,7 @@ import { t } from '../i18n/index.js';
 import { getRideRoutes } from '../utils/route-links.js';
 import { UserProfile } from '../models/UserProfile.js';
 import { SettingsService } from './SettingsService.js';
+import { RIDE_ARCHIVE_AFTER_HOURS, isFutureRideDate, isRideArchived } from './ride-lifecycle.js';
 
 const SELF_ORGANIZER_REFERENCES = new Set([
   'i',
@@ -15,6 +16,12 @@ const SELF_ORGANIZER_REFERENCES = new Set([
   'я сама',
   'сам',
   'сама'
+]);
+
+const RIDE_CONTENT_FIELDS = new Set([
+  'title', 'category', 'organizer', 'date', 'meetingPoint', 'routes', 'routeLink',
+  'distance', 'duration', 'speedMin', 'speedMax', 'cruisingSpeedMin',
+  'cruisingSpeedMax', 'additionalInfo'
 ]);
 
 /**
@@ -62,6 +69,23 @@ export class RideService {
   }
 
   /**
+   * Create a user-supplied ride after validating its start time at save time.
+   * @param {Object} rideData
+   * @param {UserProfile|null} [creatorProfile]
+   * @param {{language?: string, now?: Date}} [options]
+   * @returns {Promise<{ride: Object|null, error: string|null}>}
+   */
+  async createRideContent(rideData, creatorProfile = null, options = {}) {
+    const operationNow = options.now ?? new Date();
+    if (!isFutureRideDate(rideData?.date, operationNow)) {
+      return { ride: null, error: this.translate(options.language, 'parsers.date.pastDate') };
+    }
+
+    const ride = await this.createRide(rideData, creatorProfile);
+    return { ride, error: null };
+  }
+
+  /**
    * Update an existing ride
    * @param {string} rideId - Ride ID
    * @param {Object} updates - Updates to apply
@@ -87,6 +111,41 @@ export class RideService {
       updatesToApply.updatedBy = userId;
     }
     return await this.storage.updateRide(rideId, updatesToApply);
+  }
+
+  /**
+   * Update user-editable ride content while enforcing lifecycle rules.
+   * Ride settings are administrative and remain editable after archival.
+   * @param {string} rideId
+   * @param {Object} updates
+   * @param {number|null} [userId]
+   * @param {{language?: string, now?: Date}} [options]
+   * @returns {Promise<{ride: Object|null, error: string|null}>}
+   */
+  async updateRideContent(rideId, updates, userId = null, options = {}) {
+    const existingRide = await this.storage.getRide(rideId);
+    if (!existingRide) {
+      return { ride: null, error: this.translate(options.language, 'services.ride.notFound') };
+    }
+
+    const operationNow = options.now ?? new Date();
+    const changesContent = Object.keys(updates).some(key => RIDE_CONTENT_FIELDS.has(key));
+    if (changesContent && isRideArchived(existingRide, operationNow)) {
+      const hasNewFutureDate = Object.hasOwn(updates, 'date') &&
+        new Date(updates.date).getTime() !== new Date(existingRide.date).getTime() &&
+        isFutureRideDate(updates.date, operationNow);
+      if (!hasNewFutureDate) {
+        return {
+          ride: null,
+          error: this.translate(options.language, 'services.ride.archivedUpdate', {
+            hours: RIDE_ARCHIVE_AFTER_HOURS
+          })
+        };
+      }
+    }
+
+    const ride = await this.updateRide(rideId, updates, userId);
+    return { ride, error: null };
   }
 
   /**
@@ -241,8 +300,7 @@ export class RideService {
       // Set organizer name - use provided value or default to creator's name
       rideData.organizer = this.resolveCreateOrganizer(rideData.organizer, creatorProfile, { language });
 
-      const ride = await this.createRide(rideData, creatorProfile);
-      return { ride, error: null };
+      return await this.createRideContent(rideData, creatorProfile, options);
     } catch (error) {
       console.error('Error creating ride:', error);
       return { ride: null, error: this.translate(language, 'services.ride.errorCreatingRide') };
@@ -319,8 +377,7 @@ export class RideService {
         return { ride, error: null };
       }
       
-      const ride = await this.updateRide(rideId, updates, userId);
-      return { ride, error: null };
+      return await this.updateRideContent(rideId, updates, userId, options);
     } catch (error) {
       console.error('Error updating ride:', error);
       return { ride: null, error: this.translate(language, 'services.ride.errorUpdatingRide') };

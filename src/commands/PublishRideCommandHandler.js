@@ -2,6 +2,7 @@ import { InlineKeyboard } from 'grammy';
 import { BaseCommandHandler } from './BaseCommandHandler.js';
 import { config } from '../config.js';
 import { escapeHtml } from '../utils/html-escape.js';
+import { RIDE_ARCHIVE_AFTER_HOURS, isRideArchived } from '../services/ride-lifecycle.js';
 
 const RECENT_DESTINATIONS_LIMIT = 5;
 
@@ -27,6 +28,12 @@ export class PublishRideCommandHandler extends BaseCommandHandler {
     );
     if (error) {
       await ctx.answerCallbackQuery(error);
+      return;
+    }
+    if (isRideArchived(ride)) {
+      await ctx.answerCallbackQuery(this.translate(ctx, 'commands.publish.rideArchived', {
+        hours: RIDE_ARCHIVE_AFTER_HOURS
+      }));
       return;
     }
     if (ride.cancelled) {
@@ -59,6 +66,12 @@ export class PublishRideCommandHandler extends BaseCommandHandler {
     const { ride, error } = await this.getRideById(ctx, rideId);
     if (error || !this.isRideCreator(ride, ctx.from.id)) {
       await ctx.answerCallbackQuery(error || this.translate(ctx, 'commands.common.onlyCreatorAction'));
+      return;
+    }
+    if (isRideArchived(ride)) {
+      await ctx.answerCallbackQuery(this.translate(ctx, 'commands.publish.rideArchived', {
+        hours: RIDE_ARCHIVE_AFTER_HOURS
+      }));
       return;
     }
     if (ride.cancelled) {

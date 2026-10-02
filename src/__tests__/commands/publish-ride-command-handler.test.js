@@ -151,6 +151,18 @@ describe('PublishRideCommandHandler', () => {
     expect(ctx.answerCallbackQuery).toHaveBeenCalledWith(expect.any(String));
   });
 
+  it('rejects opening the publication menu for an archived ride', async () => {
+    rideService.getRide.mockResolvedValue({
+      id: 'ride123', createdBy: 42, cancelled: false, messages: [],
+      date: new Date(Date.now() - 60 * 60 * 1000)
+    });
+
+    await handler.handleMenu(ctx);
+
+    expect(ctx.answerCallbackQuery).toHaveBeenCalledWith(expect.stringContaining('archived'));
+    expect(ctx.replyWithRichMessage).not.toHaveBeenCalled();
+  });
+
   it('returns menu access errors through the callback without sending a chat message', async () => {
     ctx.from.id = 99;
 
@@ -223,6 +235,19 @@ describe('PublishRideCommandHandler', () => {
     expect(rideService.getRide).not.toHaveBeenCalled();
     expect(rideMessagesService.createRideMessageInTarget).not.toHaveBeenCalled();
     expect(ctx.answerCallbackQuery).toHaveBeenCalledWith(expect.any(String));
+  });
+
+  it('rejects a stale destination callback for an archived ride before cleanup', async () => {
+    rideService.getRide.mockResolvedValue({
+      id: 'ride123', createdBy: 42, cancelled: false, messages: [],
+      date: new Date(Date.now() - 60 * 60 * 1000)
+    });
+    ctx.match = ['ridepublish:ride123:-1001234567890:17', 'ride123', '-1001234567890', '17'];
+
+    await handler.handlePublish(ctx);
+
+    expect(ctx.answerCallbackQuery).toHaveBeenCalledWith(expect.stringContaining('archived'));
+    expect(rideMessagesService.cleanupRideMessagesForScope).not.toHaveBeenCalled();
   });
 
   it('rejects a forged destination callback', async () => {

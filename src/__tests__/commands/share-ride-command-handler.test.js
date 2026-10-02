@@ -120,6 +120,20 @@ describe.each(['en', 'ru'])('ShareRideCommandHandler (%s)', (language) => {
       expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.share.cannotRepostCancelled'));
     });
 
+    it('blocks publication of an archived ride', async () => {
+      mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '123', error: null });
+      mockRideService.getRide.mockResolvedValue({
+        id: '123', createdBy: 789, cancelled: false, messages: [],
+        date: new Date(Date.now() - 60 * 60 * 1000)
+      });
+
+      await handler.handle(mockCtx);
+
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.share.rideArchived', { hours: 1 }));
+      expect(mockRideMessagesService.cleanupRideMessagesForScope).not.toHaveBeenCalled();
+      expect(mockRideMessagesService.createRideMessage).not.toHaveBeenCalled();
+    });
+
     it('allows another announcement in the same chat below the limit', async () => {
       mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '123', error: null });
       mockRideService.getRide.mockResolvedValue({
