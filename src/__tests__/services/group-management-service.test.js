@@ -23,6 +23,18 @@ describe('GroupManagementService', () => {
   });
 
   describe('addParticipant', () => {
+    it('does not interrupt participation when both invitation deliveries fail', async () => {
+      mockApi.sendMessage.mockRejectedValueOnce({ error_code: 403 })
+        .mockRejectedValueOnce(new Error('Creator unavailable'));
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        await expect(service.addParticipant(mockApi, GROUP_ID, USER_ID, 'en', 123)).resolves.toBeUndefined();
+        expect(consoleSpy).toHaveBeenCalled();
+      } finally {
+        consoleSpy.mockRestore();
+      }
+    });
+
     it('should unban then send invite link to user', async () => {
       await service.addParticipant(mockApi, GROUP_ID, USER_ID, 'en');
 

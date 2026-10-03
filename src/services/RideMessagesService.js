@@ -345,11 +345,12 @@ export class RideMessagesService {
       return { success: true, updatedCount: 0, removedCount: 0 };
     }
 
+    let updatedCount = 0;
+    let removedCount = 0;
+    let failedCount = 0;
+    let lastError;
     try {
       const participation = ride.participation || { joined: [], thinking: [], skipped: [] };
-      
-      let updatedCount = 0;
-      let removedCount = 0;
       const messagesToRemove = [];
       
       // Update all messages for this ride
@@ -400,6 +401,9 @@ export class RideMessagesService {
             // Mark this message for removal from the tracking array
             messagesToRemove.push(messageInfo);
             removedCount++;
+          } else {
+            failedCount++;
+            lastError = messageError.description || messageError.message || 'Unknown error';
           }
         }
       }
@@ -410,16 +414,17 @@ export class RideMessagesService {
       }
       
       return { 
-        success: true, 
+        success: failedCount === 0,
         updatedCount, 
-        removedCount 
+        removedCount,
+        ...(failedCount > 0 ? { failedCount, error: lastError } : {})
       };
     } catch (error) {
       console.error('Error updating ride messages:', error);
       return { 
         success: false, 
-        updatedCount: 0, 
-        removedCount: 0, 
+        updatedCount,
+        removedCount,
         error: error.message || 'Unknown error' 
       };
     }

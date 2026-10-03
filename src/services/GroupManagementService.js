@@ -54,7 +54,7 @@ export class GroupManagementService {
             this.translate(language, 'commands.group.inviteLinkForCreator', { link: invite.invite_link })
           );
         } catch (e) {
-          console.warning(`GroupManagementService: failed to notify creator ${creatorId} about invite for user ${userId}:`, e);
+          console.warn(`GroupManagementService: failed to notify creator ${creatorId} about invite for user ${userId}:`, e);
         }
         return;
       }

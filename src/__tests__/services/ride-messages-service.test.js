@@ -1303,7 +1303,7 @@ describe('RideMessagesService', () => {
       consoleWarnSpy.mockRestore();
     });
 
-    it('should not remove messages on non-recoverable errors', async () => {
+    it.each(['Network timeout', 'Too Many Requests: retry after 10'])('retains tracking and reports failed propagation (%s)', async description => {
       // Setup
       const mockRide = {
         id: 'ride123',
@@ -1316,7 +1316,7 @@ describe('RideMessagesService', () => {
       const mockCtx = {
         api: {
           editMessageText: jest.fn().mockRejectedValue({
-            description: 'Network timeout'
+            description
           })
         }
       };
@@ -1333,7 +1333,7 @@ describe('RideMessagesService', () => {
       const result = await rideMessagesService.updateRideMessages(mockRide, mockCtx);
 
       // Verify - message should not be removed for network errors
-      expect(result).toEqual({ success: true, updatedCount: 0, removedCount: 0 });
+      expect(result).toEqual({ success: false, updatedCount: 0, removedCount: 0, failedCount: 1, error: description });
       expect(mockRideService.removeRideMessages).not.toHaveBeenCalled();
 
       consoleWarnSpy.mockRestore();
