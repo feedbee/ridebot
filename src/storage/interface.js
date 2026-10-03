@@ -109,9 +109,9 @@ export class StorageInterface {
   }
 
   /**
-   * Update an existing ride
+   * Update an existing ride. Settings are field patches, not replacement snapshots.
    * @param {string} rideId
-   * @param {Partial<Omit<Ride, 'id' | 'createdAt'>>} updates
+   * @param {Partial<Omit<Ride, 'id' | 'createdAt' | 'settings'>> & {settings?: Partial<RideSettings>}} updates
    * @returns {Promise<Ride>}
    */
   async updateRide(rideId, updates) {
@@ -266,7 +266,7 @@ export class StorageInterface {
   }
 
   /**
-   * Create or update a persisted user record.
+   * Create or update a persisted user record. Settings and ride defaults are field patches.
    * @param {Partial<UserEntity> & { userId: number }} user
    * @param {{initializeRideDefaults?: RideSettings}} [options]
    * @returns {Promise<UserEntity>}

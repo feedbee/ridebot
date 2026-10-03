@@ -13,6 +13,7 @@ export class RideParticipationService {
     this.rideService = rideService;
     this.notificationService = notificationService;
     this.groupManagementService = groupManagementService;
+    /** @type {Map<string, Promise<Object>>} */
     this.participantOperations = new Map();
   }
 
@@ -25,6 +26,7 @@ export class RideParticipationService {
   async runParticipantOperation(rideId, userId, operation) {
     const key = `${rideId}:${userId}`;
     const previous = this.participantOperations.get(key) || Promise.resolve();
+    // The previous caller receives its error; the next action must still run.
     const pending = previous.catch(() => {}).then(operation);
     this.participantOperations.set(key, pending);
     try {
@@ -42,7 +44,7 @@ export class RideParticipationService {
    * @param {'joined'|'thinking'|'skipped'} params.targetState
    * @param {string} [params.language]
    * @param {import('grammy').Api} params.api
-   * @returns {Promise<{status: 'changed'|'ride_not_found'|'ride_archived'|'ride_cancelled'|'already_in_state'|'participant_limit_reached', ride?: Object, previousState?: string|null, targetState: string}>}
+   * @returns {Promise<{status: 'changed'|'ride_not_found'|'ride_archived'|'ride_cancelled'|'ride_changed'|'already_in_state'|'participant_limit_reached', ride?: Object, previousState?: string|null, targetState: string}>}
    */
   async changeParticipation(params) {
     return this.runParticipantOperation(params.rideId, params.participantProfile.userId,

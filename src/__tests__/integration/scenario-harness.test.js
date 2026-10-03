@@ -20,6 +20,36 @@ describe('Scenario Harness Integration', () => {
     jest.useRealTimers();
   });
 
+  it('preserves moderation and capacity when duplicating an own ride through commands', async () => {
+    const harness = await createScenarioHarness();
+    const owner = { id: 42, first_name: 'Owner' };
+    const guest = { id: 77, first_name: 'Guest' };
+    const chat = { id: owner.id, type: 'private' };
+    await harness.dispatchMessage({
+      text: '/newride\ntitle: Moderated Ride\nwhen: tomorrow 11:00\nsettings.requireParticipationApproval: yes\nsettings.participantLimit: 2',
+      chat, from: owner
+    });
+    const [original] = harness.listRides();
+    await harness.dispatchMessage({
+      text: `/dupride ${original.id}\nwhen: 2025-01-12T11:00:00Z`, chat, from: owner
+    });
+    const copy = harness.listRides().find(ride => ride.id !== original.id);
+    expect(copy.settings).toMatchObject({ requireParticipationApproval: true, participantLimit: 2 });
+    const announcement = harness.outbox.replies.find(reply => reply.messageId === copy.messages[0].messageId);
+    expect(announcement.options.reply_markup.inline_keyboard.flat()).toContainEqual(
+      expect.objectContaining({ callback_data: `apply:${copy.id}` })
+    );
+    await harness.dispatchCallback({
+      data: `join:${copy.id}`, chat, from: guest,
+      message: { message_id: announcement.messageId, chat, text: announcement.text,
+        from: { id: 0, is_bot: true, username: 'testbot' } }
+    });
+    expect(harness.getRide(copy.id).participation.thinking).toContainEqual(
+      expect.objectContaining({ userId: guest.id })
+    );
+    expect(harness.outbox.callbackAnswers.at(-1).text).toBe(tr('commands.participation.applicationSubmitted'));
+  });
+
   it('lists rides as a paginated Rich Message with ascending global numbering', async () => {
     const harness = await createScenarioHarness();
     const chat = { id: 42, type: 'private' };

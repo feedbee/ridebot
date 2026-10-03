@@ -32,11 +32,26 @@ it('keeps group membership consistent when leaving during an application accepta
     rideId: ride.id, participantProfile: profile, targetState: 'skipped', api: {}
   });
   // Allow the competing transition to run while invitation delivery is paused.
-  for (let index = 0; index < 20; index++) await Promise.resolve();
+  await new Promise(resolve => setImmediate(resolve));
   release();
   await Promise.all([accepted, leaving]);
   expect(await rides.storage.getParticipation(ride.id, 2)).toBe('skipped');
   expect(member).toBe(false);
+  expect(service.participantOperations.size).toBe(0);
+});
+
+it('continues queued participation actions after an earlier operation fails', async () => {
+  const rides = new RideService(new MemoryStorage());
+  const ride = await rides.createRide({ title: 'Ride', date: new Date('2099-01-01'), createdBy: 1 });
+  jest.spyOn(rides, 'getRide').mockRejectedValueOnce(new Error('Storage unavailable'));
+  const service = new RideParticipationService(rides);
+  const params = { rideId: ride.id, participantProfile: { userId: 2 }, targetState: 'joined', api: {} };
+  const failed = service.changeParticipation(params);
+  const next = service.changeParticipation(params);
+  await expect(failed).rejects.toThrow('Storage unavailable');
+  await expect(next).resolves.toMatchObject({ status: 'changed' });
+  expect(service.participantOperations.size).toBe(0);
+  jest.restoreAllMocks();
 });
 
 describe('RideParticipationService', () => {

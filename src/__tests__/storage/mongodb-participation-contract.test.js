@@ -2,7 +2,7 @@ import { jest } from '@jest/globals';
 import mongoose from 'mongoose';
 import { MongoDBStorage } from '../../storage/mongodb.js';
 
-describe('Mongo participation query contract without a database', () => {
+describe('Mongo storage query contracts without a database', () => {
   const Ride = mongoose.model('Ride');
   const profile = { userId: 2, firstName: '$title', lastName: '$$ROOT', username: 'user' };
   const ride = {

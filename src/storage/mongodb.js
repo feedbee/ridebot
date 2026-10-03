@@ -374,7 +374,7 @@ export class MongoDBStorage extends StorageInterface {
     const updatedRide = await Ride.findOneAndUpdate(
       filter,
       [{ $set: nextParticipation }],
-      { new: true, updatePipeline: true }
+      { returnDocument: 'after', updatePipeline: true }
     );
     if (updatedRide) {
       return {
@@ -447,7 +447,7 @@ export class MongoDBStorage extends StorageInterface {
     const ride = await Ride.findOneAndUpdate(
       filter,
       [{ $set: { participation: nextParticipation } }],
-      { new: true, updatePipeline: true }
+      { returnDocument: 'after', updatePipeline: true }
     );
     if (ride) {
       return { status: 'changed', ride: this.mapRideToInterface(ride), previousState: expectedState };

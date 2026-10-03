@@ -98,6 +98,13 @@ If a piece of logic would need to be reused from another command, callback, wiza
 
 If a handler starts making decisions like "when state changes from X to Y, also do Z", that logic should usually move into a service dedicated to that use case.
 
+## Concurrent Mutations
+
+- Ride `settings` and user `settings.rideDefaults` updates are patches. Storage must update individual supplied fields without replacing unrelated settings from an earlier snapshot.
+- Track announcements through `addRideMessage` and `removeRideMessages`. Publication, cleanup, and unsharing must not replace the complete `messages` array read before a Telegram request.
+- `RideParticipationService` serializes each ride/user pair through persistence and notification/group side effects. A failed operation releases its queue so later actions can continue. This ordering is local to one service instance in one bot process; multiple active bot processes need shared coordination for Telegram side effects. Mongo's conditional participation writes still enforce state and capacity atomically across processes.
+- Announcement propagation retains tracking for transient Telegram errors and returns `success: false` when any edit fails transiently. Missing or permanently inaccessible announcements are removed from tracking through the atomic removal operation.
+
 ## Current Refactoring Direction
 
 This rule is especially relevant for participation flows. The handler should translate Telegram input into a participation request and communicate the result back to the user. The service layer should own participation transition rules such as notifications and attached-group synchronization.

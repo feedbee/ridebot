@@ -337,7 +337,7 @@ export class RideMessagesService {
    * Update all messages for a ride across all chats
    * @param {Object} ride - Ride object
    * @param {import('grammy').Context} ctx - Grammy context
-   * @returns {Promise<{success: boolean, updatedCount: number, removedCount: number}>} - Result of the update operation
+   * @returns {Promise<{success: boolean, updatedCount: number, removedCount: number, failedCount?: number, error?: string}>} - Transient failures retain tracking and report unsuccessful propagation.
    */
   async updateRideMessages(ride, ctx) {
     // If no messages to update, return early
