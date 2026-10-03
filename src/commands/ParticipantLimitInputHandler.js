@@ -26,6 +26,7 @@ export class ParticipantLimitInputHandler extends BaseCommandHandler {
       scope: 'user',
       inputId: randomBytes(8).toString('hex'),
       messageIds: new Set(),
+      settingsMessageId: ctx.callbackQuery?.message?.message_id,
       ...inputScope
     };
     this.pendingParticipantLimitInputs.set(ctx.from.id, pending);
@@ -54,6 +55,7 @@ export class ParticipantLimitInputHandler extends BaseCommandHandler {
       scope: 'ride',
       inputId: randomBytes(8).toString('hex'),
       messageIds: new Set(),
+      settingsMessageId: ctx.callbackQuery?.message?.message_id,
       ...inputScope,
       rideId: ride.id
     };
@@ -112,9 +114,10 @@ export class ParticipantLimitInputHandler extends BaseCommandHandler {
         { participantLimit }
       );
       this.pendingParticipantLimitInputs.delete(ctx.from.id);
-      await this.settingsHandler.showUserSettings(ctx, 'reply', {
+      await this.settingsHandler.showUserSettings(ctx, 'edit', {
         rideDefaults: updatedUser.settings.rideDefaults
-      });
+      }, this.getSettingsMessageTarget(pending));
+      await this.cleanupParticipantLimitMessages(ctx, pending);
       return true;
     }
 
@@ -139,7 +142,8 @@ export class ParticipantLimitInputHandler extends BaseCommandHandler {
     );
     this.pendingParticipantLimitInputs.delete(ctx.from.id);
     const updateResult = await this.updateRideMessage(updatedRide, ctx);
-    await this.settingsHandler.showRideSettings(ctx, 'reply', updatedRide);
+    await this.settingsHandler.showRideSettings(ctx, 'edit', updatedRide, this.getSettingsMessageTarget(pending));
+    await this.cleanupParticipantLimitMessages(ctx, pending);
     if (!updateResult.success) {
       await ctx.reply(this.translate(ctx, 'commands.settings.rideUpdatedMessageFailed'));
     }
@@ -194,6 +198,17 @@ export class ParticipantLimitInputHandler extends BaseCommandHandler {
   }
 
   /**
+   * Identify the original settings message rather than the incoming numeric reply.
+   * @param {Object} pending
+   * @returns {{chatId: number|string, messageId: number}|null}
+   */
+  getSettingsMessageTarget(pending) {
+    return pending.settingsMessageId == null
+      ? null
+      : { chatId: pending.chatId, messageId: pending.settingsMessageId };
+  }
+
+  /**
    * Track only messages belonging to this numeric-input session.
    * @param {Object} pending
    * @param {Object|undefined} message
@@ -204,7 +219,7 @@ export class ParticipantLimitInputHandler extends BaseCommandHandler {
   }
 
   /**
-   * Delete the cancelled conversation, tolerating individual Telegram failures.
+   * Delete the finished conversation, tolerating individual Telegram failures.
    * @param {import('grammy').Context} ctx
    * @param {Object} pending
    * @returns {Promise<void>}

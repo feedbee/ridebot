@@ -22,10 +22,11 @@ export class SettingsPresenter extends BaseCommandHandler {
    *
    * @param {import('grammy').Context} ctx
    * @param {'reply'|'edit'} mode
-   * @param {Object|null} defaultsOverride
+   * @param {Object|null} settingsOverride
+   * @param {{chatId: number|string, messageId: number}|null} [target]
    * @returns {Promise<void>}
    */
-  async showUserSettings(ctx, mode, settingsOverride = null) {
+  async showUserSettings(ctx, mode, settingsOverride = null, target = null) {
     const [storedDefaults, storedLevel] = await Promise.all([
       this.settingsService.getUserRideDefaults(ctx.from.id),
       this.settingsService.getParticipationNotificationLevel(ctx.from.id)
@@ -39,7 +40,7 @@ export class SettingsPresenter extends BaseCommandHandler {
     };
 
     if (mode === 'edit') {
-      await this.editMessageTextIgnoringNotModified(ctx, richMessage, options);
+      await this.editMessageTextIgnoringNotModified(ctx, richMessage, options, target);
       return;
     }
 
@@ -52,9 +53,10 @@ export class SettingsPresenter extends BaseCommandHandler {
    * @param {import('grammy').Context} ctx
    * @param {'reply'|'edit'} mode
    * @param {Object} ride
+   * @param {{chatId: number|string, messageId: number}|null} [target]
    * @returns {Promise<void>}
    */
-  async showRideSettings(ctx, mode, ride) {
+  async showRideSettings(ctx, mode, ride, target = null) {
     const settings = SettingsService.getRideSettingsSnapshot(ride);
     const richMessage = { html: this.buildRideSettingsText(ctx, ride, settings) };
     const keyboard = this.buildRideSettingsKeyboard(ctx, ride.id, settings);
@@ -63,7 +65,7 @@ export class SettingsPresenter extends BaseCommandHandler {
     };
 
     if (mode === 'edit') {
-      await this.editMessageTextIgnoringNotModified(ctx, richMessage, options);
+      await this.editMessageTextIgnoringNotModified(ctx, richMessage, options, target);
       return;
     }
 
@@ -242,11 +244,16 @@ export class SettingsPresenter extends BaseCommandHandler {
    * @param {import('grammy').Context} ctx
    * @param {Object} richMessage
    * @param {Object} options
+   * @param {{chatId: number|string, messageId: number}|null} [target]
    * @returns {Promise<void>}
    */
-  async editMessageTextIgnoringNotModified(ctx, richMessage, options) {
+  async editMessageTextIgnoringNotModified(ctx, richMessage, options, target = null) {
     try {
-      await ctx.editMessageText(richMessage, options);
+      if (target) {
+        await ctx.api.editMessageText(target.chatId, target.messageId, richMessage, options);
+      } else {
+        await ctx.editMessageText(richMessage, options);
+      }
     } catch (error) {
       const isNotModifiedError = error?.error_code === 400
         && (
@@ -259,4 +266,5 @@ export class SettingsPresenter extends BaseCommandHandler {
       }
       throw error;
     }
-  }}
+  }
+}

@@ -240,18 +240,20 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
    * @param {import('grammy').Context} ctx
    * @param {'reply'|'edit'} mode
    * @param {Object|null} settingsOverride
+   * @param {{chatId: number|string, messageId: number}|null} [target]
    */
-  showUserSettings(ctx, mode, settingsOverride = null) {
-    return this.presenter.showUserSettings(ctx, mode, settingsOverride);
+  showUserSettings(ctx, mode, settingsOverride = null, target = null) {
+    return this.presenter.showUserSettings(ctx, mode, settingsOverride, target);
   }
 
   /** Render the settings interface.
    * @param {import('grammy').Context} ctx
    * @param {'reply'|'edit'} mode
    * @param {Object|null} ride
+   * @param {{chatId: number|string, messageId: number}|null} [target]
    */
-  showRideSettings(ctx, mode, ride) {
-    return this.presenter.showRideSettings(ctx, mode, ride);
+  showRideSettings(ctx, mode, ride, target = null) {
+    return this.presenter.showRideSettings(ctx, mode, ride, target);
   }
 
 }

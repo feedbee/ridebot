@@ -268,7 +268,7 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
         expect.objectContaining({ userId: 123 }),
         { participantLimit: 25 }
       );
-      expect(mockCtx.replyWithRichMessage).toHaveBeenCalledWith(
+      expect(mockCtx.editMessageText).toHaveBeenCalledWith(
         expect.objectContaining({ html: expect.stringContaining('<b>25</b>') }),
         expect.any(Object)
       );
@@ -454,6 +454,30 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
       expect(mockCtx.reply).toHaveBeenLastCalledWith(
         tr('commands.common.onlyCreatorAction')
       );
+    });
+
+    it.each(['user', 'ride'])('updates the existing %s settings message and cleans the successful dialog', async scope => {
+      mockCtx.api = { deleteMessage: jest.fn().mockResolvedValue(true), editMessageText: jest.fn().mockResolvedValue({}) };
+      mockCtx.callbackQuery = { message: { message_id: 9, chat: mockCtx.chat } };
+      mockCtx.reply.mockResolvedValueOnce({ message_id: 10 }).mockResolvedValueOnce({ message_id: 12 });
+      const ride = { id: '123', createdBy: 123, title: 'Ride', settings: { participantLimit: 0 } };
+      mockRideService.getRide.mockResolvedValue(ride);
+      mockRideService.updateRide.mockResolvedValue({ ...ride, settings: { participantLimit: 5 } });
+      mockSettingsService.updateUserRideDefaults.mockResolvedValue({ settings: { rideDefaults: { participantLimit: 5 } } });
+      if (scope === 'ride') await handler.handleRideParticipantLimitCallback(mockCtx);
+      else await handler.handleUserParticipantLimitCallback(mockCtx);
+      delete mockCtx.callbackQuery;
+      mockCtx.message = { message_id: 11, text: 'abc' };
+      await handler.handleTextInput(mockCtx);
+      mockCtx.message = { message_id: 13, text: '5' };
+      await handler.handleTextInput(mockCtx);
+      expect(mockCtx.api.editMessageText).toHaveBeenCalledWith(
+        123, 9, expect.objectContaining({ html: expect.stringContaining('<b>5</b>') }), expect.any(Object)
+      );
+      expect(mockCtx.api.deleteMessage.mock.calls).toEqual([[123, 13], [123, 12], [123, 11], [123, 10]]);
+      expect(mockCtx.replyWithRichMessage).not.toHaveBeenCalled();
+      expect(mockCtx.reply).toHaveBeenCalledTimes(2);
+      await expect(handler.handleTextInput(mockCtx)).resolves.toBe(false);
     });
 
     it.each(['user', 'ride'])('deletes the %s limit prompt, invalid inputs and errors on cancel', async scope => {
