@@ -328,15 +328,32 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
       mockCtx.chat = { id: -100123, type: 'supergroup' };
       mockCtx.callbackQuery = { message: { message_thread_id: 10 } };
       await handler.handleUserParticipantLimitCallback(mockCtx);
+      const oldCancelData = mockCtx.reply.mock.calls.at(-1)[1]
+        .reply_markup.inline_keyboard[0][0].callback_data;
 
       mockCtx.callbackQuery.message.message_thread_id = 11;
       await handler.handleUserParticipantLimitCallback(mockCtx);
 
       mockCtx.callbackQuery.message.message_thread_id = 10;
+      mockCtx.match = [oldCancelData, oldCancelData.split(':').at(-1)];
       await handler.handleParticipantLimitCancel(mockCtx);
 
       mockCtx.callbackQuery = undefined;
       mockCtx.message = { text: '5', message_thread_id: 11 };
+      await expect(handler.handleTextInput(mockCtx)).resolves.toBe(true);
+      expect(mockSettingsService.updateUserRideDefaults).toHaveBeenCalled();
+    });
+
+    it('does not let an older prompt in the same chat cancel the current prompt', async () => {
+      await handler.handleUserParticipantLimitCallback(mockCtx);
+      const oldCancelData = mockCtx.reply.mock.calls.at(-1)[1]
+        .reply_markup.inline_keyboard[0][0].callback_data;
+
+      await handler.handleUserParticipantLimitCallback(mockCtx);
+      mockCtx.match = [oldCancelData, oldCancelData.split(':').at(-1)];
+      await handler.handleParticipantLimitCancel(mockCtx);
+
+      mockCtx.message.text = '5';
       await expect(handler.handleTextInput(mockCtx)).resolves.toBe(true);
       expect(mockSettingsService.updateUserRideDefaults).toHaveBeenCalled();
     });
@@ -398,6 +415,9 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
 
     it('cancels an active participant-limit input', async () => {
       await handler.handleUserParticipantLimitCallback(mockCtx);
+      const cancelData = mockCtx.reply.mock.calls.at(-1)[1]
+        .reply_markup.inline_keyboard[0][0].callback_data;
+      mockCtx.match = [cancelData, cancelData.split(':').at(-1)];
 
       await handler.handleParticipantLimitCancel(mockCtx);
       mockCtx.message.text = '5';

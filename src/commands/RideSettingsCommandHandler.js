@@ -23,8 +23,9 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
   constructor(rideService, messageFormatter, rideMessagesService, settingsService) {
     super(rideService, messageFormatter, rideMessagesService);
     this.settingsService = settingsService;
-    /** @type {Map<number, {scope: 'user'|'ride', chatId: number|string, messageThreadId: number|null, rideId?: string}>} */
+    /** @type {Map<number, {scope: 'user'|'ride', inputId: string, chatId: number|string, messageThreadId: number|null, rideId?: string}>} */
     this.pendingParticipantLimitInputs = new Map();
+    this.nextParticipantLimitInputId = 1;
   }
 
   /**
@@ -178,12 +179,14 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
    */
   async handleUserParticipantLimitCallback(ctx) {
     const inputScope = this.getParticipantLimitInputScope(ctx);
-    this.pendingParticipantLimitInputs.set(ctx.from.id, {
+    const pending = {
       scope: 'user',
+      inputId: `${this.nextParticipantLimitInputId++}`,
       ...inputScope
-    });
+    };
+    this.pendingParticipantLimitInputs.set(ctx.from.id, pending);
     await ctx.answerCallbackQuery();
-    await this.replyWithParticipantLimitPrompt(ctx);
+    await this.replyWithParticipantLimitPrompt(ctx, pending.inputId);
   }
 
   /**
@@ -203,13 +206,15 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
     }
 
     const inputScope = this.getParticipantLimitInputScope(ctx);
-    this.pendingParticipantLimitInputs.set(ctx.from.id, {
+    const pending = {
       scope: 'ride',
+      inputId: `${this.nextParticipantLimitInputId++}`,
       ...inputScope,
       rideId: ride.id
-    });
+    };
+    this.pendingParticipantLimitInputs.set(ctx.from.id, pending);
     await ctx.answerCallbackQuery();
-    await this.replyWithParticipantLimitPrompt(ctx);
+    await this.replyWithParticipantLimitPrompt(ctx, pending.inputId);
   }
 
   /**
@@ -219,7 +224,11 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
    */
   async handleParticipantLimitCancel(ctx) {
     const pending = this.pendingParticipantLimitInputs.get(ctx.from.id);
-    if (!pending || !this.isParticipantLimitInputScope(pending, ctx)) {
+    if (
+      !pending
+      || pending.inputId !== ctx.match?.[1]
+      || !this.isParticipantLimitInputScope(pending, ctx)
+    ) {
       await ctx.answerCallbackQuery();
       return;
     }
@@ -243,7 +252,7 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
     if (participantLimit === null) {
       await ctx.reply(
         this.translate(ctx, 'params.validation.participantLimitInvalid'),
-        { reply_markup: this.buildParticipantLimitCancelKeyboard(ctx) }
+        { reply_markup: this.buildParticipantLimitCancelKeyboard(ctx, pending.inputId) }
       );
       return true;
     }
@@ -321,24 +330,26 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
   /**
    * Send the localized numeric-input prompt.
    * @param {import('grammy').Context} ctx
+   * @param {string} inputId
    * @returns {Promise<void>}
    */
-  async replyWithParticipantLimitPrompt(ctx) {
+  async replyWithParticipantLimitPrompt(ctx, inputId) {
     await ctx.reply(
       this.translate(ctx, 'commands.settings.participantLimitPrompt'),
-      { reply_markup: this.buildParticipantLimitCancelKeyboard(ctx) }
+      { reply_markup: this.buildParticipantLimitCancelKeyboard(ctx, inputId) }
     );
   }
 
   /**
    * Build the cancel keyboard shared by prompts and validation errors.
    * @param {import('grammy').Context} ctx
+   * @param {string} inputId
    * @returns {InlineKeyboard}
    */
-  buildParticipantLimitCancelKeyboard(ctx) {
+  buildParticipantLimitCancelKeyboard(ctx, inputId) {
     return new InlineKeyboard().text(
       this.translate(ctx, 'commands.settings.participantLimitCancel'),
-      'settings:participant-limit:cancel'
+      `settings:participant-limit:cancel:${inputId}`
     );
   }
 
