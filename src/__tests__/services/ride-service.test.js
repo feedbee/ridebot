@@ -1225,15 +1225,29 @@ describe('RideService', () => {
         createdBy: creator.userId,
         settings: {
           notifyParticipation: false,
-          allowReposts: true
+          allowReposts: true,
+          participantLimit: 5
         }
       }, creator);
+
+      await storage.upsertUser({
+        userId: creator.userId,
+        username: creator.username,
+        settings: {
+          rideDefaults: {
+            notifyParticipation: true,
+            allowReposts: false,
+            participantLimit: 0
+          }
+        }
+      });
 
       const result = await rideService.duplicateRide(originalRide.id, {}, creator);
 
       expect(result.error).toBeNull();
       expect(result.ride.settings.notifyParticipation).toBe(false);
       expect(result.ride.settings.allowReposts).toBe(true);
+      expect(result.ride.settings.participantLimit).toBe(5);
     });
 
     it('should duplicate another user\'s ride using the current user defaults', async () => {

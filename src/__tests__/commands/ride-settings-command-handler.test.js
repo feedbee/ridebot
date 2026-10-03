@@ -46,6 +46,7 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
     mockCtx = {
       match: ['rideowner:settings:123', '123'],
       message: { text: '/settings' },
+      chat: { id: 123, type: 'private' },
       lang: language,
       from: { id: 123, username: 'user123', first_name: 'User', last_name: 'One' },
       reply: jest.fn().mockResolvedValue({}),
@@ -290,6 +291,54 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
         expect.any(Object),
         { participantLimit: 5 }
       );
+    });
+
+    it('does not consume participant-limit input from another chat', async () => {
+      await handler.handleUserParticipantLimitCallback(mockCtx);
+      mockCtx.chat = { id: -100123, type: 'supergroup' };
+      mockCtx.message.text = '5';
+
+      await expect(handler.handleTextInput(mockCtx)).resolves.toBe(false);
+      expect(mockSettingsService.updateUserRideDefaults).not.toHaveBeenCalled();
+
+      mockCtx.chat = { id: 123, type: 'private' };
+      await expect(handler.handleTextInput(mockCtx)).resolves.toBe(true);
+      expect(mockSettingsService.updateUserRideDefaults).toHaveBeenCalledWith(
+        expect.any(Object),
+        { participantLimit: 5 }
+      );
+    });
+
+    it('does not consume participant-limit input from another topic', async () => {
+      mockCtx.chat = { id: -100123, type: 'supergroup' };
+      mockCtx.callbackQuery = { message: { message_thread_id: 10 } };
+      await handler.handleUserParticipantLimitCallback(mockCtx);
+
+      mockCtx.callbackQuery = undefined;
+      mockCtx.message = { text: '5', message_thread_id: 11 };
+      await expect(handler.handleTextInput(mockCtx)).resolves.toBe(false);
+      expect(mockSettingsService.updateUserRideDefaults).not.toHaveBeenCalled();
+
+      mockCtx.message.message_thread_id = 10;
+      await expect(handler.handleTextInput(mockCtx)).resolves.toBe(true);
+      expect(mockSettingsService.updateUserRideDefaults).toHaveBeenCalled();
+    });
+
+    it('does not let a cancel button from an older topic cancel the current prompt', async () => {
+      mockCtx.chat = { id: -100123, type: 'supergroup' };
+      mockCtx.callbackQuery = { message: { message_thread_id: 10 } };
+      await handler.handleUserParticipantLimitCallback(mockCtx);
+
+      mockCtx.callbackQuery.message.message_thread_id = 11;
+      await handler.handleUserParticipantLimitCallback(mockCtx);
+
+      mockCtx.callbackQuery.message.message_thread_id = 10;
+      await handler.handleParticipantLimitCancel(mockCtx);
+
+      mockCtx.callbackQuery = undefined;
+      mockCtx.message = { text: '5', message_thread_id: 11 };
+      await expect(handler.handleTextInput(mockCtx)).resolves.toBe(true);
+      expect(mockSettingsService.updateUserRideDefaults).toHaveBeenCalled();
     });
 
     it('updates a ride after rechecking ownership and refreshes announcements', async () => {

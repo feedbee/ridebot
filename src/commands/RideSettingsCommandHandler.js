@@ -23,7 +23,7 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
   constructor(rideService, messageFormatter, rideMessagesService, settingsService) {
     super(rideService, messageFormatter, rideMessagesService);
     this.settingsService = settingsService;
-    /** @type {Map<number, {scope: 'user'|'ride', rideId?: string}>} */
+    /** @type {Map<number, {scope: 'user'|'ride', chatId: number|string, messageThreadId: number|null, rideId?: string}>} */
     this.pendingParticipantLimitInputs = new Map();
   }
 
@@ -177,7 +177,11 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
    * @returns {Promise<void>}
    */
   async handleUserParticipantLimitCallback(ctx) {
-    this.pendingParticipantLimitInputs.set(ctx.from.id, { scope: 'user' });
+    const inputScope = this.getParticipantLimitInputScope(ctx);
+    this.pendingParticipantLimitInputs.set(ctx.from.id, {
+      scope: 'user',
+      ...inputScope
+    });
     await ctx.answerCallbackQuery();
     await this.replyWithParticipantLimitPrompt(ctx);
   }
@@ -198,8 +202,10 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
       return;
     }
 
+    const inputScope = this.getParticipantLimitInputScope(ctx);
     this.pendingParticipantLimitInputs.set(ctx.from.id, {
       scope: 'ride',
+      ...inputScope,
       rideId: ride.id
     });
     await ctx.answerCallbackQuery();
@@ -212,7 +218,13 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
    * @returns {Promise<void>}
    */
   async handleParticipantLimitCancel(ctx) {
-    this.pendingParticipantLimitInputs.delete(ctx.from.id);
+    const pending = this.pendingParticipantLimitInputs.get(ctx.from.id);
+    if (!pending || !this.isParticipantLimitInputScope(pending, ctx)) {
+      await ctx.answerCallbackQuery();
+      return;
+    }
+
+    this.cancelPendingParticipantLimitInput(ctx);
     await ctx.answerCallbackQuery(
       this.translate(ctx, 'commands.settings.participantLimitCancelled')
     );
@@ -225,7 +237,7 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
    */
   async handleTextInput(ctx) {
     const pending = this.pendingParticipantLimitInputs.get(ctx.from.id);
-    if (!pending) return false;
+    if (!pending || !this.isParticipantLimitInputScope(pending, ctx)) return false;
 
     const participantLimit = parseParticipantLimit(ctx.message?.text);
     if (participantLimit === null) {
@@ -271,6 +283,39 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
     await this.updateRideMessage(updatedRide, ctx);
     await this.showRideSettings(ctx, 'reply', updatedRide);
     return true;
+  }
+
+  /**
+   * Stop waiting for participant-limit text when another flow starts.
+   * @param {import('grammy').Context} ctx
+   */
+  cancelPendingParticipantLimitInput(ctx) {
+    this.pendingParticipantLimitInputs.delete(ctx.from.id);
+  }
+
+  /**
+   * Identify the Telegram conversation where numeric input is expected.
+   * @param {import('grammy').Context} ctx
+   * @returns {{chatId: number|string, messageThreadId: number|null}}
+   */
+  getParticipantLimitInputScope(ctx) {
+    return {
+      chatId: ctx.chat?.id ?? ctx.callbackQuery?.message?.chat?.id,
+      messageThreadId: ctx.message?.message_thread_id
+        ?? ctx.callbackQuery?.message?.message_thread_id
+        ?? null
+    };
+  }
+
+  /**
+   * @param {{chatId: number|string, messageThreadId: number|null}} pending
+   * @param {import('grammy').Context} ctx
+   * @returns {boolean}
+   */
+  isParticipantLimitInputScope(pending, ctx) {
+    const current = this.getParticipantLimitInputScope(ctx);
+    return pending.chatId === current.chatId
+      && pending.messageThreadId === current.messageThreadId;
   }
 
   /**

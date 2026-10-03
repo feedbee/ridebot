@@ -456,6 +456,12 @@ export class RideService {
           mergedParams[paramName] = originalSettings[settingName] ? 'yes' : 'no';
         }
       });
+      if (
+        params['settings.participantLimit'] === undefined
+        && params.settings?.participantLimit === undefined
+      ) {
+        mergedParams['settings.participantLimit'] = `${originalSettings.participantLimit}`;
+      }
     }
 
     // Use existing createRideFromParams to handle all the validation and processing

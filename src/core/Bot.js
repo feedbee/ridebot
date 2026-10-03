@@ -112,17 +112,29 @@ export class Bot {
         privateOnly: [
           { command: 'start', descriptionKey: 'bot.commandDescriptions.start', handler: (ctx) => startHandler.handle(ctx) },
           { command: 'help', descriptionKey: 'bot.commandDescriptions.help', handler: (ctx) => helpHandler.handle(ctx) },
-          { command: 'newride', descriptionKey: 'bot.commandDescriptions.newride', handler: (ctx) => newRideHandler.handle(ctx) },
-          { command: 'updateride', descriptionKey: 'bot.commandDescriptions.updateride', handler: (ctx) => updateRideHandler.handle(ctx) },
+          { command: 'newride', descriptionKey: 'bot.commandDescriptions.newride', handler: (ctx) => {
+            rideSettingsHandler.cancelPendingParticipantLimitInput(ctx);
+            return newRideHandler.handle(ctx);
+          } },
+          { command: 'updateride', descriptionKey: 'bot.commandDescriptions.updateride', handler: (ctx) => {
+            rideSettingsHandler.cancelPendingParticipantLimitInput(ctx);
+            return updateRideHandler.handle(ctx);
+          } },
           { command: 'cancelride', descriptionKey: 'bot.commandDescriptions.cancelride', handler: (ctx) => cancelRideHandler.handle(ctx) },
           { command: 'deleteride', descriptionKey: 'bot.commandDescriptions.deleteride', handler: (ctx) => deleteRideHandler.handle(ctx) },
           { command: 'listrides', descriptionKey: 'bot.commandDescriptions.listrides', handler: (ctx) => listRidesHandler.handle(ctx) },
           { command: 'planned', descriptionKey: 'bot.commandDescriptions.planned', handler: (ctx) => plannedRidesHandler.handle(ctx) },
           { command: 'listparticipants', descriptionKey: 'bot.commandDescriptions.listparticipants', handler: (ctx) => listParticipantsHandler.handle(ctx) },
-          { command: 'dupride', descriptionKey: 'bot.commandDescriptions.dupride', handler: (ctx) => duplicateRideHandler.handle(ctx) },
+          { command: 'dupride', descriptionKey: 'bot.commandDescriptions.dupride', handler: (ctx) => {
+            rideSettingsHandler.cancelPendingParticipantLimitInput(ctx);
+            return duplicateRideHandler.handle(ctx);
+          } },
           { command: 'resumeride', descriptionKey: 'bot.commandDescriptions.resumeride', handler: (ctx) => resumeRideHandler.handle(ctx) },
           { command: 'settings', descriptionKey: 'bot.commandDescriptions.settings', handler: (ctx) => rideSettingsHandler.handle(ctx) },
-          { command: 'airide', descriptionKey: 'bot.commandDescriptions.airide', handler: (ctx) => this.aiRideHandler.handle(ctx) },
+          { command: 'airide', descriptionKey: 'bot.commandDescriptions.airide', handler: (ctx) => {
+            rideSettingsHandler.cancelPendingParticipantLimitInput(ctx);
+            return this.aiRideHandler.handle(ctx);
+          } },
           { command: 'joinchat', descriptionKey: 'bot.commandDescriptions.joinchat', handler: (ctx) => groupHandler.handleJoinChat(ctx) },
           { command: 'fromstrava', descriptionKey: 'bot.commandDescriptions.fromstrava', handler: (ctx) => this.fromStravaHandler.handle(ctx) },
         ],
@@ -147,14 +159,23 @@ export class Bot {
       },
       mainMenuActions: {
         buttons: (ctx) => startHandler.showButtons(ctx),
-        newride: (ctx) => newRideHandler.handleMainMenu(ctx),
+        newride: (ctx) => {
+          rideSettingsHandler.cancelPendingParticipantLimitInput(ctx);
+          return newRideHandler.handleMainMenu(ctx);
+        },
         settings: (ctx) => rideSettingsHandler.handleMainMenu(ctx),
         help: (ctx) => helpHandler.handle(ctx)
       },
       settingsTextInput: (ctx) => rideSettingsHandler.handleTextInput(ctx),
       callbacks: [
-        { pattern: /^main:newride$/, handler: (ctx) => newRideHandler.handleInlineMenu(ctx) },
-        { pattern: /^main:airide$/, handler: (ctx) => this.aiRideHandler.handleInlineMenu(ctx) },
+        { pattern: /^main:newride$/, handler: (ctx) => {
+          rideSettingsHandler.cancelPendingParticipantLimitInput(ctx);
+          return newRideHandler.handleInlineMenu(ctx);
+        } },
+        { pattern: /^main:airide$/, handler: (ctx) => {
+          rideSettingsHandler.cancelPendingParticipantLimitInput(ctx);
+          return this.aiRideHandler.handleInlineMenu(ctx);
+        } },
         { pattern: /^main:listrides$/, handler: (ctx) => listRidesHandler.handleInlineMenu(ctx) },
         { pattern: /^main:planned$/, handler: (ctx) => plannedRidesHandler.handleInlineMenu(ctx) },
         { pattern: /^main:settings$/, handler: (ctx) => rideSettingsHandler.handleInlineMenu(ctx) },
@@ -172,8 +193,14 @@ export class Bot {
         { pattern: /^list:close$/, handler: (ctx) => listRidesHandler.handleClose(ctx) },
         { pattern: /^planned:list:(\d+)$/, handler: (ctx) => plannedRidesHandler.handleCallback(ctx) },
         { pattern: /^planned:list:close$/, handler: (ctx) => plannedRidesHandler.handleClose(ctx) },
-        { pattern: /^rideowner:update:(\w+)$/, handler: (ctx) => updateRideHandler.handleCallback(ctx) },
-        { pattern: /^rideowner:duplicate:(\w+)$/, handler: (ctx) => duplicateRideHandler.handleCallback(ctx) },
+        { pattern: /^rideowner:update:(\w+)$/, handler: (ctx) => {
+          rideSettingsHandler.cancelPendingParticipantLimitInput(ctx);
+          return updateRideHandler.handleCallback(ctx);
+        } },
+        { pattern: /^rideowner:duplicate:(\w+)$/, handler: (ctx) => {
+          rideSettingsHandler.cancelPendingParticipantLimitInput(ctx);
+          return duplicateRideHandler.handleCallback(ctx);
+        } },
         { pattern: /^rideowner:delete:(\w+)$/, handler: (ctx) => deleteRideHandler.handleCallback(ctx) },
         { pattern: /^rideowner:cancel:(\w+)$/, handler: (ctx) => cancelRideHandler.handleCallback(ctx) },
         { pattern: /^rideowner:resume:(\w+)$/, handler: (ctx) => resumeRideHandler.handleCallback(ctx) },
