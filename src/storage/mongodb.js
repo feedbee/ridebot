@@ -366,7 +366,7 @@ export class MongoDBStorage extends StorageInterface {
       ['joined', 'thinking', 'skipped'].map(candidate => [
         `participation.${candidate}`,
         candidate === state
-          ? { $concatArrays: [filteredParticipants(candidate), [participantData]] }
+          ? { $concatArrays: [filteredParticipants(candidate), { $literal: [participantData] }] }
           : filteredParticipants(candidate)
       ])
     );
@@ -374,7 +374,7 @@ export class MongoDBStorage extends StorageInterface {
     const updatedRide = await Ride.findOneAndUpdate(
       filter,
       [{ $set: nextParticipation }],
-      { new: true }
+      { new: true, updatePipeline: true }
     );
     if (updatedRide) {
       return {
@@ -426,7 +426,7 @@ export class MongoDBStorage extends StorageInterface {
       ['joined', 'thinking', 'skipped'].map(participationState => [
         participationState,
         participationState === state
-          ? { $concatArrays: [withoutUser(participationState), [participantData]] }
+          ? { $concatArrays: [withoutUser(participationState), { $literal: [participantData] }] }
           : withoutUser(participationState)
       ])
     );
@@ -447,7 +447,7 @@ export class MongoDBStorage extends StorageInterface {
     const ride = await Ride.findOneAndUpdate(
       filter,
       [{ $set: { participation: nextParticipation } }],
-      { new: true }
+      { new: true, updatePipeline: true }
     );
     if (ride) {
       return { status: 'changed', ride: this.mapRideToInterface(ride), previousState: expectedState };
