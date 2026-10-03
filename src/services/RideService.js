@@ -157,6 +157,14 @@ export class RideService {
     return await this.storage.getRide(rideId);
   }
 
+  /** Atomically append a tracked message.
+   * @param {string} rideId
+   * @param {Object} message
+   */
+  async addRideMessage(rideId, message) {
+    return await this.storage.addRideMessage(rideId, message);
+  }
+
   /** Atomically remove tracked messages without replacing concurrent additions. */
   async removeRideMessages(rideId, messages) {
     return await this.storage.removeRideMessages(rideId, messages);

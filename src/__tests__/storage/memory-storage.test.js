@@ -39,6 +39,18 @@ describe('MemoryStorage', () => {
     storage = new MemoryStorage();
   });
 
+  it('preserves concurrent announcement additions and removals', async () => {
+    const ride = await storage.createRide(testRide);
+    const first = { chatId: -100123, messageId: 1 };
+    const second = { chatId: -100123, messageId: 2 };
+    await Promise.all([
+      storage.addRideMessage(ride.id, first),
+      storage.addRideMessage(ride.id, second),
+      storage.removeRideMessages(ride.id, testRide.messages)
+    ]);
+    expect((await storage.getRide(ride.id)).messages).toEqual([first, second]);
+  });
+
   describe('ID Generation', () => {
     it('should generate unique IDs for rides', async () => {
       const ride1 = await storage.createRide(testRide);

@@ -108,6 +108,14 @@ export class MemoryStorage extends StorageInterface {
     return this.mapRideToInterface(ride);
   }
 
+  /** Atomically append one tracked announcement. */
+  async addRideMessage(rideId, message) {
+    const ride = this.rides.get(rideId);
+    if (!ride) throw new Error('Ride not found');
+    ride.messages = [...(ride.messages || []), message];
+    return this.mapRideToInterface(ride);
+  }
+
   async removeRideMessages(rideId, messages) {
     const ride = this.rides.get(rideId);
     if (!ride) throw new Error('Ride not found');

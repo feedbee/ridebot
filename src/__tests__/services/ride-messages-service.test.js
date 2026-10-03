@@ -5,6 +5,30 @@
 import { jest } from '@jest/globals';
 import { RideMessagesService } from '../../services/RideMessagesService.js';
 import { t } from '../../i18n/index.js';
+import { MemoryStorage } from '../../storage/memory.js';
+import { RideService } from '../../services/RideService.js';
+
+it('keeps new publications tracked when another announcement is unshared concurrently', async () => {
+  const service = new RideService(new MemoryStorage());
+  const removedMessage = { chatId: -100123, messageId: 1 };
+  const ride = await service.createRide({
+    title: 'Ride', date: new Date('2099-01-01'), createdBy: 1, messages: [removedMessage]
+  });
+  const messages = new RideMessagesService(service, {
+    formatRideWithKeyboard: () => ({ message: 'Ride', keyboard: {} })
+  });
+  const ctx = {
+    lang: 'en', api: { sendRichMessage: jest.fn()
+      .mockResolvedValueOnce({ message_id: 2 }).mockResolvedValueOnce({ message_id: 3 }),
+    deleteMessage: jest.fn().mockResolvedValue(true) }
+  };
+  await Promise.all([
+    messages.unshareRideMessages(ride, ctx.api, [removedMessage]),
+    messages.createRideMessageInTarget(ride, ctx, { chatId: -100123, publishedBy: 1 }),
+    messages.createRideMessageInTarget(ride, ctx, { chatId: -100123, publishedBy: 1 })
+  ]);
+  expect((await service.getRide(ride.id)).messages.map(message => message.messageId).sort()).toEqual([2, 3]);
+});
 
 describe('RideMessagesService', () => {
   let rideMessagesService;
@@ -15,7 +39,7 @@ describe('RideMessagesService', () => {
   beforeEach(() => {
     // Create mock ride service for extended tests
     mockRideService = {
-      updateRide: jest.fn(),
+      addRideMessage: jest.fn(),
       removeRideMessages: jest.fn()
     };
 
@@ -317,7 +341,7 @@ describe('RideMessagesService', () => {
         message: '<h3>Morning Ride</h3>',
         keyboard: { inline_keyboard: [] }
       });
-      mockRideService.updateRide.mockImplementation(async (id, patch) => ({ ...ride, ...patch }));
+      mockRideService.addRideMessage.mockImplementation(async (id, message) => ({ ...ride, messages: [...ride.messages, message] }));
 
       await rideMessagesService.createRideMessageInTarget(ride, ctx, {
         chatId: -100123,
@@ -335,8 +359,7 @@ describe('RideMessagesService', () => {
           reply_markup: { inline_keyboard: [] }
         })
       );
-      expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
-        messages: [expect.objectContaining({
+      expect(mockRideService.addRideMessage).toHaveBeenCalledWith('ride123', expect.objectContaining({
           chatId: -100123,
           messageId: 67890,
           messageThreadId: 77,
@@ -344,8 +367,7 @@ describe('RideMessagesService', () => {
           publishedBy: 42,
           publishedAt: expect.any(Date),
           isForCreator: false
-        })]
-      });
+        }));
     });
 
     it.each([
@@ -379,7 +401,7 @@ describe('RideMessagesService', () => {
         message: '<h3>Morning Ride</h3>',
         keyboard: { inline_keyboard: [] }
       });
-      mockRideService.updateRide.mockResolvedValue(mockRide);
+      mockRideService.addRideMessage.mockResolvedValue(mockRide);
 
       await rideMessagesService.createRideMessage(mockRide, mockCtx);
 
@@ -388,9 +410,7 @@ describe('RideMessagesService', () => {
         '<img src="https://static.ridebot.valera.ws/ridebot/ride-announcement-teaser-road-color.jpg"/>\n<h3>Morning Ride</h3>'
       );
       expect(richMessage.media).toBeUndefined();
-      expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
-        messages: [expect.not.objectContaining({ teaserFileId: expect.anything() })]
-      });
+      expect(mockRideService.addRideMessage).toHaveBeenCalledWith('ride123', expect.not.objectContaining({ teaserFileId: expect.anything() }));
     });
 
     it('should create and send a ride message successfully', async () => {
@@ -414,7 +434,7 @@ describe('RideMessagesService', () => {
         parseMode: 'HTML'
       });
 
-      mockRideService.updateRide.mockResolvedValue({
+      mockRideService.addRideMessage.mockResolvedValue({
         ...mockRide,
         messages: [{ chatId: 12345, messageId: 67890, language: 'en', isForCreator: false }]
       });
@@ -433,9 +453,7 @@ describe('RideMessagesService', () => {
       }), {
         reply_markup: { inline_keyboard: [] }
       });
-      expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
-        messages: [{ chatId: 12345, messageId: 67890, language: 'en', isForCreator: false }]
-      });
+      expect(mockRideService.addRideMessage).toHaveBeenCalledWith('ride123', { chatId: 12345, messageId: 67890, language: 'en', isForCreator: false });
       expect(result.sentMessage).toEqual({ message_id: 67890 });
       expect(result.updatedRide.messages).toHaveLength(1);
     });
@@ -461,7 +479,7 @@ describe('RideMessagesService', () => {
         parseMode: 'HTML'
       });
 
-      mockRideService.updateRide.mockResolvedValue({
+      mockRideService.addRideMessage.mockResolvedValue({
         ...mockRide,
         messages: [{ chatId: 12345, messageId: 67890, messageThreadId: 999, language: 'en', isForCreator: false }]
       });
@@ -476,9 +494,7 @@ describe('RideMessagesService', () => {
         reply_markup: { inline_keyboard: [] },
         message_thread_id: 999
       });
-      expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
-        messages: [{ chatId: 12345, messageId: 67890, messageThreadId: 999, language: 'en', isForCreator: false }]
-      });
+      expect(mockRideService.addRideMessage).toHaveBeenCalledWith('ride123', { chatId: 12345, messageId: 67890, messageThreadId: 999, language: 'en', isForCreator: false });
       expect(result.updatedRide.messages[0].messageThreadId).toBe(999);
     });
 
@@ -502,7 +518,7 @@ describe('RideMessagesService', () => {
         parseMode: 'HTML'
       });
 
-      mockRideService.updateRide.mockResolvedValue({
+      mockRideService.addRideMessage.mockResolvedValue({
         ...mockRide,
         messages: [{ chatId: 12345, messageId: 67890, messageThreadId: 777, language: 'en', isForCreator: false }]
       });
@@ -541,7 +557,7 @@ describe('RideMessagesService', () => {
         parseMode: 'HTML'
       });
 
-      mockRideService.updateRide.mockResolvedValue({
+      mockRideService.addRideMessage.mockResolvedValue({
         ...mockRide,
         messages: [
           { chatId: 11111, messageId: 22222 },
@@ -553,12 +569,7 @@ describe('RideMessagesService', () => {
       const result = await rideMessagesService.createRideMessage(mockRide, mockCtx);
 
       // Verify
-      expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
-        messages: [
-          { chatId: 11111, messageId: 22222 },
-          { chatId: 12345, messageId: 67890, language: 'en', isForCreator: false }
-        ]
-      });
+      expect(mockRideService.addRideMessage).toHaveBeenCalledWith('ride123', { chatId: 12345, messageId: 67890, language: 'en', isForCreator: false });
       expect(result.updatedRide.messages).toHaveLength(2);
     });
 
@@ -595,7 +606,7 @@ describe('RideMessagesService', () => {
       );
       
       // Verify no partial state - updateRide should not have been called
-      expect(mockRideService.updateRide).not.toHaveBeenCalled();
+      expect(mockRideService.addRideMessage).not.toHaveBeenCalled();
 
       consoleErrorSpy.mockRestore();
     });
@@ -621,7 +632,7 @@ describe('RideMessagesService', () => {
       });
 
       const dbError = new Error('Database error');
-      mockRideService.updateRide.mockRejectedValue(dbError);
+      mockRideService.addRideMessage.mockRejectedValue(dbError);
 
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -664,7 +675,7 @@ describe('RideMessagesService', () => {
         parseMode: 'HTML'
       });
 
-      mockRideService.updateRide.mockResolvedValue(mockRide);
+      mockRideService.addRideMessage.mockResolvedValue(mockRide);
 
       // Execute
       await rideMessagesService.createRideMessage(mockRide, mockCtx);
@@ -699,7 +710,7 @@ describe('RideMessagesService', () => {
         parseMode: 'HTML'
       });
 
-      mockRideService.updateRide.mockResolvedValue(mockRide);
+      mockRideService.addRideMessage.mockResolvedValue(mockRide);
 
       // Execute
       await rideMessagesService.createRideMessage(mockRide, mockCtx);
@@ -710,9 +721,7 @@ describe('RideMessagesService', () => {
         { joined: [], thinking: [], skipped: [] },
         { isForCreator: true, lang: 'ru' }
       );
-      expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
-        messages: [{ chatId: 456, messageId: 789, language: 'ru', isForCreator: true }]
-      });
+      expect(mockRideService.addRideMessage).toHaveBeenCalledWith('ride123', { chatId: 456, messageId: 789, language: 'ru', isForCreator: true });
     });
 
     it('should not include share line for non-creator', async () => {
@@ -737,7 +746,7 @@ describe('RideMessagesService', () => {
         parseMode: 'HTML'
       });
 
-      mockRideService.updateRide.mockResolvedValue(mockRide);
+      mockRideService.addRideMessage.mockResolvedValue(mockRide);
 
       // Execute
       await rideMessagesService.createRideMessage(mockRide, mockCtx);
@@ -772,7 +781,7 @@ describe('RideMessagesService', () => {
         parseMode: 'HTML'
       });
 
-      mockRideService.updateRide.mockResolvedValue(mockRide);
+      mockRideService.addRideMessage.mockResolvedValue(mockRide);
 
       // Execute
       await rideMessagesService.createRideMessage(mockRide, mockCtx);
@@ -804,7 +813,7 @@ describe('RideMessagesService', () => {
 
       expect(result).toEqual({ success: true, cleanupNeeded: false, removedCount: 0, updatedRide: ride });
       expect(ctx.api.deleteMessage).not.toHaveBeenCalled();
-      expect(mockRideService.updateRide).not.toHaveBeenCalled();
+      expect(mockRideService.removeRideMessages).not.toHaveBeenCalled();
     });
 
     it('deletes the oldest exact scoped message and persists its removal', async () => {
@@ -818,18 +827,15 @@ describe('RideMessagesService', () => {
         ]
       };
       const ctx = createCtx();
-      mockRideService.updateRide.mockImplementation(async (id, patch) => ({ ...ride, ...patch }));
+      mockRideService.removeRideMessages.mockImplementation(async (id, removed) => {
+        ride.messages = ride.messages.filter(message => !removed.some(item => item.chatId === message.chatId && item.messageId === message.messageId));
+        return { ...ride };
+      });
 
       const result = await rideMessagesService.cleanupRideMessagesForScope(ride, ctx, 100, null, 2);
 
       expect(ctx.api.deleteMessage).toHaveBeenCalledWith(100, 1);
-      expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
-        messages: [
-          { chatId: 100, messageId: 2, messageThreadId: null },
-          { chatId: 100, messageId: 3, messageThreadId: 9 },
-          { chatId: 200, messageId: 4 }
-        ]
-      });
+      expect(mockRideService.removeRideMessages).toHaveBeenCalledWith('ride123', [{ chatId: 100, messageId: 1 }]);
       expect(result.success).toBe(true);
       expect(result.removedCount).toBe(1);
     });
@@ -844,7 +850,10 @@ describe('RideMessagesService', () => {
         ]
       };
       const ctx = createCtx();
-      mockRideService.updateRide.mockImplementation(async (id, patch) => ({ ...ride, ...patch }));
+      mockRideService.removeRideMessages.mockImplementation(async (id, removed) => {
+        ride.messages = ride.messages.filter(message => !removed.some(item => item.chatId === message.chatId && item.messageId === message.messageId));
+        return { ...ride };
+      });
 
       const result = await rideMessagesService.cleanupRideMessagesForScope(ride, ctx, 100, 8, 2);
 
@@ -861,7 +870,10 @@ describe('RideMessagesService', () => {
         messages: [1, 2, 3, 4].map(messageId => ({ chatId: 100, messageId }))
       };
       const ctx = createCtx();
-      mockRideService.updateRide.mockImplementation(async (id, patch) => ({ ...ride, ...patch }));
+      mockRideService.removeRideMessages.mockImplementation(async (id, removed) => {
+        ride.messages = ride.messages.filter(message => !removed.some(item => item.chatId === message.chatId && item.messageId === message.messageId));
+        return { ...ride };
+      });
 
       const result = await rideMessagesService.cleanupRideMessagesForScope(ride, ctx, 100, null, 2);
 
@@ -875,7 +887,10 @@ describe('RideMessagesService', () => {
       const error = new Error('missing');
       error.description = 'Bad Request: message to delete not found';
       ctx.api.deleteMessage.mockRejectedValue(error);
-      mockRideService.updateRide.mockImplementation(async (id, patch) => ({ ...ride, ...patch }));
+      mockRideService.removeRideMessages.mockImplementation(async (id, removed) => {
+        ride.messages = ride.messages.filter(message => !removed.some(item => item.chatId === message.chatId && item.messageId === message.messageId));
+        return { ...ride };
+      });
 
       const result = await rideMessagesService.cleanupRideMessagesForScope(ride, ctx, 100, null, 1);
 
@@ -892,7 +907,10 @@ describe('RideMessagesService', () => {
       ctx.api.deleteMessage
         .mockResolvedValueOnce(true)
         .mockRejectedValueOnce(Object.assign(new Error('forbidden'), { description: 'Forbidden: not enough rights' }));
-      mockRideService.updateRide.mockImplementation(async (id, patch) => ({ ...ride, ...patch }));
+      mockRideService.removeRideMessages.mockImplementation(async (id, removed) => {
+        ride.messages = ride.messages.filter(message => !removed.some(item => item.chatId === message.chatId && item.messageId === message.messageId));
+        return { ...ride };
+      });
 
       const result = await rideMessagesService.cleanupRideMessagesForScope(ride, ctx, 100, null, 2);
 
@@ -902,7 +920,7 @@ describe('RideMessagesService', () => {
         { chatId: 100, messageId: 2 },
         { chatId: 100, messageId: 3 }
       ]);
-      expect(mockRideService.updateRide).toHaveBeenCalledTimes(1);
+      expect(mockRideService.removeRideMessages).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -1167,9 +1185,7 @@ describe('RideMessagesService', () => {
 
       // Verify
       expect(result).toEqual({ success: true, updatedCount: 1, removedCount: 1 });
-      expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
-        messages: [{ chatId: 11111, messageId: 22222, language: 'en', isForCreator: false }]
-      });
+      expect(mockRideService.removeRideMessages).toHaveBeenCalledWith('ride123', expect.arrayContaining([expect.objectContaining({ chatId: mockRide.messages[mockRide.messages.length - 1].chatId, messageId: mockRide.messages[mockRide.messages.length - 1].messageId })]));
 
       consoleWarnSpy.mockRestore();
     });
@@ -1205,9 +1221,7 @@ describe('RideMessagesService', () => {
 
       // Verify
       expect(result).toEqual({ success: true, updatedCount: 0, removedCount: 1 });
-      expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
-        messages: []
-      });
+      expect(mockRideService.removeRideMessages).toHaveBeenCalledWith('ride123', expect.arrayContaining([expect.objectContaining({ chatId: mockRide.messages[mockRide.messages.length - 1].chatId, messageId: mockRide.messages[mockRide.messages.length - 1].messageId })]));
 
       consoleWarnSpy.mockRestore();
     });
@@ -1243,9 +1257,7 @@ describe('RideMessagesService', () => {
 
       // Verify
       expect(result).toEqual({ success: true, updatedCount: 0, removedCount: 1 });
-      expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
-        messages: []
-      });
+      expect(mockRideService.removeRideMessages).toHaveBeenCalledWith('ride123', expect.arrayContaining([expect.objectContaining({ chatId: mockRide.messages[mockRide.messages.length - 1].chatId, messageId: mockRide.messages[mockRide.messages.length - 1].messageId })]));
 
       consoleWarnSpy.mockRestore();
     });
@@ -1286,12 +1298,7 @@ describe('RideMessagesService', () => {
 
       // Verify
       expect(result).toEqual({ success: true, updatedCount: 2, removedCount: 1 });
-      expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
-        messages: [
-          { chatId: 11111, messageId: 22222, language: 'en', isForCreator: false },
-          { chatId: 55555, messageId: 66666, language: 'en', isForCreator: false }
-        ]
-      });
+      expect(mockRideService.removeRideMessages).toHaveBeenCalledWith('ride123', expect.arrayContaining([expect.objectContaining({ chatId: mockRide.messages[1].chatId, messageId: mockRide.messages[1].messageId })]));
 
       consoleWarnSpy.mockRestore();
     });
@@ -1327,7 +1334,7 @@ describe('RideMessagesService', () => {
 
       // Verify - message should not be removed for network errors
       expect(result).toEqual({ success: true, updatedCount: 0, removedCount: 0 });
-      expect(mockRideService.updateRide).not.toHaveBeenCalled();
+      expect(mockRideService.removeRideMessages).not.toHaveBeenCalled();
 
       consoleWarnSpy.mockRestore();
     });
@@ -1403,11 +1410,7 @@ describe('RideMessagesService', () => {
 
       // Verify - only the failed message with thread ID is removed
       expect(result).toEqual({ success: true, updatedCount: 1, removedCount: 1 });
-      expect(mockRideService.updateRide).toHaveBeenCalledWith('ride123', {
-        messages: [
-          { chatId: 11111, messageId: 22222, messageThreadId: 888, language: 'en', isForCreator: false }
-        ]
-      });
+      expect(mockRideService.removeRideMessages).toHaveBeenCalledWith('ride123', expect.arrayContaining([expect.objectContaining({ chatId: mockRide.messages[mockRide.messages.length - 1].chatId, messageId: mockRide.messages[mockRide.messages.length - 1].messageId })]));
 
       consoleWarnSpy.mockRestore();
     });

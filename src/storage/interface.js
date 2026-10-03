@@ -133,6 +133,11 @@ export class StorageInterface {
    * @param {Array<Pick<RideMessage, 'chatId'|'messageId'>>} messages
    * @returns {Promise<Ride>}
    */
+  /** Atomically append one tracked announcement. */
+  async addRideMessage(rideId, message) {
+    throw new Error('Not implemented');
+  }
+
   async removeRideMessages(rideId, messages) {
     throw new Error('Not implemented');
   }

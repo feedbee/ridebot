@@ -199,6 +199,15 @@ export class MongoDBStorage extends StorageInterface {
     }
   }
 
+  /** Atomically append one tracked announcement. */
+  async addRideMessage(rideId, message) {
+    const ride = await Ride.findByIdAndUpdate(
+      rideId, { $push: { messages: message } }, { returnDocument: 'after', runValidators: true }
+    );
+    if (!ride) throw new Error('Ride not found');
+    return this.mapRideToInterface(ride);
+  }
+
   async removeRideMessages(rideId, messages) {
     const ride = await Ride.findByIdAndUpdate(
       rideId,

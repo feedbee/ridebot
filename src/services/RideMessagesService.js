@@ -234,9 +234,7 @@ export class RideMessagesService {
       }
 
       // Update the ride with the message info in the messages array
-      const updatedRide = await this.rideService.updateRide(ride.id, {
-        messages: [...(ride.messages || []), messageData]
-      });
+      const updatedRide = await this.rideService.addRideMessage(ride.id, messageData);
 
       return {
         sentMessage,
@@ -292,9 +290,7 @@ export class RideMessagesService {
       messageData.messageThreadId = destination.messageThreadId;
     }
 
-    const updatedRide = await this.rideService.updateRide(ride.id, {
-      messages: [...(ride.messages || []), messageData]
-    });
+    const updatedRide = await this.rideService.addRideMessage(ride.id, messageData);
     return { sentMessage, updatedRide };
   }
 
@@ -330,17 +326,7 @@ export class RideMessagesService {
         }
       }
 
-      const messages = [...(updatedRide.messages || [])];
-      const messageIndex = messages.findIndex(candidate =>
-        candidate.chatId === message.chatId &&
-        candidate.messageId === message.messageId &&
-        (candidate.messageThreadId ?? null) === (message.messageThreadId ?? null)
-      );
-
-      if (messageIndex !== -1) {
-        messages.splice(messageIndex, 1);
-        updatedRide = await this.rideService.updateRide(ride.id, { messages });
-      }
+      updatedRide = await this.rideService.removeRideMessages(ride.id, [message]);
       removedCount++;
     }
 
@@ -420,17 +406,7 @@ export class RideMessagesService {
       
       // Remove messages that couldn't be updated from the tracking array
       if (messagesToRemove.length > 0) {
-        // Filter out messages that should be removed
-        const updatedMessages = ride.messages.filter(msg => 
-          !messagesToRemove.some(toRemove => 
-            toRemove.chatId === msg.chatId && 
-            toRemove.messageId === msg.messageId && 
-            toRemove.messageThreadId === msg.messageThreadId
-          )
-        );
-        
-        // Update the ride with the filtered messages array
-        await this.rideService.updateRide(ride.id, { messages: updatedMessages });
+        await this.rideService.removeRideMessages(ride.id, messagesToRemove);
       }
       
       return { 
