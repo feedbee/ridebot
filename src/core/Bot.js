@@ -214,7 +214,7 @@ export class Bot {
         { pattern: /^settings:ride:bool:(\w+):(on|off):(\w+)$/, handler: (ctx) => rideSettingsHandler.handleRideBooleanCallback(ctx) },
         { pattern: /^settings:user:participant-limit$/, handler: (ctx) => rideSettingsHandler.handleUserParticipantLimitCallback(ctx) },
         { pattern: /^settings:ride:participant-limit:(\w+)$/, handler: (ctx) => rideSettingsHandler.handleRideParticipantLimitCallback(ctx) },
-        { pattern: /^settings:participant-limit:cancel:(\d+)$/, handler: (ctx) => rideSettingsHandler.handleParticipantLimitCancel(ctx) },
+        { pattern: /^settings:participant-limit:cancel:([0-9a-f]+)$/, handler: (ctx) => rideSettingsHandler.handleParticipantLimitCancel(ctx) },
         { pattern: /^settings:close$/, handler: (ctx) => rideSettingsHandler.handleClose(ctx) },
         { pattern: /^wizard:(\w+)(?::(.*))?$/, handler: (ctx) => this.wizard.handleWizardAction(ctx) },
         { pattern: /^airide:(confirm|cancel):(\d+:\d+)$/, handler: (ctx) => this.aiRideHandler.handleCallback(ctx) },

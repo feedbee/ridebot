@@ -1,5 +1,6 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
 import { InlineKeyboard } from 'grammy';
+import { randomBytes } from 'node:crypto';
 import { UserProfile } from '../models/UserProfile.js';
 import { escapeHtml } from '../utils/html-escape.js';
 import { SettingsService } from '../services/SettingsService.js';
@@ -25,7 +26,6 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
     this.settingsService = settingsService;
     /** @type {Map<number, {scope: 'user'|'ride', inputId: string, chatId: number|string, messageThreadId: number|null, rideId?: string}>} */
     this.pendingParticipantLimitInputs = new Map();
-    this.nextParticipantLimitInputId = 1;
   }
 
   /**
@@ -181,7 +181,7 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
     const inputScope = this.getParticipantLimitInputScope(ctx);
     const pending = {
       scope: 'user',
-      inputId: `${this.nextParticipantLimitInputId++}`,
+      inputId: randomBytes(8).toString('hex'),
       ...inputScope
     };
     this.pendingParticipantLimitInputs.set(ctx.from.id, pending);
@@ -208,7 +208,7 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
     const inputScope = this.getParticipantLimitInputScope(ctx);
     const pending = {
       scope: 'ride',
-      inputId: `${this.nextParticipantLimitInputId++}`,
+      inputId: randomBytes(8).toString('hex'),
       ...inputScope,
       rideId: ride.id
     };

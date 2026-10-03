@@ -358,6 +358,25 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
       expect(mockSettingsService.updateUserRideDefaults).toHaveBeenCalled();
     });
 
+    it('uses distinct cancel session IDs across handler instances', async () => {
+      await handler.handleUserParticipantLimitCallback(mockCtx);
+      const firstCancelData = mockCtx.reply.mock.calls.at(-1)[1]
+        .reply_markup.inline_keyboard[0][0].callback_data;
+
+      const restartedHandler = new RideSettingsCommandHandler(
+        mockRideService,
+        mockMessageFormatter,
+        mockRideMessagesService,
+        mockSettingsService
+      );
+      await restartedHandler.handleUserParticipantLimitCallback(mockCtx);
+      const secondCancelData = mockCtx.reply.mock.calls.at(-1)[1]
+        .reply_markup.inline_keyboard[0][0].callback_data;
+
+      expect(secondCancelData).not.toBe(firstCancelData);
+      expect(Buffer.byteLength(secondCancelData, 'utf8')).toBeLessThanOrEqual(64);
+    });
+
     it('updates a ride after rechecking ownership and refreshes announcements', async () => {
       mockCtx.match = ['settings:ride:participant-limit:ride1', 'ride1'];
       mockRideService.getRide.mockResolvedValue({
