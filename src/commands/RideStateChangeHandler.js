@@ -1,5 +1,5 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
-import { RIDE_ARCHIVE_AFTER_HOURS, isRideArchived } from '../services/ride-lifecycle.js';
+import { RIDE_ARCHIVE_AFTER_HOURS } from '../services/ride-lifecycle.js';
 
 /**
  * Abstract handler for ride state change operations (cancel/resume)
@@ -8,7 +8,7 @@ import { RIDE_ARCHIVE_AFTER_HOURS, isRideArchived } from '../services/ride-lifec
 export class RideStateChangeHandler extends BaseCommandHandler {
   /**
    * Get the state check configuration
-   * @returns {{checkState: function, errorMessage: string, serviceMethod: string, successAction: string, actionVerb: string}}
+   * @returns {{errorMessage: string, serviceMethod: string, successAction: string, actionVerb: string}}
    */
   getStateConfig() {
     throw new Error('getStateConfig() must be implemented by subclass');
@@ -63,21 +63,22 @@ export class RideStateChangeHandler extends BaseCommandHandler {
   async performStateChange(ctx, ride) {
     const stateConfig = this.getStateConfig(ctx);
 
-    if (isRideArchived(ride)) {
-      return {
-        ok: false,
-        message: this.translate(ctx, 'commands.stateChange.rideArchived', {
-          action: stateConfig.actionVerb,
-          hours: RIDE_ARCHIVE_AFTER_HOURS
-        })
-      };
+    let updatedRide;
+    try {
+      updatedRide = await this.rideService[stateConfig.serviceMethod](ride.id, ctx.from.id);
+    } catch (error) {
+      if (error.code === 'ride_archived') {
+        return {
+          ok: false,
+          message: this.translate(ctx, 'commands.stateChange.rideArchived', {
+            action: stateConfig.actionVerb, hours: RIDE_ARCHIVE_AFTER_HOURS
+          })
+        };
+      }
+      if (error.code === 'already_in_state') return { ok: false, message: stateConfig.errorMessage };
+      throw error;
     }
-
-    if (!stateConfig.checkState(ride)) {
-      return { ok: false, message: stateConfig.errorMessage };
-    }
-
-    const updatedRide = await this.rideService[stateConfig.serviceMethod](ride.id, ctx.from.id);
+    if (!updatedRide) return { ok: false, message: this.translate(ctx, 'commands.common.rideNotFoundById', { id: ride.id }) };
     const result = await this.updateRideMessage(updatedRide, ctx);
     
     if (result.success) {

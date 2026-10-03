@@ -1,3 +1,4 @@
+import { isRideArchived } from '../services/ride-lifecycle.js';
 import { StorageInterface } from './interface.js';
 import { randomUUID } from 'crypto';
 import { normalizeCategory } from '../utils/category-utils.js';
@@ -61,6 +62,16 @@ export class MemoryStorage extends StorageInterface {
     
     this.rides.set(id, newRide);
     return this.mapRideToInterface(newRide);
+  }
+
+  async setRideCancelledIfActive(rideId, cancelled, userId) {
+    const ride = this.rides.get(rideId);
+    if (!ride) return null;
+    if (isRideArchived(ride)) return { status: 'ride_archived' };
+    if (Boolean(ride.cancelled) === cancelled) return { status: 'already_in_state' };
+    const updates = { cancelled };
+    if (userId !== null) updates.updatedBy = userId;
+    return { status: 'changed', ride: await this.updateRide(rideId, updates) };
   }
 
   async updateRide(rideId, updates) {

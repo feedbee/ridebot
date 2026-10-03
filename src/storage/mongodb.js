@@ -1,3 +1,5 @@
+import { isRideArchived } from '../services/ride-lifecycle.js';
+import { buildActiveRideFilter } from './mongo-ride-lifecycle.js';
 import { BOOLEAN_RIDE_SETTING_NAMES } from '../models/ride-settings.js';
 import { MIN_PARTICIPANT_LIMIT, MAX_PARTICIPANT_LIMIT } from '../utils/participant-limit.js';
 import mongoose from 'mongoose';
@@ -168,6 +170,20 @@ export class MongoDBStorage extends StorageInterface {
    * @param {Object} updates
    * @returns {Promise<Object>}
    */
+  async setRideCancelledIfActive(rideId, cancelled, userId) {
+    const updates = { cancelled, updatedAt: new Date() };
+    if (userId !== null) updates.updatedBy = userId;
+    const ride = await Ride.findOneAndUpdate(
+      { _id: rideId, ...buildActiveRideFilter(), cancelled: cancelled ? { $ne: true } : true },
+      { $set: updates },
+      { new: true }
+    );
+    if (ride) return { status: 'changed', ride: this.mapRideToInterface(ride) };
+    const currentRide = await Ride.findById(rideId);
+    if (!currentRide) return null;
+    return { status: isRideArchived(currentRide) ? 'ride_archived' : 'already_in_state' };
+  }
+
   async updateRide(rideId, updates) {
     const { settings, ...fields } = updates;
     if (fields.updatedBy) fields.updatedAt = new Date();

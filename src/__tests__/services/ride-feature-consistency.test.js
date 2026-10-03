@@ -2,6 +2,15 @@ import { MemoryStorage } from '../../storage/memory.js';
 import { RideService } from '../../services/RideService.js';
 import { SettingsService } from '../../services/SettingsService.js';
 
+it.each(['cancelRide', 'resumeRide'])('enforces archival through the %s service API', async method => {
+  const rides = new RideService(new MemoryStorage());
+  const ride = await rides.createRide({
+    title: 'Archived', date: new Date('2000-01-01'), createdBy: 1, cancelled: method === 'resumeRide'
+  });
+  await expect(rides[method](ride.id, 1)).rejects.toMatchObject({ code: 'ride_archived' });
+  expect((await rides.getRide(ride.id)).cancelled).toBe(method === 'resumeRide');
+});
+
 it.each([true, false])('preserves independent concurrent setting patches (existing defaults: %s)', async existingDefaults => {
   const storage = new MemoryStorage();
   const rides = new RideService(storage);

@@ -114,6 +114,10 @@ export class StorageInterface {
    * @param {Partial<Omit<Ride, 'id' | 'createdAt' | 'settings'>> & {settings?: Partial<RideSettings>}} updates
    * @returns {Promise<Ride>}
    */
+  async setRideCancelledIfActive(rideId, cancelled, userId) {
+    throw new Error('Not implemented');
+  }
+
   async updateRide(rideId, updates) {
     throw new Error('Not implemented');
   }

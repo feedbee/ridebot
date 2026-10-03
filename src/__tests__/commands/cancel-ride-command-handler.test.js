@@ -68,10 +68,11 @@ describe.each(['en', 'ru'])('CancelRideCommandHandler (%s)', (language) => {
       mockRideMessagesService.extractRideId.mockReturnValue({ rideId: '456', error: null });
       mockRideService.getRide.mockResolvedValue({ id: '456', createdBy: 123, cancelled: true });
 
+      mockRideService.cancelRide.mockRejectedValue(Object.assign(new Error('already_in_state'), { code: 'already_in_state' }));
       await handler.handle(mockCtx);
 
       expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.cancel.alreadyCancelled'));
-      expect(mockRideService.cancelRide).not.toHaveBeenCalled();
+      expect(mockRideService.cancelRide).toHaveBeenCalledWith('456', 123);
     });
 
     it('blocks cancelling an archived ride', async () => {
@@ -80,12 +81,13 @@ describe.each(['en', 'ru'])('CancelRideCommandHandler (%s)', (language) => {
         id: '456', createdBy: 123, cancelled: false, date: new Date(Date.now() - 60 * 60 * 1000)
       });
 
+      mockRideService.cancelRide.mockRejectedValue(Object.assign(new Error('ride_archived'), { code: 'ride_archived' }));
       await handler.handle(mockCtx);
 
       expect(mockCtx.reply).toHaveBeenCalledWith(
         tr('commands.stateChange.rideArchived', { action: tr('commands.common.verbs.cancel'), hours: 1 })
       );
-      expect(mockRideService.cancelRide).not.toHaveBeenCalled();
+      expect(mockRideService.cancelRide).toHaveBeenCalledWith('456', 123);
     });
 
     it('cancels ride and reports updated messages', async () => {

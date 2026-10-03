@@ -280,33 +280,20 @@ export class RideService {
    * @returns {Promise<Object>} - Cancelled ride
    */
   async cancelRide(rideId, userId = null) {
-    const updates = {
-      cancelled: true
-    };
-    
-    if (userId !== null) {
-      updates.updatedBy = userId;
-    }
-    
-    return this.storage.updateRide(rideId, updates);
+    return this.setRideCancelled(rideId, true, userId);
   }
-  
-  /**
-   * Resume a cancelled ride
-   * @param {string} rideId - Ride ID
-   * @param {number} userId - User ID
-   * @returns {Promise<Object>} - Resumed ride
-   */
+
   async resumeRide(rideId, userId = null) {
-    const updates = {
-      cancelled: false
-    };
-    
-    if (userId !== null) {
-      updates.updatedBy = userId;
+    return this.setRideCancelled(rideId, false, userId);
+  }
+
+  async setRideCancelled(rideId, cancelled, userId) {
+    const result = await this.storage.setRideCancelledIfActive(rideId, cancelled, userId);
+    if (!result) return null;
+    if (result.status !== 'changed') {
+      throw Object.assign(new Error(result.status), { code: result.status });
     }
-    
-    return this.storage.updateRide(rideId, updates);
+    return result.ride;
   }
 
   /**
