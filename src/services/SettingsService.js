@@ -1,3 +1,5 @@
+import { RIDE_SETTING_DEFAULTS } from '../models/ride-settings.js';
+
 /**
  * Application service for user defaults and ride settings snapshots.
  */
@@ -18,12 +20,7 @@ export class SettingsService {
    * @returns {import('../storage/interface.js').RideSettings}
    */
   static getSystemRideDefaults() {
-    return {
-      notifyParticipation: true,
-      allowReposts: false,
-      requireParticipationApproval: false,
-      participantLimit: 0
-    };
+    return { ...RIDE_SETTING_DEFAULTS };
   }
 
   /**
@@ -74,20 +71,6 @@ export class SettingsService {
   static getRideSettingsSnapshot(ride = {}) {
     const explicitSettings = SettingsService.extractExplicitRideSettings(ride);
     return SettingsService.buildRideSettingsSnapshot({}, explicitSettings);
-  }
-
-  /**
-   * Resolve the next persisted ride settings snapshot for an update operation.
-   *
-   * @param {Object} currentRide
-   * @param {Object} [updates={}]
-   * @returns {import('../storage/interface.js').RideSettings}
-   */
-  static resolveUpdatedRideSettings(currentRide, updates = {}) {
-    return SettingsService.buildRideSettingsSnapshot(
-      SettingsService.getRideSettingsSnapshot(currentRide),
-      SettingsService.extractExplicitRideSettings(updates)
-    );
   }
 
   /**

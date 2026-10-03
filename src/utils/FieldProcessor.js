@@ -1,3 +1,4 @@
+import { BOOLEAN_RIDE_SETTING_NAMES } from '../models/ride-settings.js';
 import { parseDateTimeInput } from './date-input-parser.js';
 import { parseDuration } from './duration-parser.js';
 import { normalizeCategory, DEFAULT_CATEGORY } from './category-utils.js';
@@ -110,7 +111,7 @@ export class FieldProcessor {
    * @param {Object} data
    */
   static processBooleanSettings(params, data) {
-    ['notifyParticipation', 'allowReposts', 'requireParticipationApproval'].forEach(settingName => {
+    BOOLEAN_RIDE_SETTING_NAMES.forEach(settingName => {
       const value = params.settings?.[settingName] ?? params[`settings.${settingName}`];
       if (value !== undefined) {
         data.settings = {

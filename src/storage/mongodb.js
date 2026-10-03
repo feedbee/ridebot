@@ -1,3 +1,5 @@
+import { BOOLEAN_RIDE_SETTING_NAMES } from '../models/ride-settings.js';
+import { MIN_PARTICIPANT_LIMIT, MAX_PARTICIPANT_LIMIT } from '../utils/participant-limit.js';
 import mongoose from 'mongoose';
 import { StorageInterface } from './interface.js';
 import { config } from '../config.js';
@@ -38,13 +40,11 @@ const routeSchema = new mongoose.Schema({
 }, { _id: false });
 
 const rideSettingsSchema = new mongoose.Schema({
-  notifyParticipation: { type: Boolean },
-  allowReposts: { type: Boolean },
-  requireParticipationApproval: { type: Boolean },
+  ...Object.fromEntries(BOOLEAN_RIDE_SETTING_NAMES.map(name => [name, { type: Boolean }])),
   participantLimit: {
     type: Number,
-    min: 0,
-    max: 1000,
+    min: MIN_PARTICIPANT_LIMIT,
+    max: MAX_PARTICIPANT_LIMIT,
     validate: Number.isInteger
   }
 }, { _id: false });

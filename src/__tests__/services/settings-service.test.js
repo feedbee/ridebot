@@ -144,32 +144,6 @@ describe('SettingsService', () => {
       });
     });
 
-    it('merges ride updates against the current ride snapshot', () => {
-      const updatedSettings = SettingsService.resolveUpdatedRideSettings(
-        {
-          settings: {
-            notifyParticipation: true,
-            allowReposts: false,
-            participantLimit: 8
-          }
-        },
-        {
-          settings: {
-            notifyParticipation: false,
-            allowReposts: true,
-            participantLimit: 5
-          }
-        }
-      );
-
-      expect(updatedSettings).toEqual({
-        notifyParticipation: false,
-        allowReposts: true,
-        requireParticipationApproval: false,
-        participantLimit: 5
-      });
-    });
-
     it('defaults missing participant limits to unlimited', () => {
       expect(SettingsService.getRideSettingsSnapshot({
         settings: { notifyParticipation: false, allowReposts: true }

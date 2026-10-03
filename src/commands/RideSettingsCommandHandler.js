@@ -2,13 +2,7 @@ import { BaseCommandHandler } from './BaseCommandHandler.js';
 import { UserProfile } from '../models/UserProfile.js';
 import { SettingsService } from '../services/SettingsService.js';
 import { ParticipantLimitInputHandler } from './ParticipantLimitInputHandler.js';
-import { SettingsPresenter } from './SettingsPresenter.js';
-
-const BOOLEAN_SETTING_CALLBACK_KEYS = {
-  np: 'notifyParticipation',
-  repost: 'allowReposts',
-  approval: 'requireParticipationApproval'
-};
+import { SettingsPresenter, BOOLEAN_SETTING_CONTROLS } from './SettingsPresenter.js';
 
 /**
  * Settings handler for user defaults and ride-scoped settings.
@@ -203,7 +197,7 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
    * @returns {'notifyParticipation'|'allowReposts'|'requireParticipationApproval'|null}
    */
   getBooleanSettingName(callbackKey) {
-    return BOOLEAN_SETTING_CALLBACK_KEYS[callbackKey] || null;
+    return BOOLEAN_SETTING_CONTROLS.find(control => control.callbackKey === callbackKey)?.name || null;
   }
 
 

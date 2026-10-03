@@ -3,6 +3,12 @@ import { BaseCommandHandler } from './BaseCommandHandler.js';
 import { escapeHtml } from '../utils/html-escape.js';
 import { SettingsService } from '../services/SettingsService.js';
 
+export const BOOLEAN_SETTING_CONTROLS = Object.freeze([
+  { name: 'notifyParticipation', callbackKey: 'np', enableKey: 'commands.settings.enableNotifyOnParticipationChange', disableKey: 'commands.settings.disableNotifyOnParticipationChange' },
+  { name: 'allowReposts', callbackKey: 'repost', enableKey: 'commands.settings.enableReposts', disableKey: 'commands.settings.disableReposts' },
+  { name: 'requireParticipationApproval', callbackKey: 'approval', enableKey: 'commands.settings.enableParticipationApproval', disableKey: 'commands.settings.disableParticipationApproval' }
+]);
+
 /** Render settings without owning mutation policy or input sessions. */
 export class SettingsPresenter extends BaseCommandHandler {
   /** @param {Object} handler - Settings command dependencies. */
@@ -72,24 +78,7 @@ export class SettingsPresenter extends BaseCommandHandler {
   buildUserSettingsText(ctx, defaults, level) {
     return [
       `<h3>${this.translate(ctx, 'commands.settings.userTitle')}</h3>`,
-      this.buildSettingsTable([
-        this.buildBooleanSettingRow(
-          ctx,
-          'commands.settings.notifyParticipationLabel',
-          defaults.notifyParticipation
-        ),
-        this.buildBooleanSettingRow(
-          ctx,
-          'commands.settings.allowRepostsLabel',
-          defaults.allowReposts
-        ),
-        this.buildBooleanSettingRow(
-          ctx,
-          'commands.settings.requireParticipationApprovalLabel',
-          defaults.requireParticipationApproval
-        ),
-        this.buildParticipantLimitSettingRow(ctx, defaults.participantLimit)
-      ]),
+      this.buildSettingsTable(this.buildRideSettingRows(ctx, defaults)),
       `<footer>${this.translate(ctx, 'commands.settings.userHint')}</footer>`,
       '<hr/>',
       `<h4>${this.translate(ctx, 'commands.settings.notificationPreferencesTitle')}</h4>`,
@@ -107,31 +96,7 @@ export class SettingsPresenter extends BaseCommandHandler {
    * @returns {InlineKeyboard}
    */
   buildUserSettingsKeyboard(ctx, defaults, level) {
-    return new InlineKeyboard()
-      .text(
-        this.getSettingToggleLabel(ctx, defaults.notifyParticipation, {
-          enableKey: 'commands.settings.enableNotifyOnParticipationChange',
-          disableKey: 'commands.settings.disableNotifyOnParticipationChange'
-        }),
-        `settings:user:bool:np:${defaults.notifyParticipation ? 'off' : 'on'}`
-      )
-      .row()
-      .text(
-        this.getSettingToggleLabel(ctx, defaults.allowReposts, {
-          enableKey: 'commands.settings.enableReposts',
-          disableKey: 'commands.settings.disableReposts'
-        }),
-        `settings:user:bool:repost:${defaults.allowReposts ? 'off' : 'on'}`
-      )
-      .row()
-      .text(
-        this.getSettingToggleLabel(ctx, defaults.requireParticipationApproval, {
-          enableKey: 'commands.settings.enableParticipationApproval',
-          disableKey: 'commands.settings.disableParticipationApproval'
-        }),
-        `settings:user:bool:approval:${defaults.requireParticipationApproval ? 'off' : 'on'}`
-      )
-      .row()
+    return this.buildBooleanSettingsKeyboard(ctx, defaults, 'user', null)
       .text(
         this.translate(ctx, 'commands.settings.changeParticipantLimit'),
         'settings:user:participant-limit'
@@ -163,24 +128,7 @@ export class SettingsPresenter extends BaseCommandHandler {
     return [
       `<h3>${this.translate(ctx, 'commands.settings.rideTitle')}</h3>`,
       `<p>${escapeHtml(ride.title)} (#${escapeHtml(ride.id.toString())})</p>`,
-      this.buildSettingsTable([
-        this.buildBooleanSettingRow(
-          ctx,
-          'commands.settings.notifyParticipationLabel',
-          settings.notifyParticipation
-        ),
-        this.buildBooleanSettingRow(
-          ctx,
-          'commands.settings.allowRepostsLabel',
-          settings.allowReposts
-        ),
-        this.buildBooleanSettingRow(
-          ctx,
-          'commands.settings.requireParticipationApprovalLabel',
-          settings.requireParticipationApproval
-        ),
-        this.buildParticipantLimitSettingRow(ctx, settings.participantLimit)
-      ]),
+      this.buildSettingsTable(this.buildRideSettingRows(ctx, settings)),
       `<footer>${this.translate(ctx, 'commands.settings.rideHint')}</footer>`
     ].join('');
   }
@@ -192,31 +140,7 @@ export class SettingsPresenter extends BaseCommandHandler {
    * @returns {InlineKeyboard}
    */
   buildRideSettingsKeyboard(ctx, rideId, settings) {
-    return new InlineKeyboard()
-      .text(
-        this.getSettingToggleLabel(ctx, settings.notifyParticipation, {
-          enableKey: 'commands.settings.enableNotifyOnParticipationChange',
-          disableKey: 'commands.settings.disableNotifyOnParticipationChange'
-        }),
-        `settings:ride:bool:np:${settings.notifyParticipation ? 'off' : 'on'}:${rideId}`
-      )
-      .row()
-      .text(
-        this.getSettingToggleLabel(ctx, settings.allowReposts, {
-          enableKey: 'commands.settings.enableReposts',
-          disableKey: 'commands.settings.disableReposts'
-        }),
-        `settings:ride:bool:repost:${settings.allowReposts ? 'off' : 'on'}:${rideId}`
-      )
-      .row()
-      .text(
-        this.getSettingToggleLabel(ctx, settings.requireParticipationApproval, {
-          enableKey: 'commands.settings.enableParticipationApproval',
-          disableKey: 'commands.settings.disableParticipationApproval'
-        }),
-        `settings:ride:bool:approval:${settings.requireParticipationApproval ? 'off' : 'on'}:${rideId}`
-      )
-      .row()
+    return this.buildBooleanSettingsKeyboard(ctx, settings, 'ride', rideId)
       .text(
         this.translate(ctx, 'commands.settings.changeParticipantLimit'),
         `settings:ride:participant-limit:${rideId}`
@@ -226,6 +150,36 @@ export class SettingsPresenter extends BaseCommandHandler {
         this.translate(ctx, 'buttons.close'),
         'settings:close'
       );
+  }
+
+  /** Build the setting rows shared by user defaults and ride settings.
+   * @param {import('grammy').Context} ctx
+   * @param {Object} settings
+   * @returns {Array<Object>}
+   */
+  buildRideSettingRows(ctx, settings) {
+    return [
+      ...BOOLEAN_SETTING_CONTROLS.map(({ name }) =>
+        this.buildBooleanSettingRow(ctx, `commands.settings.${name}Label`, settings[name])),
+      this.buildParticipantLimitSettingRow(ctx, settings.participantLimit)
+    ];
+  }
+
+  /** Build unchanged toggle rows for either settings scope.
+   * @param {import('grammy').Context} ctx
+   * @param {Object} settings
+   * @param {'user'|'ride'} scope
+   * @param {string|null} rideId
+   * @returns {InlineKeyboard}
+   */
+  buildBooleanSettingsKeyboard(ctx, settings, scope, rideId) {
+    const keyboard = new InlineKeyboard();
+    for (const control of BOOLEAN_SETTING_CONTROLS) {
+      const suffix = rideId ? `:${rideId}` : '';
+      keyboard.text(this.getSettingToggleLabel(ctx, settings[control.name], control),
+        `settings:${scope}:bool:${control.callbackKey}:${settings[control.name] ? 'off' : 'on'}${suffix}`).row();
+    }
+    return keyboard;
   }
 
   /**
