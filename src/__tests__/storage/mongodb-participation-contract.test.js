@@ -34,6 +34,35 @@ describe('Mongo storage query contracts without a database', () => {
     });
   });
 
+  it.each(['participation', 'decision', 'cancel', 'resume'])('guards the archive boundary in the %s write query', async operation => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-10-03T12:00:00Z'));
+    try {
+      if (operation === 'participation') {
+        await storage.setParticipationForRideMode(String(ride._id), 'thinking', profile, true, null);
+      } else if (operation === 'decision') {
+        await storage.setParticipationIfCurrent(String(ride._id), 2, 'thinking', 'joined', profile);
+      } else {
+        await storage.setRideCancelledIfActive(String(ride._id), operation === 'cancel', 1);
+      }
+      const filter = Ride.collection.findOneAndUpdate.mock.calls[0][0];
+      expect(filter.date).toEqual({ $gt: new Date('2026-10-03T11:00:00Z') });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it.each(['participation', 'decision', 'cancel'])('reports archival after a rejected %s write', async operation => {
+    Ride.collection.findOneAndUpdate.mockResolvedValue(null);
+    Ride.findById.mockResolvedValue({ ...ride, date: new Date('2000-01-01') });
+    const result = operation === 'participation'
+      ? await storage.setParticipationForRideMode(String(ride._id), 'thinking', profile, true, null)
+      : operation === 'decision'
+        ? await storage.setParticipationIfCurrent(String(ride._id), 2, 'thinking', 'joined', profile)
+        : await storage.setRideCancelledIfActive(String(ride._id), true, 1);
+    expect(result.status).toBe('ride_archived');
+  });
+
   it('writes a ride setting patch without replacing unrelated settings or tracking', async () => {
     await storage.updateRide(String(ride._id), { settings: { participantLimit: 10 } });
     expect(Ride.collection.findOneAndUpdate.mock.calls[0][1]).toEqual({

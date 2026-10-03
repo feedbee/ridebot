@@ -108,16 +108,17 @@ export class StorageInterface {
     throw new Error('Not implemented');
   }
 
+  /** Change cancellation only for an active ride; report archival or an unchanged state. */
+  async setRideCancelledIfActive(rideId, cancelled, userId) {
+    throw new Error('Not implemented');
+  }
+
   /**
    * Update an existing ride. Settings are field patches, not replacement snapshots.
    * @param {string} rideId
    * @param {Partial<Omit<Ride, 'id' | 'createdAt' | 'settings'>> & {settings?: Partial<RideSettings>}} updates
    * @returns {Promise<Ride>}
    */
-  async setRideCancelledIfActive(rideId, cancelled, userId) {
-    throw new Error('Not implemented');
-  }
-
   async updateRide(rideId, updates) {
     throw new Error('Not implemented');
   }

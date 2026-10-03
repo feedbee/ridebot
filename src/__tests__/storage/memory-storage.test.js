@@ -9,7 +9,7 @@ describe('MemoryStorage', () => {
   let storage;
   const testRide = {
     title: 'Test Ride',
-    date: new Date('2024-03-15T15:00:00Z'),
+    date: new Date('2099-03-15T15:00:00Z'),
     messages: [{ chatId: 123456, messageId: 789012 }],
     createdBy: 789,
     meetingPoint: 'Test Location',
@@ -23,7 +23,7 @@ describe('MemoryStorage', () => {
   
   const testRideWithMessages = {
     title: 'Test Ride with Messages',
-    date: new Date('2024-03-15T15:00:00Z'),
+    date: new Date('2099-03-15T15:00:00Z'),
     messages: [{ chatId: 123456, messageId: 789012 }],
     createdBy: 789,
     meetingPoint: 'Test Location',

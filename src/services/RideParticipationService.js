@@ -86,6 +86,9 @@ export class RideParticipationService {
       currentState
     );
     if (!result.success) {
+      if (result.reason === 'ride_archived') {
+        return { status: 'ride_archived', targetState: effectiveTargetState };
+      }
       if (result.reason === 'ride_changed') {
         return { status: 'ride_changed', targetState: effectiveTargetState };
       }
@@ -165,7 +168,7 @@ export class RideParticipationService {
     const targetState = decision === 'accept' ? 'joined' : 'skipped';
     const result = await this.rideService.decideParticipation(rideId, applicant, targetState);
     if (!result.success) {
-      return { status: result.reason === 'participant_limit_reached' ? result.reason : 'stale' };
+      return { status: ['participant_limit_reached', 'ride_archived'].includes(result.reason) ? result.reason : 'stale' };
     }
 
     if (targetState === 'joined' && result.ride.groupId && this.groupManagementService) {

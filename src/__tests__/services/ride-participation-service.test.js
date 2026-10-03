@@ -54,6 +54,45 @@ it('continues queued participation actions after an earlier operation fails', as
   jest.restoreAllMocks();
 });
 
+it.each(['change', 'decide'])('rejects %s when the archive boundary is crossed before storage writes', async operation => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date('2026-10-03T12:00:00Z'));
+  try {
+    const storage = new MemoryStorage();
+    const rides = new RideService(storage);
+    const profile = { userId: 2, firstName: 'Applicant' };
+    const ride = await rides.createRide({
+      title: 'Ride', date: new Date('2026-10-03T11:00:00.001Z'), createdBy: 1,
+      groupId: -100123, settings: { requireParticipationApproval: operation === 'decide' }
+    });
+    if (operation === 'decide') await rides.setParticipation(ride.id, profile, 'thinking');
+    const method = operation === 'decide' ? 'setParticipationIfCurrent' : 'setParticipationForRideMode';
+    const original = storage[method].bind(storage);
+    jest.spyOn(storage, method).mockImplementation((...args) => {
+      jest.setSystemTime(new Date('2026-10-03T12:00:00.001Z'));
+      return original(...args);
+    });
+    const groups = { addParticipant: jest.fn(), removeParticipant: jest.fn() };
+    const notifications = {
+      scheduleParticipationNotification: jest.fn(),
+      sendApplicationNotification: jest.fn(),
+      sendApplicationDecisionNotification: jest.fn()
+    };
+    const service = new RideParticipationService(rides, notifications, groups);
+    const result = operation === 'decide'
+      ? await service.decideApplication({ rideId: ride.id, applicantUserId: 2, actorUserId: 1, decision: 'accept', api: {} })
+      : await service.changeParticipation({ rideId: ride.id, participantProfile: profile, targetState: 'joined', api: {} });
+    expect(result.status).toBe('ride_archived');
+    expect(await storage.getParticipation(ride.id, 2)).toBe(operation === 'decide' ? 'thinking' : null);
+    expect(groups.addParticipant).not.toHaveBeenCalled();
+    for (const notification of Object.values(notifications)) expect(notification).not.toHaveBeenCalled();
+    expect(groups.removeParticipant).not.toHaveBeenCalled();
+  } finally {
+    jest.restoreAllMocks();
+    jest.useRealTimers();
+  }
+});
+
 describe('RideParticipationService', () => {
   let service;
   let mockRideService;

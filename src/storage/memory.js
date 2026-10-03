@@ -275,6 +275,7 @@ export class MemoryStorage extends StorageInterface {
 
   async setParticipationForRideMode(rideId, state, participantProfile, requireParticipationApproval, expectedState) {
     const ride = this.rides.get(rideId);
+    if (ride && isRideArchived(ride)) return { status: 'ride_archived' };
     if (!ride || ride.cancelled || (ride.settings?.requireParticipationApproval === true) !== requireParticipationApproval) {
       return null;
     }
@@ -287,6 +288,7 @@ export class MemoryStorage extends StorageInterface {
 
   async setParticipationIfCurrent(rideId, userId, expectedState, targetState, participantProfile) {
     const ride = this.rides.get(rideId);
+    if (ride && isRideArchived(ride)) return { status: 'ride_archived' };
     if (!ride || ride.cancelled || ride.settings?.requireParticipationApproval !== true
       || !(ride.participation?.[expectedState] || []).some(p => p.userId === userId)) {
       return null;

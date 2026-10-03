@@ -108,3 +108,10 @@ If a handler starts making decisions like "when state changes from X to Y, also 
 ## Current Refactoring Direction
 
 This rule is especially relevant for participation flows. The handler should translate Telegram input into a participation request and communicate the result back to the user. The service layer should own participation transition rules such as notifications and attached-group synchronization.
+
+## Settings and Lifecycle Boundaries
+
+- `RideSettingsCommandHandler` dispatches settings commands and toggle callbacks. `SettingsPresenter` owns settings text and keyboards; `ParticipantLimitInputHandler` owns the numeric input sessions. Their separation preserves the existing Telegram UI.
+- `src/models/ride-settings.js` defines ride defaults and boolean setting names shared by services, parsers, and storage. Presentation labels and callback keys stay in the Telegram presentation layer.
+- `RideService.cancelRide` and `resumeRide` enforce lifecycle policy through `setRideCancelledIfActive`. Command handlers translate `ride_archived` and `already_in_state` failures into user-facing messages.
+- Conditional participation writes and cancel/resume writes check archival at the storage boundary. Mongo uses a date predicate in the write query; memory checks immediately before mutation. Crossing the archive boundary after the service read produces `ride_archived` without notifications or group membership changes.

@@ -165,18 +165,15 @@ export class MongoDBStorage extends StorageInterface {
     return this.mapRideToInterface(newRide);
   }
 
-  /** Update content and individual settings without replacing other settings.
-   * @param {string} rideId
-   * @param {Object} updates
-   * @returns {Promise<Object>}
-   */
+  /** Change cancellation only for an active ride; report archival or an unchanged state. */
   async setRideCancelledIfActive(rideId, cancelled, userId) {
-    const updates = { cancelled, updatedAt: new Date() };
+    const updates = { cancelled };
     if (userId !== null) updates.updatedBy = userId;
+    if (userId) updates.updatedAt = new Date();
     const ride = await Ride.findOneAndUpdate(
       { _id: rideId, ...buildActiveRideFilter(), cancelled: cancelled ? { $ne: true } : true },
       { $set: updates },
-      { new: true }
+      { returnDocument: 'after' }
     );
     if (ride) return { status: 'changed', ride: this.mapRideToInterface(ride) };
     const currentRide = await Ride.findById(rideId);
@@ -184,6 +181,11 @@ export class MongoDBStorage extends StorageInterface {
     return { status: isRideArchived(currentRide) ? 'ride_archived' : 'already_in_state' };
   }
 
+  /** Update content and individual settings without replacing other settings.
+   * @param {string} rideId
+   * @param {Object} updates
+   * @returns {Promise<Object>}
+   */
   async updateRide(rideId, updates) {
     const { settings, ...fields } = updates;
     if (fields.updatedBy) fields.updatedAt = new Date();
@@ -220,7 +222,7 @@ export class MongoDBStorage extends StorageInterface {
     const ride = await Ride.findByIdAndUpdate(
       rideId,
       { $pull: { messages: { $or: messages.map(({ chatId, messageId }) => ({ chatId, messageId })) } } },
-      { new: true }
+      { returnDocument: 'after' }
     );
     if (!ride) throw new Error('Ride not found');
     return this.mapRideToInterface(ride);
@@ -394,7 +396,7 @@ export class MongoDBStorage extends StorageInterface {
           'participation.skipped.userId': { $ne: participantProfile.userId }
         };
     const nextParticipation = buildParticipationUpdate(state, participantData);
-    const filter = { _id: rideId, cancelled: { $ne: true }, ...approvalFilter, ...participationFilter };
+    const filter = { _id: rideId, ...buildActiveRideFilter(), cancelled: { $ne: true }, ...approvalFilter, ...participationFilter };
     Object.assign(filter, buildCapacityFilter(state));
     const ride = await Ride.findOneAndUpdate(
       filter,
@@ -406,6 +408,7 @@ export class MongoDBStorage extends StorageInterface {
     }
 
     const unchangedRide = await Ride.findById(rideId);
+    if (unchangedRide && isRideArchived(unchangedRide)) return { status: 'ride_archived' };
     const actualState = ['joined', 'thinking', 'skipped'].find(participationState =>
       unchangedRide?.participation?.[participationState]?.some(
         participant => participant.userId === participantProfile.userId
@@ -430,6 +433,7 @@ export class MongoDBStorage extends StorageInterface {
     const participantData = createParticipantData(participantProfile);
     const filter = {
       _id: rideId,
+      ...buildActiveRideFilter(),
       cancelled: { $ne: true },
       'settings.requireParticipationApproval': true,
       [`participation.${expectedState}.userId`]: userId
@@ -441,13 +445,14 @@ export class MongoDBStorage extends StorageInterface {
         $pull: { [`participation.${expectedState}`]: { userId } },
         $push: { [`participation.${targetState}`]: participantData }
       },
-      { new: true }
+      { returnDocument: 'after' }
     );
     if (ride) {
       return { status: 'changed', ride: this.mapRideToInterface(ride), previousState: expectedState };
     }
 
     const unchangedRide = await Ride.findById(rideId);
+    if (unchangedRide && isRideArchived(unchangedRide)) return { status: 'ride_archived' };
     const stillPending = unchangedRide?.participation?.[expectedState]?.some(
       participant => participant.userId === userId
     );
