@@ -13,6 +13,25 @@ export class RideParticipationService {
     this.rideService = rideService;
     this.notificationService = notificationService;
     this.groupManagementService = groupManagementService;
+    this.participantOperations = new Map();
+  }
+
+  /** Serialize transitions and their side effects within this bot process.
+   * @param {string} rideId
+   * @param {number} userId
+   * @param {function(): Promise<Object>} operation
+   * @returns {Promise<Object>}
+   */
+  async runParticipantOperation(rideId, userId, operation) {
+    const key = `${rideId}:${userId}`;
+    const previous = this.participantOperations.get(key) || Promise.resolve();
+    const pending = previous.catch(() => {}).then(operation);
+    this.participantOperations.set(key, pending);
+    try {
+      return await pending;
+    } finally {
+      if (this.participantOperations.get(key) === pending) this.participantOperations.delete(key);
+    }
   }
 
   /**
@@ -25,7 +44,16 @@ export class RideParticipationService {
    * @param {import('grammy').Api} params.api
    * @returns {Promise<{status: 'changed'|'ride_not_found'|'ride_archived'|'ride_cancelled'|'already_in_state'|'participant_limit_reached', ride?: Object, previousState?: string|null, targetState: string}>}
    */
-  async changeParticipation({ rideId, participantProfile, targetState, language, api }) {
+  async changeParticipation(params) {
+    return this.runParticipantOperation(params.rideId, params.participantProfile.userId,
+      () => this.performParticipationChange(params));
+  }
+
+  /** Execute a participation transition while its participant queue is held.
+   * @param {Object} params
+   * @returns {Promise<Object>}
+   */
+  async performParticipationChange({ rideId, participantProfile, targetState, language, api }) {
     const ride = await this.rideService.getRide(rideId);
     if (!ride) {
       return { status: 'ride_not_found', targetState };
@@ -112,7 +140,16 @@ export class RideParticipationService {
   }
 
   /** Accept or reject a pending application. */
-  async decideApplication({ rideId, applicantUserId, actorUserId, decision, language, api }) {
+  async decideApplication(params) {
+    return this.runParticipantOperation(params.rideId, params.applicantUserId,
+      () => this.performApplicationDecision(params));
+  }
+
+  /** Execute an application decision while its participant queue is held.
+   * @param {Object} params
+   * @returns {Promise<Object>}
+   */
+  async performApplicationDecision({ rideId, applicantUserId, actorUserId, decision, language, api }) {
     if (!['accept', 'reject'].includes(decision)) return { status: 'invalid_decision' };
     const ride = await this.rideService.getRide(rideId);
     if (!ride) return { status: 'ride_not_found' };

@@ -5,6 +5,39 @@
 import { jest } from '@jest/globals';
 import { RideParticipationService } from '../../services/RideParticipationService.js';
 import { UserProfile } from '../../models/UserProfile.js';
+import { MemoryStorage } from '../../storage/memory.js';
+import { RideService } from '../../services/RideService.js';
+
+it('keeps group membership consistent when leaving during an application acceptance', async () => {
+  const rides = new RideService(new MemoryStorage());
+  const profile = { userId: 2, firstName: 'Applicant' };
+  const ride = await rides.createRide({
+    title: 'Ride', date: new Date('2099-01-01'), createdBy: 1,
+    groupId: -100123, settings: { requireParticipationApproval: true }
+  });
+  await rides.setParticipation(ride.id, profile, 'thinking');
+  let entered, release;
+  const started = new Promise(resolve => { entered = resolve; });
+  const gate = new Promise(resolve => { release = resolve; });
+  let member = false;
+  const service = new RideParticipationService(rides, null, {
+    addParticipant: async () => { entered(); await gate; member = true; },
+    removeParticipant: async () => { member = false; }
+  });
+  const accepted = service.decideApplication({
+    rideId: ride.id, applicantUserId: 2, actorUserId: 1, decision: 'accept', api: {}
+  });
+  await started;
+  const leaving = service.changeParticipation({
+    rideId: ride.id, participantProfile: profile, targetState: 'skipped', api: {}
+  });
+  // Allow the competing transition to run while invitation delivery is paused.
+  for (let index = 0; index < 20; index++) await Promise.resolve();
+  release();
+  await Promise.all([accepted, leaving]);
+  expect(await rides.storage.getParticipation(ride.id, 2)).toBe('skipped');
+  expect(member).toBe(false);
+});
 
 describe('RideParticipationService', () => {
   let service;
