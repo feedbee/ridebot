@@ -456,6 +456,38 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
       );
     });
 
+    it.each(['user', 'ride'])('deletes the %s limit prompt, invalid inputs and errors on cancel', async scope => {
+      mockCtx.api = { deleteMessage: jest.fn().mockResolvedValue(true) };
+      mockCtx.reply.mockResolvedValueOnce({ message_id: 10 })
+        .mockResolvedValueOnce({ message_id: 12 })
+        .mockResolvedValueOnce({ message_id: 14 });
+      if (scope === 'ride') {
+        mockRideService.getRide.mockResolvedValue({ id: '123', createdBy: 123 });
+        await handler.handleRideParticipantLimitCallback(mockCtx);
+      } else {
+        await handler.handleUserParticipantLimitCallback(mockCtx);
+      }
+      const cancelData = mockCtx.reply.mock.calls.at(-1)[1]
+        .reply_markup.inline_keyboard[0][0].callback_data;
+      mockCtx.message = { message_id: 11, text: '1.5' };
+      await handler.handleTextInput(mockCtx);
+      mockCtx.message = { message_id: 13, text: 'abc' };
+      await handler.handleTextInput(mockCtx);
+      mockCtx.match = [cancelData, cancelData.split(':').at(-1)];
+      mockCtx.callbackQuery = { message: { message_id: 14, chat: mockCtx.chat } };
+      delete mockCtx.message;
+      // Failure to delete one message must not prevent cleanup of the rest.
+      mockCtx.api.deleteMessage.mockRejectedValueOnce(new Error('Message already deleted'));
+      await handler.handleParticipantLimitCancel(mockCtx);
+      expect(mockCtx.api.deleteMessage.mock.calls).toEqual([
+        [123, 14], [123, 13], [123, 12], [123, 11], [123, 10]
+      ]);
+      expect(mockSettingsService.updateUserRideDefaults).not.toHaveBeenCalled();
+      expect(mockRideService.updateRide).not.toHaveBeenCalled();
+      mockCtx.message = { text: '5' };
+      await expect(handler.handleTextInput(mockCtx)).resolves.toBe(false);
+    });
+
     it('cancels an active participant-limit input', async () => {
       await handler.handleUserParticipantLimitCallback(mockCtx);
       const cancelData = mockCtx.reply.mock.calls.at(-1)[1]

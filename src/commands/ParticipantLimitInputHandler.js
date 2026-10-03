@@ -25,11 +25,12 @@ export class ParticipantLimitInputHandler extends BaseCommandHandler {
     const pending = {
       scope: 'user',
       inputId: randomBytes(8).toString('hex'),
+      messageIds: new Set(),
       ...inputScope
     };
     this.pendingParticipantLimitInputs.set(ctx.from.id, pending);
     await ctx.answerCallbackQuery();
-    await this.replyWithParticipantLimitPrompt(ctx, pending.inputId);
+    await this.replyWithParticipantLimitPrompt(ctx, pending);
   }
 
   /**
@@ -52,12 +53,13 @@ export class ParticipantLimitInputHandler extends BaseCommandHandler {
     const pending = {
       scope: 'ride',
       inputId: randomBytes(8).toString('hex'),
+      messageIds: new Set(),
       ...inputScope,
       rideId: ride.id
     };
     this.pendingParticipantLimitInputs.set(ctx.from.id, pending);
     await ctx.answerCallbackQuery();
-    await this.replyWithParticipantLimitPrompt(ctx, pending.inputId);
+    await this.replyWithParticipantLimitPrompt(ctx, pending);
   }
 
   /**
@@ -76,10 +78,12 @@ export class ParticipantLimitInputHandler extends BaseCommandHandler {
       return;
     }
 
+    this.trackParticipantLimitMessage(pending, ctx.callbackQuery?.message);
     this.cancelPendingParticipantLimitInput(ctx);
     await ctx.answerCallbackQuery(
       this.translate(ctx, 'commands.settings.participantLimitCancelled')
     );
+    await this.cleanupParticipantLimitMessages(ctx, pending);
   }
 
   /**
@@ -91,12 +95,14 @@ export class ParticipantLimitInputHandler extends BaseCommandHandler {
     const pending = this.pendingParticipantLimitInputs.get(ctx.from.id);
     if (!pending || !this.isParticipantLimitInputScope(pending, ctx)) return false;
 
+    this.trackParticipantLimitMessage(pending, ctx.message);
     const participantLimit = parseParticipantLimit(ctx.message?.text);
     if (participantLimit === null) {
-      await ctx.reply(
+      const errorMessage = await ctx.reply(
         this.translate(ctx, 'params.validation.participantLimitInvalid'),
         { reply_markup: this.buildParticipantLimitCancelKeyboard(ctx, pending.inputId) }
       );
+      this.trackParticipantLimitMessage(pending, errorMessage);
       return true;
     }
 
@@ -176,14 +182,39 @@ export class ParticipantLimitInputHandler extends BaseCommandHandler {
   /**
    * Send the localized numeric-input prompt.
    * @param {import('grammy').Context} ctx
-   * @param {string} inputId
+   * @param {Object} pending
    * @returns {Promise<void>}
    */
-  async replyWithParticipantLimitPrompt(ctx, inputId) {
-    await ctx.reply(
+  async replyWithParticipantLimitPrompt(ctx, pending) {
+    const message = await ctx.reply(
       this.translate(ctx, 'commands.settings.participantLimitPrompt'),
-      { reply_markup: this.buildParticipantLimitCancelKeyboard(ctx, inputId) }
+      { reply_markup: this.buildParticipantLimitCancelKeyboard(ctx, pending.inputId) }
     );
+    this.trackParticipantLimitMessage(pending, message);
+  }
+
+  /**
+   * Track only messages belonging to this numeric-input session.
+   * @param {Object} pending
+   * @param {Object|undefined} message
+   * @returns {void}
+   */
+  trackParticipantLimitMessage(pending, message) {
+    if (Number.isInteger(message?.message_id)) pending.messageIds.add(message.message_id);
+  }
+
+  /**
+   * Delete the cancelled conversation, tolerating individual Telegram failures.
+   * @param {import('grammy').Context} ctx
+   * @param {Object} pending
+   * @returns {Promise<void>}
+   */
+  async cleanupParticipantLimitMessages(ctx, pending) {
+    for (const messageId of [...pending.messageIds].reverse()) {
+      try {
+        await ctx.api.deleteMessage(pending.chatId, messageId);
+      } catch { /* Best effort, like wizard dialog cleanup. */ }
+    }
   }
 
   /**
