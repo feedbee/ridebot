@@ -15,6 +15,7 @@ jest.mock('../../config.js', () => ({
 }));
 
 import { AiRideService } from '../../services/AiRideService.js';
+import { config } from '../../config.js';
 
 const makeResponse = (text) => ({ content: [{ type: 'text', text }] });
 
@@ -30,6 +31,27 @@ describe('AiRideService', () => {
   });
 
   describe('parseRideText', () => {
+    it('keeps AI unavailable without an API key, even when SDK credentials are configured in the environment', async () => {
+      const originalKey = config.anthropic.apiKey;
+      const originalAuthToken = process.env.ANTHROPIC_AUTH_TOKEN;
+      config.anthropic.apiKey = null;
+      process.env.ANTHROPIC_AUTH_TOKEN = 'test-token';
+      try {
+        const disabledService = new AiRideService();
+        const fetchSpy = jest.fn();
+        if (disabledService.client) disabledService.client.fetch = fetchSpy;
+
+        expect(await disabledService.parseRideText('Tomorrow at 6pm')).toEqual({
+          params: null, error: 'service_unavailable'
+        });
+        expect(fetchSpy).not.toHaveBeenCalled();
+      } finally {
+        config.anthropic.apiKey = originalKey;
+        if (originalAuthToken === undefined) delete process.env.ANTHROPIC_AUTH_TOKEN;
+        else process.env.ANTHROPIC_AUTH_TOKEN = originalAuthToken;
+      }
+    });
+
     it('returns parsed params when AI returns valid JSON', async () => {
       mockCreate.mockResolvedValue(
         makeResponse('{"title":"Evening Ride","when":"tomorrow at 6pm","category":"road","dist":"50","chat":"https://t.me/evening_chat"}')

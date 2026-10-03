@@ -13,7 +13,9 @@ export class AiRideService {
    * @param {Anthropic} [client] - Optional Anthropic client (injected for testing)
    */
   constructor(client) {
-    this.client = client ?? new Anthropic({ apiKey: config.anthropic.apiKey });
+    this.client = client ?? (config.anthropic.apiKey
+      ? new Anthropic({ apiKey: config.anthropic.apiKey })
+      : null);
   }
 
   /**
@@ -29,6 +31,8 @@ export class AiRideService {
    *   params keys match RideParamsHelper.VALID_PARAMS (title, when, category, etc.)
    */
   async parseRideText(userText, options = {}) {
+    if (!this.client) return { params: null, error: 'service_unavailable' };
+
     try {
       const userMessage = this._buildUserMessage(userText, options);
       const response = await this.client.messages.create({
