@@ -28,7 +28,7 @@ export class ShareRideCommandHandler extends BaseCommandHandler {
       ? this.rideMessagesService.extractRideId(ctx.message, extractOptions)
       : this.rideMessagesService.extractRideId(ctx.message);
     if (!rideId) {
-      await ctx.reply(error || this.translate(ctx, 'commands.share.invalidRideIdUsage'));
+      await this.replyWithCodeExamples(ctx, error || this.translate(ctx, 'commands.share.invalidRideIdUsage'));
       return;
     }
 

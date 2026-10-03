@@ -11,7 +11,7 @@ export class UnshareRideCommandHandler extends BaseCommandHandler {
       ctx.lang ? { language: ctx.lang } : undefined
     );
     if (!rideId) {
-      await ctx.reply(error);
+      await this.replyWithCodeExamples(ctx, error);
       return;
     }
 

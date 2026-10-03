@@ -4,6 +4,7 @@
 import { RideParamsHelper } from '../utils/RideParamsHelper.js';
 import { config } from '../config.js';
 import { t } from '../i18n/index.js';
+import { escapeHtml } from '../utils/html-escape.js';
 
 export class BaseCommandHandler {
   /**
@@ -154,8 +155,26 @@ export class BaseCommandHandler {
       return;
     }
 
-    await ctx.reply(message);
+    await this.replyWithCodeExamples(ctx, message);
   }
+
+  /**
+   * Render inline command examples while treating all other content as plain text.
+   * @param {import('grammy').Context} ctx
+   * @param {string} message - Localized text with optional code tags.
+   * @returns {Promise<Object>}
+   */
+  async replyWithCodeExamples(ctx, message) {
+    if (!message.includes('<code>')) return ctx.reply(message);
+    const html = message.split(/(<code>[\s\S]*?<\/code>)/g).map(part => {
+      if (part.startsWith('<code>') && part.endsWith('</code>')) {
+        return `<code>${escapeHtml(part.slice(6, -7))}</code>`;
+      }
+      return escapeHtml(part);
+    }).join('');
+    return ctx.reply(html, { parse_mode: 'HTML' });
+  }
+
   
   /**
    * Update the ride message

@@ -33,6 +33,23 @@ describe('BaseCommandHandler', () => {
     baseCommandHandler = new BaseCommandHandler(mockRideService, mockMessageFormatter, mockRideMessagesService);
   });
   
+  it.each(['en', 'ru'])('renders ride-ID command examples as Telegram code (%s)', async language => {
+    const ctx = { reply: jest.fn() };
+    const message = t(language, 'services.rideMessages.provideRideIdAfterCommand', { commandName: 'unshareride' });
+    await baseCommandHandler.replyOrAnswerCallback(ctx, 'message', message);
+    expect(ctx.reply).toHaveBeenCalledWith(
+      expect.stringContaining('<code>/unshareride rideID</code>'), { parse_mode: 'HTML' }
+    );
+  });
+
+  it('escapes user content around and inside command examples', async () => {
+    const ctx = { reply: jest.fn() };
+    await baseCommandHandler.replyWithCodeExamples(ctx, '<b>hint</b> <code>/attach #<ride>&</code>');
+    expect(ctx.reply).toHaveBeenCalledWith(
+      '&lt;b&gt;hint&lt;/b&gt; <code>/attach #&lt;ride&gt;&amp;</code>', { parse_mode: 'HTML' }
+    );
+  });
+
   describe('constructor', () => {
     it('should initialize with the provided services', () => {
       expect(baseCommandHandler.rideService).toBe(mockRideService);

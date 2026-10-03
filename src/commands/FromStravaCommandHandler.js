@@ -31,7 +31,7 @@ export class FromStravaCommandHandler extends BaseCommandHandler {
 
     const parsed = url ? this.parser.parseEventUrl(url) : null;
     if (!parsed) {
-      await ctx.reply(this.translate(ctx, 'commands.fromStrava.invalidUrl'));
+      await this.replyWithCodeExamples(ctx, this.translate(ctx, 'commands.fromStrava.invalidUrl'));
       return;
     }
 

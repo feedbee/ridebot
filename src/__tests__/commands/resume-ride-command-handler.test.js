@@ -47,7 +47,8 @@ describe.each(['en', 'ru'])('ResumeRideCommandHandler (%s)', (language) => {
       await handler.handle(mockCtx);
 
       expect(mockCtx.reply).toHaveBeenCalledWith(
-        tr('services.rideMessages.provideRideIdAfterCommand', { commandName: 'resumeride' })
+        tr('services.rideMessages.provideRideIdAfterCommand', { commandName: 'resumeride' }),
+        { parse_mode: 'HTML' }
       );
       expect(mockRideService.resumeRide).not.toHaveBeenCalled();
     });

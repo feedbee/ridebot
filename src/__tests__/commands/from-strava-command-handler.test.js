@@ -80,7 +80,7 @@ describe.each(['en', 'ru'])('FromStravaCommandHandler (%s)', (language) => {
 
       await handler.handle(mockCtx);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.fromStrava.invalidUrl'));
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.fromStrava.invalidUrl'), { parse_mode: 'HTML' });
       expect(mockStorage.createRide).not.toHaveBeenCalled();
     });
 
@@ -90,7 +90,7 @@ describe.each(['en', 'ru'])('FromStravaCommandHandler (%s)', (language) => {
 
       await handler.handle(mockCtx);
 
-      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.fromStrava.invalidUrl'));
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.fromStrava.invalidUrl'), { parse_mode: 'HTML' });
     });
   });
 

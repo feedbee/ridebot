@@ -32,7 +32,7 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
     if (ctx.message?.reply_to_message || commandTail) {
       const { ride, error } = await this.extractRideWithCreatorCheck(ctx, 'commands.common.onlyCreatorAction');
       if (error) {
-        await ctx.reply(error);
+        await this.replyWithCodeExamples(ctx, error);
         return;
       }
 

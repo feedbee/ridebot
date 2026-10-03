@@ -26,7 +26,7 @@ export class DuplicateRideCommandHandler extends BaseCommandHandler {
     // Extract the original ride
     const { ride, error } = await this.extractRide(ctx);
     if (error) {
-      await ctx.reply(error);
+      await this.replyWithCodeExamples(ctx, error);
       return;
     }
 

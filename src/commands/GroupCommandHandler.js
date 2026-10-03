@@ -36,7 +36,7 @@ export class GroupCommandHandler extends BaseCommandHandler {
       return;
     }
     if (!rideId) {
-      await ctx.reply(error || this.translate(ctx, 'commands.group.invalidRideIdUsage', { command: '/attach #rideID' }));
+      await this.replyWithCodeExamples(ctx, error || this.translate(ctx, 'commands.group.invalidRideIdUsage', { command: '/attach #rideID' }));
       return;
     }
 
@@ -152,7 +152,7 @@ export class GroupCommandHandler extends BaseCommandHandler {
   async handleJoinChat(ctx) {
     const { rideId, error } = this.rideMessagesService.extractRideId(ctx.message, ctx.lang ? { language: ctx.lang } : {});
     if (!rideId) {
-      await ctx.reply(error || this.translate(ctx, 'commands.group.invalidRideIdUsage', { command: '/joinchat #rideID' }));
+      await this.replyWithCodeExamples(ctx, error || this.translate(ctx, 'commands.group.invalidRideIdUsage', { command: '/joinchat #rideID' }));
       return;
     }
 

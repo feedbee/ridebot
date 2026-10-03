@@ -109,7 +109,8 @@ describe.each(['en', 'ru'])('GroupCommandHandler (%s)', (language) => {
       await handler.handleAttach(mockCtx);
 
       expect(mockCtx.reply).toHaveBeenCalledWith(
-        tr('commands.group.invalidRideIdUsage', { command: '/attach #rideID' })
+        tr('commands.group.invalidRideIdUsage', { command: '/attach #rideID' }),
+        { parse_mode: 'HTML' }
       );
     });
 
@@ -325,7 +326,8 @@ describe.each(['en', 'ru'])('GroupCommandHandler (%s)', (language) => {
       await handler.handleJoinChat(mockCtx);
 
       expect(mockCtx.reply).toHaveBeenCalledWith(
-        tr('commands.group.invalidRideIdUsage', { command: '/joinchat #rideID' })
+        tr('commands.group.invalidRideIdUsage', { command: '/joinchat #rideID' }),
+        { parse_mode: 'HTML' }
       );
       expect(mockGroupManagementService.addParticipant).not.toHaveBeenCalled();
     });

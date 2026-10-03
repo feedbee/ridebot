@@ -25,7 +25,7 @@ export class UpdateRideCommandHandler extends BaseCommandHandler {
     const { ride, error } = await this.extractRideWithCreatorCheck(ctx, 'commands.update.onlyCreator');
     
     if (error) {
-      await ctx.reply(error);
+      await this.replyWithCodeExamples(ctx, error);
       return;
     }
 

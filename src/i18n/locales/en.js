@@ -179,7 +179,7 @@ settings.participantLimit: 0-1000 (optional; 0 means unlimited)
     help3: `
 <h2>⚙️ Ride Settings</h2>
 
-<p>Use /settings in private chat to manage defaults for rides you create in the future.<br>Use /settings #rideId, reply to a ride message with /settings, or press the Settings button on your private creator copy to manage one ride.<br>Available settings:</p>
+<p>Use /settings in private chat to manage defaults for rides you create in the future.<br>Use <code>/settings #rideId</code>, reply to a ride message with /settings, or press the Settings button on your private creator copy to manage one ride.<br>Available settings:</p>
 
 <ul><li>Participation notifications — whether the creator gets private notifications when people join, think, or pass.</li><li>Repost permission — whether users other than the creator can repost the ride with /shareride.</li></ul>
 
@@ -370,7 +370,7 @@ Click here to start a private chat: @botname
       success: 'Ride duplicated successfully!'
     },
     listParticipants: {
-      invalidRideIdUsage: 'Please provide a valid ride ID. Usage: /listparticipants rideID',
+      invalidRideIdUsage: 'Please provide a valid ride ID. Usage: <code>/listparticipants rideID</code>',
       allParticipantsTitle: 'All Participants for "{title}" ({total})',
       joinedLabel: 'Joined ({count})',
       thinkingLabel: 'Thinking ({count})',
@@ -381,7 +381,7 @@ Click here to start a private chat: @botname
       retrieveError: 'An error occurred while retrieving participants.'
     },
     share: {
-      invalidRideIdUsage: 'Please provide a valid ride ID. Usage: /shareride rideID',
+      invalidRideIdUsage: 'Please provide a valid ride ID. Usage: <code>/shareride rideID</code>',
       onlyCreatorRepost: 'Only the ride creator can repost this ride.',
       cannotRepostCancelled: 'Cannot repost a cancelled ride.',
       rideArchived: 'This ride is archived: it started at least {hours} hour(s) ago and can no longer be published.',
@@ -447,7 +447,7 @@ Click here to start a private chat: @botname
       noGroupAttached: 'No ride is attached to this group.',
       inviteLinkSent: 'You\'ve been invited to the ride group: {link}\n\nThis group is for ride coordination, pre- and post-ride discussion, and sharing photos. The link is valid for 24 hours.',
       inviteLinkForCreator: 'A participant couldn\'t receive the group invite link automatically — they haven\'t started a conversation with the bot. Please forward this link to them manually: {link}',
-      invalidRideIdUsage: 'Please provide a valid ride ID. Usage: {command}',
+      invalidRideIdUsage: 'Please provide a valid ride ID. Usage: <code>{command}</code>',
       joinchatNoGroup: 'This ride doesn\'t have an attached group chat.',
       joinchatNotParticipant: 'You need to join the ride first.',
       chatTitle: 'Ride: {title} @ {date}'
@@ -470,7 +470,7 @@ Click here to start a private chat: @botname
       unrecognizedAnnouncement: 'This message is not a tracked ride announcement.'
     },
     airide: {
-      usageHint: 'Use /airide to create a ride in dialog mode.\nTo update an existing ride: /airide #rideId',
+      usageHint: 'Use /airide to create a ride in dialog mode.\nTo update an existing ride: <code>/airide #rideId</code>',
       sessionAlreadyActive: 'You already have an active AI ride session. Please confirm or cancel it first.',
       sessionExpired: 'Session expired. Please use /airide again.',
       parseError: '❌ Could not parse ride details. Please try again with a clearer description.',
@@ -482,7 +482,7 @@ Click here to start a private chat: @botname
       missingFieldsError: 'Missing required fields: {fields}. Please add them in a message.'
     },
     fromStrava: {
-      invalidUrl: 'Please provide a valid Strava group event URL.\nExample: /fromstrava https://www.strava.com/clubs/123/group_events/456',
+      invalidUrl: 'Please provide a valid Strava group event URL.\nExample: <code>/fromstrava https://www.strava.com/clubs/123/group_events/456</code>',
       fetchError: 'Could not fetch the Strava event. Make sure the event is public and the URL is correct.',
       created: 'Ride created from Strava event.',
       updated: 'Ride updated from Strava event.'
@@ -630,7 +630,7 @@ Click here to start a private chat: @botname
     },
     rideMessages: {
       couldNotFindRideIdInMessage: 'Could not find ride ID in the message. Please make sure you are replying to a ride message or provide a ride ID.',
-      provideRideIdAfterCommand: 'Please provide a ride ID after the command (e.g., /{commandName} rideID) or reply to a ride message.'
+      provideRideIdAfterCommand: 'Please provide a ride ID after the command (e.g., <code>/{commandName} rideID</code>) or reply to a ride message.'
     }
   },
   params: {

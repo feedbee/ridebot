@@ -44,6 +44,15 @@ describe.each(['en', 'ru'])('UnshareRideCommandHandler (%s)', language => {
     };
   });
 
+  it('formats the missing-ID command example as code', async () => {
+    const error = tr('services.rideMessages.provideRideIdAfterCommand', { commandName: 'unshareride' });
+    rideMessagesService.extractRideId.mockReturnValue({ rideId: null, error });
+    ctx.message.text = '/unshareride';
+    await handler.handle(ctx);
+    expect(ctx.reply).toHaveBeenCalledWith(error, { parse_mode: 'HTML' });
+    expect(error).toContain('<code>/unshareride rideID</code>');
+  });
+
   it('asks privately to remove only the publisher messages in the current topic', async () => {
     await handler.handle(ctx);
 

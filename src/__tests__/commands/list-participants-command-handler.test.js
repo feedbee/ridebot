@@ -174,7 +174,7 @@ describe.each(['en', 'ru'])('ListParticipantsCommandHandler (%s)', (language) =>
       await listParticipantsHandler.handle(mockCtx);
 
       // Verify
-      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.listParticipants.invalidRideIdUsage'));
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('commands.listParticipants.invalidRideIdUsage'), { parse_mode: 'HTML' });
       expect(mockRideService.getRide).not.toHaveBeenCalled();
     });
 

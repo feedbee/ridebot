@@ -16,7 +16,7 @@ export class ListParticipantsCommandHandler extends BaseCommandHandler {
       ? this.rideMessagesService.extractRideId(ctx.message, extractOptions)
       : this.rideMessagesService.extractRideId(ctx.message);
     if (!rideId) {
-      await ctx.reply(this.translate(ctx, 'commands.listParticipants.invalidRideIdUsage'));
+      await this.replyWithCodeExamples(ctx, this.translate(ctx, 'commands.listParticipants.invalidRideIdUsage'));
       return;
     }
 

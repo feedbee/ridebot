@@ -53,7 +53,8 @@ describe.each(['en', 'ru'])('DeleteRideCommandHandler (%s)', (language) => {
       await handler.handle(mockCtx);
 
       expect(mockCtx.reply).toHaveBeenCalledWith(
-        tr('services.rideMessages.provideRideIdAfterCommand', { commandName: 'deleteride' })
+        tr('services.rideMessages.provideRideIdAfterCommand', { commandName: 'deleteride' }),
+        { parse_mode: 'HTML' }
       );
     });
 

@@ -47,7 +47,8 @@ describe.each(['en', 'ru'])('CancelRideCommandHandler (%s)', (language) => {
       await handler.handle(mockCtx);
 
       expect(mockCtx.reply).toHaveBeenCalledWith(
-        tr('services.rideMessages.provideRideIdAfterCommand', { commandName: 'cancelride' })
+        tr('services.rideMessages.provideRideIdAfterCommand', { commandName: 'cancelride' }),
+        { parse_mode: 'HTML' }
       );
       expect(mockRideService.cancelRide).not.toHaveBeenCalled();
     });

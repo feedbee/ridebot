@@ -67,7 +67,7 @@ export class AiRideCommandHandler extends BaseCommandHandler {
 
     const resolvedInput = this._resolveCommandInput(ctx, rawText);
     if (resolvedInput.error) {
-      await ctx.reply(resolvedInput.error);
+      await this.replyWithCodeExamples(ctx, resolvedInput.error);
       return;
     }
 
