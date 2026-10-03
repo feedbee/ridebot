@@ -2,6 +2,11 @@ import dotenv from 'dotenv';
 
 dotenv.config({ quiet: true });
 
+const storageDriver = process.env.STORAGE_DRIVER || 'mongodb';
+if (!['mongodb', 'memory'].includes(storageDriver)) {
+  throw new Error('STORAGE_DRIVER must be mongodb or memory');
+}
+
 const defaultLanguage = process.env.DEFAULT_LANGUAGE || 'en';
 const fallbackLanguage = process.env.FALLBACK_LANGUAGE || 'en';
 const configuredMaxRideMessagesPerChatThread = Number(process.env.MAX_RIDE_MESSAGES_PER_CHAT_THREAD);
@@ -12,6 +17,7 @@ const maxRideMessagesPerChatThread = Number.isInteger(configuredMaxRideMessagesP
 
 export const config = {
   isDev: process.env.NODE_ENV === 'development',
+  storageDriver,
   debugLogMessages: process.env.DEBUG_LOG_MESSAGES === 'true',
   i18n: {
     defaultLanguage,

@@ -83,3 +83,39 @@ describe('config.debugLogMessages', () => {
     expect(config.debugLogMessages).toBe(false);
   });
 });
+
+describe('config.storageDriver', () => {
+  const originalEnv = { ...process.env };
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+    jest.resetModules();
+  });
+
+  it.each(['development', 'production', 'test', 'staging'])('defaults to mongodb in %s', async (environment) => {
+    process.env.NODE_ENV = environment;
+    // Empty value also prevents a local .env from supplying a driver.
+    process.env.STORAGE_DRIVER = '';
+    jest.resetModules();
+
+    const { config } = await import('../config.js');
+
+    expect(config.storageDriver).toBe('mongodb');
+  });
+
+  it.each(['memory', 'mongodb'])('uses the explicit driver %s', async (driver) => {
+    process.env.STORAGE_DRIVER = driver;
+    jest.resetModules();
+
+    const { config } = await import('../config.js');
+
+    expect(config.storageDriver).toBe(driver);
+  });
+
+  it('rejects an unsupported driver', async () => {
+    process.env.STORAGE_DRIVER = 'mongo';
+    jest.resetModules();
+
+    await expect(import('../config.js')).rejects.toThrow('STORAGE_DRIVER must be mongodb or memory');
+  });
+});

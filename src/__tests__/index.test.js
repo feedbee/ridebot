@@ -38,6 +38,7 @@ describe('index.js', () => {
     jest.unstable_mockModule('../config.js', () => ({
       config: {
         isDev: true,
+        storageDriver: 'memory',
         bot: { token: 'test-token' }
       }
     }));
@@ -67,10 +68,10 @@ describe('index.js', () => {
   });
 
   describe('Storage Selection', () => {
-    it('should use MemoryStorage in development mode', async () => {
-      // Setup - config.isDev = true
+    it.each([true, false])('uses memory when selected, with isDev=%s', async (isDev) => {
       const { config } = await import('../config.js');
-      config.isDev = true;
+      config.isDev = isDev;
+      config.storageDriver = 'memory';
       
       const { Bot } = await import('../core/Bot.js');
       const { MemoryStorage } = await import('../storage/memory.js');
@@ -88,10 +89,10 @@ describe('index.js', () => {
       expect(Bot).toHaveBeenCalledWith(mockMemoryStorage);
     });
 
-    it('should use MongoDBStorage in production mode', async () => {
-      // Setup - config.isDev = false
+    it.each([true, false])('uses mongodb when selected, with isDev=%s', async (isDev) => {
       const { config } = await import('../config.js');
-      config.isDev = false;
+      config.isDev = isDev;
+      config.storageDriver = 'mongodb';
       
       const { Bot } = await import('../core/Bot.js');
       const { MemoryStorage } = await import('../storage/memory.js');

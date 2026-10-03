@@ -5,7 +5,7 @@ import { MongoDBStorage } from './storage/mongodb.js';
 import packageJson from '../package.json' with { type: 'json' };
 
 async function main() {
-  const storage = config.isDev ? new MemoryStorage() : new MongoDBStorage();
+  const storage = config.storageDriver === 'memory' ? new MemoryStorage() : new MongoDBStorage();
   const bot = new Bot(storage);
   
   try {

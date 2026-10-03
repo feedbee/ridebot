@@ -56,7 +56,8 @@ function startBotProcess() {
     cwd: repoRoot,
     env: {
       ...process.env,
-      NODE_ENV: 'development'
+      NODE_ENV: 'development',
+      STORAGE_DRIVER: 'memory'
     },
     stdio: ['ignore', 'pipe', 'pipe']
   });

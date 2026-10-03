@@ -179,7 +179,7 @@ Check:
 ### The test waits forever for a message or edit
 
 Check:
-- the bot can start locally with `NODE_ENV=development node src/index.js`
+- the bot can start locally with `NODE_ENV=development STORAGE_DRIVER=memory node src/index.js`
 - the bot token in `.env` matches the Telegram bot you are messaging
 - you are not using a production group by mistake
 - the user session belongs to the account you expect

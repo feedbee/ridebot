@@ -363,8 +363,10 @@ The bot supports multiple ways to reference a ride:
 
 ## Development vs Production
 
-- Development mode uses in-memory storage and polling
-- Production mode uses MongoDB and webhooks
+- `NODE_ENV` controls development mode independently of storage and Telegram transport.
+- `STORAGE_DRIVER` selects `mongodb` (default) or `memory`. In-memory data is lost on restart.
+- `USE_WEBHOOK` selects webhooks (`true`) or polling (default).
+- For local development without MongoDB, run `STORAGE_DRIVER=memory npm run dev`.
 
 ## Environment Variables
 
@@ -374,6 +376,7 @@ The bot supports multiple ways to reference a ride:
 - `STRAVA_CLIENT_SECRET`: Strava API client secret (required for `/fromstrava`)
 - `STRAVA_REFRESH_TOKEN`: Strava OAuth refresh token (required for `/fromstrava`)
 - `WEBHOOK_DOMAIN`: Domain for webhook in production
+- `STORAGE_DRIVER`: Storage backend: `mongodb` (default) or `memory`; other values are rejected
 - `MONGODB_URI`: MongoDB connection string
 - `NODE_ENV`: Set to 'development' for dev mode
 - `USE_WEBHOOK`: Set to `true` to enable webhook mode (defaults to `false` for polling)
