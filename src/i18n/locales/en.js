@@ -192,6 +192,7 @@ settings.participantLimit: 0-1000 (optional; 0 means unlimited)
 
 
 <h3>✅ Participation Approval</h3>
+<p>The creator can exclude a participant using <code>/declineparticipant rideID</code> or by replying to an announcement with /declineparticipant. Use Exclude next to the profile link; page buttons edit the same menu. Exclusion moves the user to Not participating and removes access to an attached group. Joining or applying again remains possible. After exclusion, the menu updates and stays open for further selections. The bot also sends the participant a private notice that the creator cancelled their participation, if delivery is possible. Use Close below the page buttons to remove it.</p>
 <p>Enable moderation in ride settings or pass <code>settings.requireParticipationApproval: yes</code>. It is off by default. Participants see Apply to participate and Not participating. Applications stay pending until the creator accepts or rejects them using buttons in a private notification. Applicants receive the decision privately when the bot can message them. Start a private chat with the bot before applying.</p>
 <p>Only accepted participants count toward the limit and can join an attached group. If the ride is full, acceptance is blocked and the application stays pending. The creator can join directly, subject to the same limit. Not participating withdraws an application or leaves the ride; a rejected applicant may apply again. Switching moderation on or off does not change existing participation states. Application and decision messages are sent independently of ordinary participation notification preferences.</p>
 
@@ -400,6 +401,15 @@ Click here to start a private chat: @botname
     duplicate: {
       success: 'Ride duplicated successfully!'
     },
+    declineParticipant: {
+      title: 'Choose a participant to exclude from "{title}"',
+      decline: 'Exclude',
+      empty: 'No active participants to exclude.',
+      stale: 'This user is no longer an active participant.',
+      success: 'Participant excluded',
+      updatedButMenuFailed: 'Participant excluded, but list updates failed. Try switching pages.',
+      updatedButMessageFailed: 'Participant excluded, but announcement updates failed',
+    },
     listParticipants: {
       invalidRideIdUsage: 'Please provide a valid ride ID. Usage: <code>/listparticipants rideID</code>',
       allParticipantsTitle: 'All Participants for "{title}" ({total})',
@@ -453,6 +463,7 @@ Click here to start a private chat: @botname
       }
     },
     notifications: {
+      participationCancelled: 'Your participation in "<b>{title}</b>" (#{rideId}) was cancelled by the ride creator.',
       joined: '🚴 <b>{name}</b> joined your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nsettings.notifyParticipation: no</pre>',
       thinking: '🤔 <b>{name}</b> is thinking about your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nsettings.notifyParticipation: no</pre>',
       skipped: '🙅 <b>{name}</b> declined your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nsettings.notifyParticipation: no</pre>',
@@ -707,6 +718,7 @@ Click here to start a private chat: @botname
       deleteride: 'Delete a ride',
       listrides: 'List all your rides',
       planned: 'List rides you plan to attend',
+      declineparticipant: 'Exclude a ride participant',
       listparticipants: 'List all participants for a ride',
       dupride: 'Duplicate an existing ride',
       resumeride: 'Resume a cancelled ride',

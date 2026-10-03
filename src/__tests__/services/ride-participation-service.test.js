@@ -532,3 +532,95 @@ describe('RideParticipationService', () => {
     expect(mockNotificationService.sendApplicationDecisionNotification).not.toHaveBeenCalled();
   });
 });
+
+
+describe('Creator participant declines', () => {
+  const profile = { userId: 2, firstName: 'Guest', username: 'guest' };
+
+  async function setup(state = 'joined', moderated = false) {
+    const storage = new MemoryStorage();
+    const rides = new RideService(storage);
+    const ride = await rides.createRide({ title: 'Ride', date: new Date('2099-01-01'), createdBy: 1,
+      groupId: -100123, settings: { requireParticipationApproval: moderated } });
+    await rides.setParticipation(ride.id, profile, state);
+    const notifications = {
+      scheduleParticipationNotification: jest.fn(),
+      deleteApplicationNotifications: jest.fn().mockResolvedValue(),
+      sendApplicationDecisionNotification: jest.fn().mockResolvedValue(),
+      sendParticipationCancelledNotification: jest.fn().mockResolvedValue()
+    };
+    const groups = { removeParticipant: jest.fn().mockResolvedValue() };
+    const service = new RideParticipationService(rides, notifications, groups);
+    const params = { rideId: ride.id, participantUserId: 2, actorUserId: 1, api: {} };
+    return { storage, rides, ride, notifications, groups, service, params };
+  }
+
+  it.each(['joined', 'thinking'])('declines %s and runs removal only once for concurrent decisions', async state => {
+    const { storage, ride, notifications, groups, service, params } = await setup(state, true);
+    const results = await Promise.all([service.declineParticipant(params), service.declineParticipant(params)]);
+    expect(results.map(r => r.status)).toEqual(['changed', 'stale']);
+    expect(await storage.getParticipation(ride.id, 2)).toBe('skipped');
+    expect(groups.removeParticipant).toHaveBeenCalledTimes(1);
+    expect(groups.removeParticipant).toHaveBeenCalledWith(params.api, -100123, 2);
+    expect(notifications.scheduleParticipationNotification).not.toHaveBeenCalled();
+    expect(notifications.deleteApplicationNotifications).toHaveBeenCalledTimes(state === 'thinking' ? 1 : 0);
+    expect(notifications.sendApplicationDecisionNotification).not.toHaveBeenCalled();
+    expect(notifications.sendParticipationCancelledNotification).toHaveBeenCalledTimes(1);
+    expect(notifications.sendParticipationCancelledNotification).toHaveBeenCalledWith(expect.objectContaining({ id: ride.id }), 2, params.api);
+  });
+
+  it.each(['forbidden', 'ride_not_found', 'ride_cancelled', 'ride_archived', 'stale'])('rejects %s without side effects', async status => {
+    const { storage, ride, notifications, groups, service, params } = await setup();
+    if (status === 'forbidden') params.actorUserId = 99;
+    if (status === 'ride_not_found') params.rideId = 'missing';
+    if (status === 'ride_cancelled') await storage.updateRide(ride.id, { cancelled: true });
+    if (status === 'ride_archived') await storage.updateRide(ride.id, { date: new Date('2000-01-01') });
+    if (status === 'stale') await storage.setParticipation(ride.id, 'skipped', profile);
+    expect(await service.declineParticipant(params)).toMatchObject({ status });
+    expect(groups.removeParticipant).not.toHaveBeenCalled();
+    for (const notification of Object.values(notifications)) expect(notification).not.toHaveBeenCalled();
+  });
+
+  it('leaves the current state untouched if it changes before the conditional write', async () => {
+    const { storage, ride, notifications, groups, service, params } = await setup();
+    const original = storage.setParticipationForRideMode.bind(storage);
+    jest.spyOn(storage, 'setParticipationForRideMode').mockImplementation(async (...args) => {
+      await storage.setParticipation(ride.id, 'thinking', profile);
+      return original(...args);
+    });
+    expect(await service.declineParticipant(params)).toMatchObject({ status: 'stale' });
+    expect(await storage.getParticipation(ride.id, 2)).toBe('thinking');
+    expect(groups.removeParticipant).not.toHaveBeenCalled();
+    expect(notifications.deleteApplicationNotifications).not.toHaveBeenCalled();
+  });
+
+  it('serializes a rejoin behind the decline group removal', async () => {
+    const { storage, ride, groups, service, params } = await setup();
+    let started, release;
+    const entered = new Promise(resolve => { started = resolve; });
+    const gate = new Promise(resolve => { release = resolve; });
+    let member = true;
+    groups.removeParticipant.mockImplementation(async () => { started(); await gate; member = false; });
+    groups.addParticipant = async () => { member = true; };
+    const decline = service.declineParticipant(params);
+    await entered;
+    const join = service.changeParticipation({ rideId: ride.id, participantProfile: profile, targetState: 'joined', api: {} });
+    release();
+    await Promise.all([decline, join]);
+    expect(await storage.getParticipation(ride.id, 2)).toBe('joined');
+    expect(member).toBe(true);
+  });
+
+  it('blocks a decline if archival starts between the service read and storage write', async () => {
+    const { storage, ride, groups, service, params } = await setup();
+    const original = storage.setParticipationForRideMode.bind(storage);
+    jest.spyOn(storage, 'setParticipationForRideMode').mockImplementation(async (...args) => {
+      await storage.updateRide(ride.id, { date: new Date('2000-01-01') });
+      return original(...args);
+    });
+    expect(await service.declineParticipant(params)).toMatchObject({ status: 'ride_archived' });
+    expect(await storage.getParticipation(ride.id, 2)).toBe('joined');
+    expect(groups.removeParticipant).not.toHaveBeenCalled();
+  });
+
+});

@@ -313,7 +313,7 @@ export async function createScenarioHarness() {
     return dispatch(0);
   };
 
-  const dispatchMessage = async ({ text, chat, from, messageThreadId } = {}) => {
+  const dispatchMessage = async ({ text, chat, from, messageThreadId, replyToMessage } = {}) => {
     const effectiveChat = chat || { id: 100, type: 'private' };
     const effectiveFrom = from || { id: 200, first_name: 'Test', last_name: 'User', username: 'testuser' };
     const message = {
@@ -326,6 +326,7 @@ export async function createScenarioHarness() {
     if (messageThreadId) {
       message.message_thread_id = messageThreadId;
     }
+    if (replyToMessage) message.reply_to_message = replyToMessage;
 
     const ctx = createCtx({
       chat: effectiveChat,

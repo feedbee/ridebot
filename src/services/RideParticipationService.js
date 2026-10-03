@@ -148,6 +148,52 @@ export class RideParticipationService {
     return outcome;
   }
 
+  /** Decline an existing participant as the ride creator.
+   * @param {Object} params
+   * @param {string} params.rideId
+   * @param {number} params.participantUserId
+   * @param {number} params.actorUserId
+   * @param {import('grammy').Api} params.api
+   * @returns {Promise<Object>}
+   */
+  async declineParticipant(params) {
+    return this.runParticipantOperation(params.rideId, params.participantUserId,
+      () => this.performParticipantDecline(params));
+  }
+
+  /** Conditionally decline while holding the participant queue.
+   * @param {Object} params
+   * @returns {Promise<Object>}
+   */
+  async performParticipantDecline({ rideId, participantUserId, actorUserId, api }) {
+    const ride = await this.rideService.getRide(rideId);
+    if (!ride) return { status: 'ride_not_found' };
+    if (ride.createdBy !== actorUserId) return { status: 'forbidden' };
+    if (isRideArchived(ride)) return { status: 'ride_archived' };
+    if (ride.cancelled) return { status: 'ride_cancelled' };
+    const currentState = ['joined', 'thinking'].find(state =>
+      (ride.participation?.[state] || []).some(p => p.userId === participantUserId));
+    if (!currentState) return { status: 'stale' };
+    const participant = ride.participation[currentState].find(p => p.userId === participantUserId);
+    const approvalRequired = ride.settings?.requireParticipationApproval === true;
+    const result = await this.rideService.setParticipationForRideMode(
+      rideId, participant, 'skipped', approvalRequired, currentState
+    );
+    if (!result.success) {
+      return { status: result.reason === 'ride_archived' ? 'ride_archived' : 'stale' };
+    }
+    if (currentState === 'thinking' && this.notificationService) {
+      await this.notificationService.deleteApplicationNotifications(result.ride, participantUserId, api);
+    }
+    if (result.ride.groupId && this.groupManagementService) {
+      await this.groupManagementService.removeParticipant(api, result.ride.groupId, participantUserId);
+    }
+    if (this.notificationService) {
+      await this.notificationService.sendParticipationCancelledNotification(result.ride, participantUserId, api);
+    }
+    return { status: 'changed', ride: result.ride, targetState: 'skipped' };
+  }
+
   /** Accept or reject a pending application. */
   async decideApplication(params) {
     return this.runParticipantOperation(params.rideId, params.applicantUserId,
