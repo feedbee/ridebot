@@ -162,30 +162,21 @@ export class MongoDBStorage extends StorageInterface {
     return this.mapRideToInterface(newRide);
   }
 
+  /** Update content and individual settings without replacing other settings.
+   * @param {string} rideId
+   * @param {Object} updates
+   * @returns {Promise<Object>}
+   */
   async updateRide(rideId, updates) {
-    const ride = await Ride.findById(rideId);
-    if (!ride) {
-      throw new Error('Ride not found');
-    }
-
-    // Preserve the messages array if it's not being updated
-    // This is critical to ensure message tracking works properly
-    let updatesToApply = { ...updates };
-
-    // Set updatedAt to current time only if updatedBy is set
-    if (updatesToApply.updatedBy) {
-      updatesToApply.updatedAt = new Date();
-    }
-
-    if (updatesToApply.category !== undefined) {
-      updatesToApply.category = normalizeCategory(updatesToApply.category);
-    }
-    if (updatesToApply.routes !== undefined) {
-      updatesToApply.routes = normalizeRoutes(updatesToApply.routes);
-    }
-    // Apply updates
-    Object.assign(ride, updatesToApply);
-    await ride.save();
+    const { settings, ...fields } = updates;
+    if (fields.updatedBy) fields.updatedAt = new Date();
+    if (fields.category !== undefined) fields.category = normalizeCategory(fields.category);
+    if (fields.routes !== undefined) fields.routes = normalizeRoutes(fields.routes);
+    for (const [key, value] of Object.entries(settings || {})) fields[`settings.${key}`] = value;
+    const ride = Object.keys(fields).length
+      ? await Ride.findByIdAndUpdate(rideId, { $set: fields }, { returnDocument: 'after', runValidators: true })
+      : await Ride.findById(rideId);
+    if (!ride) throw new Error('Ride not found');
     return this.mapRideToInterface(ride);
   }
 
@@ -571,24 +562,37 @@ export class MongoDBStorage extends StorageInterface {
     }
   }
 
-  async upsertUser(userData) {
-    const existingUser = await User.findOne({ userId: userData.userId });
-    const now = new Date();
-    const nextUser = existingUser || new User({
-      userId: userData.userId,
-      createdAt: now
-    });
-
-    nextUser.username = userData.username ?? nextUser.username ?? '';
-    nextUser.firstName = userData.firstName ?? nextUser.firstName ?? '';
-    nextUser.lastName = userData.lastName ?? nextUser.lastName ?? '';
-    nextUser.settings = userData.settings !== undefined
-      ? { ...(nextUser.settings || {}), ...userData.settings }
-      : nextUser.settings;
-    nextUser.updatedAt = now;
-
-    await nextUser.save();
-    return this.mapUserToInterface(nextUser);
+  /** Patch profile and settings atomically; initialize defaults only if absent.
+   * @param {Object} userData
+   * @param {{initializeRideDefaults?: Object}} options
+   * @returns {Promise<Object>}
+   */
+  async upsertUser(userData, { initializeRideDefaults } = {}) {
+    const fields = { updatedAt: new Date() };
+    for (const key of ['username', 'firstName', 'lastName']) {
+      if (userData[key] != null) fields[key] = userData[key];
+    }
+    for (const [key, value] of Object.entries(userData.settings || {})) {
+      if (key === 'rideDefaults') {
+        for (const [name, setting] of Object.entries(value || {})) fields[`settings.rideDefaults.${name}`] = setting;
+      } else {
+        fields[`settings.${key}`] = value;
+      }
+    }
+    let user = await User.findOneAndUpdate(
+      { userId: userData.userId },
+      { $set: fields, $setOnInsert: { userId: userData.userId, createdAt: new Date() } },
+      { upsert: true, returnDocument: 'after', runValidators: true }
+    );
+    if (initializeRideDefaults) {
+      await User.updateOne(
+        { userId: userData.userId, 'settings.rideDefaults': { $exists: false } },
+        { $set: { 'settings.rideDefaults': initializeRideDefaults } },
+        { runValidators: true }
+      );
+      user = await User.findOne({ userId: userData.userId });
+    }
+    return this.mapUserToInterface(user);
   }
 
   mapRideToInterface(ride) {

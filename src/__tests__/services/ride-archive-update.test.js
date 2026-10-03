@@ -20,10 +20,10 @@ describe.each(['en', 'ru'])('archived ride updates (%s)', language => {
     service = new RideService(storage, {});
   });
 
-  it('rejects content changes without a new future date', async () => {
+  it.each([{ title: 'Changed' }, { chat: 'https://t.me/ridechat' }, { chat: '' }])('rejects content changes %j without a new future date', async updates => {
     const result = await service.updateRideContent(
       archivedRide.id,
-      { title: 'Changed' },
+      updates,
       42,
       { language, now }
     );

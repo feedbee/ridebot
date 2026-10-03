@@ -15,7 +15,7 @@ export class SettingsService {
   }
 
   /**
-   * @returns {{notifyParticipation: boolean, allowReposts: boolean}}
+   * @returns {import('../storage/interface.js').RideSettings}
    */
   static getSystemRideDefaults() {
     return {
@@ -29,7 +29,7 @@ export class SettingsService {
   /**
    * @param {Object} [baseSettings={}]
    * @param {Object} [overrideSettings={}]
-   * @returns {{notifyParticipation: boolean, allowReposts: boolean}}
+   * @returns {import('../storage/interface.js').RideSettings}
    */
   static buildRideSettingsSnapshot(baseSettings = {}, overrideSettings = {}) {
     return {
@@ -41,7 +41,7 @@ export class SettingsService {
 
   /**
    * @param {Object|null} user
-   * @returns {{notifyParticipation: boolean, allowReposts: boolean}}
+   * @returns {import('../storage/interface.js').RideSettings}
    */
   static getEffectiveUserRideDefaults(user) {
     return SettingsService.buildRideSettingsSnapshot(user?.settings?.rideDefaults);
@@ -59,7 +59,7 @@ export class SettingsService {
 
   /**
    * @param {Object} [input={}]
-   * @returns {{notifyParticipation?: boolean, allowReposts?: boolean}}
+   * @returns {Partial<import('../storage/interface.js').RideSettings>}
    */
   static extractExplicitRideSettings(input = {}) {
     return { ...(input.settings || {}) };
@@ -69,7 +69,7 @@ export class SettingsService {
    * Resolve effective ride settings from a ride-like object.
    *
    * @param {Object} [ride={}]
-   * @returns {{notifyParticipation: boolean, allowReposts: boolean}}
+   * @returns {import('../storage/interface.js').RideSettings}
    */
   static getRideSettingsSnapshot(ride = {}) {
     const explicitSettings = SettingsService.extractExplicitRideSettings(ride);
@@ -81,7 +81,7 @@ export class SettingsService {
    *
    * @param {Object} currentRide
    * @param {Object} [updates={}]
-   * @returns {{notifyParticipation: boolean, allowReposts: boolean}}
+   * @returns {import('../storage/interface.js').RideSettings}
    */
   static resolveUpdatedRideSettings(currentRide, updates = {}) {
     return SettingsService.buildRideSettingsSnapshot(
@@ -92,7 +92,7 @@ export class SettingsService {
 
   /**
    * @param {number} userId
-   * @returns {Promise<{notifyParticipation: boolean, allowReposts: boolean}>}
+   * @returns {Promise<import('../storage/interface.js').RideSettings>}
    */
   async getUserRideDefaults(userId) {
     const existingUser = await this.storage.getUser(userId);
@@ -122,14 +122,12 @@ export class SettingsService {
       throw new Error(`Unsupported participation notification level: ${level}`);
     }
 
-    const existingUser = await this.storage.getUser(userProfile.userId);
     return this.storage.upsertUser({
       userId: userProfile.userId,
       username: userProfile.username,
       firstName: userProfile.firstName,
       lastName: userProfile.lastName,
       settings: {
-        ...(existingUser?.settings || {}),
         participationNotificationLevel: level
       }
     });
@@ -152,11 +150,7 @@ export class SettingsService {
       username: userProfile.username,
       firstName: userProfile.firstName,
       lastName: userProfile.lastName,
-      settings: {
-        ...(existingUser?.settings || {}),
-        rideDefaults: SettingsService.getEffectiveUserRideDefaults(existingUser)
-      }
-    });
+    }, { initializeRideDefaults: SettingsService.getSystemRideDefaults() });
   }
 
   /**
@@ -167,20 +161,14 @@ export class SettingsService {
    * @returns {Promise<import('../storage/interface.js').UserEntity>}
    */
   async updateUserRideDefaults(userProfile, rideDefaultsPatch) {
-    const existingUser = await this.storage.getUser(userProfile.userId);
-    const mergedRideDefaults = SettingsService.buildRideSettingsSnapshot(
-      existingUser?.settings?.rideDefaults,
-      rideDefaultsPatch
-    );
-
+    await this.ensureUserWithRideDefaults(userProfile);
     return this.storage.upsertUser({
       userId: userProfile.userId,
       username: userProfile.username,
       firstName: userProfile.firstName,
       lastName: userProfile.lastName,
       settings: {
-        ...(existingUser?.settings || {}),
-        rideDefaults: mergedRideDefaults
+        rideDefaults: rideDefaultsPatch
       }
     });
   }
@@ -191,7 +179,7 @@ export class SettingsService {
    * @param {Object} params
    * @param {import('../models/UserProfile.js').UserProfile|null} [params.creatorProfile]
    * @param {Object} [params.input]
-   * @returns {Promise<{notifyParticipation: boolean, allowReposts: boolean}>}
+   * @returns {Promise<import('../storage/interface.js').RideSettings>}
    */
   async resolveCreateRideSettings({ creatorProfile = null, input = {} } = {}) {
     const explicitRideSettings = SettingsService.extractExplicitRideSettings(input);

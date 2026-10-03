@@ -2,6 +2,12 @@ import { BaseCommandHandler } from './BaseCommandHandler.js';
 import { UserProfile } from '../models/UserProfile.js';
 import { RIDE_ARCHIVE_AFTER_HOURS } from '../services/ride-lifecycle.js';
 
+const SUCCESS_MESSAGE_KEYS = {
+  joined: 'commands.participation.joinedSuccess',
+  thinking: 'commands.participation.thinkingSuccess',
+  skipped: 'commands.participation.skippedSuccess'
+};
+
 /**
  * Handler for join/thinking/skip ride callbacks
  */
@@ -26,7 +32,7 @@ export class ParticipationHandlers extends BaseCommandHandler {
 
   /** Handle an application intent for a moderated ride. */
   async handleApply(ctx) {
-    await this.handleParticipationChange(ctx, 'joined', this.translate(ctx, 'commands.participation.applicationSubmitted'));
+    await this.handleJoinRide(ctx);
   }
 
   /**
@@ -103,7 +109,9 @@ export class ParticipationHandlers extends BaseCommandHandler {
           };
           await ctx.answerCallbackQuery(result.moderationOutcome
             ? this.translate(ctx, outcomeMessages[result.moderationOutcome])
-            : successMessage);
+            : result.targetState
+              ? this.translate(ctx, SUCCESS_MESSAGE_KEYS[result.targetState])
+              : successMessage);
         } else {
           await ctx.answerCallbackQuery(this.translate(ctx, 'commands.participation.updatedButMessageFailed'));
         }

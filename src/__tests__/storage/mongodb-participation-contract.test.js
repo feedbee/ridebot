@@ -33,4 +33,26 @@ describe('Mongo participation query contract without a database', () => {
       $literal: [expect.objectContaining(profile)]
     });
   });
+
+  it('writes a ride setting patch without replacing unrelated settings or tracking', async () => {
+    await storage.updateRide(String(ride._id), { settings: { participantLimit: 10 } });
+    expect(Ride.collection.findOneAndUpdate.mock.calls[0][1]).toEqual({
+      $set: { 'settings.participantLimit': 10 }
+    });
+  });
+
+  it('writes user default and notification patches as separate fields', async () => {
+    const User = mongoose.model('User');
+    jest.spyOn(User.collection, 'findOneAndUpdate').mockResolvedValue({ userId: 2, settings: {} });
+    await storage.upsertUser({ userId: 2, settings: {
+      rideDefaults: { participantLimit: 10 }, participationNotificationLevel: 'membership'
+    } });
+    const update = User.collection.findOneAndUpdate.mock.calls[0][1];
+    expect(update.$set).toMatchObject({
+      'settings.rideDefaults.participantLimit': 10,
+      'settings.participationNotificationLevel': 'membership'
+    });
+    expect(update.$set.settings).toBeUndefined();
+    expect(update.$set['settings.rideDefaults']).toBeUndefined();
+  });
 });

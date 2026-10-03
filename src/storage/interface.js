@@ -128,16 +128,20 @@ export class StorageInterface {
   }
 
   /**
-   * Atomically remove tracked messages by chat and message ID.
+   * Atomically append one tracked announcement.
    * @param {string} rideId
-   * @param {Array<Pick<RideMessage, 'chatId'|'messageId'>>} messages
+   * @param {RideMessage} message
    * @returns {Promise<Ride>}
    */
-  /** Atomically append one tracked announcement. */
   async addRideMessage(rideId, message) {
     throw new Error('Not implemented');
   }
 
+  /** Atomically remove tracked messages by chat and message ID.
+   * @param {string} rideId
+   * @param {Array<Pick<RideMessage, 'chatId'|'messageId'>>} messages
+   * @returns {Promise<Ride>}
+   */
   async removeRideMessages(rideId, messages) {
     throw new Error('Not implemented');
   }
@@ -264,9 +268,10 @@ export class StorageInterface {
   /**
    * Create or update a persisted user record.
    * @param {Partial<UserEntity> & { userId: number }} user
+   * @param {{initializeRideDefaults?: RideSettings}} [options]
    * @returns {Promise<UserEntity>}
    */
-  async upsertUser(user) {
+  async upsertUser(user, options = {}) {
     throw new Error('Not implemented');
   }
 } 

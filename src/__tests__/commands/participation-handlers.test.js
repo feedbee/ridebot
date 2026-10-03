@@ -28,6 +28,15 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
   let mockCtx;
   const tr = (key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
 
+  it('reports direct joining for a creator or a stale Apply button after moderation is disabled', async () => {
+    mockRideParticipationService.changeParticipation.mockResolvedValue({
+      status: 'changed', ride: { id: '123' }, targetState: 'joined'
+    });
+    mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: true });
+    await participationHandlers.handleApply(mockCtx);
+    expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.participation.joinedSuccess'));
+  });
+
   beforeEach(() => {
     // Create mock RideService
     mockRideService = {};

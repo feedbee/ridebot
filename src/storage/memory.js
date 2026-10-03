@@ -92,7 +92,10 @@ export class MemoryStorage extends StorageInterface {
     }
     const updatedRide = {
       ...ride,
-      ...updatesToApply
+      ...updatesToApply,
+      ...(updatesToApply.settings !== undefined
+        ? { settings: { ...(ride.settings || {}), ...updatesToApply.settings } }
+        : {})
     };
     
     this.rides.set(rideId, updatedRide);
@@ -328,7 +331,7 @@ export class MemoryStorage extends StorageInterface {
     return this.mapUserToInterface(user);
   }
 
-  async upsertUser(userData) {
+  async upsertUser(userData, { initializeRideDefaults } = {}) {
     const existing = this.users.get(userData.userId);
     const now = new Date();
     const nextUser = {
@@ -337,12 +340,20 @@ export class MemoryStorage extends StorageInterface {
       firstName: userData.firstName ?? existing?.firstName ?? '',
       lastName: userData.lastName ?? existing?.lastName ?? '',
       settings: userData.settings !== undefined
-        ? { ...(existing?.settings || {}), ...userData.settings }
+        ? {
+            ...(existing?.settings || {}), ...userData.settings,
+            ...(userData.settings.rideDefaults !== undefined ? {
+              rideDefaults: { ...(existing?.settings?.rideDefaults || {}), ...userData.settings.rideDefaults }
+            } : {})
+          }
         : existing?.settings,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now
     };
 
+    if (initializeRideDefaults && !nextUser.settings?.rideDefaults) {
+      nextUser.settings = { ...(nextUser.settings || {}), rideDefaults: { ...initializeRideDefaults } };
+    }
     this.users.set(userData.userId, nextUser);
     return this.mapUserToInterface(nextUser);
   }

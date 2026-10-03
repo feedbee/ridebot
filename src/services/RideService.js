@@ -21,7 +21,7 @@ const SELF_ORGANIZER_REFERENCES = new Set([
 const RIDE_CONTENT_FIELDS = new Set([
   'title', 'category', 'organizer', 'date', 'meetingPoint', 'routes', 'routeLink',
   'distance', 'duration', 'speedMin', 'speedMax', 'cruisingSpeedMin',
-  'cruisingSpeedMax', 'additionalInfo'
+  'cruisingSpeedMax', 'chat', 'additionalInfo'
 ]);
 
 /**
@@ -94,17 +94,6 @@ export class RideService {
    */
   async updateRide(rideId, updates, userId = null) {
     let updatesToApply = { ...updates };
-
-    if (
-      updatesToApply.settings !== undefined
-    ) {
-      const existingRide = await this.storage.getRide(rideId);
-      if (!existingRide) {
-        throw new Error('Ride not found');
-      }
-
-      updatesToApply.settings = SettingsService.resolveUpdatedRideSettings(existingRide, updatesToApply);
-    }
 
     // Only set updatedBy if userId is provided and there are other updates
     if (userId !== null && Object.keys(updatesToApply).length > 0) {
@@ -500,21 +489,14 @@ export class RideService {
       else if (max != null) mergedParams[paramName] = `-${max}`;
     }
     
-    // Copy ride settings from the original ride when duplicating your own ride.
-    if (originalRide.createdBy === creatorProfile.userId) {
-      const originalSettings = SettingsService.getRideSettingsSnapshot(originalRide);
-      ['notifyParticipation', 'allowReposts'].forEach(settingName => {
-        const paramName = `settings.${settingName}`;
-        if (params[paramName] === undefined) {
-          mergedParams[paramName] = originalSettings[settingName] ? 'yes' : 'no';
-        }
-      });
-      if (
-        params['settings.participantLimit'] === undefined
-        && params.settings?.participantLimit === undefined
-      ) {
-        mergedParams['settings.participantLimit'] = `${originalSettings.participantLimit}`;
-      }
+    // Copy an own ride's complete snapshot, then apply explicit setting overrides.
+    const settings = originalRide.createdBy === creatorProfile.userId
+      ? SettingsService.getRideSettingsSnapshot(originalRide)
+      : {};
+    for (const settingName of Object.keys(SettingsService.getSystemRideDefaults())) {
+      const explicit = params.settings?.[settingName] ?? params[`settings.${settingName}`];
+      const value = explicit !== undefined ? explicit : settings[settingName];
+      if (value !== undefined) mergedParams[`settings.${settingName}`] = value;
     }
 
     // Use existing createRideFromParams to handle all the validation and processing
