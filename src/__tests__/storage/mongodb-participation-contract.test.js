@@ -28,7 +28,7 @@ describe('Mongo storage query contracts without a database', () => {
     expect(result.status).toBe('changed');
     const pipeline = Ride.collection.findOneAndUpdate.mock.calls[0][1];
     const set = pipeline[0].$set;
-    const expression = mode === 'regular' ? set['participation.joined'] : set.participation.thinking;
+    const expression = mode === 'regular' ? set['participation.joined'] : set['participation.thinking'];
     expect(expression.$concatArrays[1]).toEqual({
       $literal: [expect.objectContaining(profile)]
     });

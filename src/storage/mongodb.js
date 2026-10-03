@@ -4,6 +4,7 @@ import { config } from '../config.js';
 import { DEFAULT_CATEGORY, normalizeCategory } from '../utils/category-utils.js';
 import { MigrationRunner } from '../migrations/MigrationRunner.js';
 import { getRideRoutes, normalizeRoutes } from '../utils/route-links.js';
+import { buildCapacityFilter, buildParticipationUpdate, createParticipantData } from './mongo-participation.js';
 
 const participantSchema = new mongoose.Schema({
   userId: { type: Number, required: true },
@@ -328,48 +329,15 @@ export class MongoDBStorage extends StorageInterface {
       };
     }
 
-    const participantData = {
-      _id: new mongoose.Types.ObjectId(),
-      userId: participantProfile.userId,
-      username: participantProfile.username,
-      firstName: participantProfile.firstName || '',
-      lastName: participantProfile.lastName || '',
-      createdAt: new Date()
-    };
+    const participantData = { _id: new mongoose.Types.ObjectId(), ...createParticipantData(participantProfile) };
 
     const filter = {
       _id: rideId,
       [`participation.${state}.userId`]: { $ne: participantProfile.userId }
     };
-    if (state === 'joined') {
-      filter.$expr = {
-        $or: [
-          { $lte: [{ $ifNull: ['$settings.participantLimit', 0] }, 0] },
-          {
-            $lt: [
-              { $size: { $ifNull: ['$participation.joined', []] } },
-              { $ifNull: ['$settings.participantLimit', 0] }
-            ]
-          }
-        ]
-      };
-    }
+    Object.assign(filter, buildCapacityFilter(state));
 
-    const filteredParticipants = candidate => ({
-      $filter: {
-        input: { $ifNull: [`$participation.${candidate}`, []] },
-        as: 'participant',
-        cond: { $ne: ['$$participant.userId', participantProfile.userId] }
-      }
-    });
-    const nextParticipation = Object.fromEntries(
-      ['joined', 'thinking', 'skipped'].map(candidate => [
-        `participation.${candidate}`,
-        candidate === state
-          ? { $concatArrays: [filteredParticipants(candidate), { $literal: [participantData] }] }
-          : filteredParticipants(candidate)
-      ])
-    );
+    const nextParticipation = buildParticipationUpdate(state, participantData);
 
     const updatedRide = await Ride.findOneAndUpdate(
       filter,
@@ -398,13 +366,7 @@ export class MongoDBStorage extends StorageInterface {
   }
 
   async setParticipationForRideMode(rideId, state, participantProfile, requireParticipationApproval, expectedState) {
-    const participantData = {
-      userId: participantProfile.userId,
-      username: participantProfile.username,
-      firstName: participantProfile.firstName || '',
-      lastName: participantProfile.lastName || '',
-      createdAt: new Date()
-    };
+    const participantData = createParticipantData(participantProfile);
     const approvalFilter = requireParticipationApproval
       ? { 'settings.requireParticipationApproval': true }
       : { 'settings.requireParticipationApproval': { $ne: true } };
@@ -415,38 +377,12 @@ export class MongoDBStorage extends StorageInterface {
           'participation.thinking.userId': { $ne: participantProfile.userId },
           'participation.skipped.userId': { $ne: participantProfile.userId }
         };
-    const withoutUser = participationState => ({
-      $filter: {
-        input: { $ifNull: [`$participation.${participationState}`, []] },
-        as: 'participant',
-        cond: { $ne: ['$$participant.userId', participantProfile.userId] }
-      }
-    });
-    const nextParticipation = Object.fromEntries(
-      ['joined', 'thinking', 'skipped'].map(participationState => [
-        participationState,
-        participationState === state
-          ? { $concatArrays: [withoutUser(participationState), { $literal: [participantData] }] }
-          : withoutUser(participationState)
-      ])
-    );
+    const nextParticipation = buildParticipationUpdate(state, participantData);
     const filter = { _id: rideId, cancelled: { $ne: true }, ...approvalFilter, ...participationFilter };
-    if (state === 'joined') {
-      filter.$expr = {
-        $or: [
-          { $lte: [{ $ifNull: ['$settings.participantLimit', 0] }, 0] },
-          {
-            $lt: [
-              { $size: { $ifNull: ['$participation.joined', []] } },
-              { $ifNull: ['$settings.participantLimit', 0] }
-            ]
-          }
-        ]
-      };
-    }
+    Object.assign(filter, buildCapacityFilter(state));
     const ride = await Ride.findOneAndUpdate(
       filter,
-      [{ $set: { participation: nextParticipation } }],
+      [{ $set: nextParticipation }],
       { returnDocument: 'after', updatePipeline: true }
     );
     if (ride) {
@@ -475,32 +411,14 @@ export class MongoDBStorage extends StorageInterface {
   }
 
   async setParticipationIfCurrent(rideId, userId, expectedState, targetState, participantProfile) {
-    const participantData = {
-      userId: participantProfile.userId,
-      username: participantProfile.username,
-      firstName: participantProfile.firstName || '',
-      lastName: participantProfile.lastName || '',
-      createdAt: new Date()
-    };
+    const participantData = createParticipantData(participantProfile);
     const filter = {
       _id: rideId,
       cancelled: { $ne: true },
       'settings.requireParticipationApproval': true,
       [`participation.${expectedState}.userId`]: userId
     };
-    if (targetState === 'joined') {
-      filter.$expr = {
-        $or: [
-          { $lte: [{ $ifNull: ['$settings.participantLimit', 0] }, 0] },
-          {
-            $lt: [
-              { $size: { $ifNull: ['$participation.joined', []] } },
-              { $ifNull: ['$settings.participantLimit', 0] }
-            ]
-          }
-        ]
-      };
-    }
+    Object.assign(filter, buildCapacityFilter(targetState));
     const ride = await Ride.findOneAndUpdate(
       filter,
       {
