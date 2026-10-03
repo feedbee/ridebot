@@ -407,6 +407,7 @@ Click here to start a private chat: @botname
       thinkingLabel: 'Thinking ({count})',
       acceptedLabel: 'Accepted ({count})',
       applicationsLabel: 'Applications ({count})',
+      rejectedOrDeclinedLabel: 'Rejected/declined ({count})',
       notInterestedLabel: 'Not interested ({count})',
       noOneJoinedYet: 'No one joined yet.',
       retrieveError: 'An error occurred while retrieving participants.'
@@ -574,6 +575,7 @@ Click here to start a private chat: @botname
       thinking: 'Thinking',
       accepted: 'Accepted',
       applications: 'Applications',
+      rejectedOrDeclined: 'Rejected/declined',
       notInterested: 'Not interested'
     },
     units: {

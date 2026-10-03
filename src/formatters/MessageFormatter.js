@@ -274,7 +274,7 @@ export class MessageFormatter {
         )} (${thinkingCount}): ${thinkingContent}`
         : '')
       .replace('{notInterestedLine}', notInterestedCount > 0
-        ? `<br>🙅 ${this.translate('formatter.participation.notInterested', {}, language)}: ${notInterestedContent}`
+        ? `<br>🙅 ${this.translate(approvalRequired ? 'formatter.participation.rejectedOrDeclined' : 'formatter.participation.notInterested', {}, language)}: ${notInterestedContent}`
         : '')
       .replace('{joinedLabel}', this.translate(
         approvalRequired ? 'formatter.participation.accepted' : 'formatter.participation.joined',
@@ -286,7 +286,7 @@ export class MessageFormatter {
         {},
         language
       ))
-      .replace('{notInterestedLabel}', this.translate('formatter.participation.notInterested', {}, language));
+      .replace('{notInterestedLabel}', this.translate(approvalRequired ? 'formatter.participation.rejectedOrDeclined' : 'formatter.participation.notInterested', {}, language));
     
     // Add cancellation instructions if the ride is cancelled
     const cancelledInstructions = ride.cancelled

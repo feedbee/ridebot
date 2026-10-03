@@ -56,6 +56,7 @@ const rideSchema = new mongoose.Schema({
   category: { type: String, default: DEFAULT_CATEGORY },
   date: { type: Date, required: true },
   messages: [messageSchema],
+  applicationMessages: [{ userId: Number, chatId: Number, messageId: Number }],
   routes: [routeSchema],
   routeLink: String,
   meetingPoint: String,
@@ -226,6 +227,22 @@ export class MongoDBStorage extends StorageInterface {
     );
     if (!ride) throw new Error('Ride not found');
     return this.mapRideToInterface(ride);
+  }
+
+  /** Add one tracked moderation request.
+   * @param {string} rideId
+   * @param {Object} message
+   */
+  async addApplicationMessage(rideId, message) {
+    await Ride.findByIdAndUpdate(rideId, { $push: { applicationMessages: message } });
+  }
+
+  /** Remove one tracked moderation request.
+   * @param {string} rideId
+   * @param {Object} message
+   */
+  async removeApplicationMessage(rideId, message) {
+    await Ride.findByIdAndUpdate(rideId, { $pull: { applicationMessages: { chatId: message.chatId, messageId: message.messageId } } });
   }
 
   async getRidesByCreator(userId, skip, limit) {
@@ -545,6 +562,7 @@ export class MongoDBStorage extends StorageInterface {
       category: normalizeCategory(rideObj.category || DEFAULT_CATEGORY),
       date: rideObj.date,
       messages: rideObj.messages || [],
+      applicationMessages: rideObj.applicationMessages || [],
       routes: getRideRoutes(rideObj),
       routeLink: rideObj.routeLink,
       meetingPoint: rideObj.meetingPoint,

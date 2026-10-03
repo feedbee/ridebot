@@ -396,6 +396,14 @@ describe('MessageFormatter', () => {
       expect(result).toContain('<a href="tg://user?id=101112">@testuser3</a>');
     });
 
+    it.each([['ru', 'Отклонены/отказались', 'Не интересно'], ['en', 'Rejected/declined', 'Not interested']])('uses the declined label only for moderated rides in %s', (lang, moderated, ordinary) => {
+      const ride = { id: '123', title: 'Ride', date: new Date('2025-03-30T10:00:00Z'), settings: { requireParticipationApproval: true } };
+      const participation = { joined: [], thinking: [], skipped: [{ userId: 77, firstName: 'Guest' }] };
+      expect(messageFormatter.formatRideMessage(ride, participation, { lang })).toContain(`${moderated}: 1`);
+      ride.settings.requireParticipationApproval = false;
+      expect(messageFormatter.formatRideMessage(ride, participation, { lang })).toContain(`${ordinary}: 1`);
+    });
+
     it('escapes the ride title inside the Rich Message heading', () => {
       const result = messageFormatter.formatRideMessage({
         id: '123',

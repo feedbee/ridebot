@@ -407,6 +407,7 @@ id: abc123 (or #abc123)
       thinkingLabel: 'Думают ({count})',
       acceptedLabel: 'Заявка принята ({count})',
       applicationsLabel: 'Ожидают решения ({count})',
+      rejectedOrDeclinedLabel: 'Отклонены/отказались ({count})',
       notInterestedLabel: 'Не интересно ({count})',
       noOneJoinedYet: 'Пока никто не присоединился.',
       retrieveError: 'Произошла ошибка при получении списка участников.'
@@ -574,6 +575,7 @@ id: abc123 (or #abc123)
       thinking: 'Думают',
       accepted: 'Заявка принята',
       applications: 'Заявки',
+      rejectedOrDeclined: 'Отклонены/отказались',
       notInterested: 'Не интересно'
     },
     units: {

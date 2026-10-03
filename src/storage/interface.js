@@ -28,6 +28,7 @@
 /**
  * @typedef {Object} Ride
  * @property {string} id
+ * @property {Array<{userId: number, chatId: number, messageId: number}>} [applicationMessages]
  * @property {RideMessage[]} messages
  * @property {string} title
  * @property {string} [category]
@@ -206,6 +207,22 @@ export class StorageInterface {
    * @returns {Promise<boolean>}
    */
   async deleteRide(rideId) {
+    throw new Error('Not implemented');
+  }
+
+  /** Track a moderation request independently of announcements.
+   * @param {string} rideId
+   * @param {{userId: number, chatId: number, messageId: number}} message
+   */
+  async addApplicationMessage(rideId, message) {
+    throw new Error('Not implemented');
+  }
+
+  /** Remove one tracked moderation request.
+   * @param {string} rideId
+   * @param {{chatId: number, messageId: number}} message
+   */
+  async removeApplicationMessage(rideId, message) {
     throw new Error('Not implemented');
   }
 

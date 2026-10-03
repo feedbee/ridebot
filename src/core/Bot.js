@@ -51,7 +51,7 @@ export class Bot {
     const rideService = new RideService(storage, settingsService);
     const messageFormatter = new MessageFormatter();
     const rideMessagesService = new RideMessagesService(rideService, messageFormatter);
-    const notificationService = new NotificationService(settingsService);
+    const notificationService = new NotificationService(settingsService, storage);
     this.wizard = new RideWizard(storage, rideService, messageFormatter, rideMessagesService);
     const aiRideService = new AiRideService();
     this.aiRideHandler = new AiRideCommandHandler(rideService, messageFormatter, rideMessagesService, aiRideService);

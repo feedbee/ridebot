@@ -140,6 +140,28 @@ export class MemoryStorage extends StorageInterface {
     return this.mapRideToInterface(ride);
   }
 
+  /** Add one tracked moderation request.
+   * @param {string} rideId
+   * @param {Object} message
+   */
+  async addApplicationMessage(rideId, message) {
+    const ride = this.rides.get(rideId);
+    if (!ride) throw new Error('Ride not found');
+    ride.applicationMessages = [...(ride.applicationMessages || []), message];
+  }
+
+  /** Remove one tracked moderation request.
+   * @param {string} rideId
+   * @param {Object} message
+   */
+  async removeApplicationMessage(rideId, message) {
+    const ride = this.rides.get(rideId);
+    if (!ride) throw new Error('Ride not found');
+    ride.applicationMessages = (ride.applicationMessages || []).filter(item =>
+      item.chatId !== message.chatId || item.messageId !== message.messageId
+    );
+  }
+
   async getRidesByCreator(userId, skip, limit) {
     const userRides = Array.from(this.rides.values())
       .filter(ride => ride.createdBy === userId)

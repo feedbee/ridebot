@@ -75,6 +75,7 @@ it.each(['change', 'decide'])('rejects %s when the archive boundary is crossed b
     const groups = { addParticipant: jest.fn(), removeParticipant: jest.fn() };
     const notifications = {
       scheduleParticipationNotification: jest.fn(),
+      deleteApplicationNotifications: jest.fn(),
       sendApplicationNotification: jest.fn(),
       sendApplicationDecisionNotification: jest.fn()
     };
@@ -123,6 +124,7 @@ describe('RideParticipationService', () => {
     };
     mockNotificationService = {
       scheduleParticipationNotification: jest.fn(),
+      deleteApplicationNotifications: jest.fn(),
       sendApplicationNotification: jest.fn(),
       sendApplicationDecisionNotification: jest.fn()
     };

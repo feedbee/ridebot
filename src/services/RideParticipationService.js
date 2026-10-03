@@ -106,6 +106,10 @@ export class RideParticipationService {
       return noOp;
     }
 
+    if (result.previousState === 'thinking' && effectiveTargetState !== 'thinking' && this.notificationService) {
+      await this.notificationService.deleteApplicationNotifications(result.ride, participantProfile.userId, api);
+    }
+
     const isApplication = approvalRequired && !isCreator && effectiveTargetState === 'thinking';
     if (isApplication && this.notificationService) {
       await this.notificationService.sendApplicationNotification(result.ride, participantProfile, api);
@@ -169,6 +173,10 @@ export class RideParticipationService {
     const result = await this.rideService.decideParticipation(rideId, applicant, targetState);
     if (!result.success) {
       return { status: ['participant_limit_reached', 'ride_archived'].includes(result.reason) ? result.reason : 'stale' };
+    }
+
+    if (this.notificationService) {
+      await this.notificationService.deleteApplicationNotifications(result.ride, applicantUserId, api);
     }
 
     if (targetState === 'joined' && result.ride.groupId && this.groupManagementService) {

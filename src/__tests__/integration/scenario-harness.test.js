@@ -50,6 +50,28 @@ describe('Scenario Harness Integration', () => {
     expect(harness.outbox.callbackAnswers.at(-1).text).toBe(tr('commands.participation.applicationSubmitted'));
   });
 
+  it.each(['accept', 'reject'])('removes withdrawn and %s application messages and links the applicant', async (decision) => {
+    const harness = await createScenarioHarness();
+    const owner = { id: 42, first_name: 'Owner' };
+    const guest = { id: 77, first_name: 'Guest <&>' };
+    const chat = { id: 42, type: 'private' };
+    await harness.dispatchMessage({ text: '/newride\ntitle: Moderated\nwhen: tomorrow 11:00\nsettings.requireParticipationApproval: yes', chat, from: owner });
+    const [ride] = harness.listRides();
+    const message = { message_id: ride.messages[0].messageId, chat, from: { id: 0, is_bot: true } };
+    const act = (data, from = guest, callbackMessage = message) => harness.dispatchCallback({ data, from, chat, message: callbackMessage });
+    await act(`apply:${ride.id}`);
+    const request = harness.outbox.replies.at(-1);
+    expect(request.text).toContain('<a href="tg://user?id=77">Guest &lt;&amp;&gt;</a>');
+    await act(`skip:${ride.id}`);
+    expect(harness.outbox.deletes).toContainEqual({ chatId: 42, messageId: request.messageId });
+    await act(`apply:${ride.id}`);
+    const newRequest = harness.outbox.replies.at(-1);
+    expect(newRequest.messageId).not.toBe(request.messageId);
+    await act(`application:${decision}:${ride.id}:77`, owner, { ...message, message_id: newRequest.messageId });
+    expect(harness.outbox.deletes).toContainEqual({ chatId: 42, messageId: newRequest.messageId });
+    expect(harness.getRide(ride.id).participation[decision === 'accept' ? 'joined' : 'skipped']).toContainEqual(expect.objectContaining({ userId: 77 }));
+  });
+
   it('lists rides as a paginated Rich Message with ascending global numbering', async () => {
     const harness = await createScenarioHarness();
     const chat = { id: 42, type: 'private' };

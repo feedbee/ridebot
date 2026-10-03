@@ -93,7 +93,7 @@ export class ListParticipantsCommandHandler extends BaseCommandHandler {
     }
 
     if (skippedCount > 0) {
-      message += `🙅 <b>${this.translate(ctx, 'commands.listParticipants.notInterestedLabel', { count: skippedCount })}:</b>\n`;
+      message += `🙅 <b>${this.translate(ctx, approvalRequired ? 'commands.listParticipants.rejectedOrDeclinedLabel' : 'commands.listParticipants.notInterestedLabel', { count: skippedCount })}:</b>\n`;
       message += this.formatParticipantsByCategory(participation.skipped);
       message += '\n\n';
     }

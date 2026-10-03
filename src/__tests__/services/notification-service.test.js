@@ -5,6 +5,7 @@
 import { jest } from '@jest/globals';
 import { NotificationService } from '../../services/NotificationService.js';
 import { t } from '../../i18n/index.js';
+import { MemoryStorage } from '../../storage/memory.js';
 import { config } from '../../config.js';
 
 const tr = (key, params = {}) =>
@@ -55,6 +56,33 @@ describe('NotificationService', () => {
       })
     );
     expect(mockSettingsService.getParticipationNotificationLevel).not.toHaveBeenCalled();
+  });
+
+  it('keeps request tracking across service restarts and isolates other applicants', async () => {
+    const storage = new MemoryStorage();
+    const persisted = await storage.createRide(ride);
+    const api = { sendMessage: jest.fn().mockResolvedValue({ message_id: 10 }), deleteMessage: jest.fn().mockResolvedValue(true) };
+    await new NotificationService(mockSettingsService, storage).sendApplicationNotification(persisted, participant, api);
+    await storage.addApplicationMessage(persisted.id, { userId: 300, chatId: 100, messageId: 11 });
+    await new NotificationService(mockSettingsService, storage).deleteApplicationNotifications(await storage.getRide(persisted.id), 200, api);
+    expect(api.deleteMessage).toHaveBeenCalledWith(100, 10);
+    expect((await storage.getRide(persisted.id)).applicationMessages).toEqual([{ userId: 300, chatId: 100, messageId: 11 }]);
+  });
+
+  it('retains tracking when Telegram deletion fails without failing participation', async () => {
+    const storage = new MemoryStorage();
+    const persisted = await storage.createRide(ride);
+    const message = { userId: 200, chatId: 100, messageId: 10 };
+    await storage.addApplicationMessage(persisted.id, message);
+    const log = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await new NotificationService(mockSettingsService, storage).deleteApplicationNotifications(await storage.getRide(persisted.id), 200, {
+        deleteMessage: jest.fn().mockRejectedValue(new Error('Telegram unavailable'))
+      });
+      expect((await storage.getRide(persisted.id)).applicationMessages).toEqual([message]);
+    } finally {
+      log.mockRestore();
+    }
   });
 
   it('sends application decisions directly to the applicant', async () => {

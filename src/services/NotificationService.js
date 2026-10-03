@@ -13,8 +13,10 @@ const DEBOUNCE_DELAY_MS = 20_000;
 export class NotificationService {
   /**
    * @param {import('./SettingsService.js').SettingsService} settingsService
+   * @param {import('../storage/interface.js').StorageInterface|null} storage
    */
-  constructor(settingsService) {
+  constructor(settingsService, storage = null) {
+    this.storage = storage;
     this.settingsService = settingsService;
     /** @type {Map<string, {timer: ReturnType<typeof setTimeout>, participant: Object, initialState: string|null, finalState: string, ride: Object, api: Object}>} */
     this.pendingTimers = new Map();
@@ -68,8 +70,8 @@ export class NotificationService {
     this.cancelParticipationNotification(ride.id, participant.userId);
     try {
       const language = config.i18n.defaultLanguage;
-      await api.sendMessage(ride.createdBy, t(language, 'commands.notifications.application', {
-        name: escapeHtml(this._formatName(participant)),
+      const message = await api.sendMessage(ride.createdBy, t(language, 'commands.notifications.application', {
+        name: `<a href="tg://user?id=${participant.userId}">${escapeHtml(this._formatName(participant))}</a>`,
         title: escapeHtml(ride.title),
         rideId: ride.id
       }), {
@@ -81,8 +83,28 @@ export class NotificationService {
           ]]
         }
       });
+      if (this.storage) await this.storage.addApplicationMessage(ride.id, {
+        userId: participant.userId, chatId: ride.createdBy, messageId: message.message_id
+      });
     } catch (err) {
       console.error('NotificationService: failed to send application notification:', err);
+    }
+  }
+
+  /** Delete tracked requests after withdrawal or a successful decision.
+   * @param {Object} ride
+   * @param {number} userId
+   * @param {Object} api
+   */
+  async deleteApplicationNotifications(ride, userId, api) {
+    for (const message of ride.applicationMessages || []) {
+      if (message.userId !== userId) continue;
+      try {
+        await api.deleteMessage(message.chatId, message.messageId);
+        await this.storage.removeApplicationMessage(ride.id, message);
+      } catch (err) {
+        console.error('NotificationService: failed to delete application notification:', err);
+      }
     }
   }
 
