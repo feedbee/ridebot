@@ -83,15 +83,24 @@ describe.each(['en', 'ru'])('RideWizard — Live Preview (%s)', (language) => {
       createRideMessage: jest.fn().mockResolvedValue(true),
       updateRideMessages: jest.fn().mockResolvedValue(true)
     };
-    wizard = new RideWizard(storage, {
+    const rideService = {
       createRide: jest.fn((data) => storage.createRide(data)),
+      createRideContent: jest.fn(async (data) => ({
+        ride: await rideService.createRide(data),
+        error: null
+      })),
+      updateRideContent: jest.fn(async (id, data) => ({
+        ride: await storage.updateRide(id, data),
+        error: null
+      })),
       resolveCreateOrganizer: jest.fn((organizer, profile) => {
         if (['я', 'me', 'myself'].includes(organizer?.trim().toLowerCase())) {
           return `${profile.firstName} ${profile.lastName} (@${profile.username})`;
         }
         return organizer || `${profile.firstName} ${profile.lastName} (@${profile.username})`;
       })
-    }, mockMessageFormatter, mockRideMessagesService);
+    };
+    wizard = new RideWizard(storage, rideService, mockMessageFormatter, mockRideMessagesService);
   });
 
   describe('buildPreviewRideObject', () => {
@@ -111,6 +120,7 @@ describe.each(['en', 'ru'])('RideWizard — Live Preview (%s)', (language) => {
           speedMax: 28,
           cruisingSpeedMin: 29,
           cruisingSpeedMax: 32,
+          chat: 'https://t.me/example_chat',
           additionalInfo: 'Bring lights',
           // extra wizard-only keys that should NOT appear in result
           chatId: 456,
@@ -133,6 +143,7 @@ describe.each(['en', 'ru'])('RideWizard — Live Preview (%s)', (language) => {
         speedMax: 28,
         cruisingSpeedMin: 29,
         cruisingSpeedMax: 32,
+        chat: 'https://t.me/example_chat',
         additionalInfo: 'Bring lights'
       });
     });
@@ -269,7 +280,7 @@ describe.each(['en', 'ru'])('RideWizard — Live Preview (%s)', (language) => {
       await wizard.handleWizardAction(ctx); // skip organizer
       ctx.message = { text: 'tomorrow at 6pm', message_id: 11 };
       await wizard.handleWizardInput(ctx); // date
-      for (let i = 0; i < 7; i++) {
+      for (let i = 0; i < 8; i++) {
         ctx.match = ['wizard:skip', 'skip'];
         await wizard.handleWizardAction(ctx);
       }

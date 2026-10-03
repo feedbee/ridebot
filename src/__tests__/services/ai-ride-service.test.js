@@ -15,6 +15,7 @@ jest.mock('../../config.js', () => ({
 }));
 
 import { AiRideService } from '../../services/AiRideService.js';
+import { config } from '../../config.js';
 
 const makeResponse = (text) => ({ content: [{ type: 'text', text }] });
 
@@ -30,9 +31,30 @@ describe('AiRideService', () => {
   });
 
   describe('parseRideText', () => {
+    it('keeps AI unavailable without an API key, even when SDK credentials are configured in the environment', async () => {
+      const originalKey = config.anthropic.apiKey;
+      const originalAuthToken = process.env.ANTHROPIC_AUTH_TOKEN;
+      config.anthropic.apiKey = null;
+      process.env.ANTHROPIC_AUTH_TOKEN = 'test-token';
+      try {
+        const disabledService = new AiRideService();
+        const fetchSpy = jest.fn();
+        if (disabledService.client) disabledService.client.fetch = fetchSpy;
+
+        expect(await disabledService.parseRideText('Tomorrow at 6pm')).toEqual({
+          params: null, error: 'service_unavailable'
+        });
+        expect(fetchSpy).not.toHaveBeenCalled();
+      } finally {
+        config.anthropic.apiKey = originalKey;
+        if (originalAuthToken === undefined) delete process.env.ANTHROPIC_AUTH_TOKEN;
+        else process.env.ANTHROPIC_AUTH_TOKEN = originalAuthToken;
+      }
+    });
+
     it('returns parsed params when AI returns valid JSON', async () => {
       mockCreate.mockResolvedValue(
-        makeResponse('{"title":"Evening Ride","when":"tomorrow at 6pm","category":"road","dist":"50"}')
+        makeResponse('{"title":"Evening Ride","when":"tomorrow at 6pm","category":"road","dist":"50","chat":"https://t.me/evening_chat"}')
       );
 
       const { params, error } = await service.parseRideText('Evening road ride tomorrow 6pm 50km');
@@ -42,7 +64,8 @@ describe('AiRideService', () => {
         title: 'Evening Ride',
         when: 'tomorrow at 6pm',
         category: 'road',
-        dist: '50'
+        dist: '50',
+        chat: 'https://t.me/evening_chat'
       });
     });
 
@@ -163,6 +186,17 @@ describe('AiRideService', () => {
       expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({ model: expect.stringContaining('haiku') })
       );
+    });
+
+    it('instructs AI to distinguish coordination chat from other links', async () => {
+      mockCreate.mockResolvedValue(makeResponse('{"title":"Ride","when":"tomorrow"}'));
+
+      await service.parseRideText('ride tomorrow');
+
+      const calledSystem = mockCreate.mock.calls[0][0].system;
+      expect(calledSystem).toContain('coordination chat');
+      expect(calledSystem).toContain('Do not map route links');
+      expect(calledSystem).toContain('arbitrary URLs');
     });
 
     describe('dialog mode (dialogMessages option)', () => {

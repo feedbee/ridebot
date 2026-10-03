@@ -109,7 +109,8 @@ describe.each(['en', 'ru'])('DuplicateRideCommandHandler (%s)', (language) => {
           settings: {
             notifyParticipation: false,
             allowReposts: false,
-            requireParticipationApproval: false
+            requireParticipationApproval: false,
+            participantLimit: 0
           }
         }),
         'message'

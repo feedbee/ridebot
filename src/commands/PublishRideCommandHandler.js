@@ -2,6 +2,7 @@ import { InlineKeyboard } from 'grammy';
 import { BaseCommandHandler } from './BaseCommandHandler.js';
 import { config } from '../config.js';
 import { escapeHtml } from '../utils/html-escape.js';
+import { RIDE_ARCHIVE_AFTER_HOURS, isRideArchived } from '../services/ride-lifecycle.js';
 
 const RECENT_DESTINATIONS_LIMIT = 5;
 
@@ -27,6 +28,12 @@ export class PublishRideCommandHandler extends BaseCommandHandler {
     );
     if (error) {
       await ctx.answerCallbackQuery(error);
+      return;
+    }
+    if (isRideArchived(ride)) {
+      await ctx.answerCallbackQuery(this.translate(ctx, 'commands.publish.rideArchived', {
+        hours: RIDE_ARCHIVE_AFTER_HOURS
+      }));
       return;
     }
     if (ride.cancelled) {
@@ -59,6 +66,12 @@ export class PublishRideCommandHandler extends BaseCommandHandler {
     const { ride, error } = await this.getRideById(ctx, rideId);
     if (error || !this.isRideCreator(ride, ctx.from.id)) {
       await ctx.answerCallbackQuery(error || this.translate(ctx, 'commands.common.onlyCreatorAction'));
+      return;
+    }
+    if (isRideArchived(ride)) {
+      await ctx.answerCallbackQuery(this.translate(ctx, 'commands.publish.rideArchived', {
+        hours: RIDE_ARCHIVE_AFTER_HOURS
+      }));
       return;
     }
     if (ride.cancelled) {
@@ -151,7 +164,7 @@ export class PublishRideCommandHandler extends BaseCommandHandler {
     const destinationLines = destinations.map(destination => {
       const label = this.formatDestinationLabel(ctx, destination);
       const link = this.buildDestinationLink(destination);
-      const check = publishedDestinationKeys.has(this.getDestinationKey(destination)) ? '✅ ' : '';
+      const check = publishedDestinationKeys.has(this.getDestinationKey(destination)) ? '✅ ' : '❌ ';
       return link
         ? `<li>${check}<a href="${escapeHtml(link)}">${label}</a></li>`
         : `<li>${check}${label}</li>`;
@@ -172,7 +185,7 @@ export class PublishRideCommandHandler extends BaseCommandHandler {
     const keyboard = new InlineKeyboard();
     destinations.forEach((destination, index) => {
       keyboard.text(
-        String(index + 1),
+        `${publishedDestinationKeys.has(this.getDestinationKey(destination)) ? '✅' : '❌'} ${index + 1}`,
         `ridepublish:${ride.id}:${destination.chatId}:${destination.messageThreadId ?? 'main'}`
       );
     });
@@ -210,7 +223,7 @@ export class PublishRideCommandHandler extends BaseCommandHandler {
         const link = this.buildMessageLink({ ...displayDestination, messageId: message.messageId });
         return link ? `<a href="${escapeHtml(link)}">[${index + 1}]</a>` : `[${index + 1}]`;
       });
-      return `<li>${label} ${links.join(' ')}</li>`;
+      return `<li>✅ ${label} ${links.join(' ')}</li>`;
     });
 
     return heading + `<ul>${lines.join('')}</ul>`;
@@ -250,7 +263,8 @@ export class PublishRideCommandHandler extends BaseCommandHandler {
         return {
           ...destination,
           chatTitle: chat.title || destination.chatTitle,
-          chatUsername: chat.username || destination.chatUsername
+          chatUsername: chat.username || destination.chatUsername,
+          chatInviteLink: chat.invite_link
         };
       } catch {
         return destination;
@@ -259,20 +273,22 @@ export class PublishRideCommandHandler extends BaseCommandHandler {
   }
 
   /**
-   * Build a Telegram link to the previously published message or forum topic.
+   * Build a Telegram link to the chat or forum topic, never an old announcement.
    * @param {Object} destination
    * @returns {string|null}
    */
   buildDestinationLink(destination) {
-    const targetMessageId = destination.messageThreadId || destination.messageId;
-    if (!targetMessageId) return null;
+    const threadId = destination.messageThreadId;
     if (destination.chatUsername) {
-      return `https://t.me/${destination.chatUsername}/${targetMessageId}`;
+      const topicPath = threadId ? `/${threadId}` : '';
+      return `https://t.me/${destination.chatUsername}${topicPath}`;
     }
 
     const chatId = String(destination.chatId);
-    if (!chatId.startsWith('-100')) return null;
-    return `https://t.me/c/${chatId.slice(4)}/${targetMessageId}`;
+    if (threadId && chatId.startsWith('-100')) {
+      return `https://t.me/c/${chatId.slice(4)}/${threadId}`;
+    }
+    return destination.chatInviteLink || null;
   }
 
   /**

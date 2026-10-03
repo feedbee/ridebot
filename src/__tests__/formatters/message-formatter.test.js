@@ -288,6 +288,7 @@ describe('MessageFormatter', () => {
         speedMin: 25,
         speedMax: 30,
         cancelled: false,
+        chat: 'https://t.me/+invite_Hash-1',
         additionalInfo: 'Bring lights and a jacket'
       };
       
@@ -312,6 +313,8 @@ describe('MessageFormatter', () => {
       expect(result).toContain('<br>📍 Meeting point: Test Location');
       expect(result).toContain('<br><br>📏 Distance:');
       expect(result).toContain('<br><br>ℹ️ Additional info:');
+      expect(result).toContain('💬 Chat: <a href="https://t.me/+invite_Hash-1">Open chat</a>');
+      expect(result.indexOf('💬 Chat:')).toBeLessThan(result.indexOf('ℹ️ Additional info:'));
       expect(result).toContain('<br><br>🚴 Joined');
       expect(result).toContain('<br><br>🎫 #Ride #123</p>');
       expect(result).toContain('Test Location');
@@ -577,6 +580,42 @@ describe('MessageFormatter', () => {
       expect(result).toContain(`🚴 ${tr(language, 'formatter.participation.joined')} (0): ${tr(language, 'formatter.noOneJoinedYet')}`);
       expect(result).not.toContain(`🤔 ${tr(language, 'formatter.participation.thinking')}`);
       expect(result).not.toContain(`🙅 ${tr(language, 'formatter.participation.notInterested')}`);
+    });
+
+    it.each(['en', 'ru'])('shows a positive participant limit directly above Joined (%s)', language => {
+      const ride = {
+        id: '123',
+        title: 'Limited Ride',
+        date: new Date('2025-03-30T10:00:00Z'),
+        settings: { participantLimit: 5 }
+      };
+
+      const result = messageFormatter.formatRideMessage(
+        ride,
+        { joined: [], thinking: [], skipped: [] },
+        { lang: language }
+      );
+
+      expect(result).toContain(
+        `${tr(language, 'formatter.labels.participantLimit')}: 5<br>🚴 ${tr(language, 'formatter.participation.joined')}`
+      );
+    });
+
+    it.each(['en', 'ru'])('omits the participant-limit line for unlimited rides (%s)', language => {
+      const ride = {
+        id: '123',
+        title: 'Unlimited Ride',
+        date: new Date('2025-03-30T10:00:00Z'),
+        settings: { participantLimit: 0 }
+      };
+
+      const result = messageFormatter.formatRideMessage(
+        ride,
+        { joined: [], thinking: [], skipped: [] },
+        { lang: language }
+      );
+
+      expect(result).not.toContain(tr(language, 'formatter.labels.participantLimit'));
     });
 
     it.each(['en', 'ru'])('should show Thinking section only when there are thinking participants (%s)', (language) => {

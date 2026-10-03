@@ -15,6 +15,7 @@ describe('RideParamsHelper', () => {
       expect(Object.keys(RideParamsHelper.VALID_PARAMS)).toContain('dist');
       expect(Object.keys(RideParamsHelper.VALID_PARAMS)).toContain('duration');
       expect(Object.keys(RideParamsHelper.VALID_PARAMS)).toContain('speed');
+      expect(Object.keys(RideParamsHelper.VALID_PARAMS)).toContain('chat');
       expect(Object.keys(RideParamsHelper.VALID_PARAMS)).toContain('info');
       expect(Object.keys(RideParamsHelper.VALID_PARAMS)).toContain('category');
       expect(Object.keys(RideParamsHelper.VALID_PARAMS)).toContain('settings.notifyParticipation');
@@ -39,6 +40,7 @@ when: Sunday 9am
 meet: Coffee Shop
 route: https://example.com/route
 speed: 25-28
+chat: t.me/example_chat
 info: Bring water and snacks`;
       
       const { params, unknownParams } = RideParamsHelper.parseRideParams(text);
@@ -49,6 +51,7 @@ info: Bring water and snacks`;
         meet: 'Coffee Shop',
         route: ['https://example.com/route'],
         speed: '25-28',
+        chat: 't.me/example_chat',
         info: 'Bring water and snacks'
       });
       expect(unknownParams).toHaveLength(0);

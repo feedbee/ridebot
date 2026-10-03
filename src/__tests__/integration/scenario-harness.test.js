@@ -303,7 +303,7 @@ describe('Scenario Harness Integration', () => {
     const harness = await createScenarioHarness();
 
     await harness.dispatchMessage({
-      text: '/newride\ntitle: Sunrise Ride\nwhen: tomorrow 11:00\nmeet: River Park',
+      text: '/newride\ntitle: Sunrise Ride\nwhen: tomorrow 11:00\nmeet: River Park\nchat: telegram.me/sunrise_chat',
       chat: { id: 501, type: 'private' },
       from: { id: 42, first_name: 'Alex', last_name: 'Rider', username: 'alex' },
     });
@@ -315,6 +315,7 @@ describe('Scenario Harness Integration', () => {
     expect(ride.title).toBe('Sunrise Ride');
     expect(ride.createdBy).toBe(42);
     expect(ride.meetingPoint).toBe('River Park');
+    expect(ride.chat).toBe('https://t.me/sunrise_chat');
     expect(ride.messages).toHaveLength(1);
     expect(ride.participation.joined).toEqual([
       expect.objectContaining({
@@ -329,6 +330,8 @@ describe('Scenario Harness Integration', () => {
     expect(harness.outbox.replies[0].text).toContain('Sunrise Ride');
     expect(harness.outbox.replies[0].richMessage?.html).toContain('<h3>🚲 Sunrise Ride</h3>');
     expect(harness.outbox.replies[0].richMessage?.html).toContain('<tg-time ');
+    expect(harness.outbox.replies[0].richMessage?.html)
+      .toContain('💬 Chat: <a href="https://t.me/sunrise_chat">Open chat</a>');
     expect(harness.outbox.replies[0].options.parse_mode).toBeUndefined();
     expect(harness.outbox.replies[0].options.reply_markup.inline_keyboard[0]).toEqual(
       expect.arrayContaining([
@@ -469,6 +472,46 @@ describe('Scenario Harness Integration', () => {
     expect(harness.outbox.callbackAnswers).toContainEqual({ text: null });
   });
 
+  it('changes the matching list and numbered button from unpublished to published', async () => {
+    const harness = await createScenarioHarness();
+    const owner = { id: 42, first_name: 'Alex' };
+    const privateChat = { id: 42, type: 'private' };
+    const groupChat = { id: -1001234567890, type: 'supergroup', title: 'Alex Chat', username: 'alex_chat' };
+
+    await harness.dispatchMessage({
+      text: '/newride\ntitle: Old Announcement\nwhen: tomorrow 11:00',
+      chat: privateChat, from: owner,
+    });
+    const [oldRide] = harness.listRides();
+    await harness.dispatchMessage({ text: `/shareride ${oldRide.id}`, chat: groupChat, from: owner });
+    await harness.dispatchMessage({
+      text: '/newride\ntitle: Fresh Announcement\nwhen: tomorrow 12:00',
+      chat: privateChat, from: owner,
+    });
+    const freshRide = harness.listRides().find(ride => ride.id !== oldRide.id);
+    const privateMessage = harness.outbox.replies.at(-1);
+    await harness.dispatchCallback({
+      data: `rideowner:publish:${freshRide.id}`, chat: privateChat, from: owner,
+      message: { message_id: privateMessage.messageId, text: privateMessage.text, chat: privateChat },
+    });
+    const menu = harness.outbox.replies.at(-1);
+    expect(menu.text).toContain('<li>❌ <a href="https://t.me/alex_chat">Alex Chat</a></li>');
+    const button = menu.options.reply_markup.inline_keyboard[0][0];
+    expect(button.text).toBe('❌ 1');
+    await harness.dispatchCallback({
+      data: button.callback_data, chat: privateChat, from: owner,
+      message: { message_id: menu.messageId, text: menu.text, chat: privateChat },
+    });
+    const updatedMenu = harness.outbox.edits.at(-1);
+    expect(updatedMenu.text).toContain('<li>✅ <a href="https://t.me/alex_chat">Alex Chat</a></li>');
+    expect(updatedMenu.text).toContain('<ul><li>✅ Alex Chat ');
+    expect(updatedMenu.options.reply_markup.inline_keyboard[0][0].text).toBe('✅ 1');
+    expect(harness.outbox.replies.at(-1).text).toContain('Fresh Announcement');
+    expect(harness.getRide(freshRide.id).messages).toEqual(expect.arrayContaining([
+      expect.objectContaining({ chatId: groupChat.id, isForCreator: false })
+    ]));
+  });
+
   it('publishes a creator ride from the numbered recent-destinations menu', async () => {
     const harness = await createScenarioHarness();
     const owner = { id: 42, first_name: 'Alex', last_name: 'Rider', username: 'alex' };
@@ -521,7 +564,7 @@ describe('Scenario Harness Integration', () => {
     );
     expect(destinationMenu.options.reply_markup.inline_keyboard).toEqual([
       [expect.objectContaining({
-          text: '1',
+          text: '✅ 1',
           callback_data: `ridepublish:${ride.id}:${forumChat.id}:77`
       })],
       [expect.objectContaining({ callback_data: 'ridepublish:close' })]
@@ -860,6 +903,70 @@ describe('Scenario Harness Integration', () => {
     });
   });
 
+  it('removes ride announcements from the current topic after private confirmation', async () => {
+    const harness = await createScenarioHarness();
+    const owner = { id: 78, first_name: 'Ann', username: 'ann' };
+    const privateChat = { id: owner.id, type: 'private' };
+    const publicChat = { id: -10078, type: 'supergroup', title: 'Rides' };
+
+    await harness.dispatchMessage({
+      text: '/newride\ntitle: Unshare Me\nwhen: tomorrow 07:00',
+      chat: privateChat,
+      from: owner
+    });
+    const [ride] = harness.listRides();
+
+    await harness.dispatchMessage({
+      text: `/shareride ${ride.id}`,
+      chat: publicChat,
+      from: owner,
+      message: {
+        message_id: 500,
+        message_thread_id: 9,
+        text: `/shareride ${ride.id}`,
+        chat: publicChat,
+        from: owner
+      }
+    });
+    const announcement = harness.getRide(ride.id).messages.find(message => !message.isForCreator);
+
+    await harness.dispatchMessage({
+      text: `/unshareride ${ride.id}`,
+      chat: publicChat,
+      from: owner,
+      message: {
+        message_id: 501,
+        message_thread_id: 9,
+        text: `/unshareride ${ride.id}`,
+        chat: publicChat,
+        from: owner
+      }
+    });
+    const confirmation = harness.outbox.replies.at(-1);
+    const confirmData = confirmation.options.reply_markup.inline_keyboard[0][0].callback_data;
+
+    await harness.dispatchCallback({
+      data: confirmData,
+      chat: privateChat,
+      from: owner,
+      message: {
+        message_id: confirmation.messageId,
+        text: confirmation.text,
+        chat: privateChat,
+        from: { id: 0, is_bot: true, username: 'testbot' }
+      }
+    });
+
+    expect(harness.getRide(ride.id).messages).toHaveLength(1);
+    expect(harness.outbox.deletes).toContainEqual({
+      chatId: announcement.chatId,
+      messageId: announcement.messageId
+    });
+    expect(harness.outbox.callbackAnswers).toContainEqual({
+      text: tr('commands.unshare.success', { count: 1 })
+    });
+  });
+
   it('returns a user-facing error when joining a non-existent ride', async () => {
     const harness = await createScenarioHarness();
     const chat = { id: 1200, type: 'private' };
@@ -994,6 +1101,161 @@ describe('Scenario Harness Integration', () => {
         }),
       ])
     );
+  });
+
+  it('configures a participant limit, rejects overflow, and restores joining after an increase', async () => {
+    const harness = await createScenarioHarness();
+    const owner = { id: 142, first_name: 'Alex', username: 'alex_limit' };
+    const guestOne = { id: 177, first_name: 'Sam', username: 'sam_limit' };
+    const guestTwo = { id: 178, first_name: 'Mia', username: 'mia_limit' };
+    const chat = { id: owner.id, type: 'private' };
+
+    await harness.dispatchMessage({ text: '/settings', chat, from: owner });
+    const settingsMessage = harness.outbox.replies.at(-1);
+    await harness.dispatchCallback({
+      data: 'settings:user:participant-limit',
+      chat,
+      from: owner,
+      message: {
+        message_id: settingsMessage.messageId,
+        text: settingsMessage.text,
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' }
+      }
+    });
+    await harness.dispatchMessage({ text: '2', chat, from: owner });
+
+    expect(harness.storage.users.get(owner.id).settings.rideDefaults.participantLimit).toBe(2);
+
+    await harness.dispatchMessage({
+      text: '/newride\ntitle: Limited Ride\nwhen: tomorrow 11:00\nsettings.notifyParticipation: no',
+      chat,
+      from: owner
+    });
+    const [ride] = harness.listRides();
+    expect(ride.settings.participantLimit).toBe(2);
+    const trackedMessage = ride.messages[0];
+    const trackedReply = harness.outbox.replies.find(message => message.messageId === trackedMessage.messageId);
+    expect(trackedReply.richMessage?.html).toContain(`${tr('formatter.labels.participantLimit')}: 2<br>`);
+
+    for (const guest of [guestOne, guestTwo]) {
+      await harness.dispatchCallback({
+        data: `join:${ride.id}`,
+        chat,
+        from: guest,
+        message: {
+          message_id: trackedMessage.messageId,
+          text: trackedReply.text,
+          chat,
+          from: { id: 0, is_bot: true, username: 'testbot' }
+        }
+      });
+    }
+
+    expect(harness.getRide(ride.id).participation.joined).toHaveLength(2);
+    expect(harness.outbox.callbackAnswers).toContainEqual({
+      text: tr('commands.participation.participantLimitReached')
+    });
+
+    await harness.dispatchCallback({
+      data: `settings:ride:participant-limit:${ride.id}`,
+      chat,
+      from: owner,
+      message: {
+        message_id: trackedMessage.messageId,
+        text: trackedReply.text,
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' }
+      }
+    });
+    await harness.dispatchMessage({ text: '3', chat, from: owner });
+
+    expect(harness.getRide(ride.id).settings.participantLimit).toBe(3);
+    expect(harness.outbox.edits.some(edit => edit.text.includes(
+      `${tr('formatter.labels.participantLimit')}: 3<br>`
+    ))).toBe(true);
+
+    await harness.dispatchCallback({
+      data: `join:${ride.id}`,
+      chat,
+      from: guestTwo,
+      message: {
+        message_id: trackedMessage.messageId,
+        text: trackedReply.text,
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' }
+      }
+    });
+    expect(harness.getRide(ride.id).participation.joined).toHaveLength(3);
+  });
+
+  it('cancels pending participant-limit input when starting the ride wizard', async () => {
+    const harness = await createScenarioHarness();
+    const owner = { id: 143, first_name: 'Alex', username: 'alex_wizard' };
+    const chat = { id: owner.id, type: 'private' };
+
+    await harness.dispatchMessage({ text: '/settings', chat, from: owner });
+    const settingsMessage = harness.outbox.replies.at(-1);
+    await harness.dispatchCallback({
+      data: 'settings:user:participant-limit',
+      chat,
+      from: owner,
+      message: {
+        message_id: settingsMessage.messageId,
+        text: settingsMessage.text,
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' }
+      }
+    });
+
+    await harness.dispatchCallback({ data: 'main:newride', chat, from: owner });
+    await harness.dispatchMessage({ text: '5', chat, from: owner });
+
+    expect(harness.storage.users.has(owner.id)).toBe(false);
+    expect(harness.outbox.replies.at(-1).text).toContain('Please enter the ride title');
+  });
+
+  it('cancels pending participant-limit input when starting the update wizard', async () => {
+    const harness = await createScenarioHarness();
+    const owner = { id: 144, first_name: 'Alex', username: 'alex_update' };
+    const chat = { id: owner.id, type: 'private' };
+
+    await harness.dispatchMessage({
+      text: '/newride\ntitle: Update Me\nwhen: tomorrow 12:00',
+      chat,
+      from: owner
+    });
+    const [ride] = harness.listRides();
+    const trackedMessage = ride.messages[0];
+
+    await harness.dispatchMessage({ text: '/settings', chat, from: owner });
+    const settingsMessage = harness.outbox.replies.at(-1);
+    await harness.dispatchCallback({
+      data: 'settings:user:participant-limit',
+      chat,
+      from: owner,
+      message: {
+        message_id: settingsMessage.messageId,
+        text: settingsMessage.text,
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' }
+      }
+    });
+
+    await harness.dispatchCallback({
+      data: `rideowner:update:${ride.id}`,
+      chat,
+      from: owner,
+      message: {
+        message_id: trackedMessage.messageId,
+        text: 'Update Me',
+        chat,
+        from: { id: 0, is_bot: true, username: 'testbot' }
+      }
+    });
+    await harness.dispatchMessage({ text: '5', chat, from: owner });
+
+    expect(harness.storage.users.get(owner.id)?.settings?.rideDefaults?.participantLimit).not.toBe(5);
   });
 
   it('closes a settings message without changing settings', async () => {

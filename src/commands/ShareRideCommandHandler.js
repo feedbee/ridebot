@@ -1,6 +1,7 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
 import { SettingsService } from '../services/SettingsService.js';
 import { config } from '../config.js';
+import { RIDE_ARCHIVE_AFTER_HOURS, isRideArchived } from '../services/ride-lifecycle.js';
 
 /**
  * Handler for the shareride command
@@ -44,6 +45,13 @@ export class ShareRideCommandHandler extends BaseCommandHandler {
       // Only allow non-creators to repost when the ride explicitly permits it.
       if (!this.isRideCreator(ride, ctx.from.id) && !rideSettings.allowReposts) {
         await ctx.reply(this.translate(ctx, 'commands.share.onlyCreatorRepost'));
+        return;
+      }
+
+      if (isRideArchived(ride)) {
+        await ctx.reply(this.translate(ctx, 'commands.share.rideArchived', {
+          hours: RIDE_ARCHIVE_AFTER_HOURS
+        }));
         return;
       }
 

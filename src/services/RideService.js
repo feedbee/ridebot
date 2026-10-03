@@ -5,6 +5,7 @@ import { t } from '../i18n/index.js';
 import { getRideRoutes } from '../utils/route-links.js';
 import { UserProfile } from '../models/UserProfile.js';
 import { SettingsService } from './SettingsService.js';
+import { RIDE_ARCHIVE_AFTER_HOURS, isFutureRideDate, isRideArchived } from './ride-lifecycle.js';
 
 const SELF_ORGANIZER_REFERENCES = new Set([
   'i',
@@ -15,6 +16,12 @@ const SELF_ORGANIZER_REFERENCES = new Set([
   'я сама',
   'сам',
   'сама'
+]);
+
+const RIDE_CONTENT_FIELDS = new Set([
+  'title', 'category', 'organizer', 'date', 'meetingPoint', 'routes', 'routeLink',
+  'distance', 'duration', 'speedMin', 'speedMax', 'cruisingSpeedMin',
+  'cruisingSpeedMax', 'additionalInfo'
 ]);
 
 /**
@@ -62,6 +69,23 @@ export class RideService {
   }
 
   /**
+   * Create a user-supplied ride after validating its start time at save time.
+   * @param {Object} rideData
+   * @param {UserProfile|null} [creatorProfile]
+   * @param {{language?: string, now?: Date}} [options]
+   * @returns {Promise<{ride: Object|null, error: string|null}>}
+   */
+  async createRideContent(rideData, creatorProfile = null, options = {}) {
+    const operationNow = options.now ?? new Date();
+    if (!isFutureRideDate(rideData?.date, operationNow)) {
+      return { ride: null, error: this.translate(options.language, 'parsers.date.pastDate') };
+    }
+
+    const ride = await this.createRide(rideData, creatorProfile);
+    return { ride, error: null };
+  }
+
+  /**
    * Update an existing ride
    * @param {string} rideId - Ride ID
    * @param {Object} updates - Updates to apply
@@ -90,12 +114,52 @@ export class RideService {
   }
 
   /**
+   * Update user-editable ride content while enforcing lifecycle rules.
+   * Ride settings are administrative and remain editable after archival.
+   * @param {string} rideId
+   * @param {Object} updates
+   * @param {number|null} [userId]
+   * @param {{language?: string, now?: Date}} [options]
+   * @returns {Promise<{ride: Object|null, error: string|null}>}
+   */
+  async updateRideContent(rideId, updates, userId = null, options = {}) {
+    const existingRide = await this.storage.getRide(rideId);
+    if (!existingRide) {
+      return { ride: null, error: this.translate(options.language, 'services.ride.notFound') };
+    }
+
+    const operationNow = options.now ?? new Date();
+    const changesContent = Object.keys(updates).some(key => RIDE_CONTENT_FIELDS.has(key));
+    if (changesContent && isRideArchived(existingRide, operationNow)) {
+      const hasNewFutureDate = Object.hasOwn(updates, 'date') &&
+        new Date(updates.date).getTime() !== new Date(existingRide.date).getTime() &&
+        isFutureRideDate(updates.date, operationNow);
+      if (!hasNewFutureDate) {
+        return {
+          ride: null,
+          error: this.translate(options.language, 'services.ride.archivedUpdate', {
+            hours: RIDE_ARCHIVE_AFTER_HOURS
+          })
+        };
+      }
+    }
+
+    const ride = await this.updateRide(rideId, updates, userId);
+    return { ride, error: null };
+  }
+
+  /**
    * Get a ride by ID
    * @param {string} rideId - Ride ID
    * @returns {Promise<Object>} - Ride object
    */
   async getRide(rideId) {
     return await this.storage.getRide(rideId);
+  }
+
+  /** Atomically remove tracked messages without replacing concurrent additions. */
+  async removeRideMessages(rideId, messages) {
+    return await this.storage.removeRideMessages(rideId, messages);
   }
 
   /**
@@ -158,14 +222,13 @@ export class RideService {
    * @returns {Promise<Object>} - Success status and updated ride
    */
   async setParticipation(rideId, participantProfile, state) {
-    // Check if user is already in the desired state
-    const currentState = await this.storage.getParticipation(rideId, participantProfile.userId);
-    if (currentState === state) {
-      return { success: false, ride: null };
-    }
-
     const result = await this.storage.setParticipation(rideId, state, participantProfile);
-    return { success: true, ride: result.ride, previousState: currentState };
+    const success = result.status === 'changed';
+    return {
+      ...result,
+      success,
+      ride: success ? result.ride : null
+    };
   }
 
   /** Set participation only if the ride's approval mode still matches the service decision. */
@@ -184,9 +247,14 @@ export class RideService {
       requireParticipationApproval,
       expectedState
     );
-    return result
-      ? { success: true, ride: result.ride, previousState: expectedState }
-      : { success: false, ride: null, reason: 'ride_changed' };
+    if (!result) return { success: false, ride: null, reason: 'ride_changed' };
+    const success = result.status === 'changed';
+    return {
+      ...result,
+      success,
+      ride: success ? result.ride : null,
+      reason: success ? undefined : result.status
+    };
   }
 
   /** Atomically decide a currently pending participation application. */
@@ -198,7 +266,14 @@ export class RideService {
       targetState,
       participantProfile
     );
-    return result ? { success: true, ride: result.ride, previousState: 'thinking' } : { success: false };
+    if (!result) return { success: false, reason: 'ride_changed' };
+    const success = result.status === 'changed';
+    return {
+      ...result,
+      success,
+      ride: success ? result.ride : null,
+      reason: success ? undefined : result.status
+    };
   }
 
   /**
@@ -274,8 +349,7 @@ export class RideService {
       // Set organizer name - use provided value or default to creator's name
       rideData.organizer = this.resolveCreateOrganizer(rideData.organizer, creatorProfile, { language });
 
-      const ride = await this.createRide(rideData, creatorProfile);
-      return { ride, error: null };
+      return await this.createRideContent(rideData, creatorProfile, options);
     } catch (error) {
       console.error('Error creating ride:', error);
       return { ride: null, error: this.translate(language, 'services.ride.errorCreatingRide') };
@@ -352,8 +426,7 @@ export class RideService {
         return { ride, error: null };
       }
       
-      const ride = await this.updateRide(rideId, updates, userId);
-      return { ride, error: null };
+      return await this.updateRideContent(rideId, updates, userId, options);
     } catch (error) {
       console.error('Error updating ride:', error);
       return { ride: null, error: this.translate(language, 'services.ride.errorUpdatingRide') };
@@ -394,6 +467,7 @@ export class RideService {
         : getRideRoutes(originalRide).map(route => route.label ? `${route.label} | ${route.url}` : route.url),
       dist: params.dist !== undefined ? params.dist : originalRide.distance?.toString(),
       duration: params.duration !== undefined ? params.duration : originalRide.duration?.toString(),
+      chat: params.chat === '-' ? undefined : (params.chat !== undefined ? params.chat : originalRide.chat),
       info: params.info !== undefined ? params.info : originalRide.additionalInfo
     };
     
@@ -427,6 +501,12 @@ export class RideService {
           mergedParams[paramName] = originalSettings[settingName] ? 'yes' : 'no';
         }
       });
+      if (
+        params['settings.participantLimit'] === undefined
+        && params.settings?.participantLimit === undefined
+      ) {
+        mergedParams['settings.participantLimit'] = `${originalSettings.participantLimit}`;
+      }
     }
 
     // Use existing createRideFromParams to handle all the validation and processing

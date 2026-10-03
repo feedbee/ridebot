@@ -1,3 +1,5 @@
+import { isRideArchived } from './ride-lifecycle.js';
+
 /**
  * Application service for participation state changes and their side effects.
  */
@@ -21,12 +23,16 @@ export class RideParticipationService {
    * @param {'joined'|'thinking'|'skipped'} params.targetState
    * @param {string} [params.language]
    * @param {import('grammy').Api} params.api
-   * @returns {Promise<{status: 'changed'|'ride_not_found'|'ride_cancelled'|'already_in_state', ride?: Object, previousState?: string|null, targetState: string}>}
+   * @returns {Promise<{status: 'changed'|'ride_not_found'|'ride_archived'|'ride_cancelled'|'already_in_state'|'participant_limit_reached', ride?: Object, previousState?: string|null, targetState: string}>}
    */
   async changeParticipation({ rideId, participantProfile, targetState, language, api }) {
     const ride = await this.rideService.getRide(rideId);
     if (!ride) {
       return { status: 'ride_not_found', targetState };
+    }
+
+    if (isRideArchived(ride)) {
+      return { status: 'ride_archived', ride, targetState };
     }
 
     if (ride.cancelled) {
@@ -52,6 +58,9 @@ export class RideParticipationService {
     if (!result.success) {
       if (result.reason === 'ride_changed') {
         return { status: 'ride_changed', targetState: effectiveTargetState };
+      }
+      if (result.status === 'participant_limit_reached') {
+        return { status: 'participant_limit_reached', targetState: effectiveTargetState };
       }
       const noOp = { status: 'already_in_state', targetState: effectiveTargetState };
       if (approvalRequired) {
@@ -107,6 +116,7 @@ export class RideParticipationService {
     if (!['accept', 'reject'].includes(decision)) return { status: 'invalid_decision' };
     const ride = await this.rideService.getRide(rideId);
     if (!ride) return { status: 'ride_not_found' };
+    if (isRideArchived(ride)) return { status: 'ride_archived' };
     if (ride.cancelled) return { status: 'ride_cancelled' };
     if (ride.createdBy !== actorUserId) return { status: 'forbidden' };
     if (ride.settings?.requireParticipationApproval !== true) return { status: 'stale' };
@@ -115,7 +125,9 @@ export class RideParticipationService {
     if (!applicant) return { status: 'stale' };
     const targetState = decision === 'accept' ? 'joined' : 'skipped';
     const result = await this.rideService.decideParticipation(rideId, applicant, targetState);
-    if (!result.success) return { status: 'stale' };
+    if (!result.success) {
+      return { status: result.reason === 'participant_limit_reached' ? result.reason : 'stale' };
+    }
 
     if (targetState === 'joined' && result.ride.groupId && this.groupManagementService) {
       await this.groupManagementService.addParticipant(

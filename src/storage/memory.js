@@ -108,6 +108,16 @@ export class MemoryStorage extends StorageInterface {
     return this.mapRideToInterface(ride);
   }
 
+  async removeRideMessages(rideId, messages) {
+    const ride = this.rides.get(rideId);
+    if (!ride) throw new Error('Ride not found');
+    const matches = new Set(messages.map(message => `${message.chatId}:${message.messageId}`));
+    ride.messages = (ride.messages || []).filter(message =>
+      !matches.has(`${message.chatId}:${message.messageId}`)
+    );
+    return this.mapRideToInterface(ride);
+  }
+
   async getRidesByCreator(userId, skip, limit) {
     const userRides = Array.from(this.rides.values())
       .filter(ride => ride.createdBy === userId)
@@ -193,6 +203,29 @@ export class MemoryStorage extends StorageInterface {
       ride.participation = { joined: [], thinking: [], skipped: [] };
     }
 
+    const currentState = ['joined', 'thinking', 'skipped']
+      .find(candidate => ride.participation[candidate].some(
+        participant => participant.userId === participantProfile.userId
+      )) || null;
+    if (currentState === state) {
+      return {
+        status: 'already_in_state',
+        ride: this.mapRideToInterface(ride),
+        previousState: currentState
+      };
+    }
+
+    const participantLimit = ride.settings?.participantLimit ?? 0;
+    if (state === 'joined'
+      && participantLimit > 0
+      && ride.participation.joined.length >= participantLimit) {
+      return {
+        status: 'participant_limit_reached',
+        ride: this.mapRideToInterface(ride),
+        previousState: currentState
+      };
+    }
+
     // Remove user from all states first
     ride.participation.joined = ride.participation.joined.filter(p => p.userId !== participantProfile.userId);
     ride.participation.thinking = ride.participation.thinking.filter(p => p.userId !== participantProfile.userId);
@@ -211,7 +244,11 @@ export class MemoryStorage extends StorageInterface {
     
     // Update the ride in storage
     this.rides.set(rideId, ride);
-    return { ride: ride };
+    return {
+      status: 'changed',
+      ride: this.mapRideToInterface(ride),
+      previousState: currentState
+    };
   }
 
   async setParticipationForRideMode(rideId, state, participantProfile, requireParticipationApproval, expectedState) {

@@ -33,9 +33,11 @@ dist: Distance in km (optional)
 duration: Duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
 speed: Average moving speed in km/h: range (25-28), min (25+ or 25-), max (-28), average (25 or ~25) (optional)
 cruisingSpeed: Cruising speed in km/h, normally held on flat, fast sections (same forms; optional)
+chat: Telegram coordination chat or invite link (optional)
 info: Additional information (optional)
 settings.notifyParticipation: yes/no — notify the creator when participants change status (optional)
 settings.allowReposts: yes/no — allow other users to repost this ride with /shareride (optional)
+settings.participantLimit: 0-1000 — maximum joined participants; 0 means unlimited (optional)
 </pre>
 
 <p>Example:</p>
@@ -51,6 +53,7 @@ dist: 35
 duration: 2h 30m
 speed: 24-25
 cruisingSpeed: 28-30
+chat: https://t.me/example_chat
 info: Bring lights and a rain jacket
 </pre>
 
@@ -99,9 +102,11 @@ dist: New distance (optional)
 duration: New duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
 speed: New average moving speed (optional)
 cruisingSpeed: New cruising speed (optional)
+chat: New Telegram coordination chat or invite link (optional; use - to clear)
 info: Additional information (optional)
 settings.notifyParticipation: yes/no (optional)
 settings.allowReposts: yes/no (optional)
+settings.participantLimit: 0-1000 (optional; 0 means unlimited)
 </pre>
 
 <p>If you provide at least one <code>route:</code> line, it replaces the full route list. Use <code>route: -</code> to clear all routes.<br>Ride settings passed here are merged into the existing ride settings.</p>
@@ -149,9 +154,11 @@ dist: New distance (optional)
 duration: New duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
 speed: New average moving speed (optional)
 cruisingSpeed: New cruising speed (optional)
+chat: New Telegram coordination chat or invite link (optional; use - to clear)
 info: Additional information (optional)
 settings.notifyParticipation: yes/no (optional)
 settings.allowReposts: yes/no (optional)
+settings.participantLimit: 0-1000 (optional; 0 means unlimited)
 </pre>
 
 <p>Any parameters not provided will be copied from the original ride.<br>By default, the new ride will be scheduled for tomorrow at the same time.<br>If you provide at least one <code>route:</code> line, it replaces the copied route list. Use <code>route: -</code> to clear all copied routes.<br>When duplicating your own ride, its ride settings are copied. When duplicating someone else's ride, your current defaults are used.</p>
@@ -195,6 +202,10 @@ id: abc123 (or #abc123)
 
 <p><b>Important:</b> The bot needs to be added to the other chat before sharing. Bot needs to be chat admin in the other chat to use the short form of /shareride, but you can always use the full form /shareride@botname.</p>
 
+<h3>Removing Announcements</h3>
+
+<p>Use <code>/unshareride rideId</code> to remove your announcements everywhere from private chat, or only in the current topic from a group. Reply to an original or forwarded announcement with <code>/unshareride</code> to remove only that announcement. The ride creator may remove any repost.</p>
+
 <h3>📎 Attaching a Group to a Ride</h3>
 
 <p>Only the ride creator can attach a group:<br>1. Create a Telegram group and add the bot as admin (needs "Add Members" and "Ban Users" permissions)<br>2. Use /attach with the ride ID in the group chat: <code>/attach #abc123</code><br>The bot will rename the group to the ride title and date, post and pin the ride info, and automatically add/remove members as participants join or leave the ride.<br>One group can be attached to only one ride at a time.<br>To unlink the group, use /detach in the group chat.</p>
@@ -207,7 +218,7 @@ id: abc123 (or #abc123)
     ride: `
 <h3>🚲 {title}{cancelledBadge}</h3>
 {rideDetails}
-<p>🚴 {joinedLabel} ({participantCount}): {participants}{thinkingLine}{notInterestedLine}</p>
+<p>{participantLimitLine}🚴 {joinedLabel} ({participantCount}): {participants}{thinkingLine}{notInterestedLine}</p>
 {groupChatBlock}{shareBlock}{footerBlock}{cancelledInstructions}
     `.trim(),
 
@@ -284,14 +295,15 @@ Click here to start a private chat: @botname
       introTitle: 'Publishing an announcement',
       introText: 'You can publish the announcement in any chat where the bot is present using <code>{command}</code>',
       publishedTitle: 'Announcement published in chats:',
-      chooseDestination: 'Publish announcement to chats (last 5 publications):',
-      publicationHint: 'Press a button below to publish the announcement in the selected chat. If the announcement is already there, the message will be duplicated.',
+      chooseDestination: 'Publish announcement to chats (last 5 chats):',
+      publicationHint: 'Press the numbered button below that matches the chat number in the list above to publish the announcement in that chat. If the announcement is already there, the message will be duplicated.',
       notPublishedYet: 'This announcement has not been published anywhere yet.',
       noRecentPublications: 'You have not published any announcements yet.',
       threadLabel: 'Thread',
       destinationExpired: 'This destination is no longer available in your recent list.',
       unknownChat: 'Unknown chat',
-      privateOnly: 'This menu is available only in a private chat with the bot.'
+      privateOnly: 'This menu is available only in a private chat with the bot.',
+      rideArchived: 'This ride is archived: it started at least {hours} hour(s) ago and can no longer be published.'
     },
     settings: {
       userTitle: 'Default settings for new rides',
@@ -308,6 +320,12 @@ Click here to start a private chat: @botname
       notifyParticipationLabel: 'Notify me when participation changes',
       allowRepostsLabel: 'Allow other users to repost with <code>/shareride</code>',
       requireParticipationApprovalLabel: 'Require approval to participate',
+      participantLimitLabel: 'Participant limit',
+      participantLimitUnlimited: 'Unlimited',
+      changeParticipantLimit: 'Change participant limit',
+      participantLimitPrompt: 'Send a whole decimal number from 0 to 1000. Send 0 for unlimited participation.',
+      participantLimitCancel: 'Cancel',
+      participantLimitCancelled: 'Participant limit change cancelled.',
       enableNotifyOnParticipationChange: 'Enable participation notifications',
       disableNotifyOnParticipationChange: 'Disable participation notifications',
       enableReposts: 'Allow reposts',
@@ -366,6 +384,7 @@ Click here to start a private chat: @botname
       invalidRideIdUsage: 'Please provide a valid ride ID. Usage: /shareride rideID',
       onlyCreatorRepost: 'Only the ride creator can repost this ride.',
       cannotRepostCancelled: 'Cannot repost a cancelled ride.',
+      rideArchived: 'This ride is archived: it started at least {hours} hour(s) ago and can no longer be published.',
       alreadyPostedInChat: 'This ride is already posted in this chat{topicSuffix}.',
       announcementLimitCleanupFailed: 'The announcement limit for this chat or topic has been reached, and the oldest announcement could not be removed. The new announcement was not published.',
       topicSuffix: ' topic',
@@ -390,8 +409,10 @@ Click here to start a private chat: @botname
       applicationStale: 'This application has already been processed or is no longer active',
       rideNotFound: 'Ride not found',
       rideCancelled: 'This ride has been cancelled',
+      rideArchived: 'This ride is archived: it started at least {hours} hour(s) ago. Participation is closed.',
       updatedButMessageFailed: 'Your participation was updated, but message updates failed',
       genericError: 'An error occurred',
+      participantLimitReached: 'Sorry, the participant limit has been reached.',
       alreadyInState: 'You are already {state} for this ride',
       states: {
         joined: 'joined',
@@ -409,6 +430,7 @@ Click here to start a private chat: @botname
     },
     stateChange: {
       onlyCreator: 'Only the ride creator can {action} this ride.',
+      rideArchived: 'This ride is archived: it started at least {hours} hour(s) ago and can no longer be {action}.',
       messageUpdateError: 'Ride has been {action}, but there was an error updating the ride message. You may need to create a new ride message.'
     },
     group: {
@@ -438,6 +460,14 @@ Click here to start a private chat: @botname
       failed: 'Failed to delete ride.',
       deletedMessages: 'Deleted {count} message(s).',
       removedMessages: 'Removed {count} unavailable message(s).'
+    },
+    unshare: {
+      confirmation: 'Remove {messages} announcement(s) from {chats} chat(s)?',
+      cancelled: 'Removal cancelled.',
+      success: 'Removed {count} announcement(s).',
+      partial: 'Partially removed: {removed}; failed: {failed}.',
+      nothingToDelete: 'No announcements available for you to remove.',
+      unrecognizedAnnouncement: 'This message is not a tracked ride announcement.'
     },
     airide: {
       usageHint: 'Use /airide to create a ride in dialog mode.\nTo update an existing ride: /airide #rideId',
@@ -493,6 +523,7 @@ Click here to start a private chat: @botname
     upToSpeed: 'up to {max} km/h',
     shareLine: 'Share this ride: <code>/shareride #{id}</code>',
     groupChatLine: '<blockquote>Join the ride\'s private group chat: send <code>/joinchat #{id}</code> to the bot in private messages (only works if you have joined the ride).</blockquote>',
+    openChat: 'Open chat',
     labels: {
       when: 'When',
       category: 'Category',
@@ -503,7 +534,9 @@ Click here to start a private chat: @botname
       duration: 'Duration',
       speed: 'Average moving speed',
       cruisingSpeed: 'Cruising speed',
-      additionalInfo: 'Additional info'
+      chat: 'Chat',
+      additionalInfo: 'Additional info',
+      participantLimit: 'Participant limit'
     },
     participation: {
       joined: 'Joined',
@@ -552,7 +585,8 @@ Click here to start a private chat: @botname
       duplicatedSuccessfully: 'Ride duplicated successfully!',
       createdSuccessfully: 'Ride created successfully!',
       errorWithMessage: 'Error: {message}',
-      currentValue: 'Current value'
+      currentValue: 'Current value',
+      archivedDateRequired: 'This ride is archived (it started at least {hours} hour(s) ago). Enter a new start time in the future before continuing.'
     },
     prompts: {
       title: '🚲 Please enter the ride title:',
@@ -565,6 +599,7 @@ Click here to start a private chat: @botname
       speed: '⚡ Average moving speed in km/h or skip:\nThe average over the full route while moving, excluding stops; it includes climbs, descents, turns, and slow sections.\n• 25-28 — range\n• 25+ or 25- — minimum\n• -28 — maximum\n• 25 or ~25 — average\n<i>Enter a dash (-) to clear/skip this field</i>',
       cruisingSpeed: '🛣️ Cruising speed in km/h or skip:\nThe speed the group normally holds while riding on flat, fast sections.\n• 25-28 — range\n• 25+ or 25- — minimum\n• -28 — maximum\n• 25 or ~25 — average\n<i>Enter a dash (-) to clear/skip this field</i>',
       meet: '📍 Please enter the meeting point (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
+      chat: '💬 Please enter a Telegram coordination chat or invite link (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
       info: 'ℹ️ Please enter any additional information (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
       notify: '🔔 Notify you when participants join or leave?\n<i>You can change this later by updating the ride.</i>'
     },
@@ -573,7 +608,9 @@ Click here to start a private chat: @botname
       routeInvalid: 'Invalid route URL format. Please provide a valid URL, use a dash (-) to clear the field, or click Skip.',
       distanceInvalid: 'Please enter a valid number for distance, or use a dash (-) to clear the field.',
       speedInvalid: 'Please enter a valid average moving speed (for example 25-28, 25+, -28, or ~25).',
-      cruisingSpeedInvalid: 'Please enter a valid cruising speed (for example 25-28, 25+, -28, or ~25).'
+      cruisingSpeedInvalid: 'Please enter a valid cruising speed (for example 25-28, 25+, -28, or ~25).',
+      chatInvalid: 'Please enter a valid Telegram chat or invite link.',
+      chatTooLong: 'The Telegram chat link must be 512 characters or fewer.'
     },
     confirm: {
       confirmPrompt: '👆 Review the preview above and confirm'
@@ -587,6 +624,8 @@ Click here to start a private chat: @botname
       pleaseProvideTitleAndDate: 'Please provide at least title and date/time.',
       errorCreatingRide: 'An error occurred while creating the ride.',
       errorUpdatingRide: 'An error occurred while updating the ride.',
+      notFound: 'Ride not found.',
+      archivedUpdate: 'An archived ride (started at least {hours} hour(s) ago) cannot be changed without rescheduling it. First set a new start time in the future.',
       originalRideNotFound: 'Original ride not found'
     },
     rideMessages: {
@@ -605,14 +644,19 @@ Click here to start a private chat: @botname
     duration: 'Duration in minutes',
     speed: 'Average moving speed: range (25-28), min (25+), max (-28), average (25)',
     cruisingSpeed: 'Cruising speed: range (25-28), min (25+), max (-28), average (25)',
+    chat: 'Telegram coordination chat or invite link',
     validation: {
       speedInvalid: 'Invalid average moving speed. Use 25-28, 25+, -28, or ~25.',
-      cruisingSpeedInvalid: 'Invalid cruising speed. Use 25-28, 25+, -28, or ~25.'
+      cruisingSpeedInvalid: 'Invalid cruising speed. Use 25-28, 25+, -28, or ~25.',
+      chatInvalid: 'Invalid Telegram chat or invite link.',
+      chatTooLong: 'The Telegram chat link must be 512 characters or fewer.',
+      participantLimitInvalid: 'Participant limit must be a whole decimal number from 0 to 1000 without leading zeros.'
     },
     info: 'Additional information',
     settingsNotifyParticipation: 'Ride setting: notify on participation changes (yes/no)',
     settingsAllowReposts: 'Ride setting: allow other users to repost with /shareride (yes/no)',
-    settingsRequireParticipationApproval: 'Ride setting: require approval to participate (yes/no)',
+      settingsRequireParticipationApproval: 'Ride setting: require approval to participate (yes/no)',
+      settingsParticipantLimit: 'Ride setting: maximum joined participants (0-1000; 0 means unlimited)',
     id: 'Ride ID (for commands that need it)'
   },
   utils: {
@@ -634,6 +678,7 @@ Click here to start a private chat: @botname
       dupride: 'Duplicate an existing ride',
       resumeride: 'Resume a cancelled ride',
       shareride: 'Share a ride in a chat',
+      unshareride: 'Remove ride announcements',
       attach: 'Attach a Telegram group to a ride',
       detach: 'Detach the Telegram group from its ride',
       airide: 'Create or update a ride using AI',

@@ -1,5 +1,6 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
 import { UserProfile } from '../models/UserProfile.js';
+import { RIDE_ARCHIVE_AFTER_HOURS } from '../services/ride-lifecycle.js';
 
 /**
  * Handler for join/thinking/skip ride callbacks
@@ -68,6 +69,13 @@ export class ParticipationHandlers extends BaseCommandHandler {
         return;
       }
 
+      if (result.status === 'ride_archived') {
+        await ctx.answerCallbackQuery(this.translate(ctx, 'commands.participation.rideArchived', {
+          hours: RIDE_ARCHIVE_AFTER_HOURS
+        }));
+        return;
+      }
+
       if (result.status === 'ride_cancelled') {
         await ctx.answerCallbackQuery(this.translate(ctx, 'commands.participation.rideCancelled'));
         return;
@@ -75,6 +83,13 @@ export class ParticipationHandlers extends BaseCommandHandler {
 
       if (result.status === 'ride_changed') {
         await ctx.answerCallbackQuery(this.translate(ctx, 'commands.participation.rideChangedRetry'));
+        return;
+      }
+
+      if (result.status === 'participant_limit_reached') {
+        await ctx.answerCallbackQuery(
+          this.translate(ctx, 'commands.participation.participantLimitReached')
+        );
         return;
       }
 
@@ -136,12 +151,18 @@ export class ParticipationHandlers extends BaseCommandHandler {
         ? 'commands.common.onlyCreatorAction'
         : result.status === 'invalid_decision'
           ? 'commands.participation.genericError'
+        : result.status === 'participant_limit_reached'
+          ? 'commands.participation.participantLimitReached'
         : result.status === 'ride_not_found'
           ? 'commands.participation.rideNotFound'
+          : result.status === 'ride_archived'
+            ? 'commands.participation.rideArchived'
           : result.status === 'ride_cancelled'
             ? 'commands.participation.rideCancelled'
             : 'commands.participation.applicationStale';
-      await ctx.answerCallbackQuery(this.translate(ctx, key));
+      await ctx.answerCallbackQuery(this.translate(ctx, key, result.status === 'ride_archived'
+        ? { hours: RIDE_ARCHIVE_AFTER_HOURS }
+        : {}));
     } catch (error) {
       console.error('Error deciding participation application:', error);
       await ctx.answerCallbackQuery(this.translate(ctx, 'commands.participation.genericError'));

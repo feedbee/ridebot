@@ -13,7 +13,9 @@ export class AiRideService {
    * @param {Anthropic} [client] - Optional Anthropic client (injected for testing)
    */
   constructor(client) {
-    this.client = client ?? new Anthropic({ apiKey: config.anthropic.apiKey });
+    this.client = client ?? (config.anthropic.apiKey
+      ? new Anthropic({ apiKey: config.anthropic.apiKey })
+      : null);
   }
 
   /**
@@ -29,6 +31,8 @@ export class AiRideService {
    *   params keys match RideParamsHelper.VALID_PARAMS (title, when, category, etc.)
    */
   async parseRideText(userText, options = {}) {
+    if (!this.client) return { params: null, error: 'service_unavailable' };
+
     try {
       const userMessage = this._buildUserMessage(userText, options);
       const response = await this.client.messages.create({
@@ -63,10 +67,15 @@ Use these exact field names (all optional except title and when):
   duration: e.g. "2h 30m", "90m", "1.5h"
   speed: average moving speed, e.g. "25-28", "25+", "-28", "~25"
   cruisingSpeed: cruising speed normally held on flat, fast sections, using the same forms
+  chat: Telegram coordination chat or invite link
   info: additional notes
   settings: optional object
   settings.notifyParticipation: boolean
   settings.requireParticipationApproval: boolean
+  settings.participantLimit: integer from 0 through 1000; 0 means unlimited
+
+Set chat only when the user explicitly identifies a Telegram link as the ride's coordination chat or invite.
+Do not map route links, event links, or arbitrary URLs from notes to chat.
 
 Speed classification rules:
 - Explicit average wording ("average speed", "average moving speed", "avg speed", "средняя скорость", "средняя скорость движения") maps to speed.

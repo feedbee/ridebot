@@ -85,6 +85,28 @@ describe('RideParticipationService', () => {
     expect(mockRideService.setParticipationForRideMode).not.toHaveBeenCalled();
   });
 
+  it('returns ride_archived before other participation checks and side effects', async () => {
+    const archivedRide = {
+      ...ride,
+      cancelled: true,
+      date: new Date(Date.now() - 60 * 60 * 1000)
+    };
+    mockRideService.getRide.mockResolvedValue(archivedRide);
+
+    const result = await service.changeParticipation({
+      rideId: 'ride-1',
+      participantProfile,
+      targetState: 'joined',
+      language: 'en',
+      api
+    });
+
+    expect(result).toEqual({ status: 'ride_archived', ride: archivedRide, targetState: 'joined' });
+    expect(mockRideService.setParticipationForRideMode).not.toHaveBeenCalled();
+    expect(mockNotificationService.scheduleParticipationNotification).not.toHaveBeenCalled();
+    expect(mockGroupManagementService.addParticipant).not.toHaveBeenCalled();
+  });
+
   it('returns already_in_state when participation does not change', async () => {
     mockRideService.getRide.mockResolvedValue(ride);
     mockRideService.setParticipationForRideMode.mockResolvedValue({ success: false, ride: null, reason: 'already_in_state' });
@@ -99,6 +121,28 @@ describe('RideParticipationService', () => {
 
     expect(result).toEqual({ status: 'already_in_state', targetState: 'joined' });
     expect(mockNotificationService.scheduleParticipationNotification).not.toHaveBeenCalled();
+  });
+
+  it('returns participant_limit_reached without running side effects', async () => {
+    mockRideService.getRide.mockResolvedValue(ride);
+    mockRideService.setParticipationForRideMode.mockResolvedValue({
+      success: false,
+      status: 'participant_limit_reached',
+      reason: 'participant_limit_reached',
+      ride: null
+    });
+
+    const result = await service.changeParticipation({
+      rideId: 'ride-1',
+      participantProfile,
+      targetState: 'joined',
+      language: 'en',
+      api
+    });
+
+    expect(result).toEqual({ status: 'participant_limit_reached', targetState: 'joined' });
+    expect(mockNotificationService.scheduleParticipationNotification).not.toHaveBeenCalled();
+    expect(mockGroupManagementService.addParticipant).not.toHaveBeenCalled();
   });
 
   it('schedules notification and adds participant to group on join', async () => {
@@ -319,6 +363,31 @@ describe('RideParticipationService', () => {
     );
   });
 
+  it.each(['accept', 'reject'])('does not %s an application on an archived ride', async decision => {
+    const archivedRide = {
+      ...ride,
+      date: new Date(Date.now() - 60 * 60 * 1000),
+      settings: { requireParticipationApproval: true },
+      participation: { joined: [], thinking: [participantProfile], skipped: [] }
+    };
+    mockRideService.getRide.mockResolvedValue(archivedRide);
+
+    const result = await service.decideApplication({
+      rideId: ride.id,
+      applicantUserId: participantProfile.userId,
+      actorUserId: ride.createdBy,
+      decision,
+      language: 'en',
+      api
+    });
+
+    expect(result).toEqual({ status: 'ride_archived' });
+    expect(mockRideService.decideParticipation).not.toHaveBeenCalled();
+    expect(mockGroupManagementService.addParticipant).not.toHaveBeenCalled();
+    expect(mockGroupManagementService.removeParticipant).not.toHaveBeenCalled();
+    expect(mockNotificationService.sendApplicationDecisionNotification).not.toHaveBeenCalled();
+  });
+
   it('rejects a current application and removes attached-group access', async () => {
     const moderatedRide = {
       ...ride,
@@ -346,5 +415,31 @@ describe('RideParticipationService', () => {
       ride.groupId,
       participantProfile.userId
     );
+  });
+
+  it('keeps a current application pending when accepting would exceed the participant limit', async () => {
+    const moderatedRide = {
+      ...ride,
+      settings: { requireParticipationApproval: true, participantLimit: 1 },
+      participation: { joined: [{ userId: 456 }], thinking: [participantProfile], skipped: [] }
+    };
+    mockRideService.getRide.mockResolvedValue(moderatedRide);
+    mockRideService.decideParticipation.mockResolvedValue({
+      success: false,
+      reason: 'participant_limit_reached'
+    });
+
+    const result = await service.decideApplication({
+      rideId: ride.id,
+      applicantUserId: participantProfile.userId,
+      actorUserId: ride.createdBy,
+      decision: 'accept',
+      language: 'en',
+      api
+    });
+
+    expect(result).toEqual({ status: 'participant_limit_reached' });
+    expect(mockGroupManagementService.addParticipant).not.toHaveBeenCalled();
+    expect(mockNotificationService.sendApplicationDecisionNotification).not.toHaveBeenCalled();
   });
 });

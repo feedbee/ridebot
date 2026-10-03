@@ -58,7 +58,8 @@ describe('SettingsService', () => {
       expect(user.settings.rideDefaults).toEqual({
         notifyParticipation: false,
         allowReposts: false,
-        requireParticipationApproval: false
+        requireParticipationApproval: false,
+        participantLimit: 0
       });
     });
 
@@ -84,7 +85,7 @@ describe('SettingsService', () => {
       const user = await service.updateParticipationNotificationLevel(profile, 'membership');
 
       expect(user.settings).toEqual({
-        rideDefaults: { notifyParticipation: false, allowReposts: false, requireParticipationApproval: false },
+        rideDefaults: { notifyParticipation: false, allowReposts: false, requireParticipationApproval: false, participantLimit: 0 },
         participationNotificationLevel: 'membership'
       });
       await expect(service.getParticipationNotificationLevel(123)).resolves.toBe('membership');
@@ -121,7 +122,8 @@ describe('SettingsService', () => {
       expect(settings).toEqual({
         notifyParticipation: false,
         allowReposts: false,
-        requireParticipationApproval: false
+        requireParticipationApproval: false,
+        participantLimit: 0
       });
     });
 
@@ -137,7 +139,8 @@ describe('SettingsService', () => {
       expect(settings).toEqual({
         notifyParticipation: false,
         allowReposts: false,
-        requireParticipationApproval: false
+        requireParticipationApproval: false,
+        participantLimit: 0
       });
     });
 
@@ -146,13 +149,15 @@ describe('SettingsService', () => {
         {
           settings: {
             notifyParticipation: true,
-            allowReposts: false
+            allowReposts: false,
+            participantLimit: 8
           }
         },
         {
           settings: {
             notifyParticipation: false,
-            allowReposts: true
+            allowReposts: true,
+            participantLimit: 5
           }
         }
       );
@@ -160,8 +165,15 @@ describe('SettingsService', () => {
       expect(updatedSettings).toEqual({
         notifyParticipation: false,
         allowReposts: true,
-        requireParticipationApproval: false
+        requireParticipationApproval: false,
+        participantLimit: 5
       });
+    });
+
+    it('defaults missing participant limits to unlimited', () => {
+      expect(SettingsService.getRideSettingsSnapshot({
+        settings: { notifyParticipation: false, allowReposts: true }
+      }).participantLimit).toBe(0);
     });
   });
 });

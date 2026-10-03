@@ -39,6 +39,8 @@ describe.each(['en', 'ru'])('FromStravaCommandHandler (%s)', (language) => {
 
     mockRideService = {
       createRide: jest.fn(),
+      createRideContent: jest.fn(),
+      updateRideContent: jest.fn(),
     };
     mockMessageFormatter = {};
 
@@ -110,21 +112,25 @@ describe.each(['en', 'ru'])('FromStravaCommandHandler (%s)', (language) => {
       mockParser.fetchEvent.mockResolvedValue({ id: EVENT_ID, title: 'Test' });
       mockParser.mapToRideData.mockReturnValue(MOCK_RIDE_DATA);
       mockStorage.getRideByStravaId.mockResolvedValue(null);
-      mockRideService.createRide.mockResolvedValue({ ...MOCK_RIDE_DATA, id: 'abc123' });
+      mockRideService.createRideContent.mockResolvedValue({
+        ride: { ...MOCK_RIDE_DATA, id: 'abc123' },
+        error: null
+      });
     });
 
     it('creates a new ride when no existing ride found', async () => {
       await handler.handle(mockCtx);
 
       expect(mockStorage.getRideByStravaId).toHaveBeenCalledWith(EVENT_ID, 101);
-      expect(mockRideService.createRide).toHaveBeenCalledWith(
+      expect(mockRideService.createRideContent).toHaveBeenCalledWith(
         MOCK_RIDE_DATA,
         new UserProfile({
           userId: 101,
           username: 'tester',
           firstName: '',
           lastName: ''
-        })
+        }),
+        { language }
       );
       expect(mockRideMessagesService.createRideMessage).toHaveBeenCalled();
     });
@@ -161,15 +167,20 @@ describe.each(['en', 'ru'])('FromStravaCommandHandler (%s)', (language) => {
       mockParser.fetchEvent.mockResolvedValue({ id: EVENT_ID, title: 'Test' });
       mockParser.mapToRideData.mockReturnValue(MOCK_RIDE_DATA);
       mockStorage.getRideByStravaId.mockResolvedValue(existingRide);
-      mockStorage.updateRide.mockResolvedValue({ ...existingRide, title: 'Updated' });
+      mockRideService.updateRideContent.mockResolvedValue({
+        ride: { ...existingRide, title: 'Updated' },
+        error: null
+      });
     });
 
     it('updates the existing ride when same stravaId + user found', async () => {
       await handler.handle(mockCtx);
 
-      expect(mockStorage.updateRide).toHaveBeenCalledWith(
+      expect(mockRideService.updateRideContent).toHaveBeenCalledWith(
         'existing123',
-        expect.objectContaining({ updatedBy: 101 })
+        MOCK_RIDE_DATA,
+        101,
+        { language }
       );
     });
 
@@ -188,7 +199,19 @@ describe.each(['en', 'ru'])('FromStravaCommandHandler (%s)', (language) => {
     it('does not call createRide', async () => {
       await handler.handle(mockCtx);
 
-      expect(mockRideService.createRide).not.toHaveBeenCalled();
+      expect(mockRideService.createRideContent).not.toHaveBeenCalled();
+    });
+
+    it('returns lifecycle validation errors without updating messages', async () => {
+      mockRideService.updateRideContent.mockResolvedValue({
+        ride: null,
+        error: tr('services.ride.archivedUpdate', { hours: 1 })
+      });
+
+      await handler.handle(mockCtx);
+
+      expect(mockCtx.reply).toHaveBeenCalledWith(tr('services.ride.archivedUpdate', { hours: 1 }));
+      expect(mockRideMessagesService.updateRideMessages).not.toHaveBeenCalled();
     });
   });
 });

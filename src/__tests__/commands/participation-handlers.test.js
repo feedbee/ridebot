@@ -5,6 +5,7 @@
 import { jest } from '@jest/globals';
 import { ParticipationHandlers } from '../../commands/ParticipationHandlers.js';
 import { t } from '../../i18n/index.js';
+import { RIDE_ARCHIVE_AFTER_HOURS } from '../../services/ride-lifecycle.js';
 
 // Mock the grammy module
 jest.mock('grammy', () => {
@@ -180,6 +181,20 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
       expect(mockRideMessagesService.updateRideMessages).not.toHaveBeenCalled();
     });
 
+    it('reports a reached participant limit without updating messages', async () => {
+      mockRideParticipationService.changeParticipation.mockResolvedValue({
+        status: 'participant_limit_reached',
+        targetState: 'joined'
+      });
+
+      await participationHandlers.handleJoinRide(mockCtx);
+
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(
+        tr('commands.participation.participantLimitReached')
+      );
+      expect(mockRideMessagesService.updateRideMessages).not.toHaveBeenCalled();
+    });
+
     // Multi-chat propagation: just expect the simple reply
     it('should report join with simple reply even after multi-chat propagation', async () => {
       // Setup
@@ -340,6 +355,18 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
 
       expect(mockRideMessagesService.updateRideMessages).not.toHaveBeenCalled();
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.participation.applicationStale'));
+    });
+
+    it('reports archived application callbacks without updating messages', async () => {
+      mockCtx.match = ['application:accept:123:789', 'accept', '123', '789'];
+      mockRideParticipationService.decideApplication.mockResolvedValue({ status: 'ride_archived' });
+
+      await participationHandlers.handleApplicationDecision(mockCtx);
+
+      expect(mockRideMessagesService.updateRideMessages).not.toHaveBeenCalled();
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(
+        tr('commands.participation.rideArchived', { hours: RIDE_ARCHIVE_AFTER_HOURS })
+      );
     });
   });
 

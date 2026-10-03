@@ -45,6 +45,7 @@ describe('wizardFieldConfig', () => {
       expect(WIZARD_FIELDS.duration).toBeDefined();
       expect(WIZARD_FIELDS.speed).toBeDefined();
       expect(WIZARD_FIELDS.meet).toBeDefined();
+      expect(WIZARD_FIELDS.chat).toBeDefined();
       expect(WIZARD_FIELDS.info).toBeDefined();
     });
 
@@ -168,6 +169,21 @@ describe('wizardFieldConfig', () => {
       expect(WIZARD_FIELDS.distance.required).toBe(false);
       expect(WIZARD_FIELDS.distance.clearable).toBe(true);
       expect(WIZARD_FIELDS.distance.skippable).toBe(true);
+    });
+  });
+
+  describe('chat field', () => {
+    it('normalizes valid Telegram chat links', () => {
+      expect(WIZARD_FIELDS.chat.validator('telegram.me/example_chat/')).toEqual({
+        valid: true,
+        value: 'https://t.me/example_chat'
+      });
+    });
+
+    it('rejects links that do not identify a Telegram chat', () => {
+      const result = WIZARD_FIELDS.chat.validator('https://example.com/chat');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe(tr('wizard.validation.chatInvalid'));
     });
   });
 
@@ -389,7 +405,8 @@ describe('wizardFieldConfig', () => {
       expect(WIZARD_FIELDS.category.nextStep).toBe('organizer');
       expect(WIZARD_FIELDS.organizer.nextStep).toBe('date');
       expect(WIZARD_FIELDS.date.nextStep).toBe('route');
-      expect(WIZARD_FIELDS.meet.nextStep).toBe('info');
+      expect(WIZARD_FIELDS.meet.nextStep).toBe('chat');
+      expect(WIZARD_FIELDS.chat.nextStep).toBe('info');
       expect(WIZARD_FIELDS.info.nextStep).toBe('confirm');
     });
 
@@ -398,6 +415,8 @@ describe('wizardFieldConfig', () => {
       expect(WIZARD_FIELDS.category.previousStep).toBe('title');
       expect(WIZARD_FIELDS.organizer.previousStep).toBe('category');
       expect(WIZARD_FIELDS.date.previousStep).toBe('organizer');
+      expect(WIZARD_FIELDS.chat.previousStep).toBe('meet');
+      expect(WIZARD_FIELDS.info.previousStep).toBe('chat');
     });
   });
 

@@ -90,6 +90,7 @@ describe('Bot', () => {
       expect(bot.botConfig.commands.mixed).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ command: 'shareride' }),
+          expect.objectContaining({ command: 'unshareride' }),
         ])
       );
       expect(bot.botConfig.callbacks).toEqual(
@@ -101,6 +102,7 @@ describe('Bot', () => {
           expect.objectContaining({ pattern: /^calendar:ics:(\w+)$/ }),
           expect.objectContaining({ pattern: /^calendar:close$/ }),
           expect.objectContaining({ pattern: /^delete:(\w+):(\w+)(?::(message|callback))?$/ }),
+          expect.objectContaining({ pattern: /^u:(c|x):(\w+):(a|s|m)(?::(-?\d+))?(?::(-?\d+))?$/ }),
           expect.objectContaining({ pattern: /^rideowner:update:(\w+)$/ }),
           expect.objectContaining({ pattern: /^rideowner:duplicate:(\w+)$/ }),
           expect.objectContaining({ pattern: /^rideowner:delete:(\w+)$/ }),
@@ -113,6 +115,9 @@ describe('Bot', () => {
           expect.objectContaining({ pattern: /^ridepublish:close$/ }),
           expect.objectContaining({ pattern: /^settings:user:bool:(\w+):(on|off)$/ }),
           expect.objectContaining({ pattern: /^settings:ride:bool:(\w+):(on|off):(\w+)$/ }),
+          expect.objectContaining({ pattern: /^settings:user:participant-limit$/ }),
+          expect.objectContaining({ pattern: /^settings:ride:participant-limit:(\w+)$/ }),
+          expect.objectContaining({ pattern: /^settings:participant-limit:cancel:([0-9a-f]+)$/ }),
           expect.objectContaining({ pattern: /^wizard:(\w+)(?::(.*))?$/ }),
         ])
       );

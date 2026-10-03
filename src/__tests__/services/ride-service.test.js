@@ -25,7 +25,7 @@ describe('RideService', () => {
   
   const testRide = {
     title: 'Test Ride',
-    date: new Date('2024-03-15T15:00:00Z'),
+    date: new Date('2099-03-15T15:00:00Z'),
     messages: [{ chatId: 123456, messageId: 789123 }],
     createdBy: 789,
     meetingPoint: 'Test Location',
@@ -242,6 +242,23 @@ describe('RideService', () => {
 
       const updatedRide = await rideService.getRide(ride.id);
       expect(updatedRide.participation.joined).toHaveLength(1);
+    });
+
+    it('does not exceed a positive participant limit', async () => {
+      const ride = await rideService.createRide({
+        ...testRide,
+        settings: { participantLimit: 1 }
+      });
+      const participant2 = { userId: 456, username: 'user2' };
+
+      await rideService.setParticipation(ride.id, testParticipant, 'joined');
+      const result = await rideService.setParticipation(ride.id, participant2, 'joined');
+
+      expect(result).toEqual(expect.objectContaining({
+        success: false,
+        status: 'participant_limit_reached'
+      }));
+      expect((await rideService.getRide(ride.id)).participation.joined).toHaveLength(1);
     });
 
     it('should move participant between states', async () => {
@@ -603,6 +620,7 @@ describe('RideService', () => {
         notifyParticipation: false,
         allowReposts: false,
         requireParticipationApproval: false,
+        participantLimit: 0,
         futureSetting: 'preserved'
       });
       expect(result.ride.updatedBy).toBe(502);
@@ -1179,6 +1197,7 @@ describe('RideService', () => {
         speedMax: 30,
         organizer: 'Org',
         category: 'road',
+        chat: 'https://t.me/example_chat',
         additionalInfo: 'Info'
       });
       const result = await rideService.duplicateRide(originalRide.id, {}, new UserProfile({ userId: 7, username: 'user7' }));
@@ -1195,6 +1214,7 @@ describe('RideService', () => {
       expect(result.ride.duration).toBe(originalRide.duration);
       expect(result.ride.speedMin).toBe(26);
       expect(result.ride.speedMax).toBe(30);
+      expect(result.ride.chat).toBe(originalRide.chat);
       expect(result.ride.additionalInfo).toBe(originalRide.additionalInfo);
     });
 
@@ -1206,15 +1226,29 @@ describe('RideService', () => {
         createdBy: creator.userId,
         settings: {
           notifyParticipation: false,
-          allowReposts: true
+          allowReposts: true,
+          participantLimit: 5
         }
       }, creator);
+
+      await storage.upsertUser({
+        userId: creator.userId,
+        username: creator.username,
+        settings: {
+          rideDefaults: {
+            notifyParticipation: true,
+            allowReposts: false,
+            participantLimit: 0
+          }
+        }
+      });
 
       const result = await rideService.duplicateRide(originalRide.id, {}, creator);
 
       expect(result.error).toBeNull();
       expect(result.ride.settings.notifyParticipation).toBe(false);
       expect(result.ride.settings.allowReposts).toBe(true);
+      expect(result.ride.settings.participantLimit).toBe(5);
     });
 
     it('should duplicate another user\'s ride using the current user defaults', async () => {
@@ -1286,6 +1320,28 @@ describe('RideService', () => {
       expect(result.error).toBeNull();
       expect(result.ride.routes).toEqual([]);
       expect(result.ride.routeLink).toBe('');
+    });
+
+    it('should override or clear chat when duplicating', async () => {
+      const originalRide = await rideService.createRide({
+        ...testRide,
+        date: new Date('2030-03-18T15:00:00Z'),
+        chat: 'https://t.me/original_chat'
+      });
+
+      const overridden = await rideService.duplicateRide(
+        originalRide.id,
+        { chat: 'telegram.me/new_chat' },
+        new UserProfile({ userId: 7 })
+      );
+      const cleared = await rideService.duplicateRide(
+        originalRide.id,
+        { chat: '-' },
+        new UserProfile({ userId: 7 })
+      );
+
+      expect(overridden.ride.chat).toBe('https://t.me/new_chat');
+      expect(cleared.ride.chat).toBeUndefined();
     });
   });
 });

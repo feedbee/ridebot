@@ -1,4 +1,5 @@
 import { BaseCommandHandler } from './BaseCommandHandler.js';
+import { RIDE_ARCHIVE_AFTER_HOURS, isRideArchived } from '../services/ride-lifecycle.js';
 
 /**
  * Abstract handler for ride state change operations (cancel/resume)
@@ -61,6 +62,16 @@ export class RideStateChangeHandler extends BaseCommandHandler {
    */
   async performStateChange(ctx, ride) {
     const stateConfig = this.getStateConfig(ctx);
+
+    if (isRideArchived(ride)) {
+      return {
+        ok: false,
+        message: this.translate(ctx, 'commands.stateChange.rideArchived', {
+          action: stateConfig.actionVerb,
+          hours: RIDE_ARCHIVE_AFTER_HOURS
+        })
+      };
+    }
 
     if (!stateConfig.checkState(ride)) {
       return { ok: false, message: stateConfig.errorMessage };

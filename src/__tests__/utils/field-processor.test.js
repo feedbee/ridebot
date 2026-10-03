@@ -5,6 +5,23 @@
 import { FieldProcessor } from '../../utils/FieldProcessor.js';
 
 describe('FieldProcessor', () => {
+  describe('processRideFields — chat', () => {
+    it('normalizes a Telegram chat link', () => {
+      expect(FieldProcessor.processRideFields({ chat: 'telegram.me/example_chat/' }).data.chat)
+        .toBe('https://t.me/example_chat');
+    });
+
+    it('clears chat with a dash during update', () => {
+      expect(FieldProcessor.processRideFields({ chat: '-' }, true).data.chat).toBe('');
+    });
+
+    it('rejects invalid chat links', () => {
+      const result = FieldProcessor.processRideFields({ chat: 'https://example.com/chat' });
+      expect(result.data).toBeNull();
+      expect(result.error).toContain('Invalid Telegram chat');
+    });
+  });
+
   describe('processRideFields — settings.notifyParticipation', () => {
     it('maps settings.notifyParticipation:yes to nested settings', () => {
       const { data } = FieldProcessor.processRideFields({
@@ -58,6 +75,50 @@ describe('FieldProcessor', () => {
     it('does not include settings when the param is absent', () => {
       const { data } = FieldProcessor.processRideFields({ title: 'Test' });
       expect(data).not.toHaveProperty('settings');
+    });
+  });
+
+  describe('processRideFields — settings.participantLimit', () => {
+    it.each([
+      ['0', 0],
+      ['1', 1],
+      ['999', 999],
+      ['1000', 1000]
+    ])('accepts canonical decimal value %s', (input, expected) => {
+      const result = FieldProcessor.processRideFields({
+        'settings.participantLimit': input
+      });
+
+      expect(result).toEqual({
+        data: { settings: { participantLimit: expected } },
+        error: null
+      });
+    });
+
+    it.each(['-1', '1.0', '2.5', '+5', '005', '1e2', '0x10', '1001', 'nope', ''])('rejects %j', input => {
+      const result = FieldProcessor.processRideFields({
+        'settings.participantLimit': input
+      });
+
+      expect(result.data).toBeNull();
+      expect(result.error).toBeTruthy();
+    });
+
+    it('accepts structured integer values from AI parsing', () => {
+      const result = FieldProcessor.processRideFields({
+        settings: { participantLimit: 12 }
+      });
+
+      expect(result.data.settings.participantLimit).toBe(12);
+    });
+
+    it.each([1.5, -1, 1001])('rejects structured numeric value %s', input => {
+      const result = FieldProcessor.processRideFields({
+        settings: { participantLimit: input }
+      });
+
+      expect(result.data).toBeNull();
+      expect(result.error).toBeTruthy();
     });
   });
 

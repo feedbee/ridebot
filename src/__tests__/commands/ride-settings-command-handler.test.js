@@ -23,14 +23,15 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
     };
 
     mockSettingsService = {
-      getUserRideDefaults: jest.fn().mockResolvedValue({ notifyParticipation: true, allowReposts: false }),
+      getUserRideDefaults: jest.fn().mockResolvedValue({ notifyParticipation: true, allowReposts: false, participantLimit: 0 }),
       getParticipationNotificationLevel: jest.fn().mockResolvedValue('all'),
       updateParticipationNotificationLevel: jest.fn().mockResolvedValue({}),
       updateUserRideDefaults: jest.fn().mockResolvedValue({
         settings: {
           rideDefaults: {
             notifyParticipation: false,
-            allowReposts: false
+            allowReposts: false,
+            participantLimit: 0
           }
         }
       })
@@ -45,6 +46,7 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
     mockCtx = {
       match: ['rideowner:settings:123', '123'],
       message: { text: '/settings' },
+      chat: { id: 123, type: 'private' },
       lang: language,
       from: { id: 123, username: 'user123', first_name: 'User', last_name: 'One' },
       reply: jest.fn().mockResolvedValue({}),
@@ -78,6 +80,8 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
       const richHtml = mockCtx.replyWithRichMessage.mock.calls[0][0].html;
       expect(richHtml.match(/<table bordered striped compact>/g)).toHaveLength(2);
       expect(richHtml).toContain(`<td>${tr('commands.settings.allowRepostsLabel')}</td>`);
+      expect(richHtml).toContain(`<td>${tr('commands.settings.participantLimitLabel')}</td>`);
+      expect(richHtml).toContain(`<td><b>${tr('commands.settings.participantLimitUnlimited')}</b></td>`);
       expect(richHtml).toContain(`<td><b>${tr('common.yes')}</b></td>`);
       expect(richHtml).toContain(`<td><b>${tr('common.no')}</b></td>`);
       expect(richHtml).toContain(tr('commands.settings.notificationPreferencesTitle'));
@@ -91,6 +95,9 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
         text: tr('buttons.close'),
         callback_data: 'settings:close'
       }]);
+      expect(keyboard.flat()).toContainEqual(expect.objectContaining({
+        callback_data: 'settings:user:participant-limit'
+      }));
     });
 
     it('renders ride settings for /settings #rideId when the user is the creator', async () => {
@@ -232,6 +239,237 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
 
       expect(mockSettingsService.updateParticipationNotificationLevel).not.toHaveBeenCalled();
       expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('errors.generic'));
+    });
+  });
+
+  describe('participant limit input', () => {
+    it('prompts for and persists a user default', async () => {
+      mockCtx.match = ['settings:user:participant-limit'];
+      await handler.handleUserParticipantLimitCallback(mockCtx);
+
+      expect(mockCtx.reply).toHaveBeenCalledWith(
+        tr('commands.settings.participantLimitPrompt'),
+        expect.objectContaining({ reply_markup: expect.any(Object) })
+      );
+
+      mockCtx.message.text = '25';
+      mockSettingsService.updateUserRideDefaults.mockResolvedValue({
+        settings: {
+          rideDefaults: {
+            notifyParticipation: true,
+            allowReposts: false,
+            participantLimit: 25
+          }
+        }
+      });
+
+      await expect(handler.handleTextInput(mockCtx)).resolves.toBe(true);
+      expect(mockSettingsService.updateUserRideDefaults).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 123 }),
+        { participantLimit: 25 }
+      );
+      expect(mockCtx.replyWithRichMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ html: expect.stringContaining('<b>25</b>') }),
+        expect.any(Object)
+      );
+    });
+
+    it('keeps the input active after invalid text and accepts a retry', async () => {
+      await handler.handleUserParticipantLimitCallback(mockCtx);
+      mockCtx.message.text = '005';
+
+      await expect(handler.handleTextInput(mockCtx)).resolves.toBe(true);
+      expect(mockCtx.reply).toHaveBeenLastCalledWith(
+        tr('params.validation.participantLimitInvalid'),
+        expect.objectContaining({ reply_markup: expect.any(Object) })
+      );
+      expect(mockSettingsService.updateUserRideDefaults).not.toHaveBeenCalled();
+
+      mockCtx.message.text = '5';
+      await expect(handler.handleTextInput(mockCtx)).resolves.toBe(true);
+      expect(mockSettingsService.updateUserRideDefaults).toHaveBeenCalledWith(
+        expect.any(Object),
+        { participantLimit: 5 }
+      );
+    });
+
+    it('does not consume participant-limit input from another chat', async () => {
+      await handler.handleUserParticipantLimitCallback(mockCtx);
+      mockCtx.chat = { id: -100123, type: 'supergroup' };
+      mockCtx.message.text = '5';
+
+      await expect(handler.handleTextInput(mockCtx)).resolves.toBe(false);
+      expect(mockSettingsService.updateUserRideDefaults).not.toHaveBeenCalled();
+
+      mockCtx.chat = { id: 123, type: 'private' };
+      await expect(handler.handleTextInput(mockCtx)).resolves.toBe(true);
+      expect(mockSettingsService.updateUserRideDefaults).toHaveBeenCalledWith(
+        expect.any(Object),
+        { participantLimit: 5 }
+      );
+    });
+
+    it('does not consume participant-limit input from another topic', async () => {
+      mockCtx.chat = { id: -100123, type: 'supergroup' };
+      mockCtx.callbackQuery = { message: { message_thread_id: 10 } };
+      await handler.handleUserParticipantLimitCallback(mockCtx);
+
+      mockCtx.callbackQuery = undefined;
+      mockCtx.message = { text: '5', message_thread_id: 11 };
+      await expect(handler.handleTextInput(mockCtx)).resolves.toBe(false);
+      expect(mockSettingsService.updateUserRideDefaults).not.toHaveBeenCalled();
+
+      mockCtx.message.message_thread_id = 10;
+      await expect(handler.handleTextInput(mockCtx)).resolves.toBe(true);
+      expect(mockSettingsService.updateUserRideDefaults).toHaveBeenCalled();
+    });
+
+    it('does not let a cancel button from an older topic cancel the current prompt', async () => {
+      mockCtx.chat = { id: -100123, type: 'supergroup' };
+      mockCtx.callbackQuery = { message: { message_thread_id: 10 } };
+      await handler.handleUserParticipantLimitCallback(mockCtx);
+      const oldCancelData = mockCtx.reply.mock.calls.at(-1)[1]
+        .reply_markup.inline_keyboard[0][0].callback_data;
+
+      mockCtx.callbackQuery.message.message_thread_id = 11;
+      await handler.handleUserParticipantLimitCallback(mockCtx);
+
+      mockCtx.callbackQuery.message.message_thread_id = 10;
+      mockCtx.match = [oldCancelData, oldCancelData.split(':').at(-1)];
+      await handler.handleParticipantLimitCancel(mockCtx);
+
+      mockCtx.callbackQuery = undefined;
+      mockCtx.message = { text: '5', message_thread_id: 11 };
+      await expect(handler.handleTextInput(mockCtx)).resolves.toBe(true);
+      expect(mockSettingsService.updateUserRideDefaults).toHaveBeenCalled();
+    });
+
+    it('does not let an older prompt in the same chat cancel the current prompt', async () => {
+      await handler.handleUserParticipantLimitCallback(mockCtx);
+      const oldCancelData = mockCtx.reply.mock.calls.at(-1)[1]
+        .reply_markup.inline_keyboard[0][0].callback_data;
+
+      await handler.handleUserParticipantLimitCallback(mockCtx);
+      mockCtx.match = [oldCancelData, oldCancelData.split(':').at(-1)];
+      await handler.handleParticipantLimitCancel(mockCtx);
+
+      mockCtx.message.text = '5';
+      await expect(handler.handleTextInput(mockCtx)).resolves.toBe(true);
+      expect(mockSettingsService.updateUserRideDefaults).toHaveBeenCalled();
+    });
+
+    it('uses distinct cancel session IDs across handler instances', async () => {
+      await handler.handleUserParticipantLimitCallback(mockCtx);
+      const firstCancelData = mockCtx.reply.mock.calls.at(-1)[1]
+        .reply_markup.inline_keyboard[0][0].callback_data;
+
+      const restartedHandler = new RideSettingsCommandHandler(
+        mockRideService,
+        mockMessageFormatter,
+        mockRideMessagesService,
+        mockSettingsService
+      );
+      await restartedHandler.handleUserParticipantLimitCallback(mockCtx);
+      const secondCancelData = mockCtx.reply.mock.calls.at(-1)[1]
+        .reply_markup.inline_keyboard[0][0].callback_data;
+
+      expect(secondCancelData).not.toBe(firstCancelData);
+      expect(Buffer.byteLength(secondCancelData, 'utf8')).toBeLessThanOrEqual(64);
+    });
+
+    it('updates a ride after rechecking ownership and refreshes announcements', async () => {
+      mockCtx.match = ['settings:ride:participant-limit:ride1', 'ride1'];
+      mockRideService.getRide.mockResolvedValue({
+        id: 'ride1',
+        title: 'Morning Ride',
+        createdBy: 123,
+        settings: { notifyParticipation: true, allowReposts: false, participantLimit: 0 }
+      });
+      await handler.handleRideParticipantLimitCallback(mockCtx);
+
+      mockCtx.message.text = '10';
+      mockRideService.updateRide.mockResolvedValue({
+        id: 'ride1',
+        title: 'Morning Ride',
+        createdBy: 123,
+        settings: { notifyParticipation: true, allowReposts: false, participantLimit: 10 }
+      });
+
+      await handler.handleTextInput(mockCtx);
+
+      expect(mockRideService.getRide).toHaveBeenCalledWith('ride1');
+      expect(mockRideService.updateRide).toHaveBeenCalledWith(
+        'ride1',
+        { settings: { participantLimit: 10 } },
+        123
+      );
+      expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalled();
+    });
+
+    it('warns when a saved ride limit cannot be propagated to announcements', async () => {
+      mockCtx.match = ['settings:ride:participant-limit:ride1', 'ride1'];
+      const ride = {
+        id: 'ride1',
+        title: 'Morning Ride',
+        createdBy: 123,
+        settings: { notifyParticipation: true, allowReposts: false, participantLimit: 0 }
+      };
+      mockRideService.getRide.mockResolvedValue(ride);
+      await handler.handleRideParticipantLimitCallback(mockCtx);
+      mockCtx.message.text = '10';
+      mockRideService.updateRide.mockResolvedValue({
+        ...ride,
+        settings: { ...ride.settings, participantLimit: 10 }
+      });
+      mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: false });
+
+      await handler.handleTextInput(mockCtx);
+
+      expect(mockCtx.reply).toHaveBeenLastCalledWith(
+        tr('commands.settings.rideUpdatedMessageFailed')
+      );
+    });
+
+    it('rejects a ride update when ownership changes before the text reply', async () => {
+      mockCtx.match = ['settings:ride:participant-limit:ride1', 'ride1'];
+      mockRideService.getRide
+        .mockResolvedValueOnce({
+          id: 'ride1',
+          title: 'Morning Ride',
+          createdBy: 123,
+          settings: { participantLimit: 0 }
+        })
+        .mockResolvedValueOnce({
+          id: 'ride1',
+          title: 'Morning Ride',
+          createdBy: 999,
+          settings: { participantLimit: 0 }
+        });
+      await handler.handleRideParticipantLimitCallback(mockCtx);
+      mockCtx.message.text = '10';
+
+      await handler.handleTextInput(mockCtx);
+
+      expect(mockRideService.updateRide).not.toHaveBeenCalled();
+      expect(mockCtx.reply).toHaveBeenLastCalledWith(
+        tr('commands.common.onlyCreatorAction')
+      );
+    });
+
+    it('cancels an active participant-limit input', async () => {
+      await handler.handleUserParticipantLimitCallback(mockCtx);
+      const cancelData = mockCtx.reply.mock.calls.at(-1)[1]
+        .reply_markup.inline_keyboard[0][0].callback_data;
+      mockCtx.match = [cancelData, cancelData.split(':').at(-1)];
+
+      await handler.handleParticipantLimitCancel(mockCtx);
+      mockCtx.message.text = '5';
+
+      await expect(handler.handleTextInput(mockCtx)).resolves.toBe(false);
+      expect(mockSettingsService.updateUserRideDefaults).not.toHaveBeenCalled();
+      expect(mockCtx.answerCallbackQuery).toHaveBeenLastCalledWith(
+        tr('commands.settings.participantLimitCancelled')
+      );
     });
   });
 

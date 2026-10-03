@@ -21,7 +21,8 @@ export class SettingsService {
     return {
       notifyParticipation: true,
       allowReposts: false,
-      requireParticipationApproval: false
+      requireParticipationApproval: false,
+      participantLimit: 0
     };
   }
 

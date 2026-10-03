@@ -25,10 +25,12 @@ export class RideParamsHelper {
       duration: translate('params.duration'),
       speed: translate('params.speed'),
       cruisingSpeed: translate('params.cruisingSpeed'),
+      chat: translate('params.chat'),
       info: translate('params.info'),
       'settings.notifyParticipation': translate('params.settingsNotifyParticipation'),
       'settings.allowReposts': translate('params.settingsAllowReposts'),
       'settings.requireParticipationApproval': translate('params.settingsRequireParticipationApproval'),
+      'settings.participantLimit': translate('params.settingsParticipantLimit'),
       id: translate('params.id')
     };
   }

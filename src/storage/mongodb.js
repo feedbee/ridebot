@@ -39,7 +39,13 @@ const routeSchema = new mongoose.Schema({
 const rideSettingsSchema = new mongoose.Schema({
   notifyParticipation: { type: Boolean },
   allowReposts: { type: Boolean },
-  requireParticipationApproval: { type: Boolean }
+  requireParticipationApproval: { type: Boolean },
+  participantLimit: {
+    type: Number,
+    min: 0,
+    max: 1000,
+    validate: Number.isInteger
+  }
 }, { _id: false });
 
 const rideSchema = new mongoose.Schema({
@@ -56,6 +62,7 @@ const rideSchema = new mongoose.Schema({
   speedMax: Number,
   cruisingSpeedMin: Number,
   cruisingSpeedMax: Number,
+  chat: String,
   additionalInfo: String,
   settings: { type: rideSettingsSchema, default: undefined },
   cancelled: { type: Boolean, default: false },
@@ -192,6 +199,16 @@ export class MongoDBStorage extends StorageInterface {
     }
   }
 
+  async removeRideMessages(rideId, messages) {
+    const ride = await Ride.findByIdAndUpdate(
+      rideId,
+      { $pull: { messages: { $or: messages.map(({ chatId, messageId }) => ({ chatId, messageId })) } } },
+      { new: true }
+    );
+    if (!ride) throw new Error('Ride not found');
+    return this.mapRideToInterface(ride);
+  }
+
   async getRidesByCreator(userId, skip, limit) {
     const [rides, total] = await Promise.all([
       Ride.find({ createdBy: userId })
@@ -293,23 +310,26 @@ export class MongoDBStorage extends StorageInterface {
   }
 
   async setParticipation(rideId, state, participantProfile) {
-    const ride = await Ride.findById(rideId);
-    if (!ride) {
+    const currentRide = await Ride.findById(rideId);
+    if (!currentRide) {
       throw new Error('Ride not found');
     }
 
-    // Ensure participation structure exists
-    if (!ride.participation) {
-      ride.participation = { joined: [], thinking: [], skipped: [] };
+    const participation = currentRide.participation || { joined: [], thinking: [], skipped: [] };
+    const previousState = ['joined', 'thinking', 'skipped']
+      .find(candidate => participation[candidate].some(
+        participant => participant.userId === participantProfile.userId
+      )) || null;
+    if (previousState === state) {
+      return {
+        status: 'already_in_state',
+        ride: this.mapRideToInterface(currentRide),
+        previousState
+      };
     }
 
-    // Remove user from all states first
-    ride.participation.joined = ride.participation.joined.filter(p => p.userId !== participantProfile.userId);
-    ride.participation.thinking = ride.participation.thinking.filter(p => p.userId !== participantProfile.userId);
-    ride.participation.skipped = ride.participation.skipped.filter(p => p.userId !== participantProfile.userId);
-
-    // Add user to the specified state
     const participantData = {
+      _id: new mongoose.Types.ObjectId(),
       userId: participantProfile.userId,
       username: participantProfile.username,
       firstName: participantProfile.firstName || '',
@@ -317,9 +337,64 @@ export class MongoDBStorage extends StorageInterface {
       createdAt: new Date()
     };
 
-    ride.participation[state].push(participantData);
-    await ride.save();
-    return { ride: this.mapRideToInterface(ride) };
+    const filter = {
+      _id: rideId,
+      [`participation.${state}.userId`]: { $ne: participantProfile.userId }
+    };
+    if (state === 'joined') {
+      filter.$expr = {
+        $or: [
+          { $lte: [{ $ifNull: ['$settings.participantLimit', 0] }, 0] },
+          {
+            $lt: [
+              { $size: { $ifNull: ['$participation.joined', []] } },
+              { $ifNull: ['$settings.participantLimit', 0] }
+            ]
+          }
+        ]
+      };
+    }
+
+    const filteredParticipants = candidate => ({
+      $filter: {
+        input: { $ifNull: [`$participation.${candidate}`, []] },
+        as: 'participant',
+        cond: { $ne: ['$$participant.userId', participantProfile.userId] }
+      }
+    });
+    const nextParticipation = Object.fromEntries(
+      ['joined', 'thinking', 'skipped'].map(candidate => [
+        `participation.${candidate}`,
+        candidate === state
+          ? { $concatArrays: [filteredParticipants(candidate), [participantData]] }
+          : filteredParticipants(candidate)
+      ])
+    );
+
+    const updatedRide = await Ride.findOneAndUpdate(
+      filter,
+      [{ $set: nextParticipation }],
+      { new: true }
+    );
+    if (updatedRide) {
+      return {
+        status: 'changed',
+        ride: this.mapRideToInterface(updatedRide),
+        previousState
+      };
+    }
+
+    const unchangedRide = await Ride.findById(rideId);
+    if (!unchangedRide) throw new Error('Ride not found');
+    const currentState = ['joined', 'thinking', 'skipped']
+      .find(candidate => unchangedRide.participation?.[candidate]?.some(
+        participant => participant.userId === participantProfile.userId
+      )) || null;
+    return {
+      status: currentState === state ? 'already_in_state' : 'participant_limit_reached',
+      ride: this.mapRideToInterface(unchangedRide),
+      previousState: currentState
+    };
   }
 
   async setParticipationForRideMode(rideId, state, participantProfile, requireParticipationApproval, expectedState) {
@@ -355,12 +430,48 @@ export class MongoDBStorage extends StorageInterface {
           : withoutUser(participationState)
       ])
     );
+    const filter = { _id: rideId, cancelled: { $ne: true }, ...approvalFilter, ...participationFilter };
+    if (state === 'joined') {
+      filter.$expr = {
+        $or: [
+          { $lte: [{ $ifNull: ['$settings.participantLimit', 0] }, 0] },
+          {
+            $lt: [
+              { $size: { $ifNull: ['$participation.joined', []] } },
+              { $ifNull: ['$settings.participantLimit', 0] }
+            ]
+          }
+        ]
+      };
+    }
     const ride = await Ride.findOneAndUpdate(
-      { _id: rideId, cancelled: { $ne: true }, ...approvalFilter, ...participationFilter },
+      filter,
       [{ $set: { participation: nextParticipation } }],
       { new: true }
     );
-    return ride ? { ride: this.mapRideToInterface(ride) } : null;
+    if (ride) {
+      return { status: 'changed', ride: this.mapRideToInterface(ride), previousState: expectedState };
+    }
+
+    const unchangedRide = await Ride.findById(rideId);
+    const actualState = ['joined', 'thinking', 'skipped'].find(participationState =>
+      unchangedRide?.participation?.[participationState]?.some(
+        participant => participant.userId === participantProfile.userId
+      )
+    ) || null;
+    const sameMode = (unchangedRide?.settings?.requireParticipationApproval === true)
+      === requireParticipationApproval;
+    const participantLimit = unchangedRide?.settings?.participantLimit ?? 0;
+    if (unchangedRide && !unchangedRide.cancelled && sameMode && actualState === expectedState
+      && state === 'joined' && participantLimit > 0
+      && (unchangedRide.participation?.joined?.length || 0) >= participantLimit) {
+      return {
+        status: 'participant_limit_reached',
+        ride: this.mapRideToInterface(unchangedRide),
+        previousState: actualState
+      };
+    }
+    return null;
   }
 
   async setParticipationIfCurrent(rideId, userId, expectedState, targetState, participantProfile) {
@@ -371,20 +482,53 @@ export class MongoDBStorage extends StorageInterface {
       lastName: participantProfile.lastName || '',
       createdAt: new Date()
     };
+    const filter = {
+      _id: rideId,
+      cancelled: { $ne: true },
+      'settings.requireParticipationApproval': true,
+      [`participation.${expectedState}.userId`]: userId
+    };
+    if (targetState === 'joined') {
+      filter.$expr = {
+        $or: [
+          { $lte: [{ $ifNull: ['$settings.participantLimit', 0] }, 0] },
+          {
+            $lt: [
+              { $size: { $ifNull: ['$participation.joined', []] } },
+              { $ifNull: ['$settings.participantLimit', 0] }
+            ]
+          }
+        ]
+      };
+    }
     const ride = await Ride.findOneAndUpdate(
-      {
-        _id: rideId,
-        cancelled: { $ne: true },
-        'settings.requireParticipationApproval': true,
-        [`participation.${expectedState}.userId`]: userId
-      },
+      filter,
       {
         $pull: { [`participation.${expectedState}`]: { userId } },
         $push: { [`participation.${targetState}`]: participantData }
       },
       { new: true }
     );
-    return ride ? { ride: this.mapRideToInterface(ride) } : null;
+    if (ride) {
+      return { status: 'changed', ride: this.mapRideToInterface(ride), previousState: expectedState };
+    }
+
+    const unchangedRide = await Ride.findById(rideId);
+    const stillPending = unchangedRide?.participation?.[expectedState]?.some(
+      participant => participant.userId === userId
+    );
+    const participantLimit = unchangedRide?.settings?.participantLimit ?? 0;
+    if (unchangedRide && !unchangedRide.cancelled
+      && unchangedRide.settings?.requireParticipationApproval === true
+      && stillPending && targetState === 'joined' && participantLimit > 0
+      && (unchangedRide.participation?.joined?.length || 0) >= participantLimit) {
+      return {
+        status: 'participant_limit_reached',
+        ride: this.mapRideToInterface(unchangedRide),
+        previousState: expectedState
+      };
+    }
+    return null;
   }
 
   async getParticipation(rideId, userId) {
@@ -458,6 +602,7 @@ export class MongoDBStorage extends StorageInterface {
       speedMax: rideObj.speedMax,
       cruisingSpeedMin: rideObj.cruisingSpeedMin,
       cruisingSpeedMax: rideObj.cruisingSpeedMax,
+      chat: rideObj.chat,
       additionalInfo: rideObj.additionalInfo,
       settings: rideObj.settings,
       cancelled: rideObj.cancelled,

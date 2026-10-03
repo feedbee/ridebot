@@ -22,6 +22,7 @@
  * @property {boolean} notifyParticipation
  * @property {boolean} allowReposts
  * @property {boolean} requireParticipationApproval
+ * @property {number} participantLimit
  */
 
 /**
@@ -41,6 +42,7 @@
  * @property {number} [speedMax]
  * @property {number} [cruisingSpeedMin]
  * @property {number} [cruisingSpeedMax]
+ * @property {string} [chat] - Normalized Telegram coordination chat or invite link
  * @property {string} [additionalInfo]
  * @property {boolean} [cancelled]
  * @property {RideSettings} [settings]
@@ -81,6 +83,7 @@
  * @property {boolean} rideDefaults.notifyParticipation
  * @property {boolean} rideDefaults.allowReposts
  * @property {boolean} rideDefaults.requireParticipationApproval
+ * @property {number} rideDefaults.participantLimit
  * @property {'all'|'membership'} [participationNotificationLevel]
  */
 
@@ -124,13 +127,23 @@ export class StorageInterface {
     throw new Error('Not implemented');
   }
 
+  /**
+   * Atomically remove tracked messages by chat and message ID.
+   * @param {string} rideId
+   * @param {Array<Pick<RideMessage, 'chatId'|'messageId'>>} messages
+   * @returns {Promise<Ride>}
+   */
+  async removeRideMessages(rideId, messages) {
+    throw new Error('Not implemented');
+  }
+
 
   /**
    * Set user participation state for a ride
    * @param {string} rideId - Ride ID
    * @param {'joined'|'thinking'|'skipped'} state - Participation state
    * @param {Participant} participantProfile - Participant data
-   * @returns {Promise<{ride: Ride}>} - Updated ride
+   * @returns {Promise<{status: 'changed'|'already_in_state'|'participant_limit_reached', ride: Ride, previousState: 'joined'|'thinking'|'skipped'|null}>}
    */
   async setParticipation(rideId, state, participantProfile) {
     throw new Error('Not implemented');
@@ -148,7 +161,7 @@ export class StorageInterface {
    * @param {'joined'|'thinking'|'skipped'} expectedState
    * @param {'joined'|'thinking'|'skipped'} targetState
    * @param {Participant} participantProfile
-   * @returns {Promise<{ride: Ride}|null>}
+   * @returns {Promise<{status: 'changed'|'participant_limit_reached', ride: Ride, previousState: string}|null>}
    */
   async setParticipationIfCurrent(rideId, userId, expectedState, targetState, participantProfile) {
     throw new Error('Not implemented');

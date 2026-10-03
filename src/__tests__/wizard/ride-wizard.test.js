@@ -150,7 +150,15 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
         };
         storage.rides.set(ride.id, updatedRide);
         return updatedRide;
-      })
+      }),
+      createRideContent: jest.fn(async (rideData, creatorProfile) => ({
+        ride: await mockRideService.createRide(rideData, creatorProfile),
+        error: null
+      })),
+      updateRideContent: jest.fn(async (rideId, updates) => ({
+        ride: await storage.updateRide(rideId, updates),
+        error: null
+      }))
     };
     mockMessageFormatter = {
       formatRideMessage: jest.fn(),
@@ -176,6 +184,23 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
       await wizard.startWizard(ctx);
       // messages[0] = live preview, messages[1] = wizard question
       expect(ctx._test.messages[1].text).toContain(tr('wizard.prompts.title'));
+    });
+
+    test('requires a new date when keeping the archived date during update', async () => {
+      await wizard.startWizard(ctx, {
+        isUpdate: true,
+        originalRideId: 'archived',
+        title: 'Archived ride',
+        datetime: new Date(Date.now() - 60 * 60 * 1000)
+      });
+      const state = wizard.wizardStates.get(`${ctx.from.id}:${ctx.chat.id}`);
+      state.step = 'date';
+      ctx.match = ['wizard:keep', 'keep'];
+
+      await wizard.handleWizardAction(ctx);
+
+      expect(state.step).toBe('date');
+      expect(ctx._test.callbackAnswers).toContain(tr('wizard.messages.archivedDateRequired', { hours: 1 }));
     });
 
     test('should prevent starting wizard in public chat', async () => {
@@ -405,7 +430,7 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
       await wizard.handleWizardInput(ctx);
       
       // Skip to the additional info step
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < 7; i++) {
         ctx.match = ['wizard:skip', 'skip'];
         await wizard.handleWizardAction(ctx);
       }
@@ -447,7 +472,7 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
       await wizard.handleWizardInput(ctx);
 
       // Skip to the additional info step
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < 7; i++) {
         ctx.match = ['wizard:skip', 'skip'];
         await wizard.handleWizardAction(ctx);
       }
@@ -600,6 +625,7 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
         { text: '25-28', step: 'speed' },
         { text: '29-32', step: 'cruisingSpeed' },
         { text: 'City Center', step: 'meet' },
+        { text: 'https://t.me/example_chat', step: 'chat' },
         { text: 'Bring lights and a jacket', step: 'additionalInfo' }
       ];
       
@@ -623,6 +649,7 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
       expect(createdRide.speedMax).toBe(28);
       expect(createdRide.cruisingSpeedMin).toBe(29);
       expect(createdRide.cruisingSpeedMax).toBe(32);
+      expect(createdRide.chat).toBe('https://t.me/example_chat');
       expect(createdRide.additionalInfo).toBe('Bring lights and a jacket');
 
       // Verify RideMessagesService was called
@@ -633,16 +660,14 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
       await wizard.startWizard(ctx);
       
       // Fill only required fields
-      const inputs = [
-        { text: 'Quick Ride', step: 'title' },
-        { text: 'mixed', step: 'category' },
-        { text: 'tomorrow at 3pm', step: 'date' }
-      ];
-      
-      for (const input of inputs) {
-        ctx.message = { text: input.text, message_id: ctx._test.messages.length + 2 };
-        await wizard.handleWizardInput(ctx);
-      }
+      ctx.message = { text: 'Quick Ride', message_id: 2 };
+      await wizard.handleWizardInput(ctx);
+      ctx.match = ['wizard:category:mixed', 'category', 'mixed'];
+      await wizard.handleWizardAction(ctx);
+      ctx.match = ['wizard:skip', 'skip'];
+      await wizard.handleWizardAction(ctx); // organizer
+      ctx.message = { text: 'tomorrow at 3pm', message_id: 3 };
+      await wizard.handleWizardInput(ctx);
       
       // Skip optional fields
       for (let i = 0; i < 6; i++) {
@@ -758,8 +783,8 @@ describe.each(['en', 'ru'])('RideWizard (%s)', (language) => {
         ctx.message = { text, message_id: ctx._test.messages.length + 2 };
         await wizard.handleWizardInput(ctx);
       }
-      // Skip route, distance, duration, average speed, cruising speed, meet, info
-      for (let i = 0; i < 7; i++) {
+      // Skip route, distance, duration, average speed, cruising speed, meet, chat, info
+      for (let i = 0; i < 8; i++) {
         ctx.match = ['wizard:skip', 'skip'];
         await wizard.handleWizardAction(ctx);
       }

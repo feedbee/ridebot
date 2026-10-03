@@ -134,6 +134,83 @@ describe('MemoryStorage', () => {
         notifyParticipation: false
       });
     });
+
+    it('rejects a join at capacity without removing the previous state', async () => {
+      const ride = await storage.createRide({
+        ...testRide,
+        settings: { participantLimit: 1 }
+      });
+      await storage.setParticipation(ride.id, 'joined', { userId: 1, username: 'first' });
+      await storage.setParticipation(ride.id, 'thinking', { userId: 2, username: 'second' });
+
+      const result = await storage.setParticipation(
+        ride.id,
+        'joined',
+        { userId: 2, username: 'second' }
+      );
+
+      expect(result.status).toBe('participant_limit_reached');
+      const persisted = await storage.getRide(ride.id);
+      expect(persisted.participation.joined.map(({ userId }) => userId)).toEqual([1]);
+      expect(persisted.participation.thinking.map(({ userId }) => userId)).toEqual([2]);
+    });
+
+    it('allows at most one concurrent request for the last place', async () => {
+      const ride = await storage.createRide({
+        ...testRide,
+        settings: { participantLimit: 1 }
+      });
+
+      const results = await Promise.all([
+        storage.setParticipation(ride.id, 'joined', { userId: 1, username: 'first' }),
+        storage.setParticipation(ride.id, 'joined', { userId: 2, username: 'second' })
+      ]);
+
+      expect(results.filter(({ status }) => status === 'changed')).toHaveLength(1);
+      expect(results.filter(({ status }) => status === 'participant_limit_reached')).toHaveLength(1);
+      expect((await storage.getRide(ride.id)).participation.joined).toHaveLength(1);
+    });
+
+    it('keeps a moderated application pending when the ride is full', async () => {
+      const ride = await storage.createRide({
+        ...testRide,
+        settings: { requireParticipationApproval: true, participantLimit: 1 }
+      });
+      await storage.setParticipation(ride.id, 'joined', { userId: 1, username: 'first' });
+      await storage.setParticipation(ride.id, 'thinking', { userId: 2, username: 'applicant' });
+
+      const result = await storage.setParticipationIfCurrent(
+        ride.id,
+        2,
+        'thinking',
+        'joined',
+        { userId: 2, username: 'applicant' }
+      );
+
+      expect(result.status).toBe('participant_limit_reached');
+      const persisted = await storage.getRide(ride.id);
+      expect(persisted.participation.thinking.map(({ userId }) => userId)).toEqual([2]);
+    });
+
+    it('removes only selected ride messages from the current stored value', async () => {
+      const ride = await storage.createRide({
+        ...testRide,
+        messages: [
+          { chatId: -1, messageId: 1 },
+          { chatId: -1, messageId: 2 }
+        ]
+      });
+      await storage.updateRide(ride.id, {
+        messages: [...ride.messages, { chatId: -2, messageId: 3 }]
+      });
+
+      const updated = await storage.removeRideMessages(ride.id, [{ chatId: -1, messageId: 1 }]);
+
+      expect(updated.messages).toEqual([
+        expect.objectContaining({ chatId: -1, messageId: 2 }),
+        expect.objectContaining({ chatId: -2, messageId: 3 })
+      ]);
+    });
   });
 
   describe('User Persistence', () => {

@@ -149,6 +149,16 @@ describe('MongoDBStorage', () => {
       expect(updated.messages[1].chatId).toBe(444444);
     });
 
+    test('should atomically remove selected ride messages', async () => {
+      const created = await storage.createRide(testRideWithMessages);
+      const retained = { messageId: 333333, chatId: 444444 };
+      await storage.updateRide(created.id, { messages: [...created.messages, retained] });
+
+      const updated = await storage.removeRideMessages(created.id, [created.messages[0]]);
+
+      expect(updated.messages).toEqual([expect.objectContaining(retained)]);
+    });
+
     test('should delete a ride', async () => {
       const created = await storage.createRide(testRide);
       const deleted = await storage.deleteRide(created.id);
@@ -411,6 +421,33 @@ describe('MongoDBStorage', () => {
       const participant = result.ride.participation.thinking[0];
       expect(participant.firstName).toBe('');
       expect(participant.lastName).toBe('');
+    });
+
+    test('should reject a join at capacity without removing the previous state', async () => {
+      await storage.updateRide(rideId, { settings: { participantLimit: 1 } });
+      await storage.setParticipation(rideId, 'joined', testParticipant);
+      const waitingParticipant = { userId: 202, username: 'waiting' };
+      await storage.setParticipation(rideId, 'thinking', waitingParticipant);
+
+      const result = await storage.setParticipation(rideId, 'joined', waitingParticipant);
+
+      expect(result.status).toBe('participant_limit_reached');
+      const persisted = await storage.getRide(rideId);
+      expect(persisted.participation.joined.map(({ userId }) => userId)).toEqual([testParticipant.userId]);
+      expect(persisted.participation.thinking.map(({ userId }) => userId)).toEqual([waitingParticipant.userId]);
+    });
+
+    test('should atomically allow only one request for the last place', async () => {
+      await storage.updateRide(rideId, { settings: { participantLimit: 1 } });
+
+      const results = await Promise.all([
+        storage.setParticipation(rideId, 'joined', { userId: 201, username: 'first' }),
+        storage.setParticipation(rideId, 'joined', { userId: 202, username: 'second' })
+      ]);
+
+      expect(results.filter(({ status }) => status === 'changed')).toHaveLength(1);
+      expect(results.filter(({ status }) => status === 'participant_limit_reached')).toHaveLength(1);
+      expect((await storage.getRide(rideId)).participation.joined).toHaveLength(1);
     });
   });
 

@@ -133,6 +133,47 @@ export class RideMessagesService {
   }
 
   /**
+   * Delete selected announcements and remove deleted or already missing entries from tracking.
+   * @param {Object} ride
+   * @param {Object} api - Telegram API client
+   * @param {Array<Object>} targets
+   * @returns {Promise<{deletedCount: number, unavailableCount: number, failedCount: number}>}
+   */
+  async unshareRideMessages(ride, api, targets) {
+    let deletedCount = 0;
+    let unavailableCount = 0;
+    const removed = [];
+
+    for (const message of targets) {
+      try {
+        await api.deleteMessage(message.chatId, message.messageId);
+        deletedCount++;
+        removed.push(message);
+      } catch (error) {
+        if (error.description?.includes('message to delete not found')) {
+          unavailableCount++;
+          removed.push(message);
+        } else {
+          console.error(`Error unsharing ride message in chat ${message.chatId}:`, error);
+        }
+      }
+    }
+
+    if (removed.length > 0) {
+      await this.rideService.removeRideMessages(ride.id, removed.map(message => ({
+        chatId: message.chatId,
+        messageId: message.messageId
+      })));
+    }
+
+    return {
+      deletedCount,
+      unavailableCount,
+      failedCount: targets.length - removed.length
+    };
+  }
+
+  /**
    * Create and store a ride message in a chat
    * @param {Object} ride - Ride object
    * @param {import('grammy').Context} ctx - Grammy context
