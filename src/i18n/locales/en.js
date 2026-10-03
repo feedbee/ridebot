@@ -36,6 +36,7 @@ cruisingSpeed: Cruising speed in km/h, normally held on flat, fast sections (sam
 chat: Telegram coordination chat or invite link (optional)
 info: Additional information (optional)
 settings.notifyParticipation: yes/no — notify the creator when participants change status (optional)
+settings.requireParticipationApproval: yes/no — creator approval required to join (optional)
 settings.allowReposts: yes/no — allow other users to repost this ride with /shareride (optional)
 settings.participantLimit: 0-1000 — maximum joined participants; 0 means unlimited (optional)
 </pre>
@@ -55,10 +56,12 @@ speed: 24-25
 cruisingSpeed: 28-30
 chat: https://t.me/example_chat
 info: Bring lights and a rain jacket
+settings.requireParticipationApproval: yes
+settings.participantLimit: 10
 </pre>
 
 <p>Route notes:</p>
-<ul><li>Repeat <code>route:</code> to add multiple links</li><li>Use <code>route: Label | URL</code> to set a custom label</li><li>The URL is always taken from the last <code>|</code>-separated segment, so <code>|</code> may be used inside the label</li><li>If a label is omitted, the bot shows <code>Strava</code>, <code>Garmin</code>, <code>Komoot</code>, <code>RideWithGPS</code>, or localized <code>Link</code></li></ul>
+<ul><li>Repeat <code>route:</code> to add multiple links</li><li>Use <code>route: Label | URL</code> to set a custom label</li><li>The URL is always taken from the last <code>|</code>-separated segment, so <code>|</code> may be used inside the label</li><li>If a label is omitted, the bot shows <code>Strava</code>, <code>Garmin</code>, <code>Komoot</code>, <code>RideWithGPS</code>, <code>GetGPX</code>, or localized <code>Link</code></li></ul>
 <br>
 
 <p>3. Using AI in dialog mode (private chat only):<br>Send /airide and describe the ride in plain language. The bot will parse the details with AI, show a live preview, and let you refine it across multiple messages before confirming. AI can extract multiple route links too.</p>
@@ -105,6 +108,7 @@ cruisingSpeed: New cruising speed (optional)
 chat: New Telegram coordination chat or invite link (optional; use - to clear)
 info: Additional information (optional)
 settings.notifyParticipation: yes/no (optional)
+settings.requireParticipationApproval: yes/no — creator approval required to join (optional)
 settings.allowReposts: yes/no (optional)
 settings.participantLimit: 0-1000 (optional; 0 means unlimited)
 </pre>
@@ -157,6 +161,7 @@ cruisingSpeed: New cruising speed (optional)
 chat: New Telegram coordination chat or invite link (optional; use - to clear)
 info: Additional information (optional)
 settings.notifyParticipation: yes/no (optional)
+settings.requireParticipationApproval: yes/no — creator approval required to join (optional)
 settings.allowReposts: yes/no (optional)
 settings.participantLimit: 0-1000 (optional; 0 means unlimited)
 </pre>
@@ -181,9 +186,33 @@ settings.participantLimit: 0-1000 (optional; 0 means unlimited)
 
 <p>Use /settings in private chat to manage defaults for rides you create in the future.<br>Use <code>/settings #rideId</code>, reply to a ride message with /settings, or press the Settings button on your private creator copy to manage one ride.<br>Available settings:</p>
 
-<ul><li>Participation notifications — whether the creator gets private notifications when people join, think, or pass.</li><li>Repost permission — whether users other than the creator can repost the ride with /shareride.</li></ul>
+<ul><li>Participation notifications — whether the creator gets private notifications when people join, think, or pass.</li><li>Repost permission — whether users other than the creator can repost the ride with /shareride.</li><li>Participation approval — the creator accepts or rejects applications.</li><li>Participant limit — maximum joined participants; 0 means unlimited.</li></ul>
 
 <p>Defaults apply only to newly created rides. Ride-specific settings affect only that ride.</p>
+
+
+<h3>✅ Participation Approval</h3>
+<p>Enable moderation in ride settings or pass <code>settings.requireParticipationApproval: yes</code>. It is off by default. Participants see Apply to participate and Not participating. Applications stay pending until the creator accepts or rejects them using buttons in a private notification. Applicants receive the decision privately when the bot can message them. Start a private chat with the bot before applying.</p>
+<p>Only accepted participants count toward the limit and can join an attached group. If the ride is full, acceptance is blocked and the application stays pending. The creator can join directly, subject to the same limit. Not participating withdraws an application or leaves the ride; a rejected applicant may apply again. Switching moderation on or off does not change existing participation states. Application and decision messages are sent independently of ordinary participation notification preferences.</p>
+
+<h3>👥 Participant Limit</h3>
+<p>Set the limit in /settings or with <code>settings.participantLimit: 10</code>. Use an integer from 0 to 1000; 0 means unlimited. Only joined participants count, including the creator when joined. Pending applications and thinking participants do not use places. Lowering the limit does not remove existing participants; new joins or approvals wait until a place is available.</p>
+<p>Change participant limit opens a numeric-input dialog. After a valid number, the settings message updates in place and the dialog messages are removed. Cancel removes the dialog without changing the limit.</p>
+
+<h3>🔔 Notification Preferences</h3>
+<p>Your personal participation notification preference in /settings applies immediately to all your rides: all changes, only joining/leaving, or off. A ride’s notification setting can still disable its ordinary notifications. These preferences do not suppress approval requests or application decisions.</p>
+
+<h3>🕒 Archived Rides</h3>
+<p>A ride becomes archived one hour after its start. Participation changes, application decisions, publication, cancellation and resumption are then closed. To edit its content, reschedule it to a future time in the same update, for example:</p>
+<pre>/updateride abc123
+when: tomorrow 10am</pre>
+<p>Ride settings, deletion, announcement removal and group attachment/detachment remain available.</p>
+
+<h3>💬 Coordination Chat Link</h3>
+<p>Use <code>chat: https://t.me/example_chat</code> or a Telegram invite link to display a coordination chat in the announcement. Use <code>chat: -</code> to clear it during update or duplication. This link does not attach a managed group and does not automatically invite or remove participants; use /attach for that. Bare usernames and links to individual messages or topics are not accepted.</p>
+
+<h3>🗓 Calendar Export</h3>
+<p>Use Add to calendar on a ride announcement. The bot opens the calendar menu in private chat with Google Calendar, Outlook and an .ics file. The ride must be upcoming and not cancelled. Export creates a snapshot; later ride changes do not automatically update your calendar.</p>
 
 <h3>🧭 Private Creator Buttons</h3>
 
@@ -197,6 +226,8 @@ settings.participantLimit: 0-1000 (optional; 0 means unlimited)
 /shareride@botname
 id: abc123 (or #abc123)
 </pre>
+
+<p>The creator’s private ride card also has a Publish button: choose a recent chat/topic without copying the ID. The menu lists current announcements with links to their chats. Repeated publications share one participation list; when the configured per-topic announcement limit is reached, older announcements are removed before a new one is posted.</p>
 
 <p>The ride will be posted to the current chat and all instances will be synchronized when details change or participants join/leave.</p>
 

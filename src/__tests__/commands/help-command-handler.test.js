@@ -92,6 +92,19 @@ describe.each(['en', 'ru'])('HelpCommandHandler (%s)', (language) => {
       expect(mockCtx.replyWithRichMessage).toHaveBeenCalledTimes(2);
       const helpPart1 = mockCtx.replyWithRichMessage.mock.calls[0][0].html;
       const helpPart2 = mockCtx.replyWithRichMessage.mock.calls[1][0].html;
+      expect(helpPart1).toContain('settings.requireParticipationApproval: yes/no');
+      expect(helpPart1).toContain('settings.requireParticipationApproval: yes\nsettings.participantLimit: 10');
+      expect(helpPart2.match(/settings.requireParticipationApproval: yes\/no/g)).toHaveLength(2);
+      for (const heading of language === 'ru'
+        ? ['Модерация участия', 'Лимит участников', 'Предпочтения уведомлений', 'Архивные поездки', 'Ссылка на чат поездки', 'Экспорт в календарь']
+        : ['Participation Approval', 'Participant Limit', 'Notification Preferences', 'Archived Rides', 'Coordination Chat Link', 'Calendar Export']) {
+        expect(helpPart2).toContain(heading);
+      }
+      expect(helpPart2).toContain('Google Calendar');
+      expect(helpPart2).toContain('Outlook');
+      expect(helpPart2).toContain('.ics');
+      expect(helpPart2).toContain('<code>/unshareride rideId</code>');
+      expect(helpPart1).toContain('GetGPX');
       expect(helpPart1).toContain('/newride');
       expect(helpPart2).toContain('/updateride');
       expect(helpPart2).toContain('/cancelride');
