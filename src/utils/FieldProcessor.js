@@ -90,7 +90,7 @@ export class FieldProcessor {
    * @param {Object} data
    */
   static processBooleanSettings(params, data) {
-    ['notifyParticipation', 'allowReposts'].forEach(settingName => {
+    ['notifyParticipation', 'allowReposts', 'requireParticipationApproval'].forEach(settingName => {
       const value = params.settings?.[settingName] ?? params[`settings.${settingName}`];
       if (value !== undefined) {
         data.settings = {

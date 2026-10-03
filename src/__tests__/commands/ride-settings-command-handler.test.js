@@ -38,7 +38,8 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
 
     mockMessageFormatter = {};
     mockRideMessagesService = {
-      extractRideId: jest.fn()
+      extractRideId: jest.fn(),
+      updateRideMessages: jest.fn().mockResolvedValue({ success: true, updatedCount: 1, removedCount: 0 })
     };
 
     mockCtx = {
@@ -218,8 +219,10 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
         'membership'
       );
       const keyboard = mockCtx.editMessageText.mock.calls[0][1].reply_markup.inline_keyboard;
-      expect(keyboard[3][0].text).toContain('✓');
-      expect(keyboard[3][0].callback_data).toBe('settings:user:notification-level:membership');
+      const membershipButton = keyboard.flat().find(
+        button => button.callback_data === 'settings:user:notification-level:membership'
+      );
+      expect(membershipButton.text).toContain('✓');
     });
 
     it('rejects an unknown level without persistence', async () => {
@@ -378,6 +381,29 @@ describe.each(['en', 'ru'])('RideSettingsCommandHandler (%s)', (language) => {
   });
 
   describe('handleRideBooleanCallback', () => {
+    it('reports when moderation was saved but announcement propagation failed', async () => {
+      mockCtx.match = ['settings:ride:bool:approval:on:123', 'approval', 'on', '123'];
+      mockRideService.getRide.mockResolvedValue({
+        id: '123', title: 'Morning Ride', createdBy: 123,
+        settings: { notifyParticipation: true, allowReposts: false, requireParticipationApproval: false }
+      });
+      const updatedRide = {
+        id: '123', title: 'Morning Ride', createdBy: 123,
+        settings: { notifyParticipation: true, allowReposts: false, requireParticipationApproval: true }
+      };
+      mockRideService.updateRide.mockResolvedValue(updatedRide);
+      mockRideMessagesService.updateRideMessages.mockResolvedValue({ success: false, error: 'Telegram failed' });
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      await handler.handleRideBooleanCallback(mockCtx);
+
+      expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalledWith(updatedRide, mockCtx);
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(
+        tr('commands.settings.rideUpdatedMessageFailed')
+      );
+      console.error.mockRestore();
+    });
+
     it('sets ride settings from callback data and updates the ride settings message', async () => {
       mockCtx.match = ['settings:ride:bool:np:off:123', 'np', 'off', '123'];
       mockRideService.getRide.mockResolvedValue({

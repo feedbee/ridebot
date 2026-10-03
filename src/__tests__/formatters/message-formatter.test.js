@@ -131,6 +131,24 @@ describe('MessageFormatter', () => {
       );
     });
 
+    it('shows only apply and not-participating actions for moderated rides', () => {
+      const ride = {
+        id: '123',
+        cancelled: false,
+        settings: { requireParticipationApproval: true }
+      };
+
+      const result = messageFormatter.getRideKeyboard(ride, 'en', false);
+
+      expect(result.inline_keyboard.flat()).toEqual([
+        expect.objectContaining({ callback_data: 'apply:123' }),
+        expect.objectContaining({ callback_data: 'skip:123' })
+      ]);
+      expect(result.inline_keyboard.flat()).not.toEqual(
+        expect.arrayContaining([expect.objectContaining({ callback_data: 'join:123' })])
+      );
+    });
+
     it('adds owner-only management rows for creator private messages', () => {
       const ride = {
         id: '123',

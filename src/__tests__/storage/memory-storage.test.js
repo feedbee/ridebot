@@ -415,4 +415,67 @@ describe('MemoryStorage', () => {
       expect(found.createdBy).toBe(createdBy);
     });
   });
+
+  describe('moderated participation compare-and-set', () => {
+    it('refuses a participation write after the approval mode changes', async () => {
+      const ride = await storage.createRide({
+        ...testRide,
+        settings: { requireParticipationApproval: false }
+      });
+      await storage.updateRide(ride.id, { settings: { requireParticipationApproval: true } });
+
+      const result = await storage.setParticipationForRideMode(
+        ride.id,
+        'joined',
+        { userId: 123, username: 'rider' },
+        false,
+        null
+      );
+
+      expect(result).toBeNull();
+      await expect(storage.getParticipation(ride.id, 123)).resolves.toBeNull();
+    });
+
+    it('refuses a pending decision after moderation is disabled', async () => {
+      const ride = await storage.createRide({
+        ...testRide,
+        settings: { requireParticipationApproval: true }
+      });
+      const profile = { userId: 123, username: 'rider' };
+      await storage.setParticipation(ride.id, 'thinking', profile);
+      await storage.updateRide(ride.id, { settings: { requireParticipationApproval: false } });
+
+      const result = await storage.setParticipationIfCurrent(
+        ride.id,
+        profile.userId,
+        'thinking',
+        'joined',
+        profile
+      );
+
+      expect(result).toBeNull();
+      await expect(storage.getParticipation(ride.id, profile.userId)).resolves.toBe('thinking');
+    });
+
+    it('refuses an apply transition when the participation state changed after policy evaluation', async () => {
+      const ride = await storage.createRide({
+        ...testRide,
+        settings: { requireParticipationApproval: true }
+      });
+      const profile = { userId: 123, username: 'rider' };
+      await storage.setParticipation(ride.id, 'joined', profile);
+      await storage.setParticipation(ride.id, 'skipped', profile);
+
+      const result = await storage.setParticipationForRideMode(
+        ride.id,
+        'joined',
+        profile,
+        true,
+        'joined'
+      );
+
+      expect(result).toBeNull();
+      await expect(storage.getParticipation(ride.id, profile.userId)).resolves.toBe('skipped');
+    });
+  });
 });

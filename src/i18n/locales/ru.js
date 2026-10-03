@@ -235,6 +235,10 @@ id: abc123 (or #abc123)
     join: 'Я в деле! 🚴',
     thinking: 'Подумаю 🤔',
     pass: 'Пас 🙅',
+    apply: 'Подать заявку на участие',
+    notParticipating: 'Не участвую',
+    acceptApplication: 'Принять',
+    rejectApplication: 'Отклонить',
     edit: 'Редактировать',
     duplicate: 'Дублировать',
     delete: 'Удалить',
@@ -303,12 +307,16 @@ id: abc123 (or #abc123)
       rideHint: 'Эти настройки влияют только на эту поездку.',
       notifyParticipationLabel: 'Уведомлять меня об изменениях участия',
       allowRepostsLabel: 'Разрешить другим пользователям репост через <code>/shareride</code>',
+      requireParticipationApprovalLabel: 'Модерировать заявки на участие',
       enableNotifyOnParticipationChange: 'Включить уведомления об участии',
       disableNotifyOnParticipationChange: 'Выключить уведомления об участии',
       enableReposts: 'Разрешить репосты',
       disableReposts: 'Запретить репосты',
+      enableParticipationApproval: 'Включить модерацию участия',
+      disableParticipationApproval: 'Выключить модерацию участия',
       updated: 'Настройки по умолчанию обновлены.',
-      rideUpdated: 'Настройки поездки обновлены.'
+      rideUpdated: 'Настройки поездки обновлены.',
+      rideUpdatedMessageFailed: 'Настройка сохранена, но некоторые сообщения поездки обновить не удалось.'
     },
     common: {
       rideNotFoundById: 'Поездка #{id} не найдена',
@@ -348,6 +356,8 @@ id: abc123 (or #abc123)
       allParticipantsTitle: 'Все участники для "{title}" ({total})',
       joinedLabel: 'Участвуют ({count})',
       thinkingLabel: 'Думают ({count})',
+      acceptedLabel: 'Заявка принята ({count})',
+      applicationsLabel: 'Ожидают решения ({count})',
       notInterestedLabel: 'Не интересно ({count})',
       noOneJoinedYet: 'Пока никто не присоединился.',
       retrieveError: 'Произошла ошибка при получении списка участников.'
@@ -369,6 +379,15 @@ id: abc123 (or #abc123)
       joinedSuccess: 'Вы присоединились к поездке!',
       thinkingSuccess: 'Вы рассматриваете участие в поездке',
       skippedSuccess: 'Вы отказались от участия в поездке',
+      applicationSubmitted: 'Заявка на участие отправлена',
+      applicationPending: 'Ваша заявка уже ожидает решения',
+      alreadyAccepted: 'Ваша заявка уже принята',
+      notParticipating: 'Вы больше не участвуете в этой поездке',
+      alreadyNotParticipating: 'Вы уже не участвуете в этой поездке',
+      rideChangedRetry: 'Настройки поездки изменились. Попробуйте ещё раз.',
+      applicationAccepted: 'Заявка принята',
+      applicationRejected: 'Заявка отклонена',
+      applicationStale: 'Эта заявка уже обработана или больше не актуальна',
       rideNotFound: 'Поездка не найдена',
       rideCancelled: 'Эта поездка была отменена',
       updatedButMessageFailed: 'Ваш статус участия обновлен, но обновление сообщения не удалось',
@@ -383,7 +402,10 @@ id: abc123 (or #abc123)
     notifications: {
       joined: '🚴 <b>{name}</b> присоединился к вашей поездке "<b>{title}</b>"\n\n🔕 Отключить уведомления:\n<pre>/updateride #{rideId}\nsettings.notifyParticipation: no</pre>',
       thinking: '🤔 <b>{name}</b> думает о вашей поездке "<b>{title}</b>"\n\n🔕 Отключить уведомления:\n<pre>/updateride #{rideId}\nsettings.notifyParticipation: no</pre>',
-      skipped: '🙅 <b>{name}</b> отказался от вашей поездки "<b>{title}</b>"\n\n🔕 Отключить уведомления:\n<pre>/updateride #{rideId}\nsettings.notifyParticipation: no</pre>'
+      skipped: '🙅 <b>{name}</b> отказался от вашей поездки "<b>{title}</b>"\n\n🔕 Отключить уведомления:\n<pre>/updateride #{rideId}\nsettings.notifyParticipation: no</pre>',
+      application: '📝 <b>{name}</b> подал заявку на участие в поездке "<b>{title}</b>" (#{rideId}).',
+      applicationAccepted: '✅ Ваша заявка на поездку "<b>{title}</b>" принята.',
+      applicationRejected: '❌ Ваша заявка на поездку "<b>{title}</b>" отклонена.'
     },
     stateChange: {
       onlyCreator: 'Только создатель поездки может {action} эту поездку.',
@@ -486,6 +508,8 @@ id: abc123 (or #abc123)
     participation: {
       joined: 'Участвуют',
       thinking: 'Думают',
+      accepted: 'Заявка принята',
+      applications: 'Заявки',
       notInterested: 'Не интересно'
     },
     units: {
@@ -588,6 +612,7 @@ id: abc123 (or #abc123)
     info: 'Дополнительная информация',
     settingsNotifyParticipation: 'Настройка поездки: уведомлять об изменениях участников (yes/no)',
     settingsAllowReposts: 'Настройка поездки: разрешить другим пользователям репост через /shareride (yes/no)',
+    settingsRequireParticipationApproval: 'Настройка поездки: модерировать заявки на участие (yes/no)',
     id: 'ID поездки (для команд, где требуется)'
   },
   utils: {

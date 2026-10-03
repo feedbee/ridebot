@@ -66,6 +66,7 @@ Use these exact field names (all optional except title and when):
   info: additional notes
   settings: optional object
   settings.notifyParticipation: boolean
+  settings.requireParticipationApproval: boolean
 
 Speed classification rules:
 - Explicit average wording ("average speed", "average moving speed", "avg speed", "средняя скорость", "средняя скорость движения") maps to speed.

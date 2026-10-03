@@ -144,6 +144,14 @@ export class MigrationRunner {
           const { migrateRideRepostSettings } = await import('./migrations/004_ride_repost_settings.js');
           await migrateRideRepostSettings(db);
         }
+      },
+      {
+        version: 5,
+        name: 'Add participation approval settings defaults',
+        up: async (db) => {
+          const { migrateParticipationApprovalSettings } = await import('./migrations/005_participation_approval_settings.js');
+          await migrateParticipationApprovalSettings(db);
+        }
       }
       // Future migrations can be added here
     ];

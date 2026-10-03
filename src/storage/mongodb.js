@@ -38,7 +38,8 @@ const routeSchema = new mongoose.Schema({
 
 const rideSettingsSchema = new mongoose.Schema({
   notifyParticipation: { type: Boolean },
-  allowReposts: { type: Boolean }
+  allowReposts: { type: Boolean },
+  requireParticipationApproval: { type: Boolean }
 }, { _id: false });
 
 const rideSchema = new mongoose.Schema({
@@ -319,6 +320,71 @@ export class MongoDBStorage extends StorageInterface {
     ride.participation[state].push(participantData);
     await ride.save();
     return { ride: this.mapRideToInterface(ride) };
+  }
+
+  async setParticipationForRideMode(rideId, state, participantProfile, requireParticipationApproval, expectedState) {
+    const participantData = {
+      userId: participantProfile.userId,
+      username: participantProfile.username,
+      firstName: participantProfile.firstName || '',
+      lastName: participantProfile.lastName || '',
+      createdAt: new Date()
+    };
+    const approvalFilter = requireParticipationApproval
+      ? { 'settings.requireParticipationApproval': true }
+      : { 'settings.requireParticipationApproval': { $ne: true } };
+    const participationFilter = expectedState
+      ? { [`participation.${expectedState}.userId`]: participantProfile.userId }
+      : {
+          'participation.joined.userId': { $ne: participantProfile.userId },
+          'participation.thinking.userId': { $ne: participantProfile.userId },
+          'participation.skipped.userId': { $ne: participantProfile.userId }
+        };
+    const withoutUser = participationState => ({
+      $filter: {
+        input: { $ifNull: [`$participation.${participationState}`, []] },
+        as: 'participant',
+        cond: { $ne: ['$$participant.userId', participantProfile.userId] }
+      }
+    });
+    const nextParticipation = Object.fromEntries(
+      ['joined', 'thinking', 'skipped'].map(participationState => [
+        participationState,
+        participationState === state
+          ? { $concatArrays: [withoutUser(participationState), [participantData]] }
+          : withoutUser(participationState)
+      ])
+    );
+    const ride = await Ride.findOneAndUpdate(
+      { _id: rideId, cancelled: { $ne: true }, ...approvalFilter, ...participationFilter },
+      [{ $set: { participation: nextParticipation } }],
+      { new: true }
+    );
+    return ride ? { ride: this.mapRideToInterface(ride) } : null;
+  }
+
+  async setParticipationIfCurrent(rideId, userId, expectedState, targetState, participantProfile) {
+    const participantData = {
+      userId: participantProfile.userId,
+      username: participantProfile.username,
+      firstName: participantProfile.firstName || '',
+      lastName: participantProfile.lastName || '',
+      createdAt: new Date()
+    };
+    const ride = await Ride.findOneAndUpdate(
+      {
+        _id: rideId,
+        cancelled: { $ne: true },
+        'settings.requireParticipationApproval': true,
+        [`participation.${expectedState}.userId`]: userId
+      },
+      {
+        $pull: { [`participation.${expectedState}`]: { userId } },
+        $push: { [`participation.${targetState}`]: participantData }
+      },
+      { new: true }
+    );
+    return ride ? { ride: this.mapRideToInterface(ride) } : null;
   }
 
   async getParticipation(rideId, userId) {

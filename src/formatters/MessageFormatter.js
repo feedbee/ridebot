@@ -86,10 +86,14 @@ export class MessageFormatter {
     
     // Don't add participation buttons for cancelled rides
     if (!ride.cancelled) {
-      // Show all three participation buttons
-      keyboard.text(this.translate('buttons.join', {}, language), `join:${ride.id}`);
-      keyboard.text(this.translate('buttons.thinking', {}, language), `thinking:${ride.id}`);
-      keyboard.text(this.translate('buttons.pass', {}, language), `skip:${ride.id}`);
+      if (ride.settings?.requireParticipationApproval) {
+        keyboard.text(this.translate('buttons.apply', {}, language), `apply:${ride.id}`);
+        keyboard.text(this.translate('buttons.notParticipating', {}, language), `skip:${ride.id}`);
+      } else {
+        keyboard.text(this.translate('buttons.join', {}, language), `join:${ride.id}`);
+        keyboard.text(this.translate('buttons.thinking', {}, language), `thinking:${ride.id}`);
+        keyboard.text(this.translate('buttons.pass', {}, language), `skip:${ride.id}`);
+      }
     }
 
     if (isForCreator) {
@@ -144,6 +148,7 @@ export class MessageFormatter {
    */
   formatRideMessage(ride, participation, options = {}) {
     const language = options.lang || config.i18n.defaultLanguage;
+    const approvalRequired = ride.settings?.requireParticipationApproval === true;
     // Use DateParser for consistent timezone handling
     const formattedDateTime = DateParser.formatDateTime(ride.date, language);
     const datetime = `${formattedDateTime.date} ${this.translate('formatter.atWord', {}, language)} ${formattedDateTime.time}`;
@@ -238,13 +243,25 @@ export class MessageFormatter {
       .replace('{participantCount}', participantCount)
       .replace('{participants}', participantsList)
       .replace('{thinkingLine}', thinkingCount > 0
-        ? `<br>🤔 ${this.translate('formatter.participation.thinking', {}, language)} (${thinkingCount}): ${thinkingContent}`
+        ? `<br>🤔 ${this.translate(
+          approvalRequired ? 'formatter.participation.applications' : 'formatter.participation.thinking',
+          {},
+          language
+        )} (${thinkingCount}): ${thinkingContent}`
         : '')
       .replace('{notInterestedLine}', notInterestedCount > 0
         ? `<br>🙅 ${this.translate('formatter.participation.notInterested', {}, language)}: ${notInterestedContent}`
         : '')
-      .replace('{joinedLabel}', this.translate('formatter.participation.joined', {}, language))
-      .replace('{thinkingLabel}', this.translate('formatter.participation.thinking', {}, language))
+      .replace('{joinedLabel}', this.translate(
+        approvalRequired ? 'formatter.participation.accepted' : 'formatter.participation.joined',
+        {},
+        language
+      ))
+      .replace('{thinkingLabel}', this.translate(
+        approvalRequired ? 'formatter.participation.applications' : 'formatter.participation.thinking',
+        {},
+        language
+      ))
       .replace('{notInterestedLabel}', this.translate('formatter.participation.notInterested', {}, language));
     
     // Add cancellation instructions if the ride is cancelled

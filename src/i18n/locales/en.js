@@ -235,6 +235,10 @@ Click here to start a private chat: @botname
     join: "I'm in! 🚴",
     thinking: 'Maybe 🤔',
     pass: 'Pass 🙅',
+    apply: 'Apply to participate',
+    notParticipating: 'Not participating',
+    acceptApplication: 'Accept',
+    rejectApplication: 'Reject',
     edit: 'Edit',
     duplicate: 'Duplicate',
     delete: 'Delete',
@@ -303,12 +307,16 @@ Click here to start a private chat: @botname
       rideHint: 'These settings affect only this ride.',
       notifyParticipationLabel: 'Notify me when participation changes',
       allowRepostsLabel: 'Allow other users to repost with <code>/shareride</code>',
+      requireParticipationApprovalLabel: 'Require approval to participate',
       enableNotifyOnParticipationChange: 'Enable participation notifications',
       disableNotifyOnParticipationChange: 'Disable participation notifications',
       enableReposts: 'Allow reposts',
       disableReposts: 'Forbid reposts',
+      enableParticipationApproval: 'Enable participation approval',
+      disableParticipationApproval: 'Disable participation approval',
       updated: 'Default settings updated.',
-      rideUpdated: 'Ride settings updated.'
+      rideUpdated: 'Ride settings updated.',
+      rideUpdatedMessageFailed: 'The setting was saved, but some ride messages could not be updated.'
     },
     common: {
       rideNotFoundById: 'Ride #{id} not found',
@@ -348,6 +356,8 @@ Click here to start a private chat: @botname
       allParticipantsTitle: 'All Participants for "{title}" ({total})',
       joinedLabel: 'Joined ({count})',
       thinkingLabel: 'Thinking ({count})',
+      acceptedLabel: 'Accepted ({count})',
+      applicationsLabel: 'Applications ({count})',
       notInterestedLabel: 'Not interested ({count})',
       noOneJoinedYet: 'No one joined yet.',
       retrieveError: 'An error occurred while retrieving participants.'
@@ -369,6 +379,15 @@ Click here to start a private chat: @botname
       joinedSuccess: 'You have joined the ride!',
       thinkingSuccess: 'You are thinking about this ride',
       skippedSuccess: 'You have passed on this ride',
+      applicationSubmitted: 'Your application has been submitted',
+      applicationPending: 'Your application is already awaiting a decision',
+      alreadyAccepted: 'Your application has already been accepted',
+      notParticipating: 'You are no longer participating in this ride',
+      alreadyNotParticipating: 'You are already not participating in this ride',
+      rideChangedRetry: 'The ride settings changed. Please try again.',
+      applicationAccepted: 'Application accepted',
+      applicationRejected: 'Application rejected',
+      applicationStale: 'This application has already been processed or is no longer active',
       rideNotFound: 'Ride not found',
       rideCancelled: 'This ride has been cancelled',
       updatedButMessageFailed: 'Your participation was updated, but message updates failed',
@@ -383,7 +402,10 @@ Click here to start a private chat: @botname
     notifications: {
       joined: '🚴 <b>{name}</b> joined your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nsettings.notifyParticipation: no</pre>',
       thinking: '🤔 <b>{name}</b> is thinking about your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nsettings.notifyParticipation: no</pre>',
-      skipped: '🙅 <b>{name}</b> declined your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nsettings.notifyParticipation: no</pre>'
+      skipped: '🙅 <b>{name}</b> declined your ride "<b>{title}</b>"\n\n🔕 To stop notifications:\n<pre>/updateride #{rideId}\nsettings.notifyParticipation: no</pre>',
+      application: '📝 <b>{name}</b> applied to participate in "<b>{title}</b>" (#{rideId}).',
+      applicationAccepted: '✅ Your application for "<b>{title}</b>" was accepted.',
+      applicationRejected: '❌ Your application for "<b>{title}</b>" was rejected.'
     },
     stateChange: {
       onlyCreator: 'Only the ride creator can {action} this ride.',
@@ -486,6 +508,8 @@ Click here to start a private chat: @botname
     participation: {
       joined: 'Joined',
       thinking: 'Thinking',
+      accepted: 'Accepted',
+      applications: 'Applications',
       notInterested: 'Not interested'
     },
     units: {
@@ -588,6 +612,7 @@ Click here to start a private chat: @botname
     info: 'Additional information',
     settingsNotifyParticipation: 'Ride setting: notify on participation changes (yes/no)',
     settingsAllowReposts: 'Ride setting: allow other users to repost with /shareride (yes/no)',
+    settingsRequireParticipationApproval: 'Ride setting: require approval to participate (yes/no)',
     id: 'Ride ID (for commands that need it)'
   },
   utils: {

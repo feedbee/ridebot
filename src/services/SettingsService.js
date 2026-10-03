@@ -20,7 +20,8 @@ export class SettingsService {
   static getSystemRideDefaults() {
     return {
       notifyParticipation: true,
-      allowReposts: false
+      allowReposts: false,
+      requireParticipationApproval: false
     };
   }
 

@@ -100,7 +100,7 @@ export class RideMessagesService {
       const callbackData = message.reply_to_message.reply_markup?.inline_keyboard
         ?.flat()
         .map(button => button.callback_data)
-        .find(data => /^(?:join|thinking|skip|rideowner:\w+):\w+$/.test(data || ''));
+        .find(data => /^(?:join|thinking|apply|skip|rideowner:\w+):\w+$/.test(data || ''));
       const callbackRideId = callbackData?.match(/:([A-Za-z0-9_]+)$/)?.[1];
       if (callbackRideId) {
         return { rideId: callbackRideId, error: null };

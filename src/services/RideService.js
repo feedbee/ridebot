@@ -168,6 +168,39 @@ export class RideService {
     return { success: true, ride: result.ride, previousState: currentState };
   }
 
+  /** Set participation only if the ride's approval mode still matches the service decision. */
+  async setParticipationForRideMode(
+    rideId,
+    participantProfile,
+    state,
+    requireParticipationApproval,
+    expectedState
+  ) {
+    if (expectedState === state) return { success: false, ride: null, reason: 'already_in_state' };
+    const result = await this.storage.setParticipationForRideMode(
+      rideId,
+      state,
+      participantProfile,
+      requireParticipationApproval,
+      expectedState
+    );
+    return result
+      ? { success: true, ride: result.ride, previousState: expectedState }
+      : { success: false, ride: null, reason: 'ride_changed' };
+  }
+
+  /** Atomically decide a currently pending participation application. */
+  async decideParticipation(rideId, participantProfile, targetState) {
+    const result = await this.storage.setParticipationIfCurrent(
+      rideId,
+      participantProfile.userId,
+      'thinking',
+      targetState,
+      participantProfile
+    );
+    return result ? { success: true, ride: result.ride, previousState: 'thinking' } : { success: false };
+  }
+
   /**
    * Cancel a ride
    * @param {string} rideId - Ride ID

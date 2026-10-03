@@ -31,7 +31,8 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
     // Create mock RideService
     mockRideService = {};
     mockRideParticipationService = {
-      changeParticipation: jest.fn()
+      changeParticipation: jest.fn(),
+      decideApplication: jest.fn()
     };
 
     // Create mock RideMessagesService
@@ -304,6 +305,44 @@ describe.each(['en', 'ru'])('ParticipationHandlers (%s)', (language) => {
     });
   });
   
+  describe('handleApplicationDecision', () => {
+    it('maps an accepted application to the service and refreshes ride messages', async () => {
+      mockCtx.match = ['application:accept:123:789', 'accept', '123', '789'];
+      const acceptedRide = { id: '123', messages: [] };
+      mockRideParticipationService.decideApplication.mockResolvedValue({
+        status: 'changed',
+        ride: acceptedRide,
+        targetState: 'joined'
+      });
+      mockRideMessagesService.updateRideMessages.mockResolvedValue({
+        success: true,
+        updatedCount: 1,
+        removedCount: 0
+      });
+
+      await participationHandlers.handleApplicationDecision(mockCtx);
+
+      expect(mockRideParticipationService.decideApplication).toHaveBeenCalledWith(expect.objectContaining({
+        rideId: '123',
+        applicantUserId: 789,
+        actorUserId: 456,
+        decision: 'accept'
+      }));
+      expect(mockRideMessagesService.updateRideMessages).toHaveBeenCalledWith(acceptedRide, mockCtx);
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.participation.applicationAccepted'));
+    });
+
+    it('reports stale application callbacks without updating messages', async () => {
+      mockCtx.match = ['application:reject:123:789', 'reject', '123', '789'];
+      mockRideParticipationService.decideApplication.mockResolvedValue({ status: 'stale' });
+
+      await participationHandlers.handleApplicationDecision(mockCtx);
+
+      expect(mockRideMessagesService.updateRideMessages).not.toHaveBeenCalled();
+      expect(mockCtx.answerCallbackQuery).toHaveBeenCalledWith(tr('commands.participation.applicationStale'));
+    });
+  });
+
   describe('updateRideMessage', () => {
     it('should not update if messages array is missing', async () => {
       const ride = {

@@ -37,6 +37,13 @@ describe('FieldProcessor', () => {
       expect(data.settings).toEqual({ allowReposts: true });
     });
 
+    it('maps settings.requireParticipationApproval to nested settings', () => {
+      const { data } = FieldProcessor.processRideFields({
+        'settings.requireParticipationApproval': 'yes'
+      });
+      expect(data.settings).toEqual({ requireParticipationApproval: true });
+    });
+
     it('maps boolean-like values to true', () => {
       expect(FieldProcessor.parseBooleanSetting('true')).toBe(true);
       expect(FieldProcessor.parseBooleanSetting('1')).toBe(true);

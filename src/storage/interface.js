@@ -21,6 +21,7 @@
  * @typedef {Object} RideSettings
  * @property {boolean} notifyParticipation
  * @property {boolean} allowReposts
+ * @property {boolean} requireParticipationApproval
  */
 
 /**
@@ -79,6 +80,7 @@
  * @property {Object} rideDefaults
  * @property {boolean} rideDefaults.notifyParticipation
  * @property {boolean} rideDefaults.allowReposts
+ * @property {boolean} rideDefaults.requireParticipationApproval
  * @property {'all'|'membership'} [participationNotificationLevel]
  */
 
@@ -131,6 +133,24 @@ export class StorageInterface {
    * @returns {Promise<{ride: Ride}>} - Updated ride
    */
   async setParticipation(rideId, state, participantProfile) {
+    throw new Error('Not implemented');
+  }
+
+  /** Atomically set participation while the ride remains active and in the expected approval mode. */
+  async setParticipationForRideMode(rideId, state, participantProfile, requireParticipationApproval, expectedState) {
+    throw new Error('Not implemented');
+  }
+
+  /**
+   * Atomically change participation only when the user is in the expected state.
+   * @param {string} rideId
+   * @param {number} userId
+   * @param {'joined'|'thinking'|'skipped'} expectedState
+   * @param {'joined'|'thinking'|'skipped'} targetState
+   * @param {Participant} participantProfile
+   * @returns {Promise<{ride: Ride}|null>}
+   */
+  async setParticipationIfCurrent(rideId, userId, expectedState, targetState, participantProfile) {
     throw new Error('Not implemented');
   }
 

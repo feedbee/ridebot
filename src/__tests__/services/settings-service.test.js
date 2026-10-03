@@ -57,7 +57,8 @@ describe('SettingsService', () => {
       expect(user.firstName).toBe('Alice');
       expect(user.settings.rideDefaults).toEqual({
         notifyParticipation: false,
-        allowReposts: false
+        allowReposts: false,
+        requireParticipationApproval: false
       });
     });
 
@@ -83,7 +84,7 @@ describe('SettingsService', () => {
       const user = await service.updateParticipationNotificationLevel(profile, 'membership');
 
       expect(user.settings).toEqual({
-        rideDefaults: { notifyParticipation: false, allowReposts: false },
+        rideDefaults: { notifyParticipation: false, allowReposts: false, requireParticipationApproval: false },
         participationNotificationLevel: 'membership'
       });
       await expect(service.getParticipationNotificationLevel(123)).resolves.toBe('membership');
@@ -119,7 +120,8 @@ describe('SettingsService', () => {
 
       expect(settings).toEqual({
         notifyParticipation: false,
-        allowReposts: false
+        allowReposts: false,
+        requireParticipationApproval: false
       });
     });
 
@@ -134,7 +136,8 @@ describe('SettingsService', () => {
 
       expect(settings).toEqual({
         notifyParticipation: false,
-        allowReposts: false
+        allowReposts: false,
+        requireParticipationApproval: false
       });
     });
 
@@ -156,7 +159,8 @@ describe('SettingsService', () => {
 
       expect(updatedSettings).toEqual({
         notifyParticipation: false,
-        allowReposts: true
+        allowReposts: true,
+        requireParticipationApproval: false
       });
     });
   });

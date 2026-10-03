@@ -42,6 +42,42 @@ describe('NotificationService', () => {
     jest.useRealTimers();
   });
 
+  it('sends an application immediately even when ordinary notifications are disabled', async () => {
+    const silentRide = { ...ride, settings: { notifyParticipation: false, requireParticipationApproval: true } };
+
+    await service.sendApplicationNotification(silentRide, participant, mockApi);
+
+    expect(mockApi.sendMessage).toHaveBeenCalledWith(
+      ride.createdBy,
+      expect.stringContaining('Alice Smith'),
+      expect.objectContaining({
+        reply_markup: expect.objectContaining({ inline_keyboard: expect.any(Array) })
+      })
+    );
+    expect(mockSettingsService.getParticipationNotificationLevel).not.toHaveBeenCalled();
+  });
+
+  it('sends application decisions directly to the applicant', async () => {
+    await service.sendApplicationDecisionNotification(ride, participant.userId, 'accepted', mockApi);
+
+    expect(mockApi.sendMessage).toHaveBeenCalledWith(
+      participant.userId,
+      expect.stringContaining(ride.title),
+      { parse_mode: 'HTML' }
+    );
+  });
+
+  it('cancels a pending ordinary notification when a new application is sent', async () => {
+    service.scheduleParticipationNotification(ride, participant, 'joined', 'skipped', mockApi);
+
+    await service.sendApplicationNotification(ride, participant, mockApi);
+    await jest.runAllTimersAsync();
+
+    expect(mockApi.sendMessage).toHaveBeenCalledTimes(1);
+    expect(mockApi.sendMessage.mock.calls[0][0]).toBe(ride.createdBy);
+    expect(mockApi.sendMessage.mock.calls[0][2]).toHaveProperty('reply_markup');
+  });
+
   describe('scheduleParticipationNotification', () => {
     it('sends notification after 20s', async () => {
       service.scheduleParticipationNotification(ride, participant, null, 'joined', mockApi);

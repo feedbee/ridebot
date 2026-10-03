@@ -214,6 +214,27 @@ export class MemoryStorage extends StorageInterface {
     return { ride: ride };
   }
 
+  async setParticipationForRideMode(rideId, state, participantProfile, requireParticipationApproval, expectedState) {
+    const ride = this.rides.get(rideId);
+    if (!ride || ride.cancelled || (ride.settings?.requireParticipationApproval === true) !== requireParticipationApproval) {
+      return null;
+    }
+    const actualState = ['joined', 'thinking', 'skipped'].find(participationState =>
+      (ride.participation?.[participationState] || []).some(p => p.userId === participantProfile.userId)
+    ) || null;
+    if (actualState !== expectedState) return null;
+    return this.setParticipation(rideId, state, participantProfile);
+  }
+
+  async setParticipationIfCurrent(rideId, userId, expectedState, targetState, participantProfile) {
+    const ride = this.rides.get(rideId);
+    if (!ride || ride.cancelled || ride.settings?.requireParticipationApproval !== true
+      || !(ride.participation?.[expectedState] || []).some(p => p.userId === userId)) {
+      return null;
+    }
+    return this.setParticipation(rideId, targetState, participantProfile);
+  }
+
   async getParticipation(rideId, userId) {
     const ride = this.rides.get(rideId);
     if (!ride || !ride.participation) {

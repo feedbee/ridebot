@@ -6,7 +6,8 @@ import { SettingsService } from '../services/SettingsService.js';
 
 const BOOLEAN_SETTING_CALLBACK_KEYS = {
   np: 'notifyParticipation',
-  repost: 'allowReposts'
+  repost: 'allowReposts',
+  approval: 'requireParticipationApproval'
 };
 
 /**
@@ -152,6 +153,7 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
     const currentSettings = SettingsService.getRideSettingsSnapshot(ride);
     let rideToRender = ride;
 
+    let propagationFailed = false;
     if (currentSettings[settingName] !== desiredValue) {
       rideToRender = await this.rideService.updateRide(
         ride.id,
@@ -162,10 +164,17 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
         },
         ctx.from.id
       );
+
+      if (settingName === 'requireParticipationApproval') {
+        const updateResult = await this.updateRideMessage(rideToRender, ctx);
+        propagationFailed = !updateResult.success;
+      }
     }
 
     await this.showRideSettings(ctx, 'edit', rideToRender);
-    await ctx.answerCallbackQuery(this.translate(ctx, 'commands.settings.rideUpdated'));
+    await ctx.answerCallbackQuery(this.translate(ctx, propagationFailed
+      ? 'commands.settings.rideUpdatedMessageFailed'
+      : 'commands.settings.rideUpdated'));
   }
 
   /**
@@ -250,6 +259,11 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
           ctx,
           'commands.settings.allowRepostsLabel',
           defaults.allowReposts
+        ),
+        this.buildBooleanSettingRow(
+          ctx,
+          'commands.settings.requireParticipationApprovalLabel',
+          defaults.requireParticipationApproval
         )
       ]),
       `<footer>${this.translate(ctx, 'commands.settings.userHint')}</footer>`,
@@ -284,6 +298,14 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
           disableKey: 'commands.settings.disableReposts'
         }),
         `settings:user:bool:repost:${defaults.allowReposts ? 'off' : 'on'}`
+      )
+      .row()
+      .text(
+        this.getSettingToggleLabel(ctx, defaults.requireParticipationApproval, {
+          enableKey: 'commands.settings.enableParticipationApproval',
+          disableKey: 'commands.settings.disableParticipationApproval'
+        }),
+        `settings:user:bool:approval:${defaults.requireParticipationApproval ? 'off' : 'on'}`
       )
       .row()
       .text(
@@ -322,6 +344,11 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
           ctx,
           'commands.settings.allowRepostsLabel',
           settings.allowReposts
+        ),
+        this.buildBooleanSettingRow(
+          ctx,
+          'commands.settings.requireParticipationApprovalLabel',
+          settings.requireParticipationApproval
         )
       ]),
       `<footer>${this.translate(ctx, 'commands.settings.rideHint')}</footer>`
@@ -353,6 +380,14 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
       )
       .row()
       .text(
+        this.getSettingToggleLabel(ctx, settings.requireParticipationApproval, {
+          enableKey: 'commands.settings.enableParticipationApproval',
+          disableKey: 'commands.settings.disableParticipationApproval'
+        }),
+        `settings:ride:bool:approval:${settings.requireParticipationApproval ? 'off' : 'on'}:${rideId}`
+      )
+      .row()
+      .text(
         this.translate(ctx, 'buttons.close'),
         'settings:close'
       );
@@ -368,7 +403,7 @@ export class RideSettingsCommandHandler extends BaseCommandHandler {
 
   /**
    * @param {string} callbackKey
-   * @returns {'notifyParticipation'|'allowReposts'|null}
+   * @returns {'notifyParticipation'|'allowReposts'|'requireParticipationApproval'|null}
    */
   getBooleanSettingName(callbackKey) {
     return BOOLEAN_SETTING_CALLBACK_KEYS[callbackKey] || null;

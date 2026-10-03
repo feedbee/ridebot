@@ -62,6 +62,7 @@ export class ListParticipantsCommandHandler extends BaseCommandHandler {
    */
   buildParticipantsMessage(ctx, ride) {
     const participation = ride.participation || { joined: [], thinking: [], skipped: [] };
+    const approvalRequired = ride.settings?.requireParticipationApproval === true;
     const joinedCount = participation.joined.length;
     const thinkingCount = participation.thinking.length;
     const skippedCount = participation.skipped.length;
@@ -72,7 +73,9 @@ export class ListParticipantsCommandHandler extends BaseCommandHandler {
       total: totalCount
     })}</b>\n\n`;
 
-    message += `🚴 <b>${this.translate(ctx, 'commands.listParticipants.joinedLabel', { count: joinedCount })}:</b>\n`;
+    message += `🚴 <b>${this.translate(ctx, approvalRequired
+      ? 'commands.listParticipants.acceptedLabel'
+      : 'commands.listParticipants.joinedLabel', { count: joinedCount })}:</b>\n`;
     if (joinedCount > 0) {
       message += this.formatParticipantsByCategory(participation.joined);
     } else {
@@ -82,7 +85,9 @@ export class ListParticipantsCommandHandler extends BaseCommandHandler {
     message += '\n\n';
 
     if (thinkingCount > 0) {
-      message += `🤔 <b>${this.translate(ctx, 'commands.listParticipants.thinkingLabel', { count: thinkingCount })}:</b>\n`;
+      message += `🤔 <b>${this.translate(ctx, approvalRequired
+        ? 'commands.listParticipants.applicationsLabel'
+        : 'commands.listParticipants.thinkingLabel', { count: thinkingCount })}:</b>\n`;
       message += this.formatParticipantsByCategory(participation.thinking);
       message += '\n\n';
     }

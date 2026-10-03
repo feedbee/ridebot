@@ -1,5 +1,6 @@
 import { config } from '../config.js';
 import { t } from '../i18n/index.js';
+import { escapeHtml } from '../utils/html-escape.js';
 
 const DEBOUNCE_DELAY_MS = 20_000;
 
@@ -53,6 +54,51 @@ export class NotificationService {
     });
   }
 
+  /** Cancel a pending ordinary notification superseded by an operational moderation event. */
+  cancelParticipationNotification(rideId, participantUserId) {
+    const key = `${rideId}:${participantUserId}`;
+    const pending = this.pendingTimers.get(key);
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    this.pendingTimers.delete(key);
+  }
+
+  /** Send the mandatory actionable application notification immediately. */
+  async sendApplicationNotification(ride, participant, api) {
+    this.cancelParticipationNotification(ride.id, participant.userId);
+    try {
+      const language = config.i18n.defaultLanguage;
+      await api.sendMessage(ride.createdBy, t(language, 'commands.notifications.application', {
+        name: escapeHtml(this._formatName(participant)),
+        title: escapeHtml(ride.title),
+        rideId: ride.id
+      }), {
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [[
+            { text: t(language, 'buttons.acceptApplication'), callback_data: `application:accept:${ride.id}:${participant.userId}` },
+            { text: t(language, 'buttons.rejectApplication'), callback_data: `application:reject:${ride.id}:${participant.userId}` }
+          ]]
+        }
+      });
+    } catch (err) {
+      console.error('NotificationService: failed to send application notification:', err);
+    }
+  }
+
+  /** Send a best-effort application decision notification to the applicant. */
+  async sendApplicationDecisionNotification(ride, participantUserId, decision, api) {
+    try {
+      const language = config.i18n.defaultLanguage;
+      await api.sendMessage(participantUserId, t(language, `commands.notifications.application${decision === 'accepted' ? 'Accepted' : 'Rejected'}`, {
+        title: escapeHtml(ride.title),
+        rideId: ride.id
+      }), { parse_mode: 'HTML' });
+    } catch (err) {
+      console.error('NotificationService: failed to send application decision notification:', err);
+    }
+  }
+
   async _deliverNotification(ride, participant, initialState, finalState, api) {
     if (initialState === finalState) return;
 
@@ -81,8 +127,8 @@ export class NotificationService {
       const language = config.i18n.defaultLanguage;
       const name = this._formatName(participant);
       const text = t(language, `commands.notifications.${state}`, {
-        name,
-        title: ride.title,
+        name: escapeHtml(name),
+        title: escapeHtml(ride.title),
         rideId: ride.id
       }, {
         fallbackLanguage: config.i18n.fallbackLanguage

@@ -602,6 +602,7 @@ describe('RideService', () => {
       expect(result.ride.settings).toEqual({
         notifyParticipation: false,
         allowReposts: false,
+        requireParticipationApproval: false,
         futureSetting: 'preserved'
       });
       expect(result.ride.updatedBy).toBe(502);
