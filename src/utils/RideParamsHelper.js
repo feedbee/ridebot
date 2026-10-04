@@ -60,11 +60,14 @@ export class RideParamsHelper {
         
         if (canonicalKey) {
           const trimmedValue = value.trim();
-          if (canonicalKey === 'route') {
-            if (!params.route) {
-              params.route = [];
+          if (['route', 'speed', 'cruisingSpeed'].includes(canonicalKey)) {
+            if (canonicalKey === 'route') {
+              (params.route ||= []).push(trimmedValue);
+            } else if (params[canonicalKey] === undefined) {
+              params[canonicalKey] = trimmedValue;
+            } else {
+              params[canonicalKey] = [...(Array.isArray(params[canonicalKey]) ? params[canonicalKey] : [params[canonicalKey]]), trimmedValue];
             }
-            params.route.push(trimmedValue);
           } else {
             params[canonicalKey] = trimmedValue;
           }

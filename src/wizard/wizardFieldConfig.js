@@ -10,7 +10,7 @@ import {
 import { DateParser } from '../utils/date-parser.js';
 import { config } from '../config.js';
 import { t } from '../i18n/index.js';
-import { parseSpeedInput, formatSpeed } from '../utils/speed-utils.js';
+import { parseSpeedField, formatSpeedField, speedInputError } from '../utils/pace-groups.js';
 import { getDerivedRouteLabel, parseRouteEntries } from '../utils/route-links.js';
 import { parseTelegramChatLink } from '../utils/telegram-chat-link.js';
 
@@ -225,7 +225,7 @@ export function getWizardFields(language = config.i18n.defaultLanguage) {
     speed: {
       step: 'speed',
       type: FieldType.SPEED,
-      dataKey: ['speedMin', 'speedMax'],
+      dataKey: ['speedMin', 'speedMax', 'speedGroups'],
       prompt: translate(language, 'wizard.prompts.speed'),
       required: false,
       clearable: true,
@@ -233,28 +233,20 @@ export function getWizardFields(language = config.i18n.defaultLanguage) {
       nextStep: 'cruisingSpeed',
       previousStep: 'duration',
       validator: (text) => {
-        const parsed = parseSpeedInput(text);
-        if (parsed === null) {
-          return { valid: false, error: translate(language, 'wizard.validation.speedInvalid') };
+        const result = parseSpeedField(text, 'speed');
+        if (result.error) {
+          return { valid: false, error: speedInputError('speed', result, language) };
         }
-        return {
-          valid: true,
-          value: {
-            speedMin: parsed?.speedMin ?? null,
-            speedMax: parsed?.speedMax ?? null
-          }
-        };
+        return { valid: true, value: result.data };
       },
-      formatter: (value, state) => {
-        return formatSpeed(state.data.speedMin, state.data.speedMax, language);
-      },
-      hasValue: (state) => state.data.speedMin || state.data.speedMax
+      formatter: (value, state) => formatSpeedField(state.data, 'speed', language, { rich: true }),
+      hasValue: (state) => state.data.speedGroups?.length > 1 || state.data.speedMin || state.data.speedMax
     },
 
     cruisingSpeed: {
       step: 'cruisingSpeed',
       type: FieldType.SPEED,
-      dataKey: ['cruisingSpeedMin', 'cruisingSpeedMax'],
+      dataKey: ['cruisingSpeedMin', 'cruisingSpeedMax', 'cruisingSpeedGroups'],
       prompt: translate(language, 'wizard.prompts.cruisingSpeed'),
       required: false,
       clearable: true,
@@ -262,24 +254,14 @@ export function getWizardFields(language = config.i18n.defaultLanguage) {
       nextStep: 'meet',
       previousStep: 'speed',
       validator: (text) => {
-        const parsed = parseSpeedInput(text);
-        if (parsed === null) {
-          return { valid: false, error: translate(language, 'wizard.validation.cruisingSpeedInvalid') };
+        const result = parseSpeedField(text, 'cruisingSpeed');
+        if (result.error) {
+          return { valid: false, error: speedInputError('cruisingSpeed', result, language) };
         }
-        return {
-          valid: true,
-          value: {
-            cruisingSpeedMin: parsed.speedMin ?? null,
-            cruisingSpeedMax: parsed.speedMax ?? null
-          }
-        };
+        return { valid: true, value: result.data };
       },
-      formatter: (value, state) => formatSpeed(
-        state.data.cruisingSpeedMin,
-        state.data.cruisingSpeedMax,
-        language
-      ),
-      hasValue: (state) => state.data.cruisingSpeedMin || state.data.cruisingSpeedMax
+      formatter: (value, state) => formatSpeedField(state.data, 'cruisingSpeed', language, { rich: true }),
+      hasValue: (state) => state.data.cruisingSpeedGroups?.length > 1 || state.data.cruisingSpeedMin || state.data.cruisingSpeedMax
     },
 
     meet: {
@@ -376,6 +358,8 @@ export function buildRideDataFromWizard(wizardData, metadata = {}) {
     routeLink: wizardData.routes?.[0]?.url,
     distance: wizardData.distance,
     duration: wizardData.duration,
+    speedGroups: wizardData.speedGroups,
+    cruisingSpeedGroups: wizardData.cruisingSpeedGroups,
     speedMin: wizardData.speedMin,
     speedMax: wizardData.speedMax,
     cruisingSpeedMin: wizardData.cruisingSpeedMin,

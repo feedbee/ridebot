@@ -1,8 +1,9 @@
+import { richListMessage } from '../utils/rich-lists.js';
 import { InlineKeyboard } from 'grammy';
 import { BaseCommandHandler } from './BaseCommandHandler.js';
 import { parseDateTimeInput } from '../utils/date-input-parser.js';
 import { normalizeCategory } from '../utils/category-utils.js';
-import { parseSpeedInput } from '../utils/speed-utils.js';
+import { parseSpeedField, speedInputError } from '../utils/pace-groups.js';
 import { parseDuration } from '../utils/duration-parser.js';
 import { RouteParser } from '../utils/route-parser.js';
 import { getRideRoutes, parseRouteEntries } from '../utils/route-links.js';
@@ -254,6 +255,16 @@ export class AiRideCommandHandler extends BaseCommandHandler {
     }
 
     state.lastParams = params;
+    for (const prefix of ['speed', 'cruisingSpeed']) {
+      if (params[prefix] === undefined) continue;
+      const parsed = parseSpeedField(params[prefix], prefix, state.mode === 'update');
+      if (parsed.error) {
+        await this._updateOrSendPreview(ctx, state, speedInputError(prefix, parsed, ctx.lang),
+          new InlineKeyboard().text(this.translate(ctx, 'buttons.cancel'), `airide:cancel:${stateKey}`));
+        return;
+      }
+    }
+
 
     // Enrich a copy of params with route-parsed data for the preview only.
     // state.lastParams stays as pure AI output; RideService re-parses on confirm.
@@ -282,24 +293,27 @@ export class AiRideCommandHandler extends BaseCommandHandler {
    * Mirrors the pattern used by RideWizard.updatePreviewMessage().
    */
   async _updateOrSendPreview(ctx, state, text, keyboard) {
-    const opts = { parse_mode: 'HTML', reply_markup: keyboard };
+    const rich = text.includes('<ul>');
+    const opts = { ...(rich ? {} : { parse_mode: 'HTML' }), reply_markup: keyboard };
+    const payload = rich ? richListMessage(text) : text;
+    const send = () => rich ? ctx.replyWithRichMessage(payload, opts) : ctx.reply(text, opts);
 
     if (!state.previewMessageId) {
-      const msg = await ctx.reply(text, opts);
+      const msg = await send();
       state.previewMessageId = msg.message_id;
       state.botMessageIds.push(msg.message_id);
       return;
     }
 
     try {
-      await ctx.api.editMessageText(ctx.chat.id, state.previewMessageId, text, opts);
+      await ctx.api.editMessageText(ctx.chat.id, state.previewMessageId, payload, opts);
     } catch (err) {
       if (err.description?.includes('message is not modified') ||
           err.message?.includes('message is not modified')) {
         return;
       }
       // On any other edit error, re-send and update the tracked ID
-      const msg = await ctx.reply(text, opts);
+      const msg = await send();
       // Replace old ID with new one in botMessageIds
       const idx = state.botMessageIds.indexOf(state.previewMessageId);
       if (idx !== -1) state.botMessageIds[idx] = msg.message_id;
@@ -422,29 +436,15 @@ export class AiRideCommandHandler extends BaseCommandHandler {
       preview.category = normalizeCategory(categoryStr);
     }
 
-    // speed: parse into speedMin/speedMax (same as FieldProcessor does on save)
-    const speedStr = params.speed ?? null;
-    if (speedStr) {
-      const speedResult = parseSpeedInput(speedStr);
-      if (speedResult) {
-        preview.speedMin = speedResult.speedMin ?? null;
-        preview.speedMax = speedResult.speedMax ?? null;
+    for (const prefix of ['speed', 'cruisingSpeed']) {
+      if (params[prefix] !== undefined) {
+        const parsed = parseSpeedField(params[prefix], prefix, state?.mode === 'update');
+        if (parsed.data) Object.assign(preview, parsed.data);
+      } else if (existingRide) {
+        for (const suffix of ['Min', 'Max', 'Groups']) {
+          preview[`${prefix}${suffix}`] = existingRide[`${prefix}${suffix}`];
+        }
       }
-    } else if (existingRide) {
-      preview.speedMin = existingRide.speedMin ?? null;
-      preview.speedMax = existingRide.speedMax ?? null;
-    }
-
-    const cruisingSpeedStr = params.cruisingSpeed ?? null;
-    if (cruisingSpeedStr) {
-      const cruisingSpeedResult = parseSpeedInput(cruisingSpeedStr);
-      if (cruisingSpeedResult) {
-        preview.cruisingSpeedMin = cruisingSpeedResult.speedMin ?? null;
-        preview.cruisingSpeedMax = cruisingSpeedResult.speedMax ?? null;
-      }
-    } else if (existingRide) {
-      preview.cruisingSpeedMin = existingRide.cruisingSpeedMin ?? null;
-      preview.cruisingSpeedMax = existingRide.cruisingSpeedMax ?? null;
     }
 
     preview.chat = params.chat === '-' ? null : (params.chat || existingRide?.chat || null);

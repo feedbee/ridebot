@@ -1,3 +1,4 @@
+import { PACE_GROUP_NAMES } from '../utils/pace-groups.js';
 import { isRideArchived } from './ride-lifecycle.js';
 
 /**
@@ -34,6 +35,15 @@ export class RideParticipationService {
     } finally {
       if (this.participantOperations.get(key) === pending) this.participantOperations.delete(key);
     }
+  }
+
+  /** Select a pace group without participation, notification, or membership side effects.
+   * @param {{rideId: string, userId: number, group: string}} params
+   * @returns {Promise<Object>}
+   */
+  async selectPaceGroup({ rideId, userId, group }) {
+    if (!PACE_GROUP_NAMES.includes(group)) return { status: 'group_not_found' };
+    return this.runParticipantOperation(rideId, userId, () => this.rideService.setPaceGroup(rideId, userId, group));
   }
 
   /**

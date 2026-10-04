@@ -29,8 +29,8 @@ describe('Mongo storage query contracts without a database', () => {
     const pipeline = Ride.collection.findOneAndUpdate.mock.calls[0][1];
     const set = pipeline[0].$set;
     const expression = mode === 'regular' ? set['participation.joined'] : set['participation.thinking'];
-    expect(expression.$concatArrays[1]).toEqual({
-      $literal: [expect.objectContaining(profile)]
+    expect(expression.$concatArrays[1][0].$let.in.$mergeObjects[0]).toEqual({
+      $literal: expect.objectContaining(profile)
     });
   });
 
@@ -68,6 +68,45 @@ describe('Mongo storage query contracts without a database', () => {
     expect(Ride.collection.findOneAndUpdate.mock.calls[0][1]).toEqual({
       $set: { 'settings.participantLimit': 10 }
     });
+  });
+
+  it('selects groups with current lifecycle, membership, and group-existence guards', async () => {
+    await storage.setPaceGroup(String(ride._id), 2, 'B');
+    const [filter, pipeline] = Ride.collection.findOneAndUpdate.mock.calls[0];
+    expect(filter.cancelled).toEqual({ $ne: true });
+    expect(filter.date.$gt).toBeInstanceOf(Date);
+    expect(filter.$expr.$in[0]).toEqual({ $literal: 'B' });
+    expect(filter.$or).toEqual(['joined', 'thinking'].map(state => ({
+      [`participation.${state}`]: { $elemMatch: { userId: 2, paceGroup: { $ne: 'B' } } }
+    })));
+    expect(Object.keys(pipeline[0].$set)).toEqual(['participation.joined', 'participation.thinking']);
+    expect(JSON.stringify(pipeline)).not.toContain('createdAt');
+  });
+
+  it('cleans removed choices in the same update using current arrays, with literal content', async () => {
+    await storage.updateRide(String(ride._id), { cruisingSpeedGroups: [{ min: 30, max: 30 }, { min: 20, max: 20 }], title: '$participation' });
+    const pipeline = Ride.collection.findOneAndUpdate.mock.calls[0][1];
+    expect(pipeline[0].$set.title).toEqual({ $literal: '$participation' });
+    expect(pipeline[0].$set.cruisingSpeedMin).toEqual({ $literal: null });
+    expect(pipeline[1].$set['participation.joined'].$map.input).toEqual({ $ifNull: ['$participation.joined', []] });
+    expect(pipeline[1].$set['participation.thinking'].$map.input).toEqual({ $ifNull: ['$participation.thinking', []] });
+  });
+
+  it('still casts and validates all supplied fields when speed cleanup uses a pipeline', async () => {
+    await expect(storage.updateRide(String(ride._id), { speedGroups: [], title: '' })).rejects.toThrow();
+    await expect(storage.updateRide(String(ride._id), { speedGroups: [], settings: { participantLimit: 2000 } })).rejects.toThrow();
+    expect(Ride.collection.findOneAndUpdate).not.toHaveBeenCalled();
+    await storage.updateRide(String(ride._id), { speedGroups: [], date: '2099-01-01T10:00:00Z' });
+    expect(Ride.collection.findOneAndUpdate.mock.calls[0][1][0].$set.date.$literal).toEqual(new Date('2099-01-01T10:00:00Z'));
+  });
+
+  it('round trips optional group fields through Mongoose schema and interface mapping', () => {
+    const document = new Ride({ ...ride, cruisingSpeedGroups: [{ min: 25, max: 30 }, { min: 20, max: null }],
+      participation: { joined: [{ ...profile, paceGroup: 'B' }], thinking: [], skipped: [] } });
+    expect(document.validateSync()).toBeUndefined();
+    const mapped = storage.mapRideToInterface(document);
+    expect(mapped.cruisingSpeedGroups).toEqual([{ min: 25, max: 30 }, { min: 20, max: null }]);
+    expect(mapped.participation.joined[0].paceGroup).toBe('B');
   });
 
   it('writes user default and notification patches as separate fields', async () => {

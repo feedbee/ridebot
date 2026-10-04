@@ -43,6 +43,8 @@
  * @property {number} [speedMax]
  * @property {number} [cruisingSpeedMin]
  * @property {number} [cruisingSpeedMax]
+ * @property {Array<{min: number|null, max: number|null}>} [speedGroups]
+ * @property {Array<{min: number|null, max: number|null}>} [cruisingSpeedGroups]
  * @property {string} [chat] - Normalized Telegram coordination chat or invite link
  * @property {string} [additionalInfo]
  * @property {boolean} [cancelled]
@@ -63,6 +65,7 @@
  * @property {string} [firstName]
  * @property {string} [lastName]
  * @property {Date} createdAt
+ * @property {string} [paceGroup] - Selected letter A–E; joined/thinking only
  */
 
 /**
@@ -179,6 +182,16 @@ export class StorageInterface {
    * @returns {Promise<{status: 'changed'|'participant_limit_reached', ride: Ride, previousState: string}|null>}
    */
   async setParticipationIfCurrent(rideId, userId, expectedState, targetState, participantProfile) {
+    throw new Error('Not implemented');
+  }
+
+  /** Conditionally select a current group for a joined/thinking user on an active ride.
+   * @param {string} rideId
+   * @param {number} userId
+   * @param {string} group
+   * @returns {Promise<{status: string, ride?: Ride}>}
+   */
+  async setPaceGroup(rideId, userId, group) {
     throw new Error('Not implemented');
   }
 

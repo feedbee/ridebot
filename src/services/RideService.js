@@ -1,3 +1,4 @@
+import { speedFieldToInput } from '../utils/pace-groups.js';
 import { RouteParser } from '../utils/route-parser.js';
 import { FieldProcessor } from '../utils/FieldProcessor.js';
 import { config } from '../config.js';
@@ -21,7 +22,7 @@ const SELF_ORGANIZER_REFERENCES = new Set([
 const RIDE_CONTENT_FIELDS = new Set([
   'title', 'category', 'organizer', 'date', 'meetingPoint', 'routes', 'routeLink',
   'distance', 'duration', 'speedMin', 'speedMax', 'cruisingSpeedMin',
-  'cruisingSpeedMax', 'chat', 'additionalInfo'
+  'cruisingSpeedMax', 'speedGroups', 'cruisingSpeedGroups', 'chat', 'additionalInfo'
 ]);
 
 /**
@@ -226,6 +227,16 @@ export class RideService {
       success,
       ride: success ? result.ride : null
     };
+  }
+
+  /** Select a group through the conditional persistence boundary.
+   * @param {string} rideId
+   * @param {number} userId
+   * @param {string} group
+   * @returns {Promise<Object>}
+   */
+  async setPaceGroup(rideId, userId, group) {
+    return this.storage.setPaceGroup(rideId, userId, group);
   }
 
   /** Set participation only if the ride's approval mode still matches the service decision. */
@@ -468,12 +479,8 @@ export class RideService {
         if (params[paramName] !== '-') mergedParams[paramName] = params[paramName];
         continue;
       }
-      const min = originalRide[`${prefix}Min`];
-      const max = originalRide[`${prefix}Max`];
-      if (min != null && max != null && min === max) mergedParams[paramName] = `${min}`;
-      else if (min != null && max != null) mergedParams[paramName] = `${min}-${max}`;
-      else if (min != null) mergedParams[paramName] = `${min}+`;
-      else if (max != null) mergedParams[paramName] = `-${max}`;
+      const input = speedFieldToInput(originalRide, prefix);
+      if (input !== undefined) mergedParams[paramName] = input;
     }
     
     // Copy an own ride's complete snapshot, then apply explicit setting overrides.

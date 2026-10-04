@@ -1,3 +1,4 @@
+import { normalizeSpeedFields, PACE_GROUP_NAMES } from './pace-groups.js';
 import fetch from 'node-fetch';
 import { config } from '../config.js';
 import { getStravaAccessToken } from './strava-token-store.js';
@@ -94,12 +95,12 @@ export class StravaEventParser {
    * @returns {string | null}
    */
   static buildPaceGroupsText(paceGroups, paceType) {
-    if (!paceGroups || paceGroups.length === 0) return null;
+    if (!Array.isArray(paceGroups) || paceGroups.length === 0) return null;
 
     const labels = paceGroups.map(group => {
-      const center = group.pace ?? group.target_pace_metric;
-      const range = group.range ?? group.pace_range_metric ?? 0;
-      if (center == null) return null;
+      const center = group?.pace ?? group?.target_pace_metric;
+      const range = group?.range ?? group?.pace_range_metric ?? 0;
+      if (!Number.isFinite(center) || !Number.isFinite(range) || range < 0 || center < 0) return null;
 
       if (paceType === 'pace') {
         // pace is in seconds per meter → convert to min/km
@@ -125,33 +126,24 @@ export class StravaEventParser {
     return 'Pace groups: ' + labels.join(' • ');
   }
 
-  /**
-   * Extract cruisingSpeedMin / cruisingSpeedMax from pace groups (speed-based only).
-   * Returns {} if pace groups are pace-based or missing.
+  /** Extract individual cruising speeds from at most five source groups.
    * @param {Array} paceGroups
    * @param {string} paceType
-   * @returns {{ cruisingSpeedMin?: number, cruisingSpeedMax?: number }}
+   * @returns {Object}
    */
-  static extractSpeedRange(paceGroups, paceType) {
-    if (!paceGroups || paceGroups.length === 0 || paceType !== 'speed') return {};
-
-    let min = Infinity;
-    let max = -Infinity;
-
-    for (const group of paceGroups) {
-      const center = group.pace ?? group.target_pace_metric;
-      const range = group.range ?? group.pace_range_metric ?? 0;
-      if (center == null) continue;
-      const lo = center - range;
-      const hi = center + range;
-      if (lo < min) min = lo;
-      if (hi > max) max = hi;
+  static extractSpeedFields(paceGroups, paceType) {
+    if (!Array.isArray(paceGroups) || paceType !== 'speed') return {};
+    const speeds = [];
+    for (const group of paceGroups.slice(0, PACE_GROUP_NAMES.length)) {
+      const center = group?.pace ?? group?.target_pace_metric;
+      const range = group?.range ?? group?.pace_range_metric ?? 0;
+      if (!Number.isFinite(center) || !Number.isFinite(range) || range < 0) continue;
+      const min = Math.round(center - range);
+      const max = Math.round(center + range);
+      if (min < 0 || !Number.isFinite(min) || !Number.isFinite(max)) continue;
+      speeds.push({ min, max });
     }
-
-    const result = {};
-    if (min !== Infinity) result.cruisingSpeedMin = Math.round(min);
-    if (max !== -Infinity) result.cruisingSpeedMax = Math.round(max);
-    return result;
+    return speeds.length ? normalizeSpeedFields({ cruisingSpeedGroups: speeds }) : {};
   }
 
   /**
@@ -169,10 +161,10 @@ export class StravaEventParser {
       parts.push(event.description);
     }
 
-    const paceGroupsText = this.buildPaceGroupsText(
+    const paceGroupsText = event.pace_type === 'pace' ? this.buildPaceGroupsText(
       event.pace_groups ?? event.upcoming_occurrences?.[0]?.pace_groups,
-      event.pace_type ?? 'speed'
-    );
+      'pace'
+    ) : null;
     if (paceGroupsText) {
       parts.push(paceGroupsText);
     }
@@ -227,11 +219,11 @@ export class StravaEventParser {
       }
     }
 
-    // Speed range from pace groups (speed-based only)
+    // Individual cruising speeds from speed-based pace groups
     const paceType = event.pace_type ?? 'speed';
     const paceGroups = event.pace_groups ?? event.upcoming_occurrences?.[0]?.pace_groups;
-    const speedRange = this.extractSpeedRange(paceGroups, paceType);
-    Object.assign(rideData, speedRange);
+    const speedRange = this.extractSpeedFields(paceGroups, paceType);
+    Object.assign(rideData, { cruisingSpeedMin: null, cruisingSpeedMax: null, cruisingSpeedGroups: [], ...speedRange });
 
     // additionalInfo: event link + description + pace groups detail
     rideData.additionalInfo = this.buildAdditionalInfo(event, eventUrl);

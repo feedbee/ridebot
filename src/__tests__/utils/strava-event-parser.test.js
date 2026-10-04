@@ -139,24 +139,24 @@ describe('StravaEventParser', () => {
     });
   });
 
-  describe('extractSpeedRange', () => {
+  describe('extractSpeedFields', () => {
     it('returns {} for pace-based groups', () => {
       const groups = [{ pace: 5.5, range: 0.3 }];
-      expect(StravaEventParser.extractSpeedRange(groups, 'pace')).toEqual({});
+      expect(StravaEventParser.extractSpeedFields(groups, 'pace')).toEqual({});
     });
 
     it('returns {} for empty groups', () => {
-      expect(StravaEventParser.extractSpeedRange([], 'speed')).toEqual({});
+      expect(StravaEventParser.extractSpeedFields([], 'speed')).toEqual({});
     });
 
-    it('extracts min/max across multiple speed groups', () => {
+    it('preserves individual ranges across multiple speed groups', () => {
       const groups = [
         { pace: 20, range: 1 },  // 19-21
         { pace: 25, range: 1 },  // 24-26
         { pace: 30, range: 2 },  // 28-32
       ];
-      expect(StravaEventParser.extractSpeedRange(groups, 'speed'))
-        .toEqual({ cruisingSpeedMin: 19, cruisingSpeedMax: 32 });
+      expect(StravaEventParser.extractSpeedFields(groups, 'speed'))
+        .toEqual({ cruisingSpeedMin: null, cruisingSpeedMax: null, cruisingSpeedGroups: [{ min: 19, max: 21 }, { min: 24, max: 26 }, { min: 28, max: 32 }] });
     });
   });
 
@@ -168,14 +168,14 @@ describe('StravaEventParser', () => {
       expect(result).toContain('A nice gravel ride');
     });
 
-    it('appends pace groups section when present', () => {
+    it('does not duplicate structured speed groups in additional information', () => {
       const event = {
         description: 'Ride',
         pace_type: 'speed',
         pace_groups: [{ pace: 25, range: 1 }],
       };
       const result = StravaEventParser.buildAdditionalInfo(event, 'https://strava.com/clubs/1/group_events/2');
-      expect(result).toContain('Pace groups:');
+      expect(result).not.toContain('Pace groups:');
     });
 
     it('omits pace groups section when absent', () => {
@@ -259,7 +259,7 @@ describe('StravaEventParser', () => {
       expect(data.additionalInfo).toContain(eventUrl);
     });
 
-    it('extracts speed range from pace groups', () => {
+    it('extracts speed groups from pace groups', () => {
       const event = {
         ...baseEvent,
         pace_type: 'speed',
@@ -269,8 +269,9 @@ describe('StravaEventParser', () => {
         ],
       };
       const data = StravaEventParser.mapToRideData(event, 101, eventUrl, eventId);
-      expect(data.cruisingSpeedMin).toBe(19);
-      expect(data.cruisingSpeedMax).toBe(26);
+      expect(data.cruisingSpeedGroups).toEqual([{ min: 19, max: 21 }, { min: 24, max: 26 }]);
+      expect(data.cruisingSpeedMin).toBeNull();
+      expect(data.cruisingSpeedMax).toBeNull();
       expect(data.speedMin).toBeUndefined();
       expect(data.speedMax).toBeUndefined();
     });

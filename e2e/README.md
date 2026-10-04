@@ -11,11 +11,12 @@ It is intentionally separate from the normal test suite:
 ## What It Covers
 
 Current smoke scenario:
-- create a ride in private chat with the bot
+- create a ride with two pace groups in private chat with the bot
 - share it to the configured group
 - update it from private chat
 - click `join`
-- click `thinking`
+- select pace group B and verify its member count
+- click `thinking` and verify the selected group is retained
 - click `skip`
 - delete the ride and verify the group message disappears
 

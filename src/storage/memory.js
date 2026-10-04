@@ -1,3 +1,4 @@
+import { normalizeSpeedFields, getPaceGroups, SPEED_PREFIXES } from '../utils/pace-groups.js';
 import { isRideArchived } from '../services/ride-lifecycle.js';
 import { StorageInterface } from './interface.js';
 import { randomUUID } from 'crypto';
@@ -40,6 +41,7 @@ export class MemoryStorage extends StorageInterface {
   }
 
   async createRide(ride) {
+    ride = normalizeSpeedFields(ride);
     const id = this.generateShortId();
     
     let rideData = { ...ride };
@@ -75,6 +77,7 @@ export class MemoryStorage extends StorageInterface {
   }
 
   async updateRide(rideId, updates) {
+    updates = normalizeSpeedFields(updates);
     const ride = this.rides.get(rideId);
     if (!ride) {
       throw new Error('Ride not found');
@@ -109,6 +112,16 @@ export class MemoryStorage extends StorageInterface {
         : {})
     };
     
+    if (SPEED_PREFIXES.some(prefix => Object.hasOwn(updates, `${prefix}Groups`))) {
+      const groups = getPaceGroups(updatedRide);
+      for (const state of ['joined', 'thinking']) {
+        updatedRide.participation[state] = (updatedRide.participation?.[state] || []).map(person => {
+          if (groups.includes(person.paceGroup)) return person;
+          const { paceGroup, ...unassigned } = person;
+          return unassigned;
+        });
+      }
+    }
     this.rides.set(rideId, updatedRide);
     return this.mapRideToInterface(updatedRide);
   }
@@ -270,6 +283,7 @@ export class MemoryStorage extends StorageInterface {
       };
     }
 
+    const previousParticipant = currentState ? ride.participation[currentState].find(p => p.userId === participantProfile.userId) : null;
     // Remove user from all states first
     ride.participation.joined = ride.participation.joined.filter(p => p.userId !== participantProfile.userId);
     ride.participation.thinking = ride.participation.thinking.filter(p => p.userId !== participantProfile.userId);
@@ -284,6 +298,9 @@ export class MemoryStorage extends StorageInterface {
       createdAt: new Date()
     };
 
+    if (state !== 'skipped' && getPaceGroups(ride).includes(previousParticipant?.paceGroup)) {
+      participantData.paceGroup = previousParticipant.paceGroup;
+    }
     ride.participation[state].push(participantData);
     
     // Update the ride in storage
@@ -316,6 +333,26 @@ export class MemoryStorage extends StorageInterface {
       return null;
     }
     return this.setParticipation(rideId, targetState, participantProfile);
+  }
+
+  /** Atomically select a group without changing participation status.
+   * @param {string} rideId
+   * @param {number} userId
+   * @param {string} group
+   * @returns {Promise<Object>}
+   */
+  async setPaceGroup(rideId, userId, group) {
+    const ride = this.rides.get(rideId);
+    if (!ride) return { status: 'ride_not_found' };
+    if (isRideArchived(ride)) return { status: 'ride_archived' };
+    if (ride.cancelled) return { status: 'ride_cancelled' };
+    if (!getPaceGroups(ride).includes(group)) return { status: 'group_not_found' };
+    const person = ['joined', 'thinking'].flatMap(state => ride.participation?.[state] || [])
+      .find(participant => participant.userId === userId);
+    if (!person) return { status: 'not_participating', ride: this.mapRideToInterface(ride) };
+    if (person.paceGroup === group) return { status: 'already_in_group', ride: this.mapRideToInterface(ride) };
+    person.paceGroup = group;
+    return { status: 'changed', ride: this.mapRideToInterface(ride) };
   }
 
   async getParticipation(rideId, userId) {

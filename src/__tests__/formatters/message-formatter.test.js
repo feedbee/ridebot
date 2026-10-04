@@ -323,7 +323,7 @@ describe('MessageFormatter', () => {
       expect(result).toContain('Ride #123');
       expect(result).toContain('Bring lights and a jacket');
       expect(messageFormatter.formatDuration).toHaveBeenCalledWith(120, 'en');
-      expect(messageFormatter.formatSpeedRange).toHaveBeenCalledWith(25, 30, 'en');
+      expect(result).toContain('25-30 km/h');
     });
     
     it.each(['en', 'ru'])('should format ride message with cancelled status (%s)', (language) => {

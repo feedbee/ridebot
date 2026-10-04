@@ -12,7 +12,7 @@ export async function runRideLifecycleE2ETest(driver) {
   let shareCommandMessageId = null;
 
   await driver.sendPrivateCommand(
-    `/newride\ntitle: ${fixture.title}\nwhen: tomorrow 11:00\nmeet: ${fixture.meetingPoint}`
+    `/newride\ntitle: ${fixture.title}\nwhen: tomorrow 11:00\ncruisingSpeed: 30\ncruisingSpeed: 25\nmeet: ${fixture.meetingPoint}`
   );
 
   const privateRideMessage = await driver.waitForBotPrivateMessage({
@@ -66,6 +66,17 @@ export async function runRideLifecycleE2ETest(driver) {
     });
     assert.match(joinedMessage.message || '', JOINED_MARKER);
 
+    await driver.clickButtonInChat({
+      chatId: driver.primaryGroupId, messageId: groupRideMessage.id,
+      callbackDataPattern: new RegExp(`^pacegroup:${rideId}:B$`)
+    });
+    const groupedMessage = await driver.waitForEditedBotMessageInChat({
+      chatId: driver.primaryGroupId, messageId: groupRideMessage.id,
+      predicate: message => /B \(1\):/.test(message.message || '')
+    });
+    assert.match(groupedMessage.message || '', /B \(1\):/);
+
+
     const thinkingResult = await driver.clickButtonInChat({
       chatId: driver.primaryGroupId,
       messageId: groupRideMessage.id,
@@ -79,6 +90,7 @@ export async function runRideLifecycleE2ETest(driver) {
       predicate: message => THINKING_MARKER.test(message.message || '')
     });
     assert.match(thinkingMessage.message || '', THINKING_MARKER);
+    assert.match(thinkingMessage.message || '', /B \(1\):/, 'Thinking must retain the selected pace group');
 
     const skipResult = await driver.clickButtonInChat({
       chatId: driver.primaryGroupId,

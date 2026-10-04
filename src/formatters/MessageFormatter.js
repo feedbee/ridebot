@@ -1,3 +1,5 @@
+import { normalizeRichLists } from '../utils/rich-lists.js';
+import { formatSpeedField, getPaceGroups, groupParticipants } from '../utils/pace-groups.js';
 import { config } from '../config.js';
 import { escapeHtml } from '../utils/html-escape.js';
 import { InlineKeyboard } from 'grammy';
@@ -109,6 +111,11 @@ export class MessageFormatter {
       }
     }
 
+    if (!ride.cancelled && getPaceGroups(ride).length) {
+      keyboard.row();
+      for (const group of getPaceGroups(ride)) keyboard.text(group, `pacegroup:${ride.id}:${group}`);
+    }
+
     if (isForCreator) {
       if (!ride.cancelled) {
         keyboard.row();
@@ -183,15 +190,12 @@ export class MessageFormatter {
       ? `${this.translate('formatter.labels.participantLimit', {}, language)}: ${participantLimit}<br>`
       : '';
     
-    const participantsList = this.formatParticipantsWithLogic(
-      joinedParticipants,
-      this.translate('formatter.noOneJoinedYet', {}, language),
-      language
-    );
+    const participantsList = this.formatPaceGroupParticipants(ride, joinedParticipants, language)
+      || this.translate('formatter.noOneJoinedYet', {}, language);
     
     // Conditional content - show empty content for hidden sections to avoid empty lines
     const thinkingContent = thinkingCount > 0 
-      ? this.formatParticipantsList(thinkingParticipants, language)
+      ? this.formatPaceGroupParticipants(ride, thinkingParticipants, language)
       : '';
     
     const notInterestedContent = notInterestedCount > 0
@@ -234,11 +238,11 @@ export class MessageFormatter {
     if (ride.duration) {
       group4.push(`⏱ ${this.translate('formatter.labels.duration', {}, language)}: ${this.formatDuration(ride.duration, language)}`);
     }
-    if (ride.speedMin || ride.speedMax) {
-      group4.push(`⚡ ${this.translate('formatter.labels.speed', {}, language)}: ${this.formatSpeedRange(ride.speedMin, ride.speedMax, language)}`);
+    if (formatSpeedField(ride, 'speed', language)) {
+      group4.push(this.formatSpeedCharacteristic(ride, 'speed', '⚡', language).replace(/\n/g, '<br>'));
     }
-    if (ride.cruisingSpeedMin || ride.cruisingSpeedMax) {
-      group4.push(`🛣️ ${this.translate('formatter.labels.cruisingSpeed', {}, language)}: ${this.formatSpeedRange(ride.cruisingSpeedMin, ride.cruisingSpeedMax, language)}`);
+    if (formatSpeedField(ride, 'cruisingSpeed', language)) {
+      group4.push(this.formatSpeedCharacteristic(ride, 'cruisingSpeed', '🛣️', language).replace(/\n/g, '<br>'));
     }
     if (group4.length > 0) {
       rideDetails += formatParagraph(group4);
@@ -265,13 +269,13 @@ export class MessageFormatter {
       .replace('{rideDetails}', rideDetails)
       .replace('{participantLimitLine}', participantLimitLine)
       .replace('{participantCount}', participantCount)
-      .replace('{participants}', participantsList)
+      .replace('{participants}', `${getPaceGroups(ride).length && joinedParticipants.length ? '<br>' : ''}${participantsList}`)
       .replace('{thinkingLine}', thinkingCount > 0
         ? `<br>🤔 ${this.translate(
           approvalRequired ? 'formatter.participation.applications' : 'formatter.participation.thinking',
           {},
           language
-        )} (${thinkingCount}): ${thinkingContent}`
+        )} (${thinkingCount}): ${getPaceGroups(ride).length ? '<br>' : ''}${thinkingContent}`
         : '')
       .replace('{notInterestedLine}', notInterestedCount > 0
         ? `<br>🙅 ${this.translate(approvalRequired ? 'formatter.participation.rejectedOrDeclined' : 'formatter.participation.notInterested', {}, language)}: ${notInterestedContent}`
@@ -322,7 +326,7 @@ export class MessageFormatter {
       .replace('</h3>\n<p>', '</h3>\n<p><br>')
       .replace(/<\/p>\s*<p>/g, '<br><br>');
     
-    return message;
+    return normalizeRichLists(message);
   }
 
   /**
@@ -374,11 +378,11 @@ export class MessageFormatter {
     if (rideData.duration) {
       group4 += `⏱ ${this.translate('formatter.labels.duration', {}, language)}: ${this.formatDuration(rideData.duration, language)}\n`;
     }
-    if (rideData.speedMin || rideData.speedMax) {
-      group4 += `⚡ ${this.translate('formatter.labels.speed', {}, language)}: ${this.formatSpeedRange(rideData.speedMin, rideData.speedMax, language)}\n`;
+    if (formatSpeedField(rideData, 'speed', language)) {
+      group4 += `${this.formatSpeedCharacteristic(rideData, 'speed', '⚡', language)}\n`;
     }
-    if (rideData.cruisingSpeedMin || rideData.cruisingSpeedMax) {
-      group4 += `🛣️ ${this.translate('formatter.labels.cruisingSpeed', {}, language)}: ${this.formatSpeedRange(rideData.cruisingSpeedMin, rideData.cruisingSpeedMax, language)}\n`;
+    if (formatSpeedField(rideData, 'cruisingSpeed', language)) {
+      group4 += `${this.formatSpeedCharacteristic(rideData, 'cruisingSpeed', '🛣️', language)}\n`;
     }
     if (group4) {
       message += `\n${group4}`;
@@ -543,6 +547,44 @@ export class MessageFormatter {
    */
   formatDeleteConfirmation() {
     return this.translate('templates.deleteConfirmation');
+  }
+
+  /** Format a speed heading followed by a scalar or lettered list.
+   * @param {Object} ride
+   * @param {string} prefix
+   * @param {string} icon
+   * @param {string} language
+   * @returns {string}
+   */
+  formatSpeedCharacteristic(ride, prefix, icon, language) {
+    const separator = ride[`${prefix}Groups`]?.length > 1 ? '' : ' ';
+    return `${icon} ${this.translate(`formatter.labels.${prefix}`, {}, language)}:${separator}${formatSpeedField(ride, prefix, language, { rich: true })}`;
+  }
+
+  /** Format a section with complete group counts and bounded participant names.
+   * @param {Object} ride
+   * @param {Object[]} participants
+   * @param {string} language
+   * @param {{full?: boolean}} options
+   * @returns {string}
+   */
+  formatPaceGroupParticipants(ride, participants, language, { full = false } = {}) {
+    if (!participants.length) return '';
+    if (!getPaceGroups(ride).length) return full
+      ? participants.map(person => this.formatParticipant(person)).join(', ')
+      : this.formatParticipantsList(participants, language);
+    let remaining = full ? participants.length : config.maxParticipantsDisplay;
+    const format = people => {
+      const shown = people.slice(0, remaining);
+      remaining -= shown.length;
+      const displayedList = shown.map(person => this.formatParticipant(person)).join(', ');
+      return shown.length === people.length ? displayedList
+        : this.translate('formatter.andMoreParticipants', { displayedList, count: people.length - shown.length }, language).trim();
+    };
+    const items = groupParticipants(ride, participants).filter(group => group.name || group.participants.length)
+      .map(group => `<li>${group.name || this.translate('paceGroups.unassigned', {}, language)} (${group.participants.length}): ${group.participants.length ? format(group.participants) : '—'}</li>`)
+      .join('');
+    return `<ul>${items}</ul>`;
   }
 
   /**

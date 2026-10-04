@@ -2,7 +2,7 @@ import { BOOLEAN_RIDE_SETTING_NAMES } from '../models/ride-settings.js';
 import { parseDateTimeInput } from './date-input-parser.js';
 import { parseDuration } from './duration-parser.js';
 import { normalizeCategory, DEFAULT_CATEGORY } from './category-utils.js';
-import { parseSpeedInput } from './speed-utils.js';
+import { parseSpeedField, speedInputError } from './pace-groups.js';
 import { parseRouteEntries } from './route-links.js';
 import { config } from '../config.js';
 import { t } from '../i18n/index.js';
@@ -50,11 +50,11 @@ export class FieldProcessor {
     
     for (const [paramName, prefix] of [['speed', 'speed'], ['cruisingSpeed', 'cruisingSpeed']]) {
       if (params[paramName] === undefined) continue;
-      const speedResult = this.processSpeedField(params[paramName], isUpdate, prefix);
-      if (speedResult === null) {
-        return { data: null, error: this.translateSpeedError(language, paramName) };
+      const speedResult = parseSpeedField(params[paramName], prefix, isUpdate);
+      if (speedResult.error) {
+        return { data: null, error: speedInputError(paramName, speedResult, language) };
       }
-      Object.assign(result.data, speedResult);
+      Object.assign(result.data, this.processSpeedField(params[paramName], isUpdate, prefix));
     }
     
     // Process route
@@ -203,27 +203,15 @@ export class FieldProcessor {
    * @returns {Object} - Object with speedMin and/or speedMax properties
    */
   static processSpeedField(value, isUpdate, prefix = 'speed') {
-    const minKey = `${prefix}Min`;
-    const maxKey = `${prefix}Max`;
-    if (isUpdate && value === '-') {
-      return { [minKey]: null, [maxKey]: null };
+    const result = parseSpeedField(value, prefix, isUpdate);
+    if (result.error) return null;
+    if (!isUpdate && !result.data[`${prefix}Groups`].length) {
+      delete result.data[`${prefix}Groups`];
+      for (const key of [`${prefix}Min`, `${prefix}Max`]) {
+        if (result.data[key] === null) delete result.data[key];
+      }
     }
-
-    const parsed = parseSpeedInput(value);
-    if (!parsed) return null;
-
-    const result = {};
-    if ('speedMin' in parsed) result[minKey] = parsed.speedMin;
-    if ('speedMax' in parsed) result[maxKey] = parsed.speedMax;
-
-    // On update, explicitly null out whichever bound was not specified,
-    // so switching forms (e.g. range → average) clears the old value.
-    if (isUpdate) {
-      if (!(minKey in result)) result[minKey] = null;
-      if (!(maxKey in result)) result[maxKey] = null;
-    }
-
-    return result;
+    return result.data;
   }
   
   /**

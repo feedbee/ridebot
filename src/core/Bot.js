@@ -181,6 +181,7 @@ export class Bot {
         { pattern: /^main:settings$/, handler: (ctx) => rideSettingsHandler.handleInlineMenu(ctx) },
         { pattern: /^main:help$/, handler: (ctx) => helpHandler.handleInlineMenu(ctx) },
         { pattern: /^main:close$/, handler: (ctx) => startHandler.closeButtons(ctx) },
+        { pattern: /^pacegroup:(\w+):([A-E])$/, handler: (ctx) => participationHandler.handlePaceGroup(ctx) },
         { pattern: /^join:(\w+)$/, handler: (ctx) => participationHandler.handleJoinRide(ctx) },
         { pattern: /^apply:(\w+)$/, handler: (ctx) => participationHandler.handleApply(ctx) },
         { pattern: /^thinking:(\w+)$/, handler: (ctx) => participationHandler.handleThinkingRide(ctx) },

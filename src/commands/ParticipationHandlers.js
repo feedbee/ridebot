@@ -1,3 +1,4 @@
+import { getPaceGroups } from '../utils/pace-groups.js';
 import { BaseCommandHandler } from './BaseCommandHandler.js';
 import { UserProfile } from '../models/UserProfile.js';
 import { RIDE_ARCHIVE_AFTER_HOURS } from '../services/ride-lifecycle.js';
@@ -107,11 +108,16 @@ export class ParticipationHandlers extends BaseCommandHandler {
             application_submitted: 'commands.participation.applicationSubmitted',
             not_participating: 'commands.participation.notParticipating'
           };
-          await ctx.answerCallbackQuery(result.moderationOutcome
+          let text = result.moderationOutcome
             ? this.translate(ctx, outcomeMessages[result.moderationOutcome])
             : result.targetState
               ? this.translate(ctx, SUCCESS_MESSAGE_KEYS[result.targetState])
-              : successMessage);
+              : successMessage;
+          const person = result.ride.participation?.[result.targetState]?.find(p => p.userId === ctx.from.id);
+          if (result.targetState !== 'skipped' && getPaceGroups(result.ride).length && !person?.paceGroup) {
+            text += `\n${this.translate(ctx, 'paceGroups.choose')}`;
+          }
+          await ctx.answerCallbackQuery(text);
         } else {
           await ctx.answerCallbackQuery(this.translate(ctx, 'commands.participation.updatedButMessageFailed'));
         }
@@ -130,6 +136,35 @@ export class ParticipationHandlers extends BaseCommandHandler {
       }
     } catch (error) {
       console.error(`Error updating participation to ${state}:`, error);
+      await ctx.answerCallbackQuery(this.translate(ctx, 'commands.participation.genericError'));
+    }
+  }
+
+  /** Handle a group choice for the authenticated Telegram user.
+   * @param {import('grammy').Context} ctx
+   */
+  async handlePaceGroup(ctx) {
+    try {
+      const result = await this.rideParticipationService.selectPaceGroup({
+        rideId: ctx.match[1], group: ctx.match[2], userId: ctx.from.id
+      });
+      if (result.status === 'changed') {
+        const update = await this.updateRideMessage(result.ride, ctx);
+        await ctx.answerCallbackQuery(this.translate(ctx, update.success
+          ? 'paceGroups.selected' : 'commands.participation.updatedButMessageFailed', { group: ctx.match[2] }));
+        return;
+      }
+      const keys = {
+        already_in_group: 'paceGroups.alreadySelected', group_not_found: 'paceGroups.unavailable',
+        not_participating: result.ride?.settings?.requireParticipationApproval ? 'paceGroups.applyFirst' : 'paceGroups.joinFirst',
+        ride_not_found: 'commands.participation.rideNotFound', ride_archived: 'commands.participation.rideArchived',
+        ride_cancelled: 'commands.participation.rideCancelled', ride_changed: 'commands.participation.rideChangedRetry'
+      };
+      await ctx.answerCallbackQuery(this.translate(ctx, keys[result.status] || 'commands.participation.genericError', {
+        group: ctx.match[2], hours: RIDE_ARCHIVE_AFTER_HOURS
+      }));
+    } catch (error) {
+      console.error('Error selecting pace group:', error);
       await ctx.answerCallbackQuery(this.translate(ctx, 'commands.participation.genericError'));
     }
   }

@@ -1,4 +1,15 @@
 export const en = {
+  paceGroups: {
+    choose: 'Choose a pace group.',
+    unassigned: 'Without a Group',
+    limit: 'Use at most five speed values.',
+    invalidElement: 'Invalid speed at line/element {index}.',
+    selected: 'You selected group {group}.',
+    alreadySelected: 'You are already in group {group}.',
+    unavailable: 'This pace group is no longer available.',
+    joinFirst: 'First join the ride or select Thinking to choose a pace group.',
+    applyFirst: 'First apply to the ride to choose a pace group.',
+  },
   templates: {
     start: `
 <img src="https://static.ridebot.valera.ws/ridebot/ride-announcement-teaser.jpg"/>
@@ -18,6 +29,7 @@ export const en = {
 <p>Ride Announcement Bot helps you create and schedule rides, share them across chats, track participants, manage ride settings, attach private groups, and keep published announcements in sync. For a brief overview of the main features and how to use the bot, see /start.</p>
 
 <h3>➕ Creating a New Ride</h3>
+<p>For Pace Groups, repeat speed: or cruisingSpeed: parameters (up to five values), or enter one speed per line in the wizard. Groups follow input order. After joining, selecting Thinking, or applying, choose A–E using the second button row.</p>
 <p>Create a new ride:<br>1. Using the wizard (recommended):<br>Simply send /newride command without any parameters to start an interactive wizard that will guide you through each step. <i>(Note: Wizard mode is only available in private chats with the bot)</i></p>
 <br>
 
@@ -629,8 +641,8 @@ Click here to start a private chat: @botname
       route: '🗺️ Please enter the route link (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
       distance: '📏 Please enter the distance in kilometers (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
       duration: '⏱ Please enter the duration (e.g., \"2h 30m\", \"90m\", \"1.5h\"):\n<i>Enter a dash (-) to clear/skip this field</i>',
-      speed: '⚡ Average moving speed in km/h or skip:\nThe average over the full route while moving, excluding stops; it includes climbs, descents, turns, and slow sections.\n• 25-28 — range\n• 25+ or 25- — minimum\n• -28 — maximum\n• 25 or ~25 — average\n<i>Enter a dash (-) to clear/skip this field</i>',
-      cruisingSpeed: '🛣️ Cruising speed in km/h or skip:\nThe speed the group normally holds while riding on flat, fast sections.\n• 25-28 — range\n• 25+ or 25- — minimum\n• -28 — maximum\n• 25 or ~25 — average\n<i>Enter a dash (-) to clear/skip this field</i>',
+      speed: '⚡ Average moving speed in km/h or skip:\nThe average over the full route while moving, excluding stops; it includes climbs, descents, turns, and slow sections.\n• 25-28 — range\n• 25+ or 25- — minimum\n• -28 — maximum\n• 25 or ~25 — average\n<i>Enter a dash (-) to clear/skip this field</i>\nOne line is a common speed; multiple lines define groups A–E (maximum five).',
+      cruisingSpeed: '🛣️ Cruising speed in km/h or skip:\nThe speed the group normally holds while riding on flat, fast sections.\n• 25-28 — range\n• 25+ or 25- — minimum\n• -28 — maximum\n• 25 or ~25 — average\n<i>Enter a dash (-) to clear/skip this field</i>\nOne line is a common speed; multiple lines define groups A–E (maximum five).',
       meet: '📍 Please enter the meeting point (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
       chat: '💬 Please enter a Telegram coordination chat or invite link (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
       info: 'ℹ️ Please enter any additional information (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
@@ -675,8 +687,8 @@ Click here to start a private chat: @botname
     route: 'Route URL',
     dist: 'Distance in kilometers',
     duration: 'Duration in minutes',
-    speed: 'Average moving speed: range (25-28), min (25+), max (-28), average (25)',
-    cruisingSpeed: 'Cruising speed: range (25-28), min (25+), max (-28), average (25)',
+    speed: 'Average moving speed: range (25-28), min (25+), max (-28), average (25) Repeat this parameter for groups A–E (maximum five).',
+    cruisingSpeed: 'Cruising speed: range (25-28), min (25+), max (-28), average (25) Repeat this parameter for groups A–E (maximum five).',
     chat: 'Telegram coordination chat or invite link',
     validation: {
       speedInvalid: 'Invalid average moving speed. Use 25-28, 25+, -28, or ~25.',

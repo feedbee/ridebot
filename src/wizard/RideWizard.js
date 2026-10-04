@@ -1,3 +1,4 @@
+import { richListMessage } from '../utils/rich-lists.js';
 import { InlineKeyboard } from 'grammy';
 import { config } from '../config.js';
 import { DEFAULT_CATEGORY, VALID_CATEGORIES, getCategoryLabel } from '../utils/category-utils.js';
@@ -114,11 +115,11 @@ export class RideWizard {
     // If prefill data was provided (update/duplicate), render real content immediately.
     const language = this.getContextLanguage(ctx);
     const rideObj = this.buildPreviewRideObject(state);
-    const hasAnyData = Object.values(rideObj).some(v => v !== null);
+    const hasAnyData = Object.values(rideObj).some(v => v != null && (!Array.isArray(v) || v.length > 0));
     const initialPreviewText = hasAnyData
       ? this.messageFormatter.formatRidePreview(rideObj, language)
       : this.translate(ctx, 'wizard.preview.placeholder');
-    const previewMsg = await ctx.reply(initialPreviewText, { parse_mode: 'HTML' });
+    const previewMsg = await this.sendPreview(ctx, initialPreviewText);
     if (previewMsg) {
       state.previewMessageId = previewMsg.message_id;
     }
@@ -414,7 +415,7 @@ export class RideWizard {
     if (Array.isArray(fieldConfig.dataKey)) {
       // Multiple keys (e.g., speedMin, speedMax)
       fieldConfig.dataKey.forEach(key => {
-        state.data[key] = undefined;
+        state.data[key] = fieldConfig.type === 'speed' ? (key.endsWith('Groups') ? [] : null) : undefined;
       });
     } else {
       // Single key - always use undefined for consistency
@@ -456,6 +457,8 @@ export class RideWizard {
       routes:         d.routes         ?? null,
       distance:       d.distance       ?? null,
       duration:       d.duration       ?? null,
+      speedGroups: d.speedGroups,
+      cruisingSpeedGroups: d.cruisingSpeedGroups,
       speedMin:       d.speedMin       ?? null,
       speedMax:       d.speedMax       ?? null,
       cruisingSpeedMin: d.cruisingSpeedMin ?? null,
@@ -474,14 +477,14 @@ export class RideWizard {
   async updatePreviewMessage(ctx, state) {
     const language = this.getContextLanguage(ctx);
     const rideObj = this.buildPreviewRideObject(state);
-    const hasAnyData = Object.values(rideObj).some(v => v !== null);
+    const hasAnyData = Object.values(rideObj).some(v => v != null && (!Array.isArray(v) || v.length > 0));
     const previewText = hasAnyData
       ? this.messageFormatter.formatRidePreview(rideObj, language)
       : this.translate(ctx, 'wizard.preview.placeholder');
 
     if (!state.previewMessageId) {
       try {
-        const msg = await ctx.reply(previewText, { parse_mode: 'HTML' });
+        const msg = await this.sendPreview(ctx, previewText);
         state.previewMessageId = msg.message_id;
       } catch (err) {
         console.error('Error sending preview message:', err);
@@ -490,9 +493,9 @@ export class RideWizard {
     }
 
     try {
-      await ctx.api.editMessageText(ctx.chat.id, state.previewMessageId, previewText, {
-        parse_mode: 'HTML'
-      });
+      await ctx.api.editMessageText(ctx.chat.id, state.previewMessageId,
+        previewText.includes('<ul>') ? richListMessage(previewText) : previewText,
+        previewText.includes('<ul>') ? {} : { parse_mode: 'HTML' });
     } catch (err) {
       // Silently ignore "message is not modified" errors (content unchanged, e.g. back navigation)
       if (err.description?.includes('message is not modified') ||
@@ -501,12 +504,22 @@ export class RideWizard {
       }
       console.error('Error editing preview message, re-sending:', err);
       try {
-        const msg = await ctx.reply(previewText, { parse_mode: 'HTML' });
+        const msg = await this.sendPreview(ctx, previewText);
         state.previewMessageId = msg.message_id;
       } catch (sendErr) {
         console.error('Error re-sending preview message:', sendErr);
       }
     }
+  }
+
+  /** Send a preview through the Rich Message boundary when it contains native lists.
+   * @param {Object} ctx
+   * @param {string} text
+   * @returns {Promise<Object>}
+   */
+  async sendPreview(ctx, text) {
+    return text.includes('<ul>') ? ctx.replyWithRichMessage(richListMessage(text))
+      : ctx.reply(text, { parse_mode: 'HTML' });
   }
 
   async sendWizardStep(ctx, edit = false) {
@@ -570,7 +583,8 @@ export class RideWizard {
     // Use custom formatter if provided
     if (fieldConfig.formatter) {
       const formatted = fieldConfig.formatter(state.data[fieldConfig.dataKey], state);
-      return escapeHtml(formatted.toString());
+      // Speed formatters generate escaped Rich HTML lists; other fields remain plain text.
+      return fieldConfig.type === FieldType.SPEED ? formatted : escapeHtml(formatted.toString());
     }
 
     if (fieldConfig.type === FieldType.CATEGORY) {
@@ -710,31 +724,26 @@ export class RideWizard {
    * @param {boolean} edit - Whether to edit existing message
    */
   async sendOrEditMessage(ctx, state, message, keyboard, edit) {
+    const rich = message.includes('<ul>');
+    const payload = rich ? richListMessage(message) : message;
+    const options = { reply_markup: keyboard, ...(rich ? {} : { parse_mode: 'HTML' }) };
+    const send = () => rich ? ctx.replyWithRichMessage(payload, options) : ctx.reply(payload, options);
     try {
       let sentMessage;
       if (edit && state.primaryMessageId) {
         // Update existing message
         try {
-          sentMessage = await ctx.api.editMessageText(ctx.chat.id, state.primaryMessageId, message, {
-            parse_mode: 'HTML',
-            reply_markup: keyboard
-          });
+          sentMessage = await ctx.api.editMessageText(ctx.chat.id, state.primaryMessageId, payload, options);
         } catch (error) {
           console.error('Error updating wizard message:', error);
           
           // If update fails (e.g., message too old), send a new message
-          sentMessage = await ctx.reply(message, {
-            parse_mode: 'HTML',
-            reply_markup: keyboard
-          });
+          sentMessage = await send();
           state.primaryMessageId = sentMessage.message_id;
         }
       } else {
         // Send new message
-        sentMessage = await ctx.reply(message, {
-          parse_mode: 'HTML',
-          reply_markup: keyboard
-        });
+        sentMessage = await send();
         state.primaryMessageId = sentMessage.message_id;
       }
       return sentMessage;

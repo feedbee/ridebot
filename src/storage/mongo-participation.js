@@ -1,3 +1,5 @@
+import { participantWithPaceGroupExpression } from './mongo-pace-groups.js';
+
 /** Normalize the persistence fields shared by participation transitions.
  * @param {Object} profile
  * @returns {Object}
@@ -44,7 +46,7 @@ export function buildParticipationUpdate(targetState, participant) {
       }
     };
     return [`participation.${state}`, state === targetState
-      ? { $concatArrays: [withoutUser, { $literal: [participant] }] }
+      ? { $concatArrays: [withoutUser, [participantWithPaceGroupExpression(targetState, participant)]] }
       : withoutUser];
   }));
 }

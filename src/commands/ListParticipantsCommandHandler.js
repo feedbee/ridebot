@@ -1,3 +1,5 @@
+import { getPaceGroups } from '../utils/pace-groups.js';
+import { richListMessage } from '../utils/rich-lists.js';
 import { BaseCommandHandler } from './BaseCommandHandler.js';
 import { escapeHtml } from '../utils/html-escape.js';
 
@@ -54,7 +56,12 @@ export class ListParticipantsCommandHandler extends BaseCommandHandler {
    * Send the formatted participants list for a loaded ride.
    */
   async showParticipants(ctx, ride) {
-    await ctx.reply(this.buildParticipantsMessage(ctx, ride), { parse_mode: 'HTML' });
+    const message = this.buildParticipantsMessage(ctx, ride);
+    if (getPaceGroups(ride).length) {
+      await ctx.replyWithRichMessage(richListMessage(message));
+    } else {
+      await ctx.reply(message, { parse_mode: 'HTML' });
+    }
   }
 
   /**
@@ -77,7 +84,7 @@ export class ListParticipantsCommandHandler extends BaseCommandHandler {
       ? 'commands.listParticipants.acceptedLabel'
       : 'commands.listParticipants.joinedLabel', { count: joinedCount })}:</b>\n`;
     if (joinedCount > 0) {
-      message += this.formatParticipantsByCategory(participation.joined);
+      message += this.formatGroupedParticipants(ctx, ride, participation.joined);
     } else {
       message += this.translate(ctx, 'commands.listParticipants.noOneJoinedYet');
     }
@@ -88,7 +95,7 @@ export class ListParticipantsCommandHandler extends BaseCommandHandler {
       message += `🤔 <b>${this.translate(ctx, approvalRequired
         ? 'commands.listParticipants.applicationsLabel'
         : 'commands.listParticipants.thinkingLabel', { count: thinkingCount })}:</b>\n`;
-      message += this.formatParticipantsByCategory(participation.thinking);
+      message += this.formatGroupedParticipants(ctx, ride, participation.thinking);
       message += '\n\n';
     }
 
@@ -99,6 +106,19 @@ export class ListParticipantsCommandHandler extends BaseCommandHandler {
     }
 
     return message.trim();
+  }
+
+  /** Render a full group list, retaining ordinary numbering for rides without groups.
+   * @param {Object} ctx
+   * @param {Object} ride
+   * @param {Object[]} participants
+   * @returns {string}
+   */
+  formatGroupedParticipants(ctx, ride, participants) {
+    if (!ride.speedGroups?.length && !ride.cruisingSpeedGroups?.length) {
+      return this.formatParticipantsByCategory(participants);
+    }
+    return this.messageFormatter.formatPaceGroupParticipants(ride, participants, ctx.lang, { full: true });
   }
 
   /**

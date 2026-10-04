@@ -65,8 +65,8 @@ Use these exact field names (all optional except title and when):
   routes: array of strings, each string either a route URL or "Label | URL"
   dist: distance in km as a string number, e.g. "70"
   duration: e.g. "2h 30m", "90m", "1.5h"
-  speed: average moving speed, e.g. "25-28", "25+", "-28", "~25"
-  cruisingSpeed: cruising speed normally held on flat, fast sections, using the same forms
+  speed: average moving speed string, e.g. "25-28", "25+", "-28", "~25", or an array of these strings for separate pace groups
+  cruisingSpeed: cruising speed normally held on flat, fast sections, using the same string or array forms
   chat: Telegram coordination chat or invite link
   info: additional notes
   settings: optional object
@@ -81,6 +81,9 @@ Speed classification rules:
 - Explicit average wording ("average speed", "average moving speed", "avg speed", "средняя скорость", "средняя скорость движения") maps to speed.
 - Otherwise unqualified riding speed, pace, cruising speed, riding/holding wording (including "скорость", "темп группы", "едем", "держим") maps to cruisingSpeed.
 - Return both when both concepts are supplied. Never infer one from the other.
+- Multiple explicitly described pace groups use arrays in the user's order, without sorting or inventing groups.
+- A single common speed stays a string. Lists can have different lengths. Each position corresponds to A, B, C, D, E.
+- At most five groups are supported. Never truncate an oversized explicit list; return it for validation feedback.
 
 Today: ${currentDate} (${timezone})
 Return ONLY valid JSON, no markdown, no explanation. Omit fields that are not mentioned.`;
@@ -146,7 +149,7 @@ This is a multi-turn conversation. The user sends multiple messages, each adding
 
     // Remove null/empty-string fields so FieldProcessor isn't confused
     const params = Object.fromEntries(
-      Object.entries(parsed).filter(([, v]) => v !== null && v !== '' && (!Array.isArray(v) || v.length > 0))
+      Object.entries(parsed).filter(([key, v]) => ['speed', 'cruisingSpeed'].includes(key) || (v !== null && v !== '' && (!Array.isArray(v) || v.length > 0)))
     );
 
     return { params, error: null };

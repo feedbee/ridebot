@@ -1,3 +1,4 @@
+import { getPaceGroups } from '../utils/pace-groups.js';
 import { config } from '../config.js';
 import { t } from '../i18n/index.js';
 import { escapeHtml } from '../utils/html-escape.js';
@@ -112,10 +113,13 @@ export class NotificationService {
   async sendApplicationDecisionNotification(ride, participantUserId, decision, api) {
     try {
       const language = config.i18n.defaultLanguage;
-      await api.sendMessage(participantUserId, t(language, `commands.notifications.application${decision === 'accepted' ? 'Accepted' : 'Rejected'}`, {
+      let text = t(language, `commands.notifications.application${decision === 'accepted' ? 'Accepted' : 'Rejected'}`, {
         title: escapeHtml(ride.title),
         rideId: ride.id
-      }), { parse_mode: 'HTML' });
+      });
+      const person = ride.participation?.joined?.find(p => p.userId === participantUserId);
+      if (decision === 'accepted' && getPaceGroups(ride).length && !person?.paceGroup) text += `\n${t(language, 'paceGroups.choose')}`;
+      await api.sendMessage(participantUserId, text, { parse_mode: 'HTML' });
     } catch (err) {
       console.error('NotificationService: failed to send application decision notification:', err);
     }

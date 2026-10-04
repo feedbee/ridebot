@@ -133,6 +133,7 @@ describe('FieldProcessor', () => {
 
     it('keeps both bounds for a full range during updates', () => {
       expect(FieldProcessor.processSpeedField('22-25', true)).toEqual({
+        speedGroups: [],
         speedMin: 22,
         speedMax: 25
       });
@@ -148,6 +149,7 @@ describe('FieldProcessor', () => {
 
     it('treats a single number as average on update', () => {
       expect(FieldProcessor.processSpeedField('29', true)).toEqual({
+        speedGroups: [],
         speedMin: 29,
         speedMax: 29
       });
@@ -175,6 +177,7 @@ describe('FieldProcessor', () => {
 
     it('clears max bound when updating with min+ form', () => {
       expect(FieldProcessor.processSpeedField('25+', true)).toEqual({
+        speedGroups: [],
         speedMin: 25,
         speedMax: null
       });
@@ -189,6 +192,7 @@ describe('FieldProcessor', () => {
 
     it('clears min bound when updating with max-only value', () => {
       expect(FieldProcessor.processSpeedField('-25', true)).toEqual({
+        speedGroups: [],
         speedMin: null,
         speedMax: 25
       });
@@ -197,6 +201,7 @@ describe('FieldProcessor', () => {
     // Clear (update only)
     it('clears both bounds with dash on update', () => {
       expect(FieldProcessor.processSpeedField('-', true)).toEqual({
+        speedGroups: [],
         speedMin: null,
         speedMax: null
       });
@@ -209,6 +214,7 @@ describe('FieldProcessor', () => {
 
     it('maps cruising speed to independent bounds', () => {
       expect(FieldProcessor.processSpeedField('27-30', true, 'cruisingSpeed')).toEqual({
+        cruisingSpeedGroups: [],
         cruisingSpeedMin: 27,
         cruisingSpeedMax: 30
       });

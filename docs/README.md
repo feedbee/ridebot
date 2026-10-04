@@ -12,6 +12,8 @@ This directory contains the project documents that agents and contributors shoul
   - Defines the testing strategy, test layering, and expectations for new and changed behavior.
 - [`changelog.md`](./changelog.md)
   - Product-facing release history grouped by version, using Git tag creation dates.
+- [`pace-groups.md`](./pace-groups.md)
+  - Current speed-group input, participation, persistence, and editing rules.
 
 ## Specifications And Change Design
 
