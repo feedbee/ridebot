@@ -1,3 +1,4 @@
+import { formatGoogleMapsLinks } from '../utils/google-maps-links.js';
 import { getStartPoints, formatMeetingPoints } from '../utils/start-points.js';
 import { normalizeRichLists } from '../utils/rich-lists.js';
 import { formatSpeedField, getPaceGroups, groupParticipants } from '../utils/pace-groups.js';
@@ -263,7 +264,7 @@ export class MessageFormatter {
     }
     if (ride.additionalInfo) {
       rideDetails += formatParagraph([
-        `ℹ️ ${this.translate('formatter.labels.additionalInfo', {}, language)}: ${escapeRichText(ride.additionalInfo)}`
+        `ℹ️ ${this.translate('formatter.labels.additionalInfo', {}, language)}: ${formatGoogleMapsLinks(ride.additionalInfo).replace(/\r\n?|\n/g, '<br>')}`
       ]);
     }
     
@@ -400,7 +401,7 @@ export class MessageFormatter {
       message += `\n💬 ${this.translate('formatter.labels.chat', {}, language)}: ${previewChatLink}\n`;
     }
     if (rideData.additionalInfo) {
-      message += `\nℹ️ ${this.translate('formatter.labels.additionalInfo', {}, language)}: ${escapeHtml(rideData.additionalInfo)}\n`;
+      message += `\nℹ️ ${this.translate('formatter.labels.additionalInfo', {}, language)}: ${formatGoogleMapsLinks(rideData.additionalInfo)}\n`;
     }
 
     return message;

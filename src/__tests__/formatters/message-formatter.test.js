@@ -38,6 +38,14 @@ describe('MessageFormatter', () => {
   let originalDefaultLanguage;
   const tr = (language, key, params = {}) => t(language, key, params, { fallbackLanguage: 'en' });
 
+  it.each(['formatRideMessage', 'formatRidePreview'])('formats only Google Maps links in additional info with %s', method => {
+    const ride = { title: 'Ride', date: new Date('2025-03-30T10:00:00Z'),
+      additionalInfo: '<Gate> https://maps.app.goo.gl/BvBKw3nji6VmDuLa7\nhttps://www.google.com/maps/@50.890537,15.331147,17z?entry=ttu&g_ep=abc https://example.com/info' };
+    const result = messageFormatter[method](ride);
+    expect(result).toContain('&lt;Gate&gt; <a href="https://maps.app.goo.gl/BvBKw3nji6VmDuLa7">[Google Maps]</a>');
+    expect(result).toContain('<a href="https://www.google.com/maps/@50.890537,15.331147,17z?entry=ttu&amp;g_ep=abc">[Google Maps]</a> https://example.com/info');
+  });
+
   beforeEach(() => {
     messageFormatter = new MessageFormatter();
     // Save original config value

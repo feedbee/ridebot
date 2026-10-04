@@ -40,6 +40,11 @@ pending applicants may select or change a point without approval or notification
 Participant names show an optional `[S1]` suffix; pace-group grouping is unchanged.
 Prompts request missing selections, combining start and pace choices when needed.
 
+Google Maps URLs (`maps.app.goo.gl` and `google.com/maps/`, including `www`)
+inside each point display as a clickable `[Google Maps]` label in announcements
+and previews. The same formatting applies to Additional Info. The original URL
+and stored text are preserved.
+
 Selections survive Thinking → Joined and application acceptance. Skipping,
 withdrawal, and rejection clear them. Edits retain choices by normalized position;
 removed positions clear choices. Reducing to one point clears all choices and

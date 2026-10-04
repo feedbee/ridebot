@@ -1,4 +1,4 @@
-import { escapeHtml } from './html-escape.js';
+import { formatGoogleMapsLinks } from './google-maps-links.js';
 import { getPaceGroups } from './pace-groups.js';
 
 export const START_POINT_NAMES = ['S1', 'S2', 'S3', 'S4', 'S5'];
@@ -69,7 +69,7 @@ export function getStartPoints(ride) {
  */
 export function formatMeetingPoints(ride) {
   const points = getMeetingPoints(ride);
-  return points.length > 1 ? `<ul>${points.map((point, index) => `<li>S${index + 1}: ${escapeHtml(point).replace(/\r\n?|\n/g, '<br>')}</li>`).join('')}</ul>` : escapeHtml(points[0] || '').replace(/\r\n?|\n/g, '<br>');
+  return points.length > 1 ? `<ul>${points.map((point, index) => `<li>S${index + 1}: ${formatGoogleMapsLinks(point).replace(/\r\n?|\n/g, '<br>')}</li>`).join('')}</ul>` : formatGoogleMapsLinks(points[0] || '').replace(/\r\n?|\n/g, '<br>');
 }
 
 /** Choose a single localized prompt for missing optional selections.
