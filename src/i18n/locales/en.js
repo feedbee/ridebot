@@ -50,7 +50,7 @@ export const en = {
 title: Ride title
 when: Date and time (e.g., "tomorrow at 6pm", "this saturday 10am", "21 Jul 14:30")
 category: One of: "Regular/Mixed Ride" (default), "Road Ride", "Gravel Ride", "Mountain/Enduro/Downhill Ride", "MTB-XC Ride", "E-Bike Ride", "Virtual/Indoor Ride" (optional)
-meet: Meeting point (optional)
+meet: Meeting point (repeat for up to five starting points; optional)
 route: Route link or "Label | URL" (repeat to add multiple routes) (optional)
 dist: Distance in km (optional)
 duration: Duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
@@ -108,6 +108,18 @@ settings.participantLimit: 10
 <p>Fields populated automatically: title, date, meeting point, category, route links, distance, duration, cruising speed (from speed-based pace groups), organizer (club name), and additional info (event link + description + pace groups).</p>
 <br>
 <p>If the Strava event has an attached route, only that route is imported. Otherwise the bot imports all known route-provider links from the description in discovery order.</p>
+
+<h3>Multiple Starting Points</h3>
+<p>A ride can have up to five starting points. In parameter commands, repeat <code>meet:</code> once per point; markers are not needed:</p>
+<pre>meet: Main square
+meet: Park north gate</pre>
+<p>In the wizard, start the meeting-point text with <code>S1:</code> and begin each next point with a marker on a new line. Each point can contain several lines:</p>
+<pre>S1: Main square
+At the fountain
+S2: Park
+North gate</pre>
+<p>Markers accept uppercase or lowercase Latin S and leading whitespace. Any marker numbers are accepted and sorted numerically, with repeated numbers kept in input order, then renumbered S1–S5. Without an initial marker, the whole field remains one multiline description. One point uses the usual display without a label; several points appear as a labeled list. AI also recognizes explicitly described alternative starting points.</p>
+<p>After joining, selecting Thinking, or applying, optionally choose S1–S5 using the row after pace groups, or directly after participation buttons when there are no pace groups. Your choice appears as <code>[S1]</code> after your name. You can change it without approval or notifications. It survives application acceptance and Thinking → Joined; withdrawal or rejection clears it.</p>
     `.trim(),
 
     help2: `
@@ -122,7 +134,7 @@ settings.participantLimit: 10
 id: abc123
 title: New title (optional)
 when: New date/time (optional)
-meet: New meeting point (optional)
+meet: New meeting point (repeat to replace the starting-point list; optional)
 route: New route link or "Label | URL" (repeat to replace the full route list) (optional)
 dist: New distance (optional)
 duration: New duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
@@ -137,6 +149,8 @@ settings.participantLimit: 0-1000 (optional; 0 means unlimited)
 </pre>
 
 <p>If you provide at least one <code>route:</code> line, it replaces the full route list. Use <code>route: -</code> to clear all routes.<br>Ride settings passed here are merged into the existing ride settings.</p>
+
+<p>Repeated <code>meet:</code> lines replace the entire starting-point list in updates and duplicates. Omitted meeting points are kept or copied. Use <code>meet: -</code> when updating to clear all points. Participant choices stay at their S1–S5 positions; removing a position clears its choice, and reducing the list to one point clears all choices.</p>
 
 <h3>❌ Cancelling a Ride</h3>
 
@@ -175,7 +189,7 @@ id: abc123
 title: New title (optional)
 when: New date/time (optional)
 category: One of: "Regular/Mixed Ride" (default), "Road Ride", "Gravel Ride", "Mountain/Enduro/Downhill Ride", "MTB-XC Ride", "E-Bike Ride", "Virtual/Indoor Ride" (optional)
-meet: New meeting point (optional)
+meet: New meeting point (repeat to replace the starting-point list; optional)
 route: New route link or "Label | URL" (repeat to replace the copied route list) (optional)
 dist: New distance (optional)
 duration: New duration in minutes or human-readable format (e.g., "2h 30m", "90m", "1.5h") (optional)
