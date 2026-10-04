@@ -2,6 +2,11 @@
 
 This changelog is written for product-facing release notes. Release dates are based on Git tag creation dates.
 
+## v2.10.1 - 2026-10-04
+
+- **Expanded bot help for multiple starting points.**
+  English and Russian `/help` now explain repeated `meet:` parameters, S1–S5 wizard input with examples, participant selection, and how choices behave when joining, receiving approval, updating, or duplicating a ride. This release updates help without changing ride behavior.
+
 ## v2.10.0 - 2026-10-04
 
 - **Added optional pace groups with participant selection.**
