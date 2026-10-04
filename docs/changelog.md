@@ -2,6 +2,38 @@
 
 This changelog is written for product-facing release notes. Release dates are based on Git tag creation dates.
 
+## v2.10.0 - 2026-10-04
+
+- **Added optional pace groups with participant selection.**
+  Rides can offer up to five groups (A–E) with separate average moving and cruising speeds. Groups work in parameter commands, wizard and AI flows, and Strava imports. Joined participants, thinking users, and pending applicants can choose a group; announcements and participant lists show membership and counts by group. Choices survive joining and application approval, while removed groups clear affected selections. Participant capacity remains shared across the ride.
+
+- **Added multiple starting points.**
+  Creators can specify up to five locations through repeated `meet:` parameters, marked wizard input, or AI descriptions. Announcements display S1–S5 locations with selection buttons, and participant names show their chosen start. Choices survive joining and approval; removing a location clears affected choices. Existing single-location and multiline meeting descriptions remain supported.
+
+- **Introduced creator approval for participation.**
+  Optional moderation can be enabled per ride or as a default for new rides. Participants apply through the announcement, and creators accept or reject applications from private notifications. Applicants receive private decisions when reachable. Only accepted participants occupy places and gain access to an attached group; full rides keep applications pending. Withdrawal and decisions clean up application messages, and rejected users may apply again. Moderation notifications are independent of ordinary participation notification preferences.
+
+- **Added configurable participant limits.**
+  Creators can set a limit from 0 to 1000 in settings or command parameters, with 0 meaning unlimited. Only joined participants count, including a joined creator. Limits are enforced for both direct joins and application approvals, including concurrent requests. Lowering a limit preserves existing participants. Announcements show capacity, and the settings dialog updates in place and removes temporary input messages.
+
+- **Added creator-controlled participant exclusion.**
+  `/declineparticipant` opens a paginated participant menu from a ride ID or a reply to an announcement. Exclusion moves the selected user to Not participating, refreshes announcements, removes access to an attached group, and sends a private notice when possible. Pending application messages are also cleaned up. Excluded users may join or apply again.
+
+- **Added Telegram coordination chat links.**
+  Creators can supply a public chat or invite link through the `chat:` field, wizard, or AI flows. The link appears in ride announcements and can be changed, cleared, or copied when duplicating a ride. Chat links are validated separately from managed group attachment and do not change participant access automatically.
+
+- **Added scoped announcement removal with `/unshareride`.**
+  After confirmation, creators can remove all public announcements from private chat, announcements in the current chat or topic, or one announcement by replying to its original or identifiable forwarded copy. Authorized reposters can remove their own announcements. The ride itself and private cards are preserved, and partial deletion failures are reported without losing tracking for messages that remain.
+
+- **Closed participation and lifecycle actions for archived rides.**
+  Rides become archived one hour after their start. Participation changes, application decisions, publication, cancellation, and resumption are then blocked. Content editing requires rescheduling to a future start time in the same update; administrative settings remain editable. Lifecycle checks also guard writes that cross the archive boundary during an operation.
+
+- **Improved reliability across merged ride features.**
+  Concurrent participation changes and attached-group side effects are serialized per ride and user within one bot process. Announcement tracking and settings patches use atomic updates, and transient announcement update failures retain tracking and produce accurate feedback. Publication destinations now provide clearer labels and chat links. English and Russian help cover the new features, with command examples rendered as Telegram code.
+
+- **Made storage selection explicit and refreshed dependencies.**
+  `STORAGE_DRIVER` now selects `mongodb` (the default) or `memory` independently of `NODE_ENV`; local development without MongoDB must explicitly select `memory`, whose data is lost on restart. A database migration initializes participation approval as disabled for existing rides and user defaults. Runtime and development dependencies were updated, and scenario, concurrency, Mongo query-contract, and Telegram E2E smoke coverage was expanded.
+
 ## v2.9.0 - 2026-10-01
 
 - **Added GetGPX route support.**
