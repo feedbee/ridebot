@@ -12,6 +12,7 @@ import { StartCommandHandler } from '../commands/StartCommandHandler.js';
 import { NewRideCommandHandler } from '../commands/NewRideCommandHandler.js';
 import { UpdateRideCommandHandler } from '../commands/UpdateRideCommandHandler.js';
 import { CancelRideCommandHandler } from '../commands/CancelRideCommandHandler.js';
+import { DeclineParticipantCommandHandler } from '../commands/DeclineParticipantCommandHandler.js';
 import { DeleteRideCommandHandler } from '../commands/DeleteRideCommandHandler.js';
 import { ListRidesCommandHandler } from '../commands/ListRidesCommandHandler.js';
 import { PlannedRidesCommandHandler } from '../commands/PlannedRidesCommandHandler.js';
@@ -101,6 +102,7 @@ export class Bot {
     const rideSettingsHandler = new RideSettingsCommandHandler(rideService, messageFormatter, rideMessagesService, settingsService);
     const groupManagementService = new GroupManagementService();
     const rideParticipationService = new RideParticipationService(rideService, notificationService, groupManagementService);
+    const declineParticipantHandler = new DeclineParticipantCommandHandler(rideService, messageFormatter, rideMessagesService, rideParticipationService);
     const participationHandler = new ParticipationHandlers(rideService, messageFormatter, rideMessagesService, rideParticipationService);
     const shareRideHandler = new ShareRideCommandHandler(rideService, messageFormatter, rideMessagesService);
     const unshareRideHandler = new UnshareRideCommandHandler(rideService, messageFormatter, rideMessagesService);
@@ -143,6 +145,7 @@ export class Bot {
           { command: 'detach', descriptionKey: 'bot.commandDescriptions.detach', handler: (ctx) => groupHandler.handleDetach(ctx) },
         ],
         mixed: [
+          { command: 'declineparticipant', descriptionKey: 'bot.commandDescriptions.declineparticipant', handler: (ctx) => declineParticipantHandler.handle(ctx) },
           { command: 'unshareride', descriptionKey: 'bot.commandDescriptions.unshareride', handler: (ctx) => unshareRideHandler.handle(ctx) },
           { command: 'shareride', descriptionKey: 'bot.commandDescriptions.shareride', handler: async (ctx) => {
             // If no parameters provided in group chat, show a helpful message
@@ -168,6 +171,8 @@ export class Bot {
       },
       settingsTextInput: (ctx) => rideSettingsHandler.handleTextInput(ctx),
       callbacks: [
+        { pattern: /^decline:(user|page):(\w+):(\d+)(?::(\d+))?$/, handler: (ctx) => declineParticipantHandler.handleCallback(ctx) },
+        { pattern: /^decline:(close|cancel):(\w+)$/, handler: (ctx) => declineParticipantHandler.handleCallback(ctx) },
         { pattern: /^main:newride$/, handler: (ctx) => {
           rideSettingsHandler.cancelPendingParticipantLimitInput(ctx);
           return newRideHandler.handleInlineMenu(ctx);

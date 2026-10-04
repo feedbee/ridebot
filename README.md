@@ -281,6 +281,12 @@ To post an existing ride to another chat:
 
 Use `/listrides` to see all rides you've created with pagination support.
 
+### Excluding Ride Participants
+
+Only the ride creator can use `/declineparticipant rideID`, or reply to a ride announcement with `/declineparticipant`, in private or group chats. Select a joined or thinking participant using the Exclude button next to their profile link. Names use the same format as announcements, prefixed with a status icon: 🚴 joined/accepted, 🤔 thinking, or 📝 pending application. The menu shows up to 20 participants per page and edits the same message when navigating. After each exclusion, the same menu refreshes so more participants can be excluded. Only Close, on its own row below pagination, removes the menu. The user’s command message is retained.
+
+Exclusion moves the participant to Not participating (`skipped`), updates all announcements, and removes access to an attached group using the existing group ban behavior. It does not prohibit joining or applying again. Pending moderated application messages are cleaned up. In both modes, the excluded participant immediately receives a private notification that the ride creator cancelled their participation. This notification is independent of ordinary notification settings, replaces the application rejection notification for this command, and delivery failure does not undo exclusion. Archived and cancelled rides cannot be changed.
+
 ### Listing Ride Participants
 
 Use `/listparticipants rideID` to see all participants for a specific ride. This command shows all participants without the truncation limit applied to regular ride messages, organized by participation state (Joined, Thinking, Not interested).

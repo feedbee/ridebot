@@ -622,22 +622,19 @@ export class MessageFormatter {
    * @returns {string} - Formatted participant name
    */
   formatParticipant(participant) {
-    let displayName;
-    
-    // If we have first name or last name (new format)
-    if (participant.firstName || participant.lastName) {
-      const fullName = `${participant.firstName} ${participant.lastName}`.trim();
-      // If we also have a username, show both
-      if (participant.username) {
-        displayName = `${escapeHtml(fullName)} (@${escapeHtml(participant.username)})`;
-      } else {
-        displayName = escapeHtml(fullName);
-      }
-    } else {
-      // Legacy format or username-only
-      displayName = participant.username.includes(' ') ? escapeHtml(participant.username) : `@${escapeHtml(participant.username)}`;
+    return `<a href="tg://user?id=${participant.userId}">${escapeHtml(this.formatParticipantName(participant))}</a>`;
+  }
+
+  /** Format the same participant name for text-only Telegram buttons.
+   * @param {Object} participant - Stored participant profile
+   * @returns {string} - Unescaped display name
+   */
+  formatParticipantName(participant) {
+    const fullName = `${participant.firstName || ''} ${participant.lastName || ''}`.trim();
+    if (fullName) return participant.username ? `${fullName} (@${participant.username})` : fullName;
+    if (participant.username) {
+      return participant.username.includes(' ') ? participant.username : `@${participant.username}`;
     }
-    
-    return `<a href="tg://user?id=${participant.userId}">${displayName}</a>`;
+    return String(participant.userId);
   }
 }

@@ -1,0 +1,9 @@
+# Decline Participant
+
+The ride creator can invoke `/declineparticipant rideID`, or reply to a ride announcement with `/declineparticipant`, in private or group chats. Existing ride-ID extraction applies.
+
+The bot sends one participant selection message. Each row has the existing announcement participant display name as a profile URL button and a separate decline callback button. Telegram buttons cannot combine a URL and a callback. Current TDLib limits inline keyboards to 300 buttons; reserve four for previous/page/next and cancel, allowing 148 participant rows per page. Include joined and thinking participants, including the creator if present; exclude skipped participants. Edit the same message for pagination. Cancel and successful decline delete the menu. Delete the invoking command on successful menu creation when Telegram permits it; cleanup failures must not revert participation.
+
+Every callback rechecks creator ownership and ride validity. Archived or cancelled rides cannot be changed. Decline conditionally moves an existing joined/thinking participant to skipped and preserves profile metadata. Concurrent or repeated decisions cannot decline a different participant or repeat side effects. Use the per-participant service queue and conditional storage writes. Allow joining/applying again; do not add participation bans. Preserve existing attached-group removal (ban) behavior and pending application cleanup/decision notifications. Refresh all tracked announcements after a successful change. Report completion via callback feedback, including announcement update failures, without a standalone result message.
+
+Verify real bot command/callback wiring, reply extraction, maximum-page navigation, ownership for every callback action, skipped/unknown/stale participants, joined and pending declines, archival/cancellation, group removal, rejoining, formatting, and cleanup failure behavior with basic tests only.

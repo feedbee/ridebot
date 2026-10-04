@@ -25,6 +25,8 @@ export class RideMessagesService {
   constructor(rideService, messageFormatter) {
     this.rideService = rideService;
     this.messageFormatter = messageFormatter;
+    /** @type {Map<string, Promise<Object>>} */
+    this.rideUpdates = new Map();
   }
 
   translate(language, key, params = {}) {
@@ -340,6 +342,31 @@ export class RideMessagesService {
    * @returns {Promise<{success: boolean, updatedCount: number, removedCount: number, failedCount?: number, error?: string}>} - Transient failures retain tracking and report unsuccessful propagation.
    */
   async updateRideMessages(ride, ctx) {
+    const previous = this.rideUpdates.get(ride.id) || Promise.resolve();
+    const pending = previous.catch(() => {}).then(async () => {
+      // Mutations and their Telegram side effects can finish out of order.
+      // Read inside the queue so every caller renders the latest persisted ride.
+      const currentRide = await this.rideService.getRide(ride.id);
+      if (!currentRide) return { success: true, updatedCount: 0, removedCount: 0 };
+      return this.performRideMessageUpdate(currentRide, ctx);
+    });
+    this.rideUpdates.set(ride.id, pending);
+    try {
+      return await pending;
+    } catch (error) {
+      console.error('Error loading ride for announcement update:', error);
+      return { success: false, updatedCount: 0, removedCount: 0, error: error.message };
+    } finally {
+      if (this.rideUpdates.get(ride.id) === pending) this.rideUpdates.delete(ride.id);
+    }
+  }
+
+  /** Render and propagate a current ride while its announcement queue is held.
+   * @param {Object} ride - Fresh persisted snapshot
+   * @param {import('grammy').Context} ctx
+   * @returns {Promise<Object>} - Propagation outcome
+   */
+  async performRideMessageUpdate(ride, ctx) {
     // If no messages to update, return early
     if (!ride.messages || ride.messages.length === 0) {
       return { success: true, updatedCount: 0, removedCount: 0 };

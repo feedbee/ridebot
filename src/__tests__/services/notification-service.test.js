@@ -85,6 +85,34 @@ describe('NotificationService', () => {
     }
   });
 
+  it('notifies an excluded participant immediately regardless of notification settings and escapes the title', async () => {
+    const silentRide = { ...ride, title: 'Ride <&>', settings: { notifyParticipation: false } };
+    mockSettingsService.getParticipationNotificationLevel.mockResolvedValue('off');
+    await service.sendParticipationCancelledNotification(silentRide, participant.userId, mockApi);
+    expect(mockApi.sendMessage).toHaveBeenCalledWith(participant.userId,
+      tr('commands.notifications.participationCancelled', { title: 'Ride &lt;&amp;&gt;', rideId: ride.id }),
+      { parse_mode: 'HTML' });
+    expect(mockSettingsService.getParticipationNotificationLevel).not.toHaveBeenCalled();
+  });
+
+  it('cancels a pending creator notification when participation is cancelled by the creator', async () => {
+    service.scheduleParticipationNotification(ride, participant, null, 'joined', mockApi);
+    await service.sendParticipationCancelledNotification(ride, participant.userId, mockApi);
+    await jest.runAllTimersAsync();
+    expect(mockApi.sendMessage).toHaveBeenCalledTimes(1);
+    expect(mockApi.sendMessage.mock.calls[0][0]).toBe(participant.userId);
+  });
+
+  it('ignores a failure to deliver the cancellation notification', async () => {
+    mockApi.sendMessage.mockRejectedValue({ error_code: 403, description: 'Bot blocked' });
+    const log = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await expect(service.sendParticipationCancelledNotification(ride, participant.userId, mockApi)).resolves.toBeUndefined();
+    } finally {
+      log.mockRestore();
+    }
+  });
+
   it('sends application decisions directly to the applicant', async () => {
     await service.sendApplicationDecisionNotification(ride, participant.userId, 'accepted', mockApi);
 

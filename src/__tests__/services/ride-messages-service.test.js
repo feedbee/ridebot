@@ -30,6 +30,36 @@ it('keeps new publications tracked when another announcement is unshared concurr
   expect((await service.getRide(ride.id)).messages.map(message => message.messageId).sort()).toEqual([2, 3]);
 });
 
+it('continues queued announcement refreshes after a failed read', async () => {
+  const service = new RideService(new MemoryStorage());
+  const ride = await service.createRide({ title: 'Ride', date: new Date('2099-01-01'), createdBy: 1,
+    messages: [{ chatId: 1, messageId: 2 }] });
+  const formatter = { formatRideWithKeyboard: jest.fn().mockReturnValue({ message: 'Ride', keyboard: {} }) };
+  const messages = new RideMessagesService(service, formatter);
+  const ctx = { api: { editMessageText: jest.fn().mockResolvedValue({}) } };
+  jest.spyOn(service, 'getRide').mockRejectedValueOnce(new Error('Storage unavailable'));
+  const log = jest.spyOn(console, 'error').mockImplementation(() => {});
+  try {
+    const results = await Promise.all([messages.updateRideMessages(ride, ctx), messages.updateRideMessages(ride, ctx)]);
+    expect(results[0]).toMatchObject({ success: false, updatedCount: 0 });
+    expect(results[1]).toMatchObject({ success: true, updatedCount: 1 });
+    expect(messages.rideUpdates.size).toBe(0);
+  } finally {
+    log.mockRestore();
+  }
+});
+
+it('does not edit announcements from a stale snapshot after the ride is deleted', async () => {
+  const service = new RideService(new MemoryStorage());
+  const ride = await service.createRide({ title: 'Ride', date: new Date('2099-01-01'), createdBy: 1,
+    messages: [{ chatId: 1, messageId: 2 }] });
+  const messages = new RideMessagesService(service, { formatRideWithKeyboard: jest.fn() });
+  const ctx = { api: { editMessageText: jest.fn() } };
+  await service.deleteRide(ride.id);
+  expect(await messages.updateRideMessages(ride, ctx)).toEqual({ success: true, updatedCount: 0, removedCount: 0 });
+  expect(ctx.api.editMessageText).not.toHaveBeenCalled();
+});
+
 describe('RideMessagesService', () => {
   let rideMessagesService;
   let mockRideService;
@@ -39,6 +69,7 @@ describe('RideMessagesService', () => {
   beforeEach(() => {
     // Create mock ride service for extended tests
     mockRideService = {
+      getRide: jest.fn(),
       addRideMessage: jest.fn(),
       removeRideMessages: jest.fn()
     };
@@ -925,6 +956,11 @@ describe('RideMessagesService', () => {
   });
 
   describe('updateRideMessages', () => {
+    async function refreshStoredRide(ride, ctx) {
+      mockRideService.getRide.mockResolvedValue(ride);
+      return rideMessagesService.updateRideMessages(ride, ctx);
+    }
+
     it('should keep the HTTPS teaser when updating an announcement', async () => {
       const mockRide = {
         id: 'ride123',
@@ -944,7 +980,7 @@ describe('RideMessagesService', () => {
         keyboard: { inline_keyboard: [] }
       });
 
-      await rideMessagesService.updateRideMessages(mockRide, mockCtx);
+      await refreshStoredRide(mockRide, mockCtx);
 
       expect(mockCtx.api.editMessageText).toHaveBeenCalledWith(
         12345,
@@ -970,7 +1006,7 @@ describe('RideMessagesService', () => {
       };
 
       // Execute
-      const result = await rideMessagesService.updateRideMessages(mockRide, mockCtx);
+      const result = await refreshStoredRide(mockRide, mockCtx);
 
       // Verify
       expect(result).toEqual({ success: true, updatedCount: 0, removedCount: 0 });
@@ -1000,7 +1036,7 @@ describe('RideMessagesService', () => {
       });
 
       // Execute
-      const result = await rideMessagesService.updateRideMessages(mockRide, mockCtx);
+      const result = await refreshStoredRide(mockRide, mockCtx);
 
       // Verify
       expect(mockCtx.api.editMessageText).toHaveBeenCalledWith(
@@ -1044,7 +1080,7 @@ describe('RideMessagesService', () => {
       });
 
       // Execute
-      const result = await rideMessagesService.updateRideMessages(mockRide, mockCtx);
+      const result = await refreshStoredRide(mockRide, mockCtx);
 
       // Verify
       expect(mockCtx.api.editMessageText).toHaveBeenCalledTimes(3);
@@ -1083,7 +1119,7 @@ describe('RideMessagesService', () => {
           parseMode: 'HTML'
         });
 
-      const result = await rideMessagesService.updateRideMessages(mockRide, mockCtx);
+      const result = await refreshStoredRide(mockRide, mockCtx);
 
       expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenNthCalledWith(
         1,
@@ -1137,7 +1173,7 @@ describe('RideMessagesService', () => {
       });
 
       // Execute
-      await rideMessagesService.updateRideMessages(mockRide, mockCtx);
+      await refreshStoredRide(mockRide, mockCtx);
 
       // Verify
       expect(mockCtx.api.editMessageText).toHaveBeenCalledWith(
@@ -1181,7 +1217,7 @@ describe('RideMessagesService', () => {
       const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       // Execute
-      const result = await rideMessagesService.updateRideMessages(mockRide, mockCtx);
+      const result = await refreshStoredRide(mockRide, mockCtx);
 
       // Verify
       expect(result).toEqual({ success: true, updatedCount: 1, removedCount: 1 });
@@ -1217,7 +1253,7 @@ describe('RideMessagesService', () => {
       const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       // Execute
-      const result = await rideMessagesService.updateRideMessages(mockRide, mockCtx);
+      const result = await refreshStoredRide(mockRide, mockCtx);
 
       // Verify
       expect(result).toEqual({ success: true, updatedCount: 0, removedCount: 1 });
@@ -1253,7 +1289,7 @@ describe('RideMessagesService', () => {
       const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       // Execute
-      const result = await rideMessagesService.updateRideMessages(mockRide, mockCtx);
+      const result = await refreshStoredRide(mockRide, mockCtx);
 
       // Verify
       expect(result).toEqual({ success: true, updatedCount: 0, removedCount: 1 });
@@ -1294,7 +1330,7 @@ describe('RideMessagesService', () => {
       const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       // Execute
-      const result = await rideMessagesService.updateRideMessages(mockRide, mockCtx);
+      const result = await refreshStoredRide(mockRide, mockCtx);
 
       // Verify
       expect(result).toEqual({ success: true, updatedCount: 2, removedCount: 1 });
@@ -1330,7 +1366,7 @@ describe('RideMessagesService', () => {
       const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       // Execute
-      const result = await rideMessagesService.updateRideMessages(mockRide, mockCtx);
+      const result = await refreshStoredRide(mockRide, mockCtx);
 
       // Verify - message should not be removed for network errors
       expect(result).toEqual({ success: false, updatedCount: 0, removedCount: 0, failedCount: 1, error: description });
@@ -1362,7 +1398,7 @@ describe('RideMessagesService', () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
       // Execute
-      const result = await rideMessagesService.updateRideMessages(mockRide, mockCtx);
+      const result = await refreshStoredRide(mockRide, mockCtx);
 
       // Verify
       expect(result).toEqual({
@@ -1406,7 +1442,7 @@ describe('RideMessagesService', () => {
       const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       // Execute
-      const result = await rideMessagesService.updateRideMessages(mockRide, mockCtx);
+      const result = await refreshStoredRide(mockRide, mockCtx);
 
       // Verify - only the failed message with thread ID is removed
       expect(result).toEqual({ success: true, updatedCount: 1, removedCount: 1 });
@@ -1430,7 +1466,7 @@ describe('RideMessagesService', () => {
       };
 
       // Execute
-      const result = await rideMessagesService.updateRideMessages(mockRide, mockCtx);
+      const result = await refreshStoredRide(mockRide, mockCtx);
 
       // Verify
       expect(result).toEqual({ success: true, updatedCount: 0, removedCount: 0 });
@@ -1464,7 +1500,7 @@ describe('RideMessagesService', () => {
       });
 
       // Execute
-      await rideMessagesService.updateRideMessages(mockRide, mockCtx);
+      await refreshStoredRide(mockRide, mockCtx);
 
       expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(
         mockRide,
@@ -1500,7 +1536,7 @@ describe('RideMessagesService', () => {
       });
 
       // Execute
-      await rideMessagesService.updateRideMessages(mockRide, mockCtx);
+      await refreshStoredRide(mockRide, mockCtx);
 
       // Verify - should pass isForCreator: false
       expect(mockMessageFormatter.formatRideWithKeyboard).toHaveBeenCalledWith(

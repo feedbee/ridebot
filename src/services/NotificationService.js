@@ -125,6 +125,24 @@ export class NotificationService {
     }
   }
 
+  /** Notify an excluded participant immediately, regardless of ordinary preferences.
+   * Delivery failure must not undo the creator's participation decision.
+   * @param {Object} ride
+   * @param {number} participantUserId
+   * @param {Object} api - Telegram transport
+   */
+  async sendParticipationCancelledNotification(ride, participantUserId, api) {
+    this.cancelParticipationNotification(ride.id, participantUserId);
+    try {
+      await api.sendMessage(participantUserId, t(config.i18n.defaultLanguage, 'commands.notifications.participationCancelled', {
+        title: escapeHtml(ride.title),
+        rideId: ride.id
+      }), { parse_mode: 'HTML' });
+    } catch (err) {
+      console.error('NotificationService: failed to send participation cancellation notification:', err);
+    }
+  }
+
   async _deliverNotification(ride, participant, initialState, finalState, api) {
     if (initialState === finalState) return;
 
