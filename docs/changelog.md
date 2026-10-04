@@ -2,6 +2,11 @@
 
 This changelog is written for product-facing release notes. Release dates are based on Git tag creation dates.
 
+## v2.11.0 - 2026-10-04
+
+- **Made Google Maps links more readable in ride text.**
+  Google Maps URLs in meeting points, multiple starting points, and additional information now appear as compact clickable `[Google Maps]` labels in announcements and previews. Both short `maps.app.goo.gl` links and full `google.com/maps` links are supported. Original destinations and stored text are preserved.
+
 ## v2.10.1 - 2026-10-04
 
 - **Expanded bot help for multiple starting points.**
