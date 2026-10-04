@@ -12,7 +12,7 @@ export async function runRideLifecycleE2ETest(driver) {
   let shareCommandMessageId = null;
 
   await driver.sendPrivateCommand(
-    `/newride\ntitle: ${fixture.title}\nwhen: tomorrow 11:00\ncruisingSpeed: 30\ncruisingSpeed: 25\nmeet: ${fixture.meetingPoint}`
+    `/newride\ntitle: ${fixture.title}\nwhen: tomorrow 11:00\ncruisingSpeed: 30\ncruisingSpeed: 25\nmeet: ${fixture.meetingPoint}\nmeet: Second start`
   );
 
   const privateRideMessage = await driver.waitForBotPrivateMessage({
@@ -41,7 +41,7 @@ export async function runRideLifecycleE2ETest(driver) {
     });
 
     await driver.sendPrivateCommand(
-      `/updateride #${rideId}\ntitle: ${fixture.updatedTitle}\nmeet: ${fixture.updatedMeetingPoint}`
+      `/updateride #${rideId}\ntitle: ${fixture.updatedTitle}\nmeet: ${fixture.updatedMeetingPoint}\nmeet: Second start`
     );
 
     const updatedGroupMessage = await driver.waitForEditedBotMessageInChat({
@@ -76,6 +76,16 @@ export async function runRideLifecycleE2ETest(driver) {
     });
     assert.match(groupedMessage.message || '', /B \(1\):/);
 
+    await driver.clickButtonInChat({
+      chatId: driver.primaryGroupId, messageId: groupRideMessage.id,
+      callbackDataPattern: new RegExp(`^startpoint:${rideId}:S2$`)
+    });
+    const selectedStartMessage = await driver.waitForEditedBotMessageInChat({
+      chatId: driver.primaryGroupId, messageId: groupRideMessage.id,
+      predicate: message => /\[S2\]/.test(message.message || '')
+    });
+    assert.match(selectedStartMessage.message || '', /\[S2\]/);
+
 
     const thinkingResult = await driver.clickButtonInChat({
       chatId: driver.primaryGroupId,
@@ -90,6 +100,7 @@ export async function runRideLifecycleE2ETest(driver) {
       predicate: message => THINKING_MARKER.test(message.message || '')
     });
     assert.match(thinkingMessage.message || '', THINKING_MARKER);
+    assert.match(thinkingMessage.message || '', /\[S2\]/);
     assert.match(thinkingMessage.message || '', /B \(1\):/, 'Thinking must retain the selected pace group');
 
     const skipResult = await driver.clickButtonInChat({
@@ -105,6 +116,7 @@ export async function runRideLifecycleE2ETest(driver) {
       predicate: message => SKIPPED_MARKER.test(message.message || '')
     });
     assert.match(skippedMessage.message || '', SKIPPED_MARKER);
+    assert.doesNotMatch(skippedMessage.message || '', /\[S2\]/);
 
     const deleteCheckpoint = await driver.capturePrivateCheckpoint();
     await driver.sendPrivateCommand(`/deleteride #${rideId}`);

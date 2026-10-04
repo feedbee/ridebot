@@ -1,3 +1,4 @@
+import { parseMeetingPoints, meetingPointsToInput } from './start-points.js';
 import { BOOLEAN_RIDE_SETTING_NAMES } from '../models/ride-settings.js';
 import { parseDateTimeInput } from './date-input-parser.js';
 import { parseDuration } from './duration-parser.js';
@@ -78,6 +79,13 @@ export class FieldProcessor {
       }
     }
     
+    if (params.meet !== undefined) {
+      const parsed = parseMeetingPoints(isUpdate && params.meet === '-' ? '' : params.meet);
+      if (parsed.error) return { data: null, error: t(language || config.i18n.defaultLanguage, `startPoints.${parsed.error}`) };
+      result.data.meetingPoint = meetingPointsToInput(parsed.points);
+      result.data.meetingPoints = parsed.points;
+    }
+
     // Process simple text fields
     this.processTextFields(params, result.data, isUpdate);
 
@@ -221,15 +229,13 @@ export class FieldProcessor {
    * @param {boolean} isUpdate - Whether this is an update operation
    */
   static processTextFields(params, data, isUpdate) {
-    const textFields = ['title', 'meet', 'info', 'organizer', 'category'];
+    const textFields = ['title', 'info', 'organizer', 'category'];
     textFields.forEach(field => {
       if (params[field] !== undefined) {
         if (isUpdate && params[field] === '-') {
           // Clear field value for updates
           if (field === 'category') {
             data[field] = DEFAULT_CATEGORY;
-          } else if (field === 'meet') {
-            data.meetingPoint = '';
           } else if (field === 'info') {
             data.additionalInfo = '';
           } else {
@@ -239,8 +245,6 @@ export class FieldProcessor {
           // Set field value
           if (field === 'category') {
             data[field] = normalizeCategory(params[field]);
-          } else if (field === 'meet') {
-            data.meetingPoint = params[field];
           } else if (field === 'info') {
             data.additionalInfo = params[field];
           } else {

@@ -1,3 +1,4 @@
+import { normalizeMeetingFields } from '../utils/start-points.js';
 import { richListMessage } from '../utils/rich-lists.js';
 import { InlineKeyboard } from 'grammy';
 import { config } from '../config.js';
@@ -412,6 +413,7 @@ export class RideWizard {
    * @param {Object} fieldConfig - Field configuration
    */
   clearFieldValue(state, fieldConfig) {
+    if (fieldConfig.dataKey === 'meetingPoint') state.data.meetingPoints = [];
     if (Array.isArray(fieldConfig.dataKey)) {
       // Multiple keys (e.g., speedMin, speedMax)
       fieldConfig.dataKey.forEach(key => {
@@ -430,6 +432,10 @@ export class RideWizard {
    * @param {*} value - Value to set
    */
   setFieldValue(state, fieldConfig, value) {
+    if (fieldConfig.dataKey === 'meetingPoint') {
+      Object.assign(state.data, normalizeMeetingFields({ meetingPoint: value }));
+      return;
+    }
     if (Array.isArray(fieldConfig.dataKey)) {
       // Multiple keys (e.g., speedMin, speedMax)
       Object.keys(value).forEach(key => {
@@ -454,6 +460,7 @@ export class RideWizard {
       date:           d.datetime       ?? null,  // wizard key is 'datetime', formatter uses 'date'
       organizer:      d.organizer      ?? null,
       meetingPoint:   d.meetingPoint   ?? null,
+      meetingPoints: d.meetingPoints,
       routes:         d.routes         ?? null,
       distance:       d.distance       ?? null,
       duration:       d.duration       ?? null,

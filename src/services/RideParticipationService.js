@@ -1,3 +1,4 @@
+import { START_POINT_NAMES } from '../utils/start-points.js';
 import { PACE_GROUP_NAMES } from '../utils/pace-groups.js';
 import { isRideArchived } from './ride-lifecycle.js';
 
@@ -44,6 +45,15 @@ export class RideParticipationService {
   async selectPaceGroup({ rideId, userId, group }) {
     if (!PACE_GROUP_NAMES.includes(group)) return { status: 'group_not_found' };
     return this.runParticipantOperation(rideId, userId, () => this.rideService.setPaceGroup(rideId, userId, group));
+  }
+
+  /** Select a start point without changing participation or notifying anyone.
+   * @param {{rideId: string, userId: number, group: string}} params
+   * @returns {Promise<Object>}
+   */
+  async selectStartPoint({ rideId, userId, group }) {
+    if (!START_POINT_NAMES.includes(group)) return { status: 'group_not_found' };
+    return this.runParticipantOperation(rideId, userId, () => this.rideService.setStartPoint(rideId, userId, group));
   }
 
   /**

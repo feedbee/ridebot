@@ -60,7 +60,7 @@ export class RideParamsHelper {
         
         if (canonicalKey) {
           const trimmedValue = value.trim();
-          if (['route', 'speed', 'cruisingSpeed'].includes(canonicalKey)) {
+          if (['route', 'speed', 'cruisingSpeed', 'meet'].includes(canonicalKey)) {
             if (canonicalKey === 'route') {
               (params.route ||= []).push(trimmedValue);
             } else if (params[canonicalKey] === undefined) {

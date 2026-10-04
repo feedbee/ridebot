@@ -116,7 +116,7 @@ export class ListParticipantsCommandHandler extends BaseCommandHandler {
    */
   formatGroupedParticipants(ctx, ride, participants) {
     if (!ride.speedGroups?.length && !ride.cruisingSpeedGroups?.length) {
-      return this.formatParticipantsByCategory(participants);
+      return this.formatParticipantsByCategory(participants, ride);
     }
     return this.messageFormatter.formatPaceGroupParticipants(ride, participants, ctx.lang, { full: true });
   }
@@ -126,14 +126,14 @@ export class ListParticipantsCommandHandler extends BaseCommandHandler {
    * @param {Array} participants - List of participants
    * @returns {string} - Formatted participants list
    */
-  formatParticipantsByCategory(participants) {
+  formatParticipantsByCategory(participants, ride = null) {
     if (participants.length === 0) {
       return '';
     }
 
     return participants
       .map((participant, index) => {
-        const displayName = this.messageFormatter.formatParticipant(participant);
+        const displayName = this.messageFormatter.formatParticipant(participant, ride);
         return `${index + 1}. ${displayName}`;
       })
       .join('\n');

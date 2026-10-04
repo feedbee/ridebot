@@ -1,4 +1,15 @@
 export const en = {
+  startPoints: {
+    choose: 'Choose a starting point.',
+    chooseBoth: 'Choose a starting point and a pace group.',
+    limit: 'Use at most five starting points.',
+    empty: 'Each starting point must contain text.',
+    selected: 'You selected starting point {group}.',
+    alreadySelected: 'You have already selected starting point {group}.',
+    unavailable: 'This starting point is no longer available.',
+    joinFirst: 'First join the ride or select Thinking to choose a starting point.',
+    applyFirst: 'First apply to the ride to choose a starting point.',
+  },
   paceGroups: {
     choose: 'Choose a pace group.',
     unassigned: 'Without a Group',
@@ -654,7 +665,7 @@ Click here to start a private chat: @botname
       duration: '⏱ Please enter the duration (e.g., \"2h 30m\", \"90m\", \"1.5h\"):\n<i>Enter a dash (-) to clear/skip this field</i>',
       speed: '⚡ Average moving speed in km/h or skip:\nThe average over the full route while moving, excluding stops; it includes climbs, descents, turns, and slow sections.\n• 25-28 — range\n• 25+ or 25- — minimum\n• -28 — maximum\n• 25 or ~25 — average\n<i>Enter a dash (-) to clear/skip this field</i>\nOne line is a common speed; multiple lines define groups A–E (maximum five).',
       cruisingSpeed: '🛣️ Cruising speed in km/h or skip:\nThe speed the group normally holds while riding on flat, fast sections.\n• 25-28 — range\n• 25+ or 25- — minimum\n• -28 — maximum\n• 25 or ~25 — average\n<i>Enter a dash (-) to clear/skip this field</i>\nOne line is a common speed; multiple lines define groups A–E (maximum five).',
-      meet: '📍 Please enter the meeting point (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
+      meet: '📍 Please enter the meeting point (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>\n<i>For several starting points (up to five), begin with S1: and put S2:, S3: on new lines. Each point can span several lines. Without an initial marker, line breaks remain ordinary text.</i>',
       chat: '💬 Please enter a Telegram coordination chat or invite link (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
       info: 'ℹ️ Please enter any additional information (or skip):\n<i>Enter a dash (-) to clear/skip this field</i>',
       notify: '🔔 Notify you when participants join or leave?\n<i>You can change this later by updating the ride.</i>'
@@ -694,7 +705,7 @@ Click here to start a private chat: @botname
     category: 'Ride category',
     organizer: 'Ride organizer name',
     when: 'Date and time of the ride',
-    meet: 'Meeting point',
+    meet: 'Meeting point; repeat meet: for up to five starting points',
     route: 'Route URL',
     dist: 'Distance in kilometers',
     duration: 'Duration in minutes',

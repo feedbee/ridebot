@@ -43,6 +43,7 @@
  * @property {number} [speedMax]
  * @property {number} [cruisingSpeedMin]
  * @property {number} [cruisingSpeedMax]
+ * @property {string[]} [meetingPoints] - Optional multiple meeting points
  * @property {Array<{min: number|null, max: number|null}>} [speedGroups]
  * @property {Array<{min: number|null, max: number|null}>} [cruisingSpeedGroups]
  * @property {string} [chat] - Normalized Telegram coordination chat or invite link
@@ -65,6 +66,7 @@
  * @property {string} [firstName]
  * @property {string} [lastName]
  * @property {Date} createdAt
+ * @property {string} [startPoint] - Selected S1–S5; joined/thinking only
  * @property {string} [paceGroup] - Selected letter A–E; joined/thinking only
  */
 
@@ -192,6 +194,16 @@ export class StorageInterface {
    * @returns {Promise<{status: string, ride?: Ride}>}
    */
   async setPaceGroup(rideId, userId, group) {
+    throw new Error('Not implemented');
+  }
+
+  /** Select a start point for a participating user.
+   * @param {string} rideId
+   * @param {number} userId
+   * @param {string} group
+   * @returns {Promise<Object>}
+   */
+  async setStartPoint(rideId, userId, group) {
     throw new Error('Not implemented');
   }
 

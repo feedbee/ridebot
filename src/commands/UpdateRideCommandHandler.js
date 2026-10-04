@@ -1,3 +1,4 @@
+import { getMeetingPoints } from '../utils/start-points.js';
 import { BaseCommandHandler } from './BaseCommandHandler.js';
 import { DEFAULT_CATEGORY } from '../utils/category-utils.js';
 import { getRideRoutes } from '../utils/route-links.js';
@@ -69,6 +70,7 @@ export class UpdateRideCommandHandler extends BaseCommandHandler {
       organizer: ride.organizer,
       datetime: ride.date,
       meetingPoint: ride.meetingPoint,
+      meetingPoints: getMeetingPoints(ride),
       routes: getRideRoutes(ride),
       distance: ride.distance,
       duration: ride.duration,

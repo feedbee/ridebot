@@ -15,6 +15,9 @@ This directory contains the project documents that agents and contributors shoul
 - [`pace-groups.md`](./pace-groups.md)
   - Current speed-group input, participation, persistence, and editing rules.
 
+- [`start-points.md`](./start-points.md)
+  - Meeting-point input, selection, rendering, and editing rules.
+
 ## Specifications And Change Design
 
 - [`changes/`](./changes)

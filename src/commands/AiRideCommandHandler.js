@@ -1,3 +1,4 @@
+import { parseMeetingPoints, meetingPointsToInput } from '../utils/start-points.js';
 import { richListMessage } from '../utils/rich-lists.js';
 import { InlineKeyboard } from 'grammy';
 import { BaseCommandHandler } from './BaseCommandHandler.js';
@@ -255,6 +256,14 @@ export class AiRideCommandHandler extends BaseCommandHandler {
     }
 
     state.lastParams = params;
+    if (params.meet !== undefined) {
+      const meeting = parseMeetingPoints(state.mode === 'update' && params.meet === '-' ? '' : params.meet);
+      if (meeting.error) {
+        await this._updateOrSendPreview(ctx, state, this.translate(ctx, `startPoints.${meeting.error}`),
+          new InlineKeyboard().text(this.translate(ctx, 'buttons.cancel'), `airide:cancel:${stateKey}`));
+        return;
+      }
+    }
     for (const prefix of ['speed', 'cruisingSpeed']) {
       if (params[prefix] === undefined) continue;
       const parsed = parseSpeedField(params[prefix], prefix, state.mode === 'update');
@@ -399,7 +408,8 @@ export class AiRideCommandHandler extends BaseCommandHandler {
       date:         null,
       category:     null,
       organizer:    this._resolvePreviewOrganizer(params, state, options),
-      meetingPoint: params.meet      || existingRide?.meetingPoint || null,
+      meetingPoint: existingRide?.meetingPoint || null,
+      meetingPoints: existingRide?.meetingPoints,
       routes:       clearsRoutes ? [] : (routeInputs ? (parsedPreviewRoutes || null) : getRideRoutes(existingRide)),
       distance:     params.dist      ? parseFloat(params.dist)
                                      : (existingRide?.distance   ?? null),
@@ -411,6 +421,12 @@ export class AiRideCommandHandler extends BaseCommandHandler {
       chat: null,
       additionalInfo: null
     };
+
+    if (params.meet !== undefined) {
+      const parsed = parseMeetingPoints(state?.mode === 'update' && params.meet === '-' ? '' : params.meet);
+      preview.meetingPoint = meetingPointsToInput(parsed.points || []);
+      preview.meetingPoints = parsed.points || [];
+    }
 
     // date: AI param takes priority, else fall back to existing ride date
     if (params.when) {

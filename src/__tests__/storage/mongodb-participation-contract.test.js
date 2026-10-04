@@ -123,4 +123,48 @@ describe('Mongo storage query contracts without a database', () => {
     expect(update.$set.settings).toBeUndefined();
     expect(update.$set['settings.rideDefaults']).toBeUndefined();
   });
+  it('selects start points with current lifecycle, membership and point-existence guards', async () => {
+    await storage.setStartPoint(String(ride._id), 2, 'S2');
+    const [filter, pipeline] = Ride.collection.findOneAndUpdate.mock.calls[0];
+    expect(filter.cancelled).toEqual({ $ne: true });
+    expect(filter.date.$gt).toBeInstanceOf(Date);
+    expect(filter.$expr.$in[0]).toEqual({ $literal: 'S2' });
+    expect(filter.$or).toEqual(['joined', 'thinking'].map(state => ({
+      [`participation.${state}`]: { $elemMatch: { userId: 2, startPoint: { $ne: 'S2' } } }
+    })));
+    expect(JSON.stringify(filter.$expr)).toContain('$meetingPoints');
+    expect(pipeline[0].$set['participation.joined'].$map.in.$cond[1].$mergeObjects[1])
+      .toEqual({ startPoint: { $literal: 'S2' } });
+  });
+
+  it('cleans deleted start choices atomically and treats meeting contents as literals', async () => {
+    await storage.updateRide(String(ride._id), { meetingPoint: 'S9: $title\nS1: Square' });
+    const pipeline = Ride.collection.findOneAndUpdate.mock.calls[0][1];
+    expect(pipeline[0].$set.meetingPoints).toEqual({ $literal: ['Square', '$title'] });
+    expect(JSON.stringify(pipeline[2])).toContain('startPoint');
+    expect(pipeline[2].$set['participation.joined'].$map.input)
+      .toEqual({ $ifNull: ['$participation.joined', []] });
+    await expect(storage.updateRide(String(ride._id), { meetingPoints: Array(6).fill('Park') })).rejects.toThrow();
+  });
+
+  it('preserves current start selection in participation transitions but clears it on skipping', async () => {
+    await storage.setParticipation(String(ride._id), 'joined', profile);
+    const pipeline = Ride.collection.findOneAndUpdate.mock.calls[0][1];
+    const selection = pipeline[0].$set['participation.joined'].$concatArrays[1][0].$let.in.$mergeObjects[2];
+    expect(selection.$cond[1]).toEqual({ startPoint: '$$current.startPoint' });
+    Ride.collection.findOneAndUpdate.mockClear();
+    await storage.setParticipation(String(ride._id), 'skipped', profile);
+    const skipped = Ride.collection.findOneAndUpdate.mock.calls[0][1][0].$set['participation.skipped'].$concatArrays[1][0];
+    expect(skipped.$literal.startPoint).toBeUndefined();
+  });
+
+  it('round trips points and selected labels through the schema and interface', async () => {
+    const document = new Ride({ ...ride, meetingPoints: ['Park', 'Square'],
+      participation: { joined: [{ ...profile, startPoint: 'S2' }], thinking: [], skipped: [] } });
+    await expect(document.validate()).resolves.toBeUndefined();
+    const mapped = storage.mapRideToInterface(document);
+    expect(mapped.meetingPoints).toEqual(['Park', 'Square']);
+    expect(mapped.participation.joined[0].startPoint).toBe('S2');
+  });
+
 });

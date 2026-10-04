@@ -1,3 +1,4 @@
+import { getStartPoints, formatMeetingPoints } from '../utils/start-points.js';
 import { normalizeRichLists } from '../utils/rich-lists.js';
 import { formatSpeedField, getPaceGroups, groupParticipants } from '../utils/pace-groups.js';
 import { config } from '../config.js';
@@ -116,6 +117,11 @@ export class MessageFormatter {
       for (const group of getPaceGroups(ride)) keyboard.text(group, `pacegroup:${ride.id}:${group}`);
     }
 
+    if (!ride.cancelled && getStartPoints(ride).length) {
+      keyboard.row();
+      for (const point of getStartPoints(ride)) keyboard.text(point, `startpoint:${ride.id}:${point}`);
+    }
+
     if (isForCreator) {
       if (!ride.cancelled) {
         keyboard.row();
@@ -220,7 +226,7 @@ export class MessageFormatter {
       group3.push(`👤 ${this.translate('formatter.labels.organizer', {}, language)}: ${escapeRichText(ride.organizer)}`);
     }
     if (ride.meetingPoint) {
-      group3.push(`📍 ${this.translate('formatter.labels.meetingPoint', {}, language)}: ${escapeRichText(ride.meetingPoint)}`);
+      group3.push(`📍 ${this.translate('formatter.labels.meetingPoint', {}, language)}:${getStartPoints(ride).length ? '' : ' '}${formatMeetingPoints(ride)}`);
     }
     const rideRouteLinks = this.renderRouteLinks(ride, language);
     if (rideRouteLinks) {
@@ -360,7 +366,7 @@ export class MessageFormatter {
       group3 += `👤 ${this.translate('formatter.labels.organizer', {}, language)}: ${escapeHtml(rideData.organizer)}\n`;
     }
     if (rideData.meetingPoint) {
-      group3 += `📍 ${this.translate('formatter.labels.meetingPoint', {}, language)}: ${escapeHtml(rideData.meetingPoint)}\n`;
+      group3 += `📍 ${this.translate('formatter.labels.meetingPoint', {}, language)}:${getStartPoints(rideData).length ? '' : ' '}${formatMeetingPoints(rideData)}\n`;
     }
     const previewRouteLinks = this.renderRouteLinks(rideData, language);
     if (previewRouteLinks) {
@@ -428,7 +434,7 @@ export class MessageFormatter {
       ];
 
       if (ride.meetingPoint) {
-        details.push(`📍 ${escapeHtml(ride.meetingPoint)}`);
+        details.push(`📍 ${formatMeetingPoints(ride)}`);
       }
 
       // Add chat information
@@ -485,7 +491,7 @@ export class MessageFormatter {
       const details = [`📅 <tg-time unix="${unixTime}">${datetime}</tg-time>`];
 
       if (ride.meetingPoint) {
-        details.push(`📍 ${escapeHtml(ride.meetingPoint)}`);
+        details.push(`📍 ${formatMeetingPoints(ride)}`);
       }
 
       const participationState = ['joined', 'thinking'].find(state =>
@@ -571,13 +577,13 @@ export class MessageFormatter {
   formatPaceGroupParticipants(ride, participants, language, { full = false } = {}) {
     if (!participants.length) return '';
     if (!getPaceGroups(ride).length) return full
-      ? participants.map(person => this.formatParticipant(person)).join(', ')
-      : this.formatParticipantsList(participants, language);
+      ? participants.map(person => this.formatParticipant(person, ride)).join(', ')
+      : this.formatParticipantsList(participants, language, ride);
     let remaining = full ? participants.length : config.maxParticipantsDisplay;
     const format = people => {
       const shown = people.slice(0, remaining);
       remaining -= shown.length;
-      const displayedList = shown.map(person => this.formatParticipant(person)).join(', ');
+      const displayedList = shown.map(person => this.formatParticipant(person, ride)).join(', ');
       return shown.length === people.length ? displayedList
         : this.translate('formatter.andMoreParticipants', { displayedList, count: people.length - shown.length }, language).trim();
     };
@@ -590,15 +596,17 @@ export class MessageFormatter {
   /**
    * Format participants list with truncation for large numbers
    * @param {Array} participants - List of participants
+   * @param {string} language
+   * @param {Object|null} ride
    * @returns {string} - Formatted participants list
    */
-  formatParticipantsList(participants, language = config.i18n.defaultLanguage) {
+  formatParticipantsList(participants, language = config.i18n.defaultLanguage, ride = null) {
     const maxDisplay = config.maxParticipantsDisplay;
     
     if (participants.length <= maxDisplay) {
       // Show all participants if within limit
       return participants
-        .map(p => this.formatParticipant(p))
+        .map(p => this.formatParticipant(p, ride))
         .join(', ');
     } else {
       // Show first N participants and "and X more"
@@ -606,7 +614,7 @@ export class MessageFormatter {
       const remainingCount = participants.length - maxDisplay;
       
       const displayedList = displayedParticipants
-        .map(p => this.formatParticipant(p))
+        .map(p => this.formatParticipant(p, ride))
         .join(', ');
       
       return this.translate('formatter.andMoreParticipants', {
@@ -619,10 +627,11 @@ export class MessageFormatter {
   /**
    * Format a single participant
    * @param {Object} participant - Participant object
+   * @param {Object|null} ride - Ride containing selectable start points
    * @returns {string} - Formatted participant name
    */
-  formatParticipant(participant) {
-    return `<a href="tg://user?id=${participant.userId}">${escapeHtml(this.formatParticipantName(participant))}</a>`;
+  formatParticipant(participant, ride = null) {
+    return `<a href="tg://user?id=${participant.userId}">${escapeHtml(this.formatParticipantName(participant))}</a>${getStartPoints(ride).includes(participant.startPoint) ? ` [${participant.startPoint}]` : ''}`;
   }
 
   /** Format the same participant name for text-only Telegram buttons.

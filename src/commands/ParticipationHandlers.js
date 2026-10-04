@@ -1,4 +1,4 @@
-import { getPaceGroups } from '../utils/pace-groups.js';
+import { selectionPromptKey } from '../utils/start-points.js';
 import { BaseCommandHandler } from './BaseCommandHandler.js';
 import { UserProfile } from '../models/UserProfile.js';
 import { RIDE_ARCHIVE_AFTER_HOURS } from '../services/ride-lifecycle.js';
@@ -114,9 +114,8 @@ export class ParticipationHandlers extends BaseCommandHandler {
               ? this.translate(ctx, SUCCESS_MESSAGE_KEYS[result.targetState])
               : successMessage;
           const person = result.ride.participation?.[result.targetState]?.find(p => p.userId === ctx.from.id);
-          if (result.targetState !== 'skipped' && getPaceGroups(result.ride).length && !person?.paceGroup) {
-            text += `\n${this.translate(ctx, 'paceGroups.choose')}`;
-          }
+          const promptKey = result.targetState !== 'skipped' && selectionPromptKey(result.ride, person);
+          if (promptKey) text += `\n${this.translate(ctx, promptKey)}`;
           await ctx.answerCallbackQuery(text);
         } else {
           await ctx.answerCallbackQuery(this.translate(ctx, 'commands.participation.updatedButMessageFailed'));
@@ -165,6 +164,35 @@ export class ParticipationHandlers extends BaseCommandHandler {
       }));
     } catch (error) {
       console.error('Error selecting pace group:', error);
+      await ctx.answerCallbackQuery(this.translate(ctx, 'commands.participation.genericError'));
+    }
+  }
+
+  /** Handle the authenticated user’s optional start-point selection.
+   * @param {import('grammy').Context} ctx
+   */
+  async handleStartPoint(ctx) {
+    try {
+      const result = await this.rideParticipationService.selectStartPoint({
+        rideId: ctx.match[1], group: ctx.match[2], userId: ctx.from.id
+      });
+      if (result.status === 'changed') {
+        const update = await this.updateRideMessage(result.ride, ctx);
+        await ctx.answerCallbackQuery(this.translate(ctx, update.success
+          ? 'startPoints.selected' : 'commands.participation.updatedButMessageFailed', { group: ctx.match[2] }));
+        return;
+      }
+      const keys = {
+        already_in_group: 'startPoints.alreadySelected', group_not_found: 'startPoints.unavailable',
+        not_participating: result.ride?.settings?.requireParticipationApproval ? 'startPoints.applyFirst' : 'startPoints.joinFirst',
+        ride_not_found: 'commands.participation.rideNotFound', ride_archived: 'commands.participation.rideArchived',
+        ride_cancelled: 'commands.participation.rideCancelled', ride_changed: 'commands.participation.rideChangedRetry'
+      };
+      await ctx.answerCallbackQuery(this.translate(ctx, keys[result.status] || 'commands.participation.genericError', {
+        group: ctx.match[2], hours: RIDE_ARCHIVE_AFTER_HOURS
+      }));
+    } catch (error) {
+      console.error('Error selecting start point:', error);
       await ctx.answerCallbackQuery(this.translate(ctx, 'commands.participation.genericError'));
     }
   }

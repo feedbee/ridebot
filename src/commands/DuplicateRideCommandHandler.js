@@ -1,3 +1,4 @@
+import { getMeetingPoints } from '../utils/start-points.js';
 import { BaseCommandHandler } from './BaseCommandHandler.js';
 import { getRideRoutes } from '../utils/route-links.js';
 import { UserProfile } from '../models/UserProfile.js';
@@ -72,6 +73,7 @@ export class DuplicateRideCommandHandler extends BaseCommandHandler {
       organizer: ride.organizer,
       datetime: tomorrow,
       meetingPoint: ride.meetingPoint,
+      meetingPoints: getMeetingPoints(ride),
       routes: getRideRoutes(ride),
       distance: ride.distance,
       duration: ride.duration,

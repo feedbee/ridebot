@@ -1,3 +1,4 @@
+import { getMeetingPoints } from '../utils/start-points.js';
 import { speedFieldToInput } from '../utils/pace-groups.js';
 import { RouteParser } from '../utils/route-parser.js';
 import { FieldProcessor } from '../utils/FieldProcessor.js';
@@ -20,7 +21,7 @@ const SELF_ORGANIZER_REFERENCES = new Set([
 ]);
 
 const RIDE_CONTENT_FIELDS = new Set([
-  'title', 'category', 'organizer', 'date', 'meetingPoint', 'routes', 'routeLink',
+  'title', 'category', 'organizer', 'date', 'meetingPoint', 'meetingPoints', 'routes', 'routeLink',
   'distance', 'duration', 'speedMin', 'speedMax', 'cruisingSpeedMin',
   'cruisingSpeedMax', 'speedGroups', 'cruisingSpeedGroups', 'chat', 'additionalInfo'
 ]);
@@ -239,6 +240,16 @@ export class RideService {
     return this.storage.setPaceGroup(rideId, userId, group);
   }
 
+  /** Select a start point for a participating user.
+   * @param {string} rideId
+   * @param {number} userId
+   * @param {string} group
+   * @returns {Promise<Object>}
+   */
+  async setStartPoint(rideId, userId, group) {
+    return this.storage.setStartPoint(rideId, userId, group);
+  }
+
   /** Set participation only if the ride's approval mode still matches the service decision. */
   async setParticipationForRideMode(
     rideId,
@@ -454,7 +465,7 @@ export class RideService {
       title: params.title !== undefined ? params.title : originalRide.title,
       category: params.category !== undefined ? params.category : originalRide.category,
       organizer: params.organizer !== undefined ? params.organizer : originalRide.organizer,
-      meet: params.meet !== undefined ? params.meet : originalRide.meetingPoint,
+      meet: params.meet !== undefined ? params.meet : getMeetingPoints(originalRide),
       route: explicitRouteClear
         ? []
         : params.route !== undefined

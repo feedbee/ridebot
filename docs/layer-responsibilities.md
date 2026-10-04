@@ -120,6 +120,10 @@ This rule is especially relevant for participation flows. The handler should tra
   remove groups. Group selection changes no participation status, notifications,
   or membership in the attached Telegram chat.
 
+- Starting-point parsing and normalization are shared in `src/utils/start-points.js`.
+  `RideParticipationService` serializes choices with pace-group and status changes.
+  Storage owns conditional selection, preservation, and atomic cleanup after edits.
+
 - `RideSettingsCommandHandler` dispatches settings commands and toggle callbacks. `SettingsPresenter` owns settings text and keyboards; `ParticipantLimitInputHandler` owns the numeric input sessions. Their separation preserves the existing Telegram UI.
 - `src/models/ride-settings.js` defines ride defaults and boolean setting names shared by services, parsers, and storage. Presentation labels and callback keys stay in the Telegram presentation layer.
 - `RideService.cancelRide` and `resumeRide` enforce lifecycle policy through `setRideCancelledIfActive`. Command handlers translate `ride_archived` and `already_in_state` failures into user-facing messages.

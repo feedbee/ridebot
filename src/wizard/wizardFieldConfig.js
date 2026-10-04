@@ -1,3 +1,4 @@
+import { parseMeetingPoints } from '../utils/start-points.js';
 import { parseDateTimeInput } from '../utils/date-input-parser.js';
 import { RouteParser } from '../utils/route-parser.js';
 import { parseDuration } from '../utils/duration-parser.js';
@@ -274,7 +275,11 @@ export function getWizardFields(language = config.i18n.defaultLanguage) {
       skippable: true,
       nextStep: 'chat',
       previousStep: 'cruisingSpeed',
-      validator: (text) => ({ valid: true, value: text })
+      validator: (text) => {
+        const result = parseMeetingPoints(text);
+        return result.error ? { valid: false, error: translate(language, `startPoints.${result.error}`) }
+          : { valid: true, value: text };
+      }
     },
 
     chat: {
@@ -354,6 +359,7 @@ export function buildRideDataFromWizard(wizardData, metadata = {}) {
     date: wizardData.datetime,
     organizer: wizardData.organizer,
     meetingPoint: wizardData.meetingPoint,
+    meetingPoints: wizardData.meetingPoints,
     routes: wizardData.routes,
     routeLink: wizardData.routes?.[0]?.url,
     distance: wizardData.distance,

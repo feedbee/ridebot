@@ -1,4 +1,4 @@
-import { getPaceGroups } from '../utils/pace-groups.js';
+import { selectionPromptKey } from '../utils/start-points.js';
 import { config } from '../config.js';
 import { t } from '../i18n/index.js';
 import { escapeHtml } from '../utils/html-escape.js';
@@ -118,7 +118,8 @@ export class NotificationService {
         rideId: ride.id
       });
       const person = ride.participation?.joined?.find(p => p.userId === participantUserId);
-      if (decision === 'accepted' && getPaceGroups(ride).length && !person?.paceGroup) text += `\n${t(language, 'paceGroups.choose')}`;
+      const promptKey = decision === 'accepted' && selectionPromptKey(ride, person);
+      if (promptKey) text += `\n${t(language, promptKey)}`;
       await api.sendMessage(participantUserId, text, { parse_mode: 'HTML' });
     } catch (err) {
       console.error('NotificationService: failed to send application decision notification:', err);

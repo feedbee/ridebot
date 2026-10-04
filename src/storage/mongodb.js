@@ -1,3 +1,5 @@
+import { buildStartPointCleanup, buildStartPointSelection, startPointNamesExpression } from './mongo-start-points.js';
+import { normalizeMeetingFields, getStartPoints, START_POINT_NAMES } from '../utils/start-points.js';
 import { normalizeSpeedFields, getPaceGroups, PACE_GROUP_NAMES, SPEED_PREFIXES } from '../utils/pace-groups.js';
 import { buildPaceGroupCleanup, buildPaceGroupSelection, paceGroupNamesExpression } from './mongo-pace-groups.js';
 import { isRideArchived } from '../services/ride-lifecycle.js';
@@ -13,6 +15,7 @@ import { getRideRoutes, normalizeRoutes } from '../utils/route-links.js';
 import { buildCapacityFilter, buildParticipationUpdate, createParticipantData } from './mongo-participation.js';
 
 const participantSchema = new mongoose.Schema({
+  startPoint: { type: String, enum: START_POINT_NAMES, default: undefined },
   paceGroup: { type: String, enum: PACE_GROUP_NAMES, default: undefined },
   userId: { type: Number, required: true },
   username: { type: String, default: '' }, // Optional as Telegram usernames are optional
@@ -67,6 +70,7 @@ const rideSchema = new mongoose.Schema({
   routes: [routeSchema],
   routeLink: String,
   meetingPoint: String,
+  meetingPoints: { type: [String], default: undefined, validate: values => values.length <= 5 && values.every(value => value.trim().length > 0) },
   distance: Number,
   duration: Number,
   speedGroups: speedGroupsField,
@@ -156,7 +160,7 @@ export class MongoDBStorage extends StorageInterface {
   }
 
   async createRide(ride) {
-    ride = normalizeSpeedFields(ride);
+    ride = normalizeMeetingFields(normalizeSpeedFields(ride));
     let rideData = {
       ...ride,
       category: normalizeCategory(ride.category),
@@ -198,13 +202,13 @@ export class MongoDBStorage extends StorageInterface {
    * @returns {Promise<Object>}
    */
   async updateRide(rideId, updates) {
-    updates = normalizeSpeedFields(updates);
+    updates = normalizeMeetingFields(normalizeSpeedFields(updates));
     const { settings, ...fields } = updates;
     if (fields.updatedBy) fields.updatedAt = new Date();
     if (fields.category !== undefined) fields.category = normalizeCategory(fields.category);
     if (fields.routes !== undefined) fields.routes = normalizeRoutes(fields.routes);
     for (const [key, value] of Object.entries(settings || {})) fields[`settings.${key}`] = value;
-    const changesGroups = SPEED_PREFIXES.some(prefix => Object.hasOwn(fields, `${prefix}Groups`));
+    const changesGroups = SPEED_PREFIXES.some(prefix => Object.hasOwn(fields, `${prefix}Groups`)) || Object.hasOwn(fields, 'meetingPoints');
     if (changesGroups) {
       // Mongoose does not cast or validate aggregation update pipelines.
       const patch = new Ride(fields);
@@ -217,7 +221,7 @@ export class MongoDBStorage extends StorageInterface {
     // Pipeline literals prevent strings such as "$..." being evaluated as expressions.
     const update = changesGroups
       ? [{ $set: Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined)
-          .map(([key, value]) => [key, { $literal: value }])) }, buildPaceGroupCleanup()]
+          .map(([key, value]) => [key, { $literal: value }])) }, buildPaceGroupCleanup(), buildStartPointCleanup()]
       : { $set: fields };
     const ride = Object.keys(fields).length
       ? await Ride.findByIdAndUpdate(rideId, update, { returnDocument: 'after', runValidators: true, ...(changesGroups ? { updatePipeline: true } : {}) })
@@ -536,6 +540,32 @@ export class MongoDBStorage extends StorageInterface {
     return { status: person?.paceGroup === group ? 'already_in_group' : person ? 'ride_changed' : 'not_participating', ride: current };
   }
 
+  /** Select a start point using current participation and ride contents.
+   * @param {string} rideId
+   * @param {number} userId
+   * @param {string} group
+   * @returns {Promise<Object>}
+   */
+  async setStartPoint(rideId, userId, group) {
+    if (!START_POINT_NAMES.includes(group)) return { status: 'group_not_found' };
+    const ride = await Ride.findOneAndUpdate({
+      _id: rideId, ...buildActiveRideFilter(), cancelled: { $ne: true },
+      $expr: { $in: [{ $literal: group }, startPointNamesExpression()] },
+      $or: ['joined', 'thinking'].map(state => ({
+        [`participation.${state}`]: { $elemMatch: { userId, startPoint: { $ne: group } } }
+      }))
+    }, [buildStartPointSelection(userId, group)], { returnDocument: 'after', updatePipeline: true });
+    if (ride) return { status: 'changed', ride: this.mapRideToInterface(ride) };
+    const current = await this.getRide(rideId);
+    if (!current) return { status: 'ride_not_found' };
+    if (isRideArchived(current)) return { status: 'ride_archived' };
+    if (current.cancelled) return { status: 'ride_cancelled' };
+    if (!getStartPoints(current).includes(group)) return { status: 'group_not_found' };
+    const person = ['joined', 'thinking'].flatMap(state => current.participation?.[state] || [])
+      .find(participant => participant.userId === userId);
+    return { status: person?.startPoint === group ? 'already_in_group' : person ? 'ride_changed' : 'not_participating', ride: current };
+  }
+
   async getParticipation(rideId, userId) {
     const ride = await Ride.findById(rideId);
     if (!ride || !ride.participation) {
@@ -615,6 +645,7 @@ export class MongoDBStorage extends StorageInterface {
       routes: getRideRoutes(rideObj),
       routeLink: rideObj.routeLink,
       meetingPoint: rideObj.meetingPoint,
+      meetingPoints: rideObj.meetingPoints,
       distance: rideObj.distance,
       duration: rideObj.duration,
       speedGroups: rideObj.speedGroups,
@@ -641,7 +672,8 @@ export class MongoDBStorage extends StorageInterface {
           firstName: p.firstName || '',
           lastName: p.lastName || '',
           createdAt: p.createdAt,
-          ...(p.paceGroup ? { paceGroup: p.paceGroup } : {})
+          ...(p.paceGroup ? { paceGroup: p.paceGroup } : {}),
+          ...(p.startPoint ? { startPoint: p.startPoint } : {})
         })),
         thinking: (rideObj.participation?.thinking || []).map(p => ({
           userId: p.userId,
@@ -649,7 +681,8 @@ export class MongoDBStorage extends StorageInterface {
           firstName: p.firstName || '',
           lastName: p.lastName || '',
           createdAt: p.createdAt,
-          ...(p.paceGroup ? { paceGroup: p.paceGroup } : {})
+          ...(p.paceGroup ? { paceGroup: p.paceGroup } : {}),
+          ...(p.startPoint ? { startPoint: p.startPoint } : {})
         })),
         skipped: (rideObj.participation?.skipped || []).map(p => ({
           userId: p.userId,
@@ -657,7 +690,8 @@ export class MongoDBStorage extends StorageInterface {
           firstName: p.firstName || '',
           lastName: p.lastName || '',
           createdAt: p.createdAt,
-          ...(p.paceGroup ? { paceGroup: p.paceGroup } : {})
+          ...(p.paceGroup ? { paceGroup: p.paceGroup } : {}),
+          ...(p.startPoint ? { startPoint: p.startPoint } : {})
         }))
       },
       messages: (rideObj.messages || []).map(msg => ({

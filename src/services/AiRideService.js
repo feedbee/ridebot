@@ -61,7 +61,7 @@ Use these exact field names (all optional except title and when):
   when: date/time in natural language (e.g. "tomorrow at 6pm", "Saturday 10am")
   category: one of "mixed","road","gravel","mtb","mtb-xc","e-bike","virtual"
   organizer: name of the organizer
-  meet: meeting point location
+  meet: one meeting point as a string (preserving line breaks), or an array of strings for explicitly described alternative starting points, in order of mention
   routes: array of strings, each string either a route URL or "Label | URL"
   dist: distance in km as a string number, e.g. "70"
   duration: e.g. "2h 30m", "90m", "1.5h"
@@ -76,6 +76,8 @@ Use these exact field names (all optional except title and when):
 
 Set chat only when the user explicitly identifies a Telegram link as the ride's coordination chat or invite.
 Do not map route links, event links, or arbitrary URLs from notes to chat.
+
+Meeting points: At most five starting points are supported. Do not invent alternatives or split descriptive line breaks into points. Never truncate an oversized explicit list; return it for validation feedback.
 
 Speed classification rules:
 - Explicit average wording ("average speed", "average moving speed", "avg speed", "средняя скорость", "средняя скорость движения") maps to speed.
