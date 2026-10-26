@@ -2,6 +2,17 @@
 
 This changelog is written for product-facing release notes. Release dates are based on Git tag creation dates.
 
+## v2.11.1 - 2026-10-26
+
+- **Preserved multiline meeting points in wizard previews.**
+  Line breaks within meeting-point descriptions now remain visible in ride previews, including descriptions of individual starting points.
+
+- **Kept announcements synchronized after permission errors.**
+  Failed announcement updates caused by insufficient Telegram permissions no longer remove those messages from tracking. Once permissions are restored, later ride updates can synchronize the announcements again.
+
+- **Improved operational diagnostics.**
+  Application logs now use structured records with detailed exception information. Optional Telegram conversation diagnostics include readable Rich Message content, ride references, source-message context, API timing, and error details to help investigate delivery and synchronization issues.
+
 ## v2.11.0 - 2026-10-04
 
 - **Made Google Maps links more readable in ride text.**
