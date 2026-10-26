@@ -367,7 +367,8 @@ export class MessageFormatter {
       group3 += `👤 ${this.translate('formatter.labels.organizer', {}, language)}: ${escapeHtml(rideData.organizer)}\n`;
     }
     if (rideData.meetingPoint) {
-      group3 += `📍 ${this.translate('formatter.labels.meetingPoint', {}, language)}:${getStartPoints(rideData).length ? '' : ' '}${formatMeetingPoints(rideData)}\n`;
+      // Previews without lists use ordinary Telegram HTML, which requires literal newlines.
+      group3 += `📍 ${this.translate('formatter.labels.meetingPoint', {}, language)}:${getStartPoints(rideData).length ? '' : ' '}${formatMeetingPoints(rideData).replace(/<br>/g, '\n')}\n`;
     }
     const previewRouteLinks = this.renderRouteLinks(rideData, language);
     if (previewRouteLinks) {

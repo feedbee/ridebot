@@ -7,6 +7,7 @@
  */
 
 import { RideWizard } from '../../wizard/RideWizard.js';
+import { MessageFormatter } from '../../formatters/MessageFormatter.js';
 import { jest } from '@jest/globals';
 import { t } from '../../i18n/index.js';
 
@@ -200,6 +201,24 @@ describe.each(['en', 'ru'])('RideWizard — Live Preview (%s)', (language) => {
   });
 
   describe('preview updates on step advance', () => {
+    it('preserves a multiline meeting point in both sent and edited HTML previews', async () => {
+      const ctx = createMockContext(123, 456, 'private', language);
+      wizard.messageFormatter = new MessageFormatter();
+      await wizard.startWizard(ctx, {
+        title: 'Morning Ride',
+        meetingPoint: 'Park & square\nNear <entrance>'
+      });
+
+      const state = wizard.wizardStates.get(wizard.getWizardStateKey(123, 456));
+      await wizard.updatePreviewMessage(ctx, state);
+
+      for (const preview of [ctx._test.messages[0], ctx._test.editedMessages.at(-1)]) {
+        expect(preview.parse_mode).toBe('HTML');
+        expect(preview.text).toContain('Park &amp; square\nNear &lt;entrance&gt;');
+        expect(preview.text).not.toContain('<br>');
+      }
+    });
+
     it('updates preview after entering title', async () => {
       const ctx = createMockContext(123, 456, 'private', language);
       await wizard.startWizard(ctx);
