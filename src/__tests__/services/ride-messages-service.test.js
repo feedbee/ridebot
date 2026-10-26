@@ -8,6 +8,32 @@ import { t } from '../../i18n/index.js';
 import { MemoryStorage } from '../../storage/memory.js';
 import { RideService } from '../../services/RideService.js';
 
+it('retries a tracked announcement after permissions are restored while other chats keep updating', async () => {
+  const service = new RideService(new MemoryStorage());
+  const tracked = [{ chatId: -100123, messageId: 1 }, { chatId: 2, messageId: 3 }];
+  const ride = await service.createRide({ title: 'Ride', date: new Date('2099-01-01'), createdBy: 1, messages: tracked });
+  const messages = new RideMessagesService(service, {
+    formatRideWithKeyboard: () => ({ message: 'Ride', keyboard: {} })
+  });
+  const api = { editMessageText: jest.fn()
+    .mockRejectedValueOnce({ description: 'Bad Request: not enough rights to send the rich message to the chat' })
+    .mockResolvedValue({}) };
+  const warning = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  try {
+    expect(await messages.updateRideMessages(ride, { api })).toMatchObject({
+      success: false, updatedCount: 1, failedCount: 1, removedCount: 0
+    });
+    expect((await service.getRide(ride.id)).messages).toEqual(tracked);
+    api.editMessageText.mockClear();
+    expect(await messages.updateRideMessages(ride, { api })).toMatchObject({
+      success: true, updatedCount: 2, removedCount: 0
+    });
+    expect(api.editMessageText.mock.calls.map(([chatId, messageId]) => ({ chatId, messageId }))).toEqual(tracked);
+  } finally {
+    warning.mockRestore();
+  }
+});
+
 it('keeps new publications tracked when another announcement is unshared concurrently', async () => {
   const service = new RideService(new MemoryStorage());
   const removedMessage = { chatId: -100123, messageId: 1 };
@@ -1339,7 +1365,12 @@ describe('RideMessagesService', () => {
       consoleWarnSpy.mockRestore();
     });
 
-    it.each(['Network timeout', 'Too Many Requests: retry after 10'])('retains tracking and reports failed propagation (%s)', async description => {
+    it.each([
+      'Network timeout',
+      'Too Many Requests: retry after 10',
+      'Forbidden: not enough rights',
+      'Bad Request: not enough rights to send the rich message to the chat'
+    ])('retains tracking and reports failed propagation (%s)', async description => {
       // Setup
       const mockRide = {
         id: 'ride123',
@@ -1368,7 +1399,7 @@ describe('RideMessagesService', () => {
       // Execute
       const result = await refreshStoredRide(mockRide, mockCtx);
 
-      // Verify - message should not be removed for network errors
+      // Recoverable errors, including permissions that may be restored, retain tracking.
       expect(result).toEqual({ success: false, updatedCount: 0, removedCount: 0, failedCount: 1, error: description });
       expect(mockRideService.removeRideMessages).not.toHaveBeenCalled();
 

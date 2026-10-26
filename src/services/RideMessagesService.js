@@ -422,8 +422,7 @@ export class RideMessagesService {
               messageError.description.includes('message to edit not found') ||
               messageError.description.includes('bot was blocked by the user') ||
               messageError.description.includes('chat not found') ||
-              messageError.description.includes('user is deactivated') ||
-              messageError.description.includes('not enough rights')
+              messageError.description.includes('user is deactivated')
           )) {
             // Mark this message for removal from the tracking array
             messagesToRemove.push(messageInfo);
