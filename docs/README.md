@@ -4,6 +4,9 @@ This directory contains the project documents that agents and contributors shoul
 
 ## Core Guidance
 
+- [`logging.md`](./logging.md)
+  - Structured application logs, severity levels, exception serialization, and conversation-log compatibility.
+
 - [`coding-preferences.md`](./coding-preferences.md)
   - Captures project coding preferences and implementation constraints in an agent-friendly form.
 - [`layer-responsibilities.md`](./layer-responsibilities.md)

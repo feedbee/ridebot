@@ -1,8 +1,11 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
+import { conversationText } from './conversation-text.js';
+import { incomingRideId, messageRideId } from './conversation-ride.js';
 
 const OPERATIONS = {
   sendMessage: 'send_message',
+  sendRichMessage: 'send_message',
   editMessageText: 'edit_message_text',
   deleteMessage: 'delete_message',
   answerCallbackQuery: 'answer_callback_query',
@@ -52,6 +55,7 @@ export class TelegramConversationLogger {
     const state = {
       correlationId: updateId === null ? `background:${this.createId()}` : `telegram-update:${updateId}`,
       updateId,
+      rideId: incomingRideId(ctx),
       senderUserId: incoming.senderUserId,
       username: incoming.username,
       sourceChat: incoming.chat,
@@ -121,18 +125,37 @@ export class TelegramConversationLogger {
         existingContext.outgoingAttempted = true;
       }
 
+      // Operation-local context avoids assigning another announcement's ride to
+      // subsequent calls when one update publishes several rides.
+      const operationContext = { ...context, rideId: messageRideId(payload) || context.rideId };
+      const started = performance.now();
       try {
         const result = await previous(method, payload, signal);
-        this.#emitOutgoing({ operation, status: 'success', payload, result, context });
+        const error = result?.ok === false ? result : null;
+        this.#emitOutgoing({ operation, status: error ? 'error' : 'success', payload,
+          result: result?.ok === true && 'result' in result ? result.result : result,
+          context: operationContext, error, method, duration: performance.now() - started });
         return result;
       } catch (error) {
-        this.#emitOutgoing({ operation, status: 'error', payload, context, error });
+        this.#emitOutgoing({ operation, status: 'error', payload, context: operationContext,
+          error, method, duration: performance.now() - started });
         throw error;
       }
     };
   }
 
-  #emitOutgoing({ operation, status, payload, result, context, error }) {
+  /** Observe a result without changing API success or the original exception.
+   * @param {Object} record
+   */
+  #emitOutgoing(record) {
+    try {
+      this.#recordOutgoing(record);
+    } catch {
+      // Diagnostic construction and output are both best-effort.
+    }
+  }
+
+  #recordOutgoing({ operation, status, payload, result, context, error, method, duration }) {
     const resultChat = result && typeof result === 'object' ? result.chat : null;
     const payloadChatId = payload?.chat_id ?? null;
     const sourceChat = context.sourceChat;
@@ -154,11 +177,15 @@ export class TelegramConversationLogger {
       status,
       context,
       chat: effectiveChat,
-      messageThreadId: payload?.message_thread_id ?? context.sourceMessageThreadId ?? null,
+      messageThreadId: payload?.message_thread_id ?? result?.message_thread_id ??
+        (isCallbackAnswer || (payloadChatId === sourceChat?.id && messageId === context.sourceMessageId)
+          ? context.sourceMessageThreadId : null),
       messageId,
       callbackQueryId: payload?.callback_query_id ?? context.callbackQueryId ?? null,
-      text: operation === 'delete_message' ? null : payload?.text ?? null,
+      text: operation === 'delete_message' ? null : conversationText(payload),
     });
+    event.api_method = method;
+    event.duration_ms = Math.round(duration * 100) / 100;
 
     if (error) {
       event.error_name = typeof error.name === 'string' ? error.name : null;
@@ -166,6 +193,8 @@ export class TelegramConversationLogger {
         ? error.message
         : typeof error.description === 'string' ? error.description : null;
       event.error_code = error.error_code ?? null;
+      event.retry_after = error.parameters?.retry_after ?? null;
+      event.migrate_to_chat_id = error.parameters?.migrate_to_chat_id ?? null;
     }
 
     this.#emit(event);
@@ -191,6 +220,10 @@ export class TelegramConversationLogger {
       status,
       correlation_id: context.correlationId,
       update_id: context.updateId,
+      ride_id: context.rideId ?? null,
+      source_chat_id: context.sourceChat?.id ?? null,
+      source_message_id: context.sourceMessageId ?? null,
+      source_message_thread_id: context.sourceMessageThreadId ?? null,
       sender_user_id: context.senderUserId,
       recipient_user_id: direction === 'outgoing' && chatType === 'private' ? chat?.id ?? null : null,
       username: context.username,
@@ -205,7 +238,8 @@ export class TelegramConversationLogger {
   }
 
   #extractIncoming(ctx) {
-    if (typeof ctx.message?.text === 'string') {
+    const messageText = conversationText(ctx.message);
+    if (messageText !== null) {
       return {
         operation: 'message',
         senderUserId: ctx.message.from?.id ?? ctx.from?.id ?? null,
@@ -214,7 +248,7 @@ export class TelegramConversationLogger {
         messageThreadId: ctx.message.message_thread_id ?? null,
         messageId: ctx.message.message_id ?? null,
         callbackQueryId: null,
-        text: ctx.message.text,
+        text: messageText,
       };
     }
 

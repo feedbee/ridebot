@@ -8,6 +8,7 @@
  *   docker run --rm -e MONGODB_URI=mongodb://... bike-ride-bot npm run migrate
  */
 
+import '../src/logging.js';
 import { MigrationRunner } from '../src/migrations/MigrationRunner.js';
 import { config } from '../src/config.js';
 

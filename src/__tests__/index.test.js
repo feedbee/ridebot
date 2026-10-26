@@ -14,6 +14,9 @@ describe('index.js', () => {
   let main;
 
   beforeEach(async () => {
+    // Keep console spies local to these startup tests. The console adapter and
+    // its real bootstrap are exercised in structured-logging.test.js.
+    jest.unstable_mockModule('../logging.js', () => ({}));
     // Mock console methods
     consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});

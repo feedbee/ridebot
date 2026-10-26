@@ -1,3 +1,4 @@
+import './logging.js';
 import { config } from './config.js';
 import { Bot } from './core/Bot.js';
 import { MemoryStorage } from './storage/memory.js';
